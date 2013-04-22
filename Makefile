@@ -9,10 +9,7 @@ MODULES=nfdump_reader flow_counter
 all: ${MODULES}
 
 nfdump_reader: nfdump_reader.o
-	gcc ${CFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so -ltrap 
-
-flow_counter: flow_counter.o
-	gcc ${CFLAGS} -o flow_counter flow_counter.o -ltrap 
+	gcc ${CFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so
 
 clean:
 	rm -f *.o ${MODULES}
