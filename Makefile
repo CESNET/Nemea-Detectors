@@ -1,5 +1,7 @@
 CC=gcc
-CFLAGS=-O2 -ltrap
+CFLAGS=-O2
+LDFLAGS=
+LDLIBS=-ltrap
 
 
 # if no special flags or libraries are needed, it's sufficient to add name of
@@ -9,7 +11,7 @@ MODULES=nfdump_reader flow_counter
 all: ${MODULES}
 
 nfdump_reader: nfdump_reader.o
-	gcc ${CFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so
+	gcc ${LDFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so ${LDLIBS}
 
 clean:
 	rm -f *.o ${MODULES}
