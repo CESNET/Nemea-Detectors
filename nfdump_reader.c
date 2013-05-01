@@ -1,7 +1,7 @@
 /**
  * \file nfdump_reader.h
- * \brief Nfdump reader module reads a given nfdump file and outputs flow 
- *  records in UniRec format. 
+ * \brief Nfdump reader module reads a given nfdump file and outputs flow
+ *  records in UniRec format.
  * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>
  * \date 2013
  */
@@ -9,7 +9,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "../traplib/trap.h"
+#include <libtrap/trap.h>
 #include "nfreader.h"
 #include "unirec.h"
 
@@ -40,34 +40,34 @@ int main(int argc, char **argv)
 {
    int ret;
    nf_file_t file;
-   
+
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(&module_info, &argc, argv);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       return 1;
    }
-   
+
    signal(SIGTERM, signal_handler);
-   
+
    if (argc != 2) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier nfdump-file\n", argv[0]);
       trap_finalize();
       return 2;
    }
-   
+
    ret = nf_open(&file, argv[1]);
    if (ret != 0) {
       fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
       trap_finalize();
       return 3;
    }
-   
-   
+
+
    // Read a record from file, convert to UniRec and send to output ifc
    while (!stop) {
       master_record_t rec;
-      
+
       ret = nf_next_record(&file, &rec);
       if (ret != 0) {
          if (ret == 1) { // no more records
@@ -78,9 +78,9 @@ int main(int argc, char **argv)
          trap_finalize();
          return 3;
       }
-      
+
       ur_basic_flow_t rec2;
-      
+
       // Copy data from master_record_t to ur_basic_flow_t
       // TODO check endinanness
       if (rec.flags & 0x01) { // IPv6
@@ -113,22 +113,22 @@ int main(int argc, char **argv)
       rec2.msec_first = rec.msec_first;
       rec2.last = rec.last;
       rec2.msec_last = rec.msec_last;
-      
+
       // Send data to output interface
       trap_send_data(0, &rec2, sizeof(rec2), TRAP_WAIT);
       //usleep(100);
    }
-   
+
    nf_close(&file);
-   
+
    // Send data with zero length to signalize end
    if (!stop)
       trap_send_data(0, "", 0, TRAP_WAIT);
-   
+
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
    trap_finalize();
-   
+
    return 0;
 }
 

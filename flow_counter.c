@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "../traplib/trap.h"
+#include <libtrap/trap.h>
 #include "unirec.h"
 
 /* ****************************** Modify here ****************************** */
