@@ -9,9 +9,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <iostream>
 
 extern "C" {
-#include "../traplib/trap.h"
+#include <libtrap/trap.h>
 #include "nfreader.h"
 }
 #include "unirec.h"
@@ -70,6 +71,7 @@ int main(int argc, char **argv)
 
    vector<ur_basic_flow_t> records;
 
+   cout << "Loading data from file..." << endl;
    while (1) {
       master_record_t rec;
 
@@ -123,6 +125,8 @@ int main(int argc, char **argv)
 
    nf_close(&file);
 
+   cout << "Sending (" << records.size() << ") records..." << endl;
+
    // Read a record from file, convert to UniRec and send to output ifc
    for (int i = 0; i < records.size() && !stop; i++)
    {
@@ -130,10 +134,11 @@ int main(int argc, char **argv)
       trap_send_data(0, &records[i], sizeof(records[i]), TRAP_WAIT);
       //usleep(100);
    }
+   cout << "Sending terminating record..." << endl;
 
    // Send data with zero length to signalize end
    if (!stop)
-      trap_send_data(0, "", 0, TRAP_WAIT);
+      trap_send_data(0, &records[0], 1, TRAP_WAIT);
 
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)

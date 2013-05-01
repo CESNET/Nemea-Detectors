@@ -74,7 +74,7 @@ int main(int argc, char **argv)
       
       // Check size of received data
       if (data_size != sizeof(ur_basic_flow_t)) {
-         if (data_size == 0) {
+         if (data_size <= 1) {
             // End of data, print counters
             printf("Flows: %lu\n", cnt_flows);
             printf("Packets: %lu\n", cnt_packets);
