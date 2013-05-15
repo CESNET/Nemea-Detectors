@@ -40,29 +40,36 @@ int main(int argc, char **argv)
 {
    int ret;
    nf_file_t file;
-
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, &argc, argv);
+   trap_ifc_spec_t ifc_spec;
+   
+   // Let TRAP library parse command-line arguments and extract its parameters
+   ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
-
-   signal(SIGTERM, signal_handler);
-
+   
    if (argc != 2) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier nfdump-file\n", argv[0]);
-      trap_finalize();
       return 2;
    }
 
+   // Open nfdump file
    ret = nf_open(&file, argv[1]);
    if (ret != 0) {
       fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
-      trap_finalize();
       return 3;
    }
-
+   
+   // Initialize TRAP library (create and init all interfaces)
+   ret = trap_init(&module_info, ifc_spec);
+   if (ret != TRAP_E_OK) {
+      nf_close(&file);
+      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+   }
+   trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
+   
+   signal(SIGTERM, signal_handler);
 
    // Read a record from file, convert to UniRec and send to output ifc
    while (!stop) {

@@ -17,7 +17,7 @@
 trap_module_info_t module_info = {
    "Flow-counter module", // Module name
    // Module description
-   "Example module counting number of incoming flow records.\n"
+   "Example module for counting number of incoming flow records.\n"
    "Interfaes:\n"
    "   Inputs: 1 (ur_basic_flow)"
    "   Outputs: 0",
@@ -39,20 +39,29 @@ void signal_handler(int signal)
 int main(int argc, char **argv)
 {
    int ret;
-   /* **************************** Modify here **************************** */
    unsigned long cnt_flows = 0;
    unsigned long cnt_packets = 0;
    unsigned long cnt_bytes = 0;
-   /* ********************************************************************* */
    
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, &argc, argv);
+   // ***** TRAP initialization *****
+   trap_ifc_spec_t ifc_spec;
+   
+   // Let TRAP library parse command-line arguments and extract its parameters
+   ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
+   // Initialize TRAP library (create and init all interfaces)
+   ret = trap_init(&module_info, ifc_spec);
+   if (ret != TRAP_E_OK) {
+      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+   }
+   trap_free_ifc_spec(ifc_spec);
    
    signal(SIGTERM, signal_handler);
+   
+   // ***** Main processing loop *****
    
    while (!stop) {
       // Receive data from any interface, wait until data are available
@@ -70,7 +79,6 @@ int main(int argc, char **argv)
          }
       }
       
-      /* *************************** Modify here *************************** */
       
       // Check size of received data
       if (data_size != sizeof(ur_basic_flow_t)) {
@@ -96,8 +104,9 @@ int main(int argc, char **argv)
       cnt_packets += rec->packets;
       cnt_bytes += rec->bytes;
       
-      /* ******************************************************************* */
    }
+   
+   // ***** Cleanup *****
    
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
