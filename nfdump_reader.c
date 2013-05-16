@@ -19,9 +19,9 @@ trap_module_info_t module_info = {
    // Module description
    "This module module reads a given nfdump file and outputs flow records in \n"
    "UniRec format.\n"
-   "Interfaes:\n"
-   "   Inputs: 0"
-   "   Outputs: 1 (ur_basic_flow)",
+   "Interfaces:\n"
+   "   Inputs: 0\n"
+   "   Outputs: 1 (ur_basic_flow)\n",
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
@@ -30,7 +30,7 @@ static int stop = 0;
 
 void signal_handler(int signal)
 {
-   if (signal == SIGTERM) {
+   if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
    }
@@ -41,10 +41,15 @@ int main(int argc, char **argv)
    int ret;
    nf_file_t file;
    trap_ifc_spec_t ifc_spec;
+   unsigned long counter = 0;
    
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) { // "-h" was found
+         trap_print_help(&module_info);
+         return 0;
+      }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
@@ -70,6 +75,7 @@ int main(int argc, char **argv)
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
    
    signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
 
    // Read a record from file, convert to UniRec and send to output ifc
    while (!stop) {
@@ -123,15 +129,19 @@ int main(int argc, char **argv)
 
       // Send data to output interface
       trap_send_data(0, &rec2, sizeof(rec2), TRAP_WAIT);
+      counter++;
       //usleep(100);
    }
 
    nf_close(&file);
 
+   printf("%lu flow records sent\n", counter);
+   
    // Send data with zero length to signalize end
+   char dummy[1] = {0};
    if (!stop)
-      trap_send_data(0, "", 0, TRAP_WAIT);
-
+      trap_send_data(0, dummy, 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
+   
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
    trap_finalize();

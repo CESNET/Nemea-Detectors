@@ -25,9 +25,9 @@ trap_module_info_t module_info = {
    // Module description
    (char *) "This module module reads a given nfdump file and outputs flow records in \n"
    "UniRec format (special version for throughput testing).\n"
-   "Interfaes:\n"
-   "   Inputs: 0"
-   "   Outputs: 1 (ur_basic_flow)",
+   "Interfaces:\n"
+   "   Inputs: 0\n"
+   "   Outputs: 1 (ur_basic_flow)\n",
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
@@ -36,7 +36,7 @@ static int stop = 0;
 
 void signal_handler(int signal)
 {
-   if (signal == SIGTERM) {
+   if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
    }
@@ -51,6 +51,10 @@ int main(int argc, char **argv)
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) { // "-h" was found
+         trap_print_help(&module_info);
+         return 0;
+      }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
@@ -77,6 +81,7 @@ int main(int argc, char **argv)
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
    
    signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
    
    
    vector<ur_basic_flow_t> records;
@@ -148,7 +153,7 @@ int main(int argc, char **argv)
 
    // Send data with zero length to signalize end
    if (!stop)
-      trap_send_data(0, &records[0], 1, TRAP_WAIT);
+      trap_send_data(0, &records[0], 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
 
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)

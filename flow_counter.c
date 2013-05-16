@@ -18,9 +18,9 @@ trap_module_info_t module_info = {
    "Flow-counter module", // Module name
    // Module description
    "Example module for counting number of incoming flow records.\n"
-   "Interfaes:\n"
-   "   Inputs: 1 (ur_basic_flow)"
-   "   Outputs: 0",
+   "Interfaces:\n"
+   "   Inputs: 1 (ur_basic_flow)\n"
+   "   Outputs: 0\n",
    1, // Number of input interfaces
    0, // Number of output interfaces
 };
@@ -30,7 +30,7 @@ static int stop = 0;
 
 void signal_handler(int signal)
 {
-   if (signal == SIGTERM) {
+   if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
    }
@@ -49,6 +49,10 @@ int main(int argc, char **argv)
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) { // "-h" was found
+         trap_print_help(&module_info);
+         return 0;
+      }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
@@ -60,6 +64,7 @@ int main(int argc, char **argv)
    trap_free_ifc_spec(ifc_spec);
    
    signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
    
    // ***** Main processing loop *****
    
@@ -79,15 +84,10 @@ int main(int argc, char **argv)
          }
       }
       
-      
       // Check size of received data
       if (data_size != sizeof(ur_basic_flow_t)) {
          if (data_size <= 1) {
-            // End of data, print counters
-            printf("Flows: %lu\n", cnt_flows);
-            printf("Packets: %lu\n", cnt_packets);
-            printf("Bytes: %lu\n", cnt_bytes);
-            break;
+            break; // End of data
          }
          else {
             fprintf(stderr, "Error: data with wrong size received (expected size: %i, received size: %i)\n",
@@ -105,6 +105,12 @@ int main(int argc, char **argv)
       cnt_bytes += rec->bytes;
       
    }
+   
+   // ***** Print results *****
+
+   printf("Flows:   %20lu\n", cnt_flows);
+   printf("Packets: %20lu\n", cnt_packets);
+   printf("Bytes:   %20lu\n", cnt_bytes);
    
    // ***** Cleanup *****
    

@@ -6,8 +6,8 @@ LDFLAGS=
 LDLIBS=-ltrap
 
 
-# if no special flags or libraries are needed, it's sufficient to add name of
-# the new module here (when no rule is found, make uses default one)
+# if no special flags or libraries are needed, it's sufficient to add the name
+# of a new module here (when no rule is found, make uses default one)
 MODULES=nfdump_reader flow_counter nfdump_reader_test
 
 all: ${MODULES}
