@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS=-O2
 CXXFLAGS=-O2
 LDFLAGS=
-LDLIBS=-ltrap
+LDLIBS=-ltrap -lcommlbr -lrt
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
