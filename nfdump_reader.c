@@ -8,6 +8,7 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <getopt.h>
 
 #include <libtrap/trap.h>
 #include "nfreader.h"
@@ -42,6 +43,9 @@ int main(int argc, char **argv)
    nf_file_t file;
    trap_ifc_spec_t ifc_spec;
    unsigned long counter = 0;
+   unsigned long max_records = 0;
+   int send_eof = 1;
+   int verbose = 0;
    
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
@@ -54,19 +58,46 @@ int main(int argc, char **argv)
       return 1;
    }
    
-   if (argc != 2) {
-      fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier nfdump-file\n", argv[0]);
+   verbose = (trap_get_verbose_level() >= 0);
+   
+   char opt;
+   while ((opt = getopt(argc, argv, "c:n")) != -1) {
+      switch (opt) {
+         case 'c':
+            max_records = atoi(optarg);
+            if (max_records == 0) {
+               fprintf(stderr, "Invalid maximal number of records.\n");
+               return 2;
+            }
+            break;
+         case 'n':
+            send_eof = 0;
+            break;
+         default:
+            fprintf(stderr, "Invalid arguments.\n");
+            return 2;
+      }
+   }
+   
+   if (optind >= argc) {
+      fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier [-n] [-c NUM] nfdump-file\n", argv[0]);
       return 2;
    }
 
    // Open nfdump file
-   ret = nf_open(&file, argv[1]);
+   if (verbose) {
+      printf("Opening file %s ...\n", argv[optind]);
+   }
+   ret = nf_open(&file, argv[optind]);
    if (ret != 0) {
-      fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
+      fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
       return 3;
    }
    
    // Initialize TRAP library (create and init all interfaces)
+   if (verbose) {
+      printf("Initializing TRAP library ...\n");
+   }
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       nf_close(&file);
@@ -78,7 +109,10 @@ int main(int argc, char **argv)
    signal(SIGINT, signal_handler);
 
    // Read a record from file, convert to UniRec and send to output ifc
-   while (!stop) {
+   if (verbose) {
+      printf("Sending records ...\n");
+   }
+   while (!stop && (max_records == 0 || counter < max_records)) {
       master_record_t rec;
 
       ret = nf_next_record(&file, &rec);
@@ -86,7 +120,7 @@ int main(int argc, char **argv)
          if (ret == 1) { // no more records
             break;
          }
-         fprintf(stderr, "Error during reading file.\n", argv[1]);
+         fprintf(stderr, "Error during reading file.\n");
          nf_close(&file);
          trap_finalize();
          return 3;
@@ -131,16 +165,29 @@ int main(int argc, char **argv)
       trap_send_data(0, &rec2, sizeof(rec2), TRAP_WAIT);
       counter++;
       //usleep(100);
+      
+      if (verbose && counter % 1000 == 1) {
+         printf(".");
+         fflush(stdout);
+      }
    }
 
+   if (verbose) {
+      printf("done\n");
+   }
+   
    nf_close(&file);
 
    printf("%lu flow records sent\n", counter);
    
    // Send data with zero length to signalize end
    char dummy[1] = {0};
-   if (!stop)
+   if (!stop && send_eof) { // if EOF enabled and program wasn't interrupted
+      if (verbose) {
+         printf("Sending EOF message (zero-length record)\n");
+      }
       trap_send_data(0, dummy, 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
+   }
    
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
