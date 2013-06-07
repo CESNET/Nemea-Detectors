@@ -107,14 +107,15 @@ int main(int argc, char **argv)
       // Copy data from master_record_t to ur_basic_flow_t
       // TODO check endinanness
       if (rec.flags & 0x01) { // IPv6
+         // rec.ip_union._v6.srcaddr is uint64_t[2]
          rec2.src_addr.ad[0] = rec.ip_union._v6.srcaddr[0];
-         rec2.src_addr.ad[1] = rec.ip_union._v6.srcaddr[1];
-         rec2.src_addr.ad[2] = rec.ip_union._v6.srcaddr[2];
-         rec2.src_addr.ad[3] = rec.ip_union._v6.srcaddr[3];
+         rec2.src_addr.ad[1] = rec.ip_union._v6.srcaddr[0] >> 32;
+         rec2.src_addr.ad[2] = rec.ip_union._v6.srcaddr[1];
+         rec2.src_addr.ad[3] = rec.ip_union._v6.srcaddr[1] >> 32;
          rec2.dst_addr.ad[0] = rec.ip_union._v6.dstaddr[0];
-         rec2.dst_addr.ad[1] = rec.ip_union._v6.dstaddr[1];
-         rec2.dst_addr.ad[2] = rec.ip_union._v6.dstaddr[2];
-         rec2.dst_addr.ad[3] = rec.ip_union._v6.dstaddr[3];
+         rec2.dst_addr.ad[1] = rec.ip_union._v6.dstaddr[0] >> 32;
+         rec2.dst_addr.ad[2] = rec.ip_union._v6.dstaddr[1];
+         rec2.dst_addr.ad[3] = rec.ip_union._v6.dstaddr[1] >> 32;
       }
       else { // IPv4
          rec2.src_addr.ad[0] = rec.ip_union._v4.srcaddr;
