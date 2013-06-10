@@ -114,8 +114,9 @@ extern inline ip_addr_t ip_from_16_bytes_le(char b[16])
 {
    ip_addr_t a;
    int i;
-   for (i = 0; i < 16; i++)
+   for (i = 0; i < 16; i++) {
       a.bytes[i] = b[15-i];
+   }
    return a;
 }
 
@@ -124,17 +125,17 @@ extern inline ip_addr_t ip_from_16_bytes_le(char b[16])
 // 0 on error (i.e. string doesn't contain a valid IP address).
 extern inline int ip_from_str(const char *str, ip_addr_t *addr)
 {
+   char tmp[16];
    if (strchr(str, ':') == NULL) { // IPv4
-      char tmp[4];
-      if (inet_pton(AF_INET, str, &tmp) != 1)
+      if (inet_pton(AF_INET, str, (void *) tmp) != 1) {
          return 0; // err
+      }
       *addr = ip_from_4_bytes_be(tmp);
       return 1;
-   }
-   else { // IPv6
-      char tmp[16];
-      if (inet_pton(AF_INET6, str, tmp) != 1)
+   } else { // IPv6
+      if (inet_pton(AF_INET6, str, (void *) tmp) != 1) {
          return 0; // err
+      }
       *addr = ip_from_16_bytes_be(tmp);
       return 1;
    }
@@ -148,8 +149,7 @@ extern inline void ip_to_str(ip_addr_t *addr, char *str)
 {
    if (ip_is4(addr)) { // IPv4
       inet_ntop(AF_INET, ip_get_v4_as_bytes(addr), str, INET6_ADDRSTRLEN);
-   }
-   else { // IPv6
+   } else { // IPv6
       inet_ntop(AF_INET6, addr, str, INET6_ADDRSTRLEN);
    }
 }
