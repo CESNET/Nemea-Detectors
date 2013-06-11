@@ -33,16 +33,17 @@ extern "C" {
 
 typedef union ip_addr_u {
    uint8_t  bytes[16];
-   uint8_t  i8[16];
-   uint32_t i32[4];
-   uint64_t i64[2];
+   uint8_t  ui8[16];
+   uint16_t ui16[8];
+   uint32_t ui32[4];
+   uint64_t ui64[2];
 } ip_addr_t;
 
 
 // Return 1 if the address is IPv4, 0 otherwise.
 extern inline int ip_is4(ip_addr_t *addr)
 {
-   return (addr->i64[0] == 0 && addr->i32[3] == 0xffffffff);
+   return (addr->ui64[0] == 0 && addr->ui32[3] == 0xffffffff);
 }
 
 // Return 1 if the address is IPv4, 0 otherwise.
@@ -54,7 +55,7 @@ extern inline int ip_is6(ip_addr_t *addr)
 // Return integer value of an IPv4 address
 extern inline uint32_t ip_get_v4_as_int(ip_addr_t *addr)
 {
-   return ntohl(addr->i32[2]);
+   return ntohl(addr->ui32[2]);
 }
 
 // Return a pointer to bytes of IPv4 address in big endian (network order)
@@ -68,9 +69,9 @@ extern inline char* ip_get_v4_as_bytes(ip_addr_t *addr)
 extern inline ip_addr_t ip_from_int(uint32_t i)
 {
    ip_addr_t a;
-   a.i64[0] = 0;
-   a.i32[2] = htonl(i);
-   a.i32[3] = 0xffffffff;
+   a.ui64[0] = 0;
+   a.ui32[2] = htonl(i);
+   a.ui32[3] = 0xffffffff;
    return a;
 }
 
@@ -78,12 +79,12 @@ extern inline ip_addr_t ip_from_int(uint32_t i)
 extern inline ip_addr_t ip_from_4_bytes_be(char b[4])
 {
    ip_addr_t a;
-   a.i64[0] = 0;
+   a.ui64[0] = 0;
    a.bytes[8] = b[0];
    a.bytes[9] = b[1];
    a.bytes[10] = b[2];
    a.bytes[11] = b[3];
-   a.i32[3] = 0xffffffff;
+   a.ui32[3] = 0xffffffff;
    return a;
 }
 
@@ -91,12 +92,12 @@ extern inline ip_addr_t ip_from_4_bytes_be(char b[4])
 extern inline ip_addr_t ip_from_4_bytes_le(char b[4])
 {
    ip_addr_t a;
-   a.i64[0] = 0;
+   a.ui64[0] = 0;
    a.bytes[8]  = b[3];
    a.bytes[9]  = b[2];
    a.bytes[10] = b[1];
    a.bytes[11] = b[0];
-   a.i32[3] = 0xffffffff;
+   a.ui32[3] = 0xffffffff;
    return a;
 }
 
