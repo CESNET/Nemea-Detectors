@@ -3,11 +3,7 @@
 
 #include <stdint.h>
 
-// Generic IP address (IPv4 or IPv6)
-// In case of IPv4, address is stored in ad[0] and ad[1-3] = 0
-typedef struct ip_addr_s {
-   uint32_t ad[4];
-} ip_addr_t;
+#include "ipaddr.h"
 
 // Basic flow record
 struct ur_basic_flow_s {

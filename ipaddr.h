@@ -1,5 +1,5 @@
-#ifndef _UNIREC_H_
-#define _UNIREC_H_
+#ifndef _IPADDR_H_
+#define _IPADDR_H_
 
 #ifdef __cplusplus
 extern "C" {
