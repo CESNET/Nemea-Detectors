@@ -61,7 +61,7 @@ extern inline uint32_t ip_get_v4_as_int(ip_addr_t *addr)
 // Return a pointer to bytes of IPv4 address in big endian (network order)
 extern inline char* ip_get_v4_as_bytes(ip_addr_t *addr)
 {
-   return &addr->bytes[8];
+   return (char *) &addr->bytes[8];
 }
 
 

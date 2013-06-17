@@ -108,24 +108,24 @@ int main(int argc, char **argv)
       // TODO check endinanness
       if (rec.flags & 0x01) { // IPv6
          // rec.ip_union._v6.srcaddr is uint64_t[2]
-         rec2.src_addr.ad[0] = rec.ip_union._v6.srcaddr[0];
-         rec2.src_addr.ad[1] = rec.ip_union._v6.srcaddr[0] >> 32;
-         rec2.src_addr.ad[2] = rec.ip_union._v6.srcaddr[1];
-         rec2.src_addr.ad[3] = rec.ip_union._v6.srcaddr[1] >> 32;
-         rec2.dst_addr.ad[0] = rec.ip_union._v6.dstaddr[0];
-         rec2.dst_addr.ad[1] = rec.ip_union._v6.dstaddr[0] >> 32;
-         rec2.dst_addr.ad[2] = rec.ip_union._v6.dstaddr[1];
-         rec2.dst_addr.ad[3] = rec.ip_union._v6.dstaddr[1] >> 32;
+         rec2.src_addr.ui32[0] = rec.ip_union._v6.srcaddr[0];
+         rec2.src_addr.ui32[1] = rec.ip_union._v6.srcaddr[0] >> 32;
+         rec2.src_addr.ui32[2] = rec.ip_union._v6.srcaddr[1];
+         rec2.src_addr.ui32[3] = rec.ip_union._v6.srcaddr[1] >> 32;
+         rec2.dst_addr.ui32[0] = rec.ip_union._v6.dstaddr[0];
+         rec2.dst_addr.ui32[1] = rec.ip_union._v6.dstaddr[0] >> 32;
+         rec2.dst_addr.ui32[2] = rec.ip_union._v6.dstaddr[1];
+         rec2.dst_addr.ui32[3] = rec.ip_union._v6.dstaddr[1] >> 32;
       }
       else { // IPv4
-         rec2.src_addr.ad[0] = rec.ip_union._v4.srcaddr;
-         rec2.src_addr.ad[1] = 0;
-         rec2.src_addr.ad[2] = 0;
-         rec2.src_addr.ad[3] = 0;
-         rec2.dst_addr.ad[0] = rec.ip_union._v4.dstaddr;
-         rec2.dst_addr.ad[1] = 0;
-         rec2.dst_addr.ad[2] = 0;
-         rec2.dst_addr.ad[3] = 0;
+         rec2.src_addr.ui32[0] = rec.ip_union._v4.srcaddr;
+         rec2.src_addr.ui32[1] = 0;
+         rec2.src_addr.ui32[2] = 0;
+         rec2.src_addr.ui32[3] = 0;
+         rec2.dst_addr.ui32[0] = rec.ip_union._v4.dstaddr;
+         rec2.dst_addr.ui32[1] = 0;
+         rec2.dst_addr.ui32[2] = 0;
+         rec2.dst_addr.ui32[3] = 0;
       }
       rec2.src_port = rec.srcport;
       rec2.dst_port = rec.dstport;
