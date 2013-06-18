@@ -103,29 +103,25 @@ int main(int argc, char **argv)
 
       records.push_back(ur_basic_flow_t());
       ur_basic_flow_t &rec2 = records.back();
+      uint64_t tmp_ip_v6_addr;
 
       // Copy data from master_record_t to ur_basic_flow_t
       // TODO check endinanness
       if (rec.flags & 0x01) { // IPv6
-         // rec.ip_union._v6.srcaddr is uint64_t[2]
-         rec2.src_addr.ui32[0] = rec.ip_union._v6.srcaddr[0];
-         rec2.src_addr.ui32[1] = rec.ip_union._v6.srcaddr[0] >> 32;
-         rec2.src_addr.ui32[2] = rec.ip_union._v6.srcaddr[1];
-         rec2.src_addr.ui32[3] = rec.ip_union._v6.srcaddr[1] >> 32;
-         rec2.dst_addr.ui32[0] = rec.ip_union._v6.dstaddr[0];
-         rec2.dst_addr.ui32[1] = rec.ip_union._v6.dstaddr[0] >> 32;
-         rec2.dst_addr.ui32[2] = rec.ip_union._v6.dstaddr[1];
-         rec2.dst_addr.ui32[3] = rec.ip_union._v6.dstaddr[1] >> 32;
-      }
-      else { // IPv4
-         rec2.src_addr.ui32[0] = rec.ip_union._v4.srcaddr;
-         rec2.src_addr.ui32[1] = 0;
-         rec2.src_addr.ui32[2] = 0;
-         rec2.src_addr.ui32[3] = 0;
-         rec2.dst_addr.ui32[0] = rec.ip_union._v4.dstaddr;
-         rec2.dst_addr.ui32[1] = 0;
-         rec2.dst_addr.ui32[2] = 0;
-         rec2.dst_addr.ui32[3] = 0;
+         // Swap IPv6 halves
+         tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
+         rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
+         rec.ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
+         tmp_ip_v6_addr = rec.ip_union._v6.dstaddr[0];
+         rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
+         rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
+
+          rec2.src_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr);
+          rec2.dst_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr);
+
+      } else { // IPv4
+         rec2.src_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr);
+         rec2.dst_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr);
       }
       rec2.src_port = rec.srcport;
       rec2.dst_port = rec.dstport;
