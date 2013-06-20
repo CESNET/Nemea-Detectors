@@ -19,11 +19,16 @@ extern "C" {
 
 // structure definitions
 
-typedef vector<ip_addr_t> preflist pref_list_t; 
+typedef struct bogon_prefix {
+    ip_addr_t ip;
+    uint8_t pref_length;
+} ip_prefix_t;
+
+typedef std::vector<ip_prefix_t> pref_list_t; 
 
 // function prototypes
-int load_pref (&pref_list_t prefix_list);
-int bogon_filter(ur_basic_flow_t *analyzed);
+int load_pref (pref_list_t& prefix_list);
+int bogon_filter(ur_basic_flow_t *analyzed, pref_list_t& prefix_list);
 
 #ifdef __cplusplus
 }
