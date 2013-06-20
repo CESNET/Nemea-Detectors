@@ -5,23 +5,27 @@
  * \date 2013
  */
 
+#include <string>
+#include <cctype>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
 #include <stdint.h>
 #include <signal.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <libtrap/trap.h>
+#ifdef __cplusplus
+}
+#endif
 #include "../unirec.h"
 #include "../ipaddr.h"
 #include "spoofing.h"
 
 using namespace std;
 
-/**
- * Filter for checking ip for bogon prefixes
- * @param analyzed Record that's being analyzed
- * @return SPOOF_POSITIVE if address fits the bogon prefix else SPOOF_NEGATIVE
- */
 
 static int stop = 0;
 
@@ -32,47 +36,126 @@ void signal_handler(int signal)
         trap_terminate();
     }
 }
+/**
+ * Function for creating masks for IPv4 addresses.
+ * Function fills the given array with every possible netmask for IPv4 address.
+ * Size of this array is 33 items (see header file)
+ *
+ * @param m Array to be filled
+ */
+void create_v4_mask_map(ipv4_mask_map_t& m)
+{
+    m[0] = 0x00000000; // explicitly inserted or else it will be 0xFFFFFFFF
+    for (int i = 1; i <= 32; i++) {
+        m[i] = 0xFFFFFFFF << (32 - i);
+        cout << i + " ";
+        cout << hex << m[i] << endl;
+    }
+}
 
+void create_v6_mask_map(ipv6_mask_map_t& m)
+{
+    m[0][0] = m[0][1] = 0;
+
+    for (int i = 1; i <= 128; i++) {
+        if (i < 64) {
+            m[i][0] = 0xFFFFFFFFFFFFFFF << (64 - i);
+            m[i][1] = 0x0;
+        } else {
+            m[i][0] = 0xFFFFFFFFFFFFFFF;
+            m[i][1] = 0xFFFFFFFFFFFFFFF << (64 - i);
+        }
+        cout << i + " ";
+        cout << hex << m[i][0];
+        cout << hex << m[i][1] << endl;
+    }
+}
+
+
+/**
+ * Function for loading prefix file.
+ * Function reads file with network prefixes and creates a vector for use
+ * filters. This function should be called only once, since loading 
+ * prefixes is needed only on "cold start of the detector" or if we want to 
+ * teach the detector new file. (Possile changes to get signal for loading).
+ *
+ * @param prefix_list Reference to a structure for containing all prefixes
+ * @return 0 if everything goes smoothly else 1
+ *
+ */
 int load_pref (pref_list_t& prefix_list)
 {
     ip_prefix_t *pref;
     ifstream pref_file;
     char linebuf[INET6_ADDRSTRLEN];
 
-    pref_file.open("adr.txt", fstream::in);
+    pref_file.open("./adr.txt");
 
     if (!pref_file.is_open()) {
-        cerr << "File with bogon prefixes couldn't be loaded. Unable to continue." << endl;
+        cerr << "ERROR: File with bogon prefixes couldn't be loaded. Unable to continue." << endl;
         return 1;
     }
 
     while (pref_file.good()) {
         pref = new ip_prefix_t;
-        pref_file.getline(linebuf, 33, '/');
+
         string raw_ip = string(linebuf);
+        raw_ip.erase(remove_if(raw_ip.begin(), raw_ip.end(), ::isspace), raw_ip.end());
         
         ip_from_str(raw_ip.c_str(), &(pref->ip));
 
-        cout <<  raw_ip;
+        cout << raw_ip;
         cout << " --> ";
-        cout << ip_get_v4_as_int(&(pref->ip)) << endl;        
+        if (ip_is4(&(pref->ip))) {
+            cout << ip_get_v4_as_int(&(pref->ip)) << endl;
+        } else {
+            ip_to_str(&(pref->ip), linebuf);
+            cout << linebuf << endl;
+        }
         
         pref_file.getline(linebuf,4, '\n');
         pref->pref_length = atoi(linebuf);
+
+        prefix_list.push_back(pref);
     }
+    pref_file.close();
     return 0;
 }
 
-
-int bogon_filter(ur_basic_flow_t *analyzed)
+/**
+ * Filter for checking ip for bogon prefixes
+ * @param analyzed Record that's being analyzed
+ * @return SPOOF_POSITIVE if address fits the bogon prefix else SPOOF_NEGATIVE
+ */
+int v4_bogon_filter(ur_basic_flow_t *analyzed, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
-    //load file with bogon prefixes
     //check source address of the record with each prefix
-//    if  fits the bogon prefix
-//        return SPOOF_POSITIVE;
-//    else
-        return SPOOF_NEGATIVE;
+    for (int i = 0; i < prefix_list.size(); i++) {
+        if ((ip_get_v4_as_int(&(analyzed->src_addr)) & v4mm[prefix_list[i]->pref_length])
+            == ip_get_v4_as_int(&(prefix_list[i]->ip))) {
+            return SPOOF_POSITIVE;
+        }
+        //else continue
+    }
+
+    // doesn't fit any bogon prefix
+    return SPOOF_NEGATIVE;
 }
+
+/**
+ * Procedure for freeing memory used by prefix list.
+ * Procedure goes through the vector and frees all memory used by its elements.
+ * @param prefix_list List to be erased.
+ */
+void clear_bogon_filter(pref_list_t& prefix_list)
+{
+    for (int i = 0; i < prefix_list.size(); i++) {
+        delete prefix_list[i];
+    }
+    prefix_list.clear();
+}
+
+
 int main (int argc, char** argv)
 {
 
@@ -82,12 +165,16 @@ int main (int argc, char** argv)
 
     ur_basic_flow_t *record;
 
-    pref_list_t  bogon_list;
+    pref_list_t bogon_list;
+
+    ipv4_mask_map_t v4_masks;
+
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP initialization failed: ";
         cerr <<  trap_last_error_msg << endl;
+        return retval;
     }
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
@@ -95,6 +182,16 @@ int main (int argc, char** argv)
     // set signal handling for termination
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
+
+    create_v4_mask_map(v4_masks);
+
+    // we don't have list of bogon prefixes loaded (usually first run)
+    if (bogon_list.empty()) {
+       retval = load_pref(bogon_list);
+       if (retval) {
+            return retval;
+        }
+    }
 
     // ***** Main processing loop *****
     while (!stop) {
@@ -109,31 +206,48 @@ int main (int argc, char** argv)
                 cerr << "ERROR: Unable to get data. Return value " + retval;
                 cerr << " (";
                 cerr <<  trap_last_error_msg;
-                cerr << ")" << endl;
+                cerr << ")";
                 break;
             }
         }
 
-    // Interpret data as unirec flow record
-    record = (ur_basic_flow_t *) data;
+        if (data_size != sizeof(ur_basic_flow_t)) {
+            if (data_size <= 1) {
+                break;
+            } else {
+                cerr << "ERROR: Wrong data size.";
+                cerr << "Expected: " + sizeof(ur_basic_flow_t);
+                cerr << "Recieved: " + data_size << endl;
+                break;
+            }
+        }
 
-    //go through all filters
+        // Interpret data as unirec flow record
+        record = (ur_basic_flow_t *) data;
 
-    // ***** 1. bogon prefix filter *****
-    // we don't have list of bogon prefixes loaded (usually first run)
-    if (bogon_list.empty()) {
-        load_pref(bogon_list);
+        //go through all filters
+
+        // ***** 1. bogon prefix filter *****
+        if (ip_is4(&(record->src_addr))) {
+            retval = v4_bogon_filter(record, bogon_list, v4_masks);
+        } else {
+            // retval = v6_bogon_filter(record, bogon_list, v6_masks);
+            // will probably change to one function with both mask maps
+        }
+
+        if (retval == SPOOF_POSITIVE) {
+            cout << "Spoofed address found." << endl;
+            retval = 0;
+        }
+        //2. symetric routing filter (TBA)
+        //3. asymetric routing filter (will be implemented later)
+        //4. new flow count check (TBA)
+
+
+        //return spoofed or not
     }
+    if (retval != 0)
+        clear_bogon_filter(bogon_list);
+    return 0;
 
-    retval = bogon_filter(record, bogon_list);
-    if (retval == SPOOF_POSITIVE) {
-        cout << "Spoofed address found." << endl;
-    }
-    //2. symetric routing filter
-    //3. asymetric routing filter (will be implemented later)
-    //4. new flow count check
-
-
-    //return spoofed or not
-    }
 }
