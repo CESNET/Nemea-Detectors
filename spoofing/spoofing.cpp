@@ -47,9 +47,7 @@ void create_v4_mask_map(ipv4_mask_map_t& m)
 {
     m[0] = 0x00000000; // explicitly inserted or else it will be 0xFFFFFFFF
     for (int i = 1; i <= 32; i++) {
-        m[i] = 0xFFFFFFFF << (32 - i);
-        cout << i + " ";
-        cout << hex << m[i] << endl;
+        m[i] = (0xFFFFFFFF << (32 - i));
     }
 }
 
@@ -98,20 +96,12 @@ int load_pref (pref_list_t& prefix_list)
 
     while (pref_file.good()) {
         pref = new ip_prefix_t;
-
+        
+        pref_file.getline(linebuf, INET6_ADDRSTRLEN, '/');
         string raw_ip = string(linebuf);
         raw_ip.erase(remove_if(raw_ip.begin(), raw_ip.end(), ::isspace), raw_ip.end());
         
-        ip_from_str(raw_ip.c_str(), &(pref->ip));
-
-        cout << raw_ip;
-        cout << " --> ";
-        if (ip_is4(&(pref->ip))) {
-            cout << ip_get_v4_as_int(&(pref->ip)) << endl;
-        } else {
-            ip_to_str(&(pref->ip), linebuf);
-            cout << linebuf << endl;
-        }
+        ip_from_str(raw_ip.c_str(), &(pref->ip));      
         
         pref_file.getline(linebuf,4, '\n');
         pref->pref_length = atoi(linebuf);
@@ -131,6 +121,17 @@ int v4_bogon_filter(ur_basic_flow_t *analyzed, pref_list_t& prefix_list, ipv4_ma
 {
     //check source address of the record with each prefix
     for (int i = 0; i < prefix_list.size(); i++) {
+ 
+        char debug_ip[INET6_ADDRSTRLEN];
+        ip_to_str(&(analyzed->src_addr), debug_ip);
+
+        cout << "Checking: ";
+        cout << debug_ip;
+        cout << " against ";
+
+        ip_to_str(&(prefix_list[i]->ip), debug_ip);
+        cout << debug_ip << endl;
+
         if ((ip_get_v4_as_int(&(analyzed->src_addr)) & v4mm[prefix_list[i]->pref_length])
             == ip_get_v4_as_int(&(prefix_list[i]->ip))) {
             return SPOOF_POSITIVE;
@@ -176,6 +177,24 @@ int main (int argc, char** argv)
         cerr <<  trap_last_error_msg << endl;
         return retval;
     }
+
+    trap_module_info_t module_info = {
+   "Flow-counter module", // Module name
+   // Module description
+   "Example module for counting number of incoming flow records.\n"
+   "Interfaces:\n"
+   "   Inputs: 1 (ur_basic_flow)\n"
+   "   Outputs: 0\n",
+   1, // Number of input interfaces
+   0, // Number of output interfaces
+    };
+   
+
+    retval = trap_init(&module_info, ifc_spec);
+    if (retval != TRAP_E_OK) {
+        cerr << "TRAP INIT ERROR" << endl;
+        return retval;
+    }
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
@@ -203,11 +222,12 @@ int main (int argc, char** argv)
             if (retval == TRAP_E_TERMINATED) {
                 break;
             } else {
-                cerr << "ERROR: Unable to get data. Return value " + retval;
+                cerr << "ERROR: Unable to get data. Return value ";
+                cerr << dec << retval;
                 cerr << " (";
                 cerr <<  trap_last_error_msg;
-                cerr << ")";
-                break;
+                cerr << ")" << endl;
+                    break;
             }
         }
 
@@ -228,12 +248,12 @@ int main (int argc, char** argv)
         //go through all filters
 
         // ***** 1. bogon prefix filter *****
-        if (ip_is4(&(record->src_addr))) {
+//        if (ip_is4(&(record->src_addr))) {
             retval = v4_bogon_filter(record, bogon_list, v4_masks);
-        } else {
+//        } else {
             // retval = v6_bogon_filter(record, bogon_list, v6_masks);
             // will probably change to one function with both mask maps
-        }
+//        }
 
         if (retval == SPOOF_POSITIVE) {
             cout << "Spoofed address found." << endl;
