@@ -105,14 +105,14 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list)
+int load_pref (pref_list_t& prefix_list, char *bogon_file)
 {
     ip_prefix_t *pref;
     ifstream pref_file;
     char linebuf[INET6_ADDRSTRLEN];
     
     // open file with prefixes (hardcoded for now -- may be changed)
-    pref_file.open("bogons.txt");
+    pref_file.open(bogon_file);
 
     // unable to open prefix file
     if (!pref_file.is_open()) {
@@ -138,7 +138,8 @@ int load_pref (pref_list_t& prefix_list)
         // trim whitespaces from the input
         raw_ip.erase(remove_if(raw_ip.begin(), raw_ip.end(), ::isspace), raw_ip.end());
         
-        /* Convert input to ip address for use in program
+        /*
+         * Convert input to ip address for use in program
          * If it fails (invalid ip address) free the memory and continue 
          * to next line.
          */
@@ -147,29 +148,14 @@ int load_pref (pref_list_t& prefix_list)
             continue;
         }
 
-        // for debuging only
-        cout << "Address: ";
-        cout << raw_ip;
-        cout << "/";
-        // debug
-        
         // load prefix length (netmask
         pref_file.getline(linebuf,4, '\n');
-
-        // debug
-        cout << linebuf << endl;
-        // debug
 
         // convert to number
         pref->pref_length = strtoul(linebuf, NULL, 0);
 
         // save to the prefix list
         prefix_list.push_back(pref);
-
-        // debug
-        ip_to_str(&(pref->ip), linebuf);
-        cout << linebuf << endl; 
-        // debug
     }
     pref_file.close();
     return ALL_OK;
@@ -320,10 +306,20 @@ int main (int argc, char** argv)
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
+        if (retval == TRAP_E_HELP) {
+            trap_print_help(&module_info);
+            return EXIT_SUCCESS;
+        }
         cerr << "ERROR: TRAP initialization failed: ";
         cerr <<  trap_last_error_msg << endl;
         return retval;
     }
+
+    if (argc != 2) {
+        cerr << "ERROR: Bogon file missing. Unable to continue" << endl;
+        return EXIT_FAILURE;
+    }
+        
 
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
@@ -352,7 +348,7 @@ int main (int argc, char** argv)
                 
         // we don't have list of bogon prefixes loaded (usually first run)
         if (bogon_list.empty()) {
-            retval = load_pref(bogon_list);
+            retval = load_pref(bogon_list, argv[1]);
             if (retval == BOGON_FILE_ERROR) {
                 return retval;
             }
@@ -424,11 +420,13 @@ int main (int argc, char** argv)
     cout << dec << v6 << endl;
     cout << "No. of possibly spoofed addresses: ";
     cout << dec << spoof_count << endl;
-    // only
+    // debug
 
     // clean up before termination
-    if (retval != 0)
+    if (retval != 0) {
         clear_bogon_filter(bogon_list);
+        trap_finalize();
+    }   
 
     return EXIT_SUCCESS;
 }

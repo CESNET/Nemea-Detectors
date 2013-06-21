@@ -60,7 +60,7 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list);
+int load_pref (pref_list_t& prefix_list, char *bogon_file);
 
 /**
  * Functions for checking the ip address for bogon prefixes.
