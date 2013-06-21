@@ -27,8 +27,23 @@ extern "C" {
 using namespace std;
 
 
+trap_module_info_t module_info = {
+    "Flow-counter module", // Module name
+    // Module description
+    "Example module for counting number of incoming flow records.\n"
+    "Interfaces:\n"
+    "   Inputs: 1 (ur_basic_flow)\n"
+    "   Outputs: 0\n",
+    1, // Number of input interfaces
+    0, // Number of output interfaces
+};
+
+
 static int stop = 0;
 
+/**
+ * Procedure for handling signals SIGTERM and SIGINT (Ctrl-C)
+ */
 void signal_handler(int signal)
 {
     if (signal == SIGTERM || signal == SIGINT) {
@@ -57,15 +72,12 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 
     for (int i = 1; i <= 128; i++) {
         if (i < 64) {
-            m[i][0] = 0xFFFFFFFFFFFFFFF << (64 - i);
+            m[i][0] = 0xFFFFFFFFFFFFFFFF << (64 - i);
             m[i][1] = 0x0;
         } else {
-            m[i][0] = 0xFFFFFFFFFFFFFFF;
-            m[i][1] = 0xFFFFFFFFFFFFFFF << (64 - i);
+            m[i][0] = 0xFFFFFFFFFFFFFFFF;
+            m[i][1] = 0xFFFFFFFFFFFFFFFF << (64 - i);
         }
-        cout << i + " ";
-        cout << hex << m[i][0];
-        cout << hex << m[i][1] << endl;
     }
 }
 
@@ -87,7 +99,7 @@ int load_pref (pref_list_t& prefix_list)
     ifstream pref_file;
     char linebuf[INET6_ADDRSTRLEN];
 
-    pref_file.open("./adr.txt");
+    pref_file.open("bogons.txt");
 
     if (!pref_file.is_open()) {
         cerr << "ERROR: File with bogon prefixes couldn't be loaded. Unable to continue." << endl;
@@ -104,7 +116,7 @@ int load_pref (pref_list_t& prefix_list)
         ip_from_str(raw_ip.c_str(), &(pref->ip));      
         
         pref_file.getline(linebuf,4, '\n');
-        pref->pref_length = atoi(linebuf);
+        pref->pref_length = strtoul(linebuf, NULL, 0);
 
         prefix_list.push_back(pref);
     }
@@ -117,23 +129,26 @@ int load_pref (pref_list_t& prefix_list)
  * @param analyzed Record that's being analyzed
  * @return SPOOF_POSITIVE if address fits the bogon prefix else SPOOF_NEGATIVE
  */
-int v4_bogon_filter(ur_basic_flow_t *analyzed, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
+int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
     //check source address of the record with each prefix
     for (int i = 0; i < prefix_list.size(); i++) {
+        
+        if (ip_is6(&(prefix_list[i]->ip))) {
+            continue;
+        }
  
-        char debug_ip[INET6_ADDRSTRLEN];
-        ip_to_str(&(analyzed->src_addr), debug_ip);
+        char debug_ip_src[INET6_ADDRSTRLEN];
+        char debug_ip_pref[INET6_ADDRSTRLEN];
+        ip_to_str(checked, debug_ip_src);
+        ip_to_str(&(prefix_list[i]->ip), debug_ip_pref);
 
-        cout << "Checking: ";
-        cout << debug_ip;
-        cout << " against ";
-
-        ip_to_str(&(prefix_list[i]->ip), debug_ip);
-        cout << debug_ip << endl;
-
-        if ((ip_get_v4_as_int(&(analyzed->src_addr)) & v4mm[prefix_list[i]->pref_length])
+        if ((ip_get_v4_as_int(checked) & v4mm[prefix_list[i]->pref_length])
             == ip_get_v4_as_int(&(prefix_list[i]->ip))) {
+            cout << "Possible spoofing found: ";
+            cout << debug_ip_src;
+            cout << " fits bogon prefix ";
+            cout << debug_ip_pref << endl;
             return SPOOF_POSITIVE;
         }
         //else continue
@@ -143,6 +158,40 @@ int v4_bogon_filter(ur_basic_flow_t *analyzed, pref_list_t& prefix_list, ipv4_ma
     return SPOOF_NEGATIVE;
 }
 
+int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
+{
+    for (int i = 0; i < prefix_list.size(); i++) {
+        
+        if (ip_is4(&(prefix_list[i]->ip))) {
+            continue;
+        }
+
+        char debug_ip_src[INET6_ADDRSTRLEN];
+        char debug_ip_pref[INET6_ADDRSTRLEN];
+        ip_to_str(checked, debug_ip_src);
+        ip_to_str(&(prefix_list[i]->ip), debug_ip_pref);
+        
+        if (prefix_list[i]->pref_length <= 64) {
+            if ((checked->ui64[0] & v6mm[prefix_list[i]->pref_length][0]) == prefix_list[i]->ip.ui64[0]) {                              
+                cout << "Possible spoofing found: ";
+                cout << debug_ip_src;
+                cout << " fits bogon prefix ";
+                cout << debug_ip_pref << endl;
+                return SPOOF_POSITIVE;
+            }
+        } else {      
+            if ((checked->ui64[1] & v6mm[prefix_list[i]->pref_length][1]) == prefix_list[i]->ip.ui64[1]
+                && checked->ui64[0] == prefix_list[i]->ip.ui64[0]) {                              
+                cout << "Possible spoofing found: ";
+                cout << debug_ip_src;
+                cout << " fits bogon prefix ";
+                cout << debug_ip_pref << endl;
+                return SPOOF_POSITIVE;
+            }
+        }
+    }
+    return SPOOF_NEGATIVE;   
+}
 /**
  * Procedure for freeing memory used by prefix list.
  * Procedure goes through the vector and frees all memory used by its elements.
@@ -169,6 +218,7 @@ int main (int argc, char** argv)
     pref_list_t bogon_list;
 
     ipv4_mask_map_t v4_masks;
+    ipv6_mask_map_t v6_masks;
 
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
@@ -177,18 +227,6 @@ int main (int argc, char** argv)
         cerr <<  trap_last_error_msg << endl;
         return retval;
     }
-
-    trap_module_info_t module_info = {
-   "Flow-counter module", // Module name
-   // Module description
-   "Example module for counting number of incoming flow records.\n"
-   "Interfaces:\n"
-   "   Inputs: 1 (ur_basic_flow)\n"
-   "   Outputs: 0\n",
-   1, // Number of input interfaces
-   0, // Number of output interfaces
-    };
-   
 
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
@@ -203,7 +241,8 @@ int main (int argc, char** argv)
     signal(SIGINT, signal_handler);
 
     create_v4_mask_map(v4_masks);
-
+    
+    create_v6_mask_map(v6_masks);
     // we don't have list of bogon prefixes loaded (usually first run)
     if (bogon_list.empty()) {
        retval = load_pref(bogon_list);
@@ -212,6 +251,10 @@ int main (int argc, char** argv)
         }
     }
 
+
+    int v4 = 0;
+    int v6 = 0;
+    int spoof_count = 0;
     // ***** Main processing loop *****
     while (!stop) {
         const void *data;
@@ -245,18 +288,23 @@ int main (int argc, char** argv)
         // Interpret data as unirec flow record
         record = (ur_basic_flow_t *) data;
 
+        if (ip_is4(&(record->src_addr))) {
+            ++v4;
+        } else {
+            ++v6;
+        }
         //go through all filters
+        
 
         // ***** 1. bogon prefix filter *****
-//        if (ip_is4(&(record->src_addr))) {
-            retval = v4_bogon_filter(record, bogon_list, v4_masks);
-//        } else {
-            // retval = v6_bogon_filter(record, bogon_list, v6_masks);
-            // will probably change to one function with both mask maps
-//        }
+        if (ip_is4(&(record->src_addr))) {
+            retval = v4_bogon_filter(&(record->src_addr), bogon_list, v4_masks);
+        } else {
+            retval = v6_bogon_filter(&(record->src_addr), bogon_list, v6_masks);
+        }
 
         if (retval == SPOOF_POSITIVE) {
-            cout << "Spoofed address found." << endl;
+            ++spoof_count;
             retval = 0;
         }
         //2. symetric routing filter (TBA)
@@ -266,6 +314,14 @@ int main (int argc, char** argv)
 
         //return spoofed or not
     }
+    cout << "IPv4: ";
+    cout << dec << v4 << endl;
+
+    cout << "IPv6: ";
+    cout << dec << v6 << endl;
+    cout << "No. of possible spoofed addresses: ";
+    cout << dec << spoof_count << endl;
+
     if (retval != 0)
         clear_bogon_filter(bogon_list);
     return 0;
