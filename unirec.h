@@ -19,6 +19,8 @@ struct ur_basic_flow_s {
    uint16_t dst_port;
    uint8_t proto;
    uint8_t tcp_flags;
+   uint64_t linkbitfield;
+   uint8_t dirbitfield;
 } __attribute__((packed));
 typedef struct ur_basic_flow_s ur_basic_flow_t;
 

@@ -134,6 +134,10 @@ int main(int argc, char **argv)
       rec2.msec_first = rec.msec_first;
       rec2.last = rec.last;
       rec2.msec_last = rec.msec_last;
+      
+      // assign value for link and direction of the flow
+      rec2.linkbitfield = 0x01;
+      rec2.dirbitfield = rec.input;
    }
 
    nf_close(&file);

@@ -14,8 +14,6 @@
 #include <stdint.h>
 #include <signal.h>
 
-#include <iomanip>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -302,7 +300,7 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
 /**
  * Procedure for freeing memory used by prefix list.
  * Procedure goes through the vector and frees all memory used by its elements.
- *
+ *i
  * @param prefix_list List to be erased.
  */
 void clear_bogon_filter(pref_list_t& prefix_list)
@@ -311,6 +309,34 @@ void clear_bogon_filter(pref_list_t& prefix_list)
         delete prefix_list[i];
     }
     prefix_list.clear();
+}
+
+int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
+{
+    // check incomming/outgoing traffic
+    if (record->dirbitfield == 0x01) {// incomming traffic
+        src.insert(ip_get_v4_as_int(&(record->src_addr), record->linkbitfield));
+        return SPOOF_NEGATIVE
+    } else {
+        if (src.find(ip_get_v4_as_int(&(record->dst_addr))) != map::end) {
+            if (src[ip_get_v4_as_int(&(record->dst_addr))] != record->linkbitfield) {
+                return SPOOF_POSITIVE;
+            } else {
+                src.insert(ip_get_v4_as_int(&(record->src_addr), record->linkbitfield));
+                return SPOOF_NEGATIVE;
+            }
+        }
+    }
+    // if incomming
+    //  save the address to map and go on
+    // else 
+    //  ask whether the destination address is in table
+    //  if found
+    //      check the link flag stored on this position
+    //      if the flag isn't the same report possible spoofing
+    //  else
+    //      save the destination address to map and go on
+    return SPOOF_NEGATIVE;
 }
 
 int main (int argc, char** argv)
@@ -427,8 +453,10 @@ int main (int argc, char** argv)
         if (retval == SPOOF_POSITIVE) {
             ++spoof_count;
             retval = ALL_OK; // reset return value
+            continue;
         }
-        //2. symetric routing filter (TBA)
+        // ***** 2. symetric routing filter *****
+        
         //3. asymetric routing filter (will be implemented later)
         //4. new flow count check (TBA)
 
