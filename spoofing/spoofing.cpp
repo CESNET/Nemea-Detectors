@@ -56,6 +56,8 @@ void signal_handler(int signal)
         trap_terminate();
     }
 }
+
+// **********   BOGON PREFIX FILTER   **********
 /**
  * Function for creating masks for IPv4 addresses.
  * Function fills the given array with every possible netmask for IPv4 address.
@@ -311,31 +313,104 @@ void clear_bogon_filter(pref_list_t& prefix_list)
     prefix_list.clear();
 }
 
+
+// **********   SYMETRIC ROUTING FILTER   **********
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
 {
+    cout << "Checking symetric route ";
+    char debug_ip_src[INET6_ADDRSTRLEN];
+    char debug_ip_dst[INET6_ADDRSTRLEN];
+    ip_to_str(&(record->src_addr), debug_ip_src);
+    ip_to_str(&(record->dst_addr), debug_ip_dst);
+
+    cout << debug_ip_src << "<-->" << debug_ip_dst << endl;
+
+    int v4_numeric;
+    
     // check incomming/outgoing traffic
-    if (record->dirbitfield == 0x01) {// incomming traffic
-        src.insert(ip_get_v4_as_int(&(record->src_addr), record->linkbitfield));
-        return SPOOF_NEGATIVE
-    } else {
-        if (src.find(ip_get_v4_as_int(&(record->dst_addr))) != map::end) {
-            if (src[ip_get_v4_as_int(&(record->dst_addr))] != record->linkbitfield) {
+    cout << hex << record->dirbitfield << endl;
+    if (record->dirbitfield == 0x0) {// outgoing traffic
+        // mask with 24-bit long prefix
+        v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
+
+        if (src.find(v4_numeric) != src.end()) {
+            src[v4_numeric].link |= record->linkbitfield;
+//            src[v4_numeric].timestamp = "timestamp from unirec"
+        } else {
+            sym_src_t src_rec;
+            src_rec.link = record->linkbitfield;
+//            src_rec.timestamp = "timestamp from unirec"
+            src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
+        }
+
+    } else { // incomming traffic --> check for validity
+
+        // mask with 24-bit long prefix
+        v4_numeric = ip_get_v4_as_int(&(record->src_addr)) & 0xFFFFFF00;
+        if (src.find(v4_numeric) != src.end()) {
+            int valid = src[v4_numeric].link & record->linkbitfield;
+            if (valid == 0x0) {
+                //no valid link found => possible spoofing
+                // debug 
+                cout << "Possible spoofing found by asymetric route" << endl;
                 return SPOOF_POSITIVE;
             } else {
-                src.insert(ip_get_v4_as_int(&(record->src_addr), record->linkbitfield));
                 return SPOOF_NEGATIVE;
             }
+        } else { // no bit record found
+            // ???
         }
     }
-    // if incomming
-    //  save the address to map and go on
-    // else 
-    //  ask whether the destination address is in table
-    //  if found
-    //      check the link flag stored on this position
-    //      if the flag isn't the same report possible spoofing
-    //  else
-    //      save the destination address to map and go on
+    return SPOOF_NEGATIVE;
+}
+
+int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
+{
+/*   May not be necesary
+    ip_addr_t checked;
+    // Swap the halves of the addresses again
+    checked = ip_from_16_bytes_le((char *) record);
+    uint64_t tmp;
+    tmp = checked->ui64[1];
+    checked->ui64[1] = checked->ui64[0];
+    checked->ui64[0] = tmp;*/
+
+    // For debuging purposes
+    cout << record->src_addr.ui64[0];
+    cout << "   ";
+    cout << record->src_addr.ui64[1] << endl;
+
+    cout << record->dst_addr.ui64[0];
+    cout << "   ";
+    cout << record->dst_addr.ui64[1] << endl;
+
+    // check incomming/outgoing traffic
+    if (record->dirbitfield == 0x0) {// outgoing traffic
+
+        if (src.find(record->dst_addr.ui64[0]) != src.end()) {
+            src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
+//            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
+        } else {
+            sym_src_t src_rec;
+            src_rec.link = record->linkbitfield;
+//            src_rec.timestamp = "timestamp from unirec"
+            src.insert(pair<uint64_t, sym_src_t>(record->dst_addr.ui64[0], src_rec));
+        }
+
+    } else { // incomming traffic --> check for validity
+
+        if (src.find(record->src_addr.ui64[0]) != src.end()) {
+            int valid = src[record->src_addr.ui64[0]].link & record->linkbitfield;
+            if (valid == 0x0) {
+                //no valid link found => possible spoofing
+                return SPOOF_POSITIVE;
+            } else {
+                return SPOOF_NEGATIVE;
+            }
+        } else { // no bit record found
+            // ???
+        }
+    }
     return SPOOF_NEGATIVE;
 }
 
@@ -352,6 +427,9 @@ int main (int argc, char** argv)
 
     ipv4_mask_map_t v4_masks; // all possible IPv4 masks
     ipv6_mask_map_t v6_masks; // all possible IPv6 masks
+
+    v4_sym_sources_t v4_route_sym; // map of sources for symetric routes (IPv4)
+    v6_sym_sources_t v6_route_sym; // map of sources for symetric routes (IPv6)
 
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
@@ -456,6 +534,17 @@ int main (int argc, char** argv)
             continue;
         }
         // ***** 2. symetric routing filter *****
+        if (ip_is4(&(record->src_addr))) {
+            retval = check_symetry_v4(record, v4_route_sym);
+        } /*else {
+            retval = check_symetry_v6(record, v6_route_sym);
+        }*/
+        
+        if (retval == SPOOF_POSITIVE) {
+            ++spoof_count;
+            retval = ALL_OK;
+            continue;
+        }
         
         //3. asymetric routing filter (will be implemented later)
         //4. new flow count check (TBA)

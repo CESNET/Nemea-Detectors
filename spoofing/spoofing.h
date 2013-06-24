@@ -35,16 +35,16 @@ typedef struct bogon_prefix {
  * structure for keeping the source addresses in symetric filter
  */
 typedef struct symetric_src {
-    ip_addr_t ip;
     uint64_t link;
+    uint64_t timestamp;
 } sym_src_t;
 
 // vector used as a container of all prefixes
 typedef std::vector<ip_prefix_t*> pref_list_t;
 
 // map of link associated to source ip addresses
-typedef std::map<int, uint64_t> v4_sym_sources_t;
-typedef std::map<uint64_t, uint64_t> v6_sym_sources_t;
+typedef std::map<int, sym_src_t> v4_sym_sources_t;
+typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
 
 // Array of ipv4 netmasks
 typedef uint32_t ipv4_mask_map_t[33];
@@ -96,13 +96,6 @@ void clear_bogon_filter(pref_list_t& prefix_list);
 
 /**
  * Function for checking routing symetry.
- * Function gets a full unirec record and set of source addresses learnt from
- * the previous records. If the communication is outgoing the function checks
- * if the destination address is present in set. If the address is not in set 
- * we can assume it is a different communication. If the address is in set then 
- * we check the linkbitfield part of the unirec record if the data is sent 
- * using the same link. If the link is different then we can report possible 
- * spoofing.
  */
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src);
 int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src);
