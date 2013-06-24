@@ -329,7 +329,8 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
     
     // check incomming/outgoing traffic
     cout << hex << record->dirbitfield << endl;
-    if (record->dirbitfield == 0x0) {// outgoing traffic
+    if (record->dirbitfield == 0x0) {// outgoing trafic
+        cout << "Trafic is outgoing ==> will be inserted to table." << endl;
         // mask with 24-bit long prefix
         v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
 
@@ -344,7 +345,7 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
         }
 
     } else { // incomming traffic --> check for validity
-
+        cout << "Trafic is incomming ==> will be checked." << endl;
         // mask with 24-bit long prefix
         v4_numeric = ip_get_v4_as_int(&(record->src_addr)) & 0xFFFFFF00;
         if (src.find(v4_numeric) != src.end()) {
@@ -352,13 +353,14 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
                 // debug 
-                cout << "Possible spoofing found by asymetric route" << endl;
+                cout << "Possible spoofing found: tested route is asymetric." << endl;
                 return SPOOF_POSITIVE;
             } else {
                 return SPOOF_NEGATIVE;
             }
         } else { // no bit record found
-            // ???
+            cout << "Possible spoofing found: tested route is asymetric." << endl;
+            return SPOOF_POSITIVE;
         }
     }
     return SPOOF_NEGATIVE;
