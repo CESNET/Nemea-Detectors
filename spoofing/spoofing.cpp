@@ -13,6 +13,9 @@
 #include <cstdlib>
 #include <stdint.h>
 #include <signal.h>
+
+#include <iomanip>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -202,7 +205,10 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
             cout << "Possible spoofing found: ";
             cout << debug_ip_src;
             cout << " fits bogon prefix ";
-            cout << debug_ip_pref << endl;
+            cout << debug_ip_pref;
+            cout <<"/";
+            short a;
+            cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
             // for debuging only
 
             return SPOOF_POSITIVE;
@@ -251,13 +257,29 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
          * and then we compare the whole result with the bogon prefix. Spoofing 
          * is positive when the result of comparison fits the prefix.
          */
+
+        // Swap the halves of the addresses again
+        *checked = ip_from_16_bytes_le((char *) checked);
+        uint64_t tmp;
+        tmp = checked->ui64[1];
+        checked->ui64[1] = checked->ui64[0];
+        checked->ui64[0] = tmp;
+/*
+        cout << debug_ip_src << endl;
+        cout << hex << setfill('0') <<  setw(16) <<  checked->ui64[0];
+        cout << "   ";
+        cout << hex << setfill('0') <<  setw(16) <<  checked->ui64[1] << endl;
+*/
         if (prefix_list[i]->pref_length <= 64) {
             if ((checked->ui64[0] & v6mm[prefix_list[i]->pref_length][0]) 
                  == prefix_list[i]->ip.ui64[0]) {
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
                 cout << " fits bogon prefix ";
-                cout << debug_ip_pref << endl;
+                cout << debug_ip_pref;
+                cout <<"/";
+                short a;
+                cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
                 return SPOOF_POSITIVE;
             }
         } else {
@@ -267,11 +289,14 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
                 cout << " fits bogon prefix ";
-                cout << debug_ip_pref << endl;
+                cout << debug_ip_pref;
+                cout <<"/";
+                short a;
+                cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
                 return SPOOF_POSITIVE;
             }
         }
-    }
+  }
     return SPOOF_NEGATIVE;   
 }
 /**
@@ -287,7 +312,6 @@ void clear_bogon_filter(pref_list_t& prefix_list)
     }
     prefix_list.clear();
 }
-
 
 int main (int argc, char** argv)
 {

@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
-
+#include <iomanip>
 extern "C" {
 #include <libtrap/trap.h>
 #include "nfreader.h"
@@ -116,8 +116,9 @@ int main(int argc, char **argv)
          rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
          rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-          rec2.src_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr);
-          rec2.dst_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr);
+
+         rec2.src_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr);
+         rec2.dst_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr);
 
       } else { // IPv4
          rec2.src_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr);

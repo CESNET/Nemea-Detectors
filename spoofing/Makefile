@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -std=c99
-CXXFLAGS=-std=c++98
+CXXFLAGS=-O2 -std=c++98
 LDFLAGS=
 LDLIBS=-ltrap -lcommlbr -lrt
 
@@ -12,7 +12,7 @@ MODULES=spoofing
 all: ${MODULES}
 
 doxygen:
-	doxygen transitfilter.c
+	doxygen spoofing.cpp
 
 
 clean:
