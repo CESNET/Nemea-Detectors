@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <stdint.h>
 #include <signal.h>
+#include <getopt.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -110,7 +111,7 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list, char *bogon_file)
+int load_pref (pref_list_t& prefix_list, const char *bogon_file)
 {
     ip_prefix_t *pref;
     ifstream pref_file;
@@ -333,10 +334,11 @@ void clear_bogon_filter(pref_list_t& prefix_list)
  *
  * @param record Record (unirec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
+ * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
-int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
+int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time)
 {
 
 #ifdef DEBUG
@@ -348,19 +350,25 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
 
 
     int v4_numeric;
-    
+
     // check incomming/outgoing traffic
     if (record->dirbitfield == 0x0) {// outgoing trafic
         // mask with 24-bit long prefix
         v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
 
-        if (src.count(v4_numeric)) {
+#ifdef DEBUG
+        cout << "Timestamp difference is ";
+        cout << (unsigned long long) ((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) << endl;
+#endif
+
+        if (src.count(v4_numeric) 
+            && !((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) > rw_time) {
             src[v4_numeric].link |= record->linkbitfield;
-//            src[v4_numeric].timestamp = "timestamp from unirec"
+            src[v4_numeric].timestamp = record->first;
         } else {
             sym_src_t src_rec;
             src_rec.link = record->linkbitfield;
-//            src_rec.timestamp = "timestamp from unirec"
+            src[v4_numeric].timestamp = record->first;
             src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
         }
 
@@ -372,7 +380,7 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
-                cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
+                cout << debug_ip_src << " -" << debug_ip_dst << endl;
                 cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[v4_numeric].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
@@ -404,10 +412,11 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
  *
  * @param record Record (unirec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
+ * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
-int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
+int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time)
 {
 
 #ifdef DEBUG
@@ -431,13 +440,13 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
     record->dst_addr.ui64[1] = record->dst_addr.ui64[0];
     record->dst_addr.ui64[0] = tmp;
 
-
     // check incomming/outgoing traffic
     if (record->dirbitfield == 0x0) {// outgoing traffic
         // for future use with /48 prefix length
         // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
 
-        if (src.count(record->dst_addr.ui64[0] /* && timestamp is not older than given value*/)) {
+        if (src.count(record->dst_addr.ui64[0])
+            && ((record->first & 0xFFFFFFFF00000000) - src[record->dst_addr.ui64[0]].timestamp) > rw_time) {
             src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
 //            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
         } else {
@@ -499,12 +508,48 @@ int main (int argc, char** argv)
         cerr <<  trap_last_error_msg << endl;
         return retval;
     }
+     
+    // getopt loop for additional parameters not parsed by TRAP
+    int argret = 0;
+    int sym_rw_time = 0;
+    bool b_flag = false;
+    string bog_filename;
 
-    if (argc != 2) {
-        cerr << "ERROR: Bogon file missing. Unable to continue" << endl;
+    while ((argret = getopt(argc, argv, "b:s:")) != -1) {
+        switch (argret) {
+            case 'b':
+                bog_filename = string(optarg);
+                b_flag = true;
+                break;
+            
+            case 's':
+                sym_rw_time = atoi(optarg);
+                break;
+            
+            case '?':
+                if (argret == 'b') {
+                    cerr << "Option -b requires an argument -- file with bogon prefixes." << endl;
+                    return EXIT_FAILURE;
+                }
+                break;
+        }
+    }
+
+    if (! b_flag) {
+        cerr << "ERROR: Bogon file not specified. Unable to continue." << endl;
         return EXIT_FAILURE;
     }
-        
+
+#ifdef DEBUG
+    if (sym_rw_time = 0) {
+        cout << "Symetric filter update time not specified. Default time will be used instead." << endl;    
+    }
+#endif
+
+    // set the default rw_time
+    if (sym_rw_time == 0) {
+        sym_rw_time = SYM_RW_DEFAULT;
+    }
 
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
@@ -535,7 +580,7 @@ int main (int argc, char** argv)
                 
         // we don't have list of bogon prefixes loaded (usually first run)
         if (bogon_list.empty()) {
-            retval = load_pref(bogon_list, argv[1]);
+            retval = load_pref(bogon_list, bog_filename.c_str());
             if (retval == BOGON_FILE_ERROR) {
                 return retval;
             }
@@ -559,8 +604,8 @@ int main (int argc, char** argv)
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
-                cerr << "ERROR: Wrong data size.";
-                cerr << "Expected: " << sizeof(ur_basic_flow_t);
+                cerr << "ERROR: Wrong data size. ";
+                cerr << "Expected: " << sizeof(ur_basic_flow_t) << " ";
                 cerr << "Recieved: " << data_size << endl;
                 break;
             }
@@ -593,9 +638,9 @@ int main (int argc, char** argv)
         }
         // ***** 2. symetric routing filter *****
         if (ip_is4(&(record->src_addr))) {
-            retval = check_symetry_v4(record, v4_route_sym);
+            retval = check_symetry_v4(record, v4_route_sym, sym_rw_time);
         } else {
-            retval = check_symetry_v6(record, v6_route_sym);
+            retval = check_symetry_v6(record, v6_route_sym, sym_rw_time);
         }
         
         // we caught a spoofed address by not keeping to symteric routing

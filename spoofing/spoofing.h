@@ -20,6 +20,7 @@ extern "C" {
 #define SPOOF_NEGATIVE 0
 #define BOGON_FILE_ERROR 1
 #define ALL_OK 0
+#define SYM_RW_DEFAULT 45
 
 // structure definitions
 
@@ -74,7 +75,7 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list, char *bogon_file);
+int load_pref (pref_list_t& prefix_list, const char *bogon_file);
 
 /**
  * Functions for checking the ip address for bogon prefixes.
@@ -95,10 +96,14 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
 void clear_bogon_filter(pref_list_t& prefix_list);
 
 /**
- * Function for checking routing symetry.
+ * Functions for checking routing symetry.
+ * Functions get records and their respective maps of the links used for 
+ * communication by devices in record (src and dst). If the flow keeps 
+ * using the same link for the communication then it considered legit.
+ * Otherwise it is flagged as possible spoofing.
  */
-int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src);
-int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src);
+int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time);
+int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time);
 
 #ifdef __cplusplus
 }
