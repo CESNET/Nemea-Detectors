@@ -174,10 +174,9 @@ int main(int argc, char **argv)
       rec2.tcp_flags = rec.tcp_flags;
       rec2.packets = rec.dPkts;
       rec2.bytes = rec.dOctets;
-      rec2.first = rec.first;
-      rec2.msec_first = rec.msec_first;
-      rec2.last = rec.last;
-      rec2.msec_last = rec.msec_last;
+      rec2.first = (((uint64_t)rec.first)<<32) | rec.msec_first; // Merge secs and msecs together
+      rec2.last = (((uint64_t)rec.last)<<32) | rec.msec_last;    // Merge secs and msecs together
+      
 
       // Send data to output interface
       trap_send_data(0, &rec2, sizeof(rec2), TRAP_WAIT);
