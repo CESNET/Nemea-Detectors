@@ -19,6 +19,7 @@ struct ur_basic_flow_s {
    uint8_t tcp_flags;
    uint64_t linkbitfield;
    uint8_t dirbitfield;
+   uint8_t direction_flags;
 } __attribute__((packed));
 typedef struct ur_basic_flow_s ur_basic_flow_t;
 
