@@ -206,7 +206,7 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
 #ifdef DEBUG
             cout << "Possible spoofing found: ";
             cout << debug_ip_src;
-            cout << " fits bogon prefix ";
+            cout << " fits prefix ";
             cout << debug_ip_pref;
             cout <<"/";
             short a;
@@ -273,7 +273,7 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
 #ifdef DEBUG
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
-                cout << " fits bogon prefix ";
+                cout << " fits prefix ";
                 cout << debug_ip_pref;
                 cout <<"/";
                 short a;
@@ -303,7 +303,7 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
 /**
  * Procedure for freeing memory used by prefix list.
  * Procedure goes through the vector and frees all memory used by its elements.
- *i
+ *
  * @param prefix_list List to be erased.
  */
 void clear_bogon_filter(pref_list_t& prefix_list)
@@ -316,6 +316,26 @@ void clear_bogon_filter(pref_list_t& prefix_list)
 
 
 // **********   SYMETRIC ROUTING FILTER   **********
+
+/**
+ * Function for checking routing symetry for IPv4.
+ * Function takes the direction flag from the record and based on its value 
+ * it decides whether to associate the link with its source IP or to check 
+ * the link used by the communication. Checking of the communication is 
+ * done based on the map of links their respective source IP address. The map 
+ * is filled from outgoing communication by the destination address. If the 
+ * communication flow is incomming then the source address is used as a key 
+ * to the map to get the link used by this communiation. If the link fits 
+ * the bitmask stored on this location then the communication is considered 
+ * legit (the route is symetric). If the result of masking  AND operation is
+ * 0x0 then there is no valid link for this communication and the source IP is 
+ * flagged as spoofed.
+ *
+ * @param record Record (unirec format) that is being analyzed.
+ * @param src Map with link masks associated to their respective sources.
+ * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
+ */
+
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
 {
 
@@ -352,8 +372,8 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
-                cout << debug_ip_src << "<-->" << debug_ip_dst << endl;
-                cout << "Flow goes through 0x" << (long long) record->linkbitfield << " while stored is 0x" << (long long) src[v4_numeric].link  << endl;
+                cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
+                cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[v4_numeric].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;
@@ -368,6 +388,25 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src)
     return SPOOF_NEGATIVE;
 }
 
+/**
+ * Function for checking routing symetry for IPv6.
+ * Function takes the direction flag from the record and based on its value 
+ * it decides whether to associate the link with its source IP or to check 
+ * the link used by the communication. Checking of the communication is 
+ * done based on the map of links their respective source IP address. The map 
+ * is filled from outgoing communication by the destination address. If the 
+ * communication flow is incomming then the source address is used as a key 
+ * to the map to get the link used by this communiation. If the link fits 
+ * the bitmask stored on this location then the communication is considered 
+ * legit (the route is symetric). If the result of masking  AND operation is
+ * 0x0 then there is no valid link for this communication and the source IP is 
+ * flagged as spoofed.
+ *
+ * @param record Record (unirec format) that is being analyzed.
+ * @param src Map with link masks associated to their respective sources.
+ * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
+ */
+
 int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
 {
 
@@ -379,6 +418,7 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
 #endif
 
     //  Swap the halves of the addresses again
+    //  No idea why the address from recieved record is messed up
     record->src_addr = ip_from_16_bytes_le((char *) &(record->src_addr));
     record->dst_addr = ip_from_16_bytes_le((char *) &(record->dst_addr));
 
@@ -394,8 +434,10 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
 
     // check incomming/outgoing traffic
     if (record->dirbitfield == 0x0) {// outgoing traffic
+        // for future use with /48 prefix length
+        // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
 
-        if (src.count(record->dst_addr.ui64[0])) {
+        if (src.count(record->dst_addr.ui64[0] /* && timestamp is not older than given value*/)) {
             src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
 //            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
         } else {
@@ -406,14 +448,16 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src)
         }
 
     } else { // incomming traffic --> check for validity
+        // for future use with /48 prefix length
+        //record->src_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
 
         if (src.count(record->src_addr.ui64[0])) {
             int valid = src[record->src_addr.ui64[0]].link & record->linkbitfield;
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
-                cout << debug_ip_src << "<-->" << debug_ip_dst << endl;
-                cout << "Flow goes through 0x" << (long long) record->linkbitfield << " while stored is 0x" << (long long) src[record->src_addr.ui64[0]].link  << endl;
+                cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
+                cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[record->src_addr.ui64[0]].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;

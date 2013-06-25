@@ -143,10 +143,12 @@ int main(int argc, char **argv)
       rec2.msec_last = rec.msec_last;
       
       // assign value for link and direction of the flow
-      if ((cnt_rec % (rand()%5000+5000)) == 0) {
+      if ((cnt_rec % (rand() % 5000 + 5000)) == 0) {
           rec2.linkbitfield = 0x01;
-      } else {
+      } else if ((cnt_rec % (rand() % 4000 + 1))) {
           rec2.linkbitfield = 0x02;
+      } else {
+          rec2.linkbitfield = 0x04;
       }
       rec2.dirbitfield = rec.input;
    }
