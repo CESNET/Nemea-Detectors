@@ -356,19 +356,17 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw
         // mask with 24-bit long prefix
         v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
 
+        if (src.count(v4_numeric)
+            && (((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) < rw_time)) {
 #ifdef DEBUG
-        cout << "Timestamp difference is ";
-        cout << (unsigned long long) ((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) << endl;
+            cout <<(unsigned long long) (((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) < rw_time) << endl;
 #endif
-
-        if (src.count(v4_numeric) 
-            && !((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) > rw_time) {
             src[v4_numeric].link |= record->linkbitfield;
             src[v4_numeric].timestamp = record->first;
         } else {
             sym_src_t src_rec;
             src_rec.link = record->linkbitfield;
-            src[v4_numeric].timestamp = record->first;
+            src_rec.timestamp = record->first;
             src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
         }
 
@@ -380,7 +378,7 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
-                cout << debug_ip_src << " -" << debug_ip_dst << endl;
+                cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
                 cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[v4_numeric].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
@@ -446,7 +444,7 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
         // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
 
         if (src.count(record->dst_addr.ui64[0])
-            && ((record->first & 0xFFFFFFFF00000000) - src[record->dst_addr.ui64[0]].timestamp) > rw_time) {
+            && ((record->first & 0xFFFFFFFF00000000) - src[record->dst_addr.ui64[0]].timestamp) < rw_time) {
             src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
 //            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
         } else {
