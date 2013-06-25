@@ -6,6 +6,9 @@
  * \date 2013
  */
 
+#include <cstdlib>
+#include <time.h>
+
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
@@ -85,6 +88,8 @@ int main(int argc, char **argv)
    
    
    vector<ur_basic_flow_t> records;
+   unsigned cnt_rec = 0;
+   srand(time(NULL));
 
    cout << "Loading data from file..." << endl;
    while (1) {
@@ -104,6 +109,8 @@ int main(int argc, char **argv)
       records.push_back(ur_basic_flow_t());
       ur_basic_flow_t &rec2 = records.back();
       uint64_t tmp_ip_v6_addr;
+
+      ++cnt_rec;
 
       // Copy data from master_record_t to ur_basic_flow_t
       // TODO check endinanness
@@ -136,7 +143,11 @@ int main(int argc, char **argv)
       rec2.msec_last = rec.msec_last;
       
       // assign value for link and direction of the flow
-      rec2.linkbitfield = 0x01;
+      if ((cnt_rec % (rand()%5000+5000)) == 0) {
+          rec2.linkbitfield = 0x01;
+      } else {
+          rec2.linkbitfield = 0x02;
+      }
       rec2.dirbitfield = rec.input;
    }
 
