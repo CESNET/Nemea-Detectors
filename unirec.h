@@ -11,10 +11,8 @@ struct ur_basic_flow_s {
    ip_addr_t dst_addr;
    uint64_t packets;
    uint64_t bytes;
-   uint32_t first;
-   uint32_t last;
-   uint16_t msec_first;
-   uint16_t msec_last;
+   uint64_t first;
+   uint64_t last;
    uint16_t src_port;
    uint16_t dst_port;
    uint8_t proto;

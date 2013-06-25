@@ -130,10 +130,8 @@ int main(int argc, char **argv)
       rec2.tcp_flags = rec.tcp_flags;
       rec2.packets = rec.dPkts;
       rec2.bytes = rec.dOctets;
-      rec2.first = rec.first;
-      rec2.msec_first = rec.msec_first;
-      rec2.last = rec.last;
-      rec2.msec_last = rec.msec_last;
+      rec2.first = (((uint64_t)rec.first)<<32) | rec.msec_first;   // Merge secs and msecs together
+      rec2.last = (((uint64_t)rec.last)<<32) | rec.msec_last;      // Merge secs and msecs together
       
       // assign value for link and direction of the flow
       rec2.linkbitfield = 0x01;
