@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include "../unirec.h"
 
 #ifndef SPOOFING_H
@@ -21,6 +22,7 @@ extern "C" {
 #define BOGON_FILE_ERROR 1
 #define ALL_OK 0
 #define SYM_RW_DEFAULT 45
+#define NEW_FLOW_DEFAULT 100
 
 // structure definitions
 
@@ -41,11 +43,33 @@ typedef struct symetric_src {
 } sym_src_t;
 
 // vector used as a container of all prefixes
-typedef std::vector<ip_prefix_t*> pref_list_t;
+typedef std::vector<ip_prefix_t> pref_list_t;
 
 // map of link associated to source ip addresses
-typedef std::map<int, sym_src_t> v4_sym_sources_t;
+typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
 typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
+
+// set for keeping destinations of the flows
+typedef std::set<unsigned> v4_flow_dst_t;
+typedef std::set<uint64_t> v6_flow_dst_t;
+
+//
+typedef struct flow_count_v4_s {
+    v4_flow_dst_t v4_src;
+    unsigned count;
+//    uint64_t add_timestamp;
+} flow_count_v4_t;
+
+typedef struct flow_count_v6_s {
+    v6_flow_dst_t v6_src;
+    unsigned count;
+//    uint64_t add_timestamp;
+} flow_count_v6_t;
+
+//
+typedef std::map<unsigned, flow_count_v4_t> v4_flows_t;
+typedef std::map<uint64_t, flow_count_v6_t> v6_flows_t;
+
 
 // Array of ipv4 netmasks
 typedef uint32_t ipv4_mask_map_t[33];
@@ -75,7 +99,8 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list, const char *bogon_file);
+int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const char *bogon_file);
+
 
 /**
  * Functions for checking the ip address for bogon prefixes.
@@ -104,6 +129,11 @@ void clear_bogon_filter(pref_list_t& prefix_list);
  */
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time);
 int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time);
+
+
+//
+int check_new_flows_v4(ur_basic_flow_t *record, v4_flows_t& flow_map, unsigned threshold);
+int check_new_flows_v6(ur_basic_flow_t *record, v6_flows_t& flow_map, unsigned threshold);
 
 #ifdef __cplusplus
 }

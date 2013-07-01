@@ -100,6 +100,23 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
     }
 }
 
+unsigned i = 0;
+unsigned j = 0;
+
+bool sort_by_prefix_v4 (const ip_prefix_t& addr1, const ip_prefix_t& addr2)
+{
+    cout << "Begin sort " << ++i << endl;
+    return (memcmp(&(addr1.ip.ui32[2]), &(addr2.ip.ui32[2]), 4) < 0) ? true : false;
+}
+
+bool sort_by_prefix_v6 (const ip_prefix_t& addr1, const ip_prefix_t& addr2)
+{
+    cout << "Begin sort " << ++j << endl;
+    if (memcmp(&addr1.ip.ui8, &addr2.ip.ui8, 16) < 0) {
+        return true;
+    }
+    return false;
+}
 
 /**
  * Function for loading prefix file.
@@ -111,11 +128,11 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
  * @param prefix_list Reference to a structure for containing all prefixes
  * @return 0 if everything goes smoothly else 1
  */
-int load_pref (pref_list_t& prefix_list, const char *bogon_file)
+int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const char *bogon_file)
 {
-    ip_prefix_t *pref;
+    int error_cnt = 0;
+    ip_prefix_t pref;
     ifstream pref_file;
-    char linebuf[INET6_ADDRSTRLEN];
     
     // open file with prefixes (hardcoded for now -- may be changed)
     pref_file.open(bogon_file);
@@ -128,18 +145,11 @@ int load_pref (pref_list_t& prefix_list, const char *bogon_file)
     }
 
     // loading the prefixes to memory
-    while (pref_file.good()) {
+    while (!(pref_file.eof())) {
 
         // allocate memory for new item
-        pref = new ip_prefix_t;
-        if (pref == NULL) {
-            cerr << "ERROR: Cannot allocate memory for bogon list item.";
-            cerr << " Unable to continue." << endl;
-            return BOGON_FILE_ERROR;
-        }
-        
-        pref_file.getline(linebuf, INET6_ADDRSTRLEN, '/');
-        string raw_ip = string(linebuf);
+        string raw_ip;
+        getline(pref_file, raw_ip, '/');
 
         // trim whitespaces from the input
         raw_ip.erase(remove_if(raw_ip.begin(), raw_ip.end(), ::isspace), raw_ip.end());
@@ -149,20 +159,27 @@ int load_pref (pref_list_t& prefix_list, const char *bogon_file)
          * If it fails (invalid ip address) free the memory and continue 
          * to next line.
          */
-        if (!ip_from_str(raw_ip.c_str(), &(pref->ip))) {
-            delete pref;
+        if (!ip_from_str(raw_ip.c_str(), &(pref.ip))) {
             continue;
         }
-
         // load prefix length (netmask
-        pref_file.getline(linebuf,4, '\n');
+        getline(pref_file,raw_ip,'\n');
 
         // convert to number
-        pref->pref_length = strtoul(linebuf, NULL, 0);
+        pref.pref_length = strtoul(raw_ip.c_str(), NULL, 0);
 
-        // save to the prefix list
-        prefix_list.push_back(pref);
+        if (ip_is4(&(pref.ip))) {
+            prefix_list_v4.push_back(pref);
+        } else {
+            prefix_list_v6.push_back(pref);
+        }
+
     }
+
+    cout << "Sorting ..." << endl;
+    sort(prefix_list_v4.begin(), prefix_list_v4.end(), sort_by_prefix_v4);
+    sort(prefix_list_v6.begin(), prefix_list_v6.end(), sort_by_prefix_v6);
+
     pref_file.close();
     return ALL_OK;
 }
@@ -183,16 +200,11 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
     //check source address of the record with each prefix
     for (int i = 0; i < prefix_list.size(); i++) {
         
-        // we don't need to try IPv6 prefixes
-        if (ip_is6(&(prefix_list[i]->ip))) {
-            continue;
-        }
-
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
         ip_to_str(checked, debug_ip_src);
-        ip_to_str(&(prefix_list[i]->ip), debug_ip_pref);
+        ip_to_str(&(prefix_list[i].ip), debug_ip_pref);
 #endif
 
         /* 
@@ -201,8 +213,8 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
          * and mask of the bogon prefix. Spoofing is positive if the result
          * of this operation is equal to integer value of bogon ip address.
          */
-        if ((ip_get_v4_as_int(checked) & v4mm[prefix_list[i]->pref_length])
-            == ip_get_v4_as_int(&(prefix_list[i]->ip))) {
+        if ((ip_get_v4_as_int(checked) & v4mm[prefix_list[i].pref_length])
+            == ip_get_v4_as_int(&(prefix_list[i].ip))) {
 
 #ifdef DEBUG
             cout << "Possible spoofing found: ";
@@ -211,7 +223,7 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
             cout << debug_ip_pref;
             cout <<"/";
             short a;
-            cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
+            cout << dec <<  (a = prefix_list[i].pref_length) << endl;
 #endif
 
             return SPOOF_POSITIVE;
@@ -238,16 +250,11 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
 {
     for (int i = 0; i < prefix_list.size(); i++) {
         
-        // we don't need to try IPv4 prefixes
-        if (ip_is4(&(prefix_list[i]->ip))) {
-            continue;
-        }
-
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
         ip_to_str(checked, debug_ip_src);
-        ip_to_str(&(prefix_list[i]->ip), debug_ip_pref);
+        ip_to_str(&(prefix_list[i].ip), debug_ip_pref);
 #endif
         
         /* 
@@ -268,9 +275,9 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
         checked->ui64[1] = checked->ui64[0];
         checked->ui64[0] = tmp;
 
-        if (prefix_list[i]->pref_length <= 64) {
-            if ((checked->ui64[0] & v6mm[prefix_list[i]->pref_length][0]) 
-                 == prefix_list[i]->ip.ui64[0]) {
+        if (prefix_list[i].pref_length <= 64) {
+            if ((checked->ui64[0] & v6mm[prefix_list[i].pref_length][0]) 
+                 == prefix_list[i].ip.ui64[0]) {
 #ifdef DEBUG
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
@@ -278,14 +285,14 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
                 cout << debug_ip_pref;
                 cout <<"/";
                 short a;
-                cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
+                cout << dec <<  (a = prefix_list[i].pref_length) << endl;
 #endif
                 return SPOOF_POSITIVE;
             }
         } else {
-            if ((checked->ui64[1] & v6mm[prefix_list[i]->pref_length][1]) 
-                 == prefix_list[i]->ip.ui64[1]
-                 && checked->ui64[0] == prefix_list[i]->ip.ui64[0]) {
+            if ((checked->ui64[1] & v6mm[prefix_list[i].pref_length][1]) 
+                 == prefix_list[i].ip.ui64[1]
+                 && checked->ui64[0] == prefix_list[i].ip.ui64[0]) {
 #ifdef DEBUG
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
@@ -293,7 +300,7 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
                 cout << debug_ip_pref;
                 cout <<"/";
                 short a;
-                cout << dec <<  (a = prefix_list[i]->pref_length) << endl;
+                cout << dec <<  (a = prefix_list[i].pref_length) << endl;
 #endif
                 return SPOOF_POSITIVE;
             }
@@ -307,13 +314,13 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
  *
  * @param prefix_list List to be erased.
  */
-void clear_bogon_filter(pref_list_t& prefix_list)
+/*void clear_bogon_filter(pref_list_t& prefix_list)
 {
     for (int i = 0; i < prefix_list.size(); i++) {
         delete prefix_list[i];
     }
     prefix_list.clear();
-}
+}*/
 
 
 // **********   SYMETRIC ROUTING FILTER   **********
@@ -349,7 +356,7 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw
 #endif
 
 
-    int v4_numeric;
+    unsigned v4_numeric;
 
     // check incomming/outgoing traffic
     if (record->dirbitfield == 0x0) {// outgoing trafic
@@ -477,7 +484,72 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
     }
     return SPOOF_NEGATIVE;
 }
+/**
+ * Function for cheking new flows for given source.
+ * Function gets the record and map of used data flows. Then it asks
+ * the map for source source address. If the source is not present it adds the 
+ * new source with its destination and initializes its counter to 1. If the 
+ * source already communicated then the destination is added to the set of flows 
+ * and the counter is increased. If the flow count exceeds the given threshold 
+ * the source address is reported as spoofed.
+ *
+ * @param record Record that is being analyzed.
+ * @param flow_map Map of all used flows.
+ * @param threshold Maximum limit for flows per source.
+ * @return SPOOF_POSITIVE if the flow count exceeds the threshold.
+ */
+int check_new_flows_v4(ur_basic_flow_t *record, v4_flows_t& flow_map, unsigned threshold)
+{
 
+    if (threshold == 0) {
+        threshold = NEW_FLOW_DEFAULT;
+        cout << "Default threshold is: " << threshold << endl;
+    }
+#ifdef DEBUG
+    char debug_ip_src[INET6_ADDRSTRLEN];
+    char debug_ip_dst[INET6_ADDRSTRLEN];
+    ip_to_str(&(record->src_addr), debug_ip_src);
+    ip_to_str(&(record->dst_addr), debug_ip_dst);
+#endif
+    //check for ip in flow map
+    unsigned dst_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;    
+
+    if (flow_map.count(dst_numeric) == 0) { // src_addr is not yet in map
+
+#ifdef DEBUG
+        cout << "New source detected -- will be added." << endl;
+#endif
+
+        flow_count_v4_t flow;
+        flow.v4_src.insert(ip_get_v4_as_int(&(record->dst_addr)));
+        flow.count = 1;
+        flow_map.insert(pair<unsigned, flow_count_v4_t>(dst_numeric, flow));
+        
+        return SPOOF_NEGATIVE;
+    } else { // dst addr is in map -- check the data flow
+        unsigned src_numeric = ip_get_v4_as_int(&(record->src_addr)) & 0xFFFFFF00;
+
+        // source not in set -- count as new flow
+        if (flow_map[dst_numeric].v4_src.count(src_numeric) == 0) {
+#ifdef DEBUG
+            cout << "Destination " << debug_ip_dst << " recieves new flow from " << debug_ip_src << "." << endl;
+#endif
+            flow_map[dst_numeric].v4_src.insert(src_numeric);
+            ++flow_map[dst_numeric].count;
+
+            // too many new flows -- possible spoofing
+            if (flow_map[dst_numeric].count > threshold) {
+#ifdef DEBUG
+                cout << "Possible spoofing found: Destination " << debug_ip_dst << " is recieveing too many flows." << endl;
+                cout << flow_map[dst_numeric].count << " to " << threshold << endl;
+#endif
+                return SPOOF_POSITIVE;
+            }
+            return SPOOF_NEGATIVE;
+        }
+    }
+    return SPOOF_NEGATIVE;
+}
 int main (int argc, char** argv)
 {
 
@@ -487,13 +559,18 @@ int main (int argc, char** argv)
 
     ur_basic_flow_t *record; // pointer on flow record
 
-    pref_list_t bogon_list; // list of bogon prefixes
+    // lists of bogon prefixes
+    pref_list_t bogon_list_v4; 
+    pref_list_t bogon_list_v6; 
 
     ipv4_mask_map_t v4_masks; // all possible IPv4 masks
     ipv6_mask_map_t v6_masks; // all possible IPv6 masks
 
     v4_sym_sources_t v4_route_sym; // map of sources for symetric routes (IPv4)
     v6_sym_sources_t v6_route_sym; // map of sources for symetric routes (IPv6)
+
+    v4_flows_t v4_flow_map;
+    v6_flows_t v6_flow_map;
 
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
@@ -509,24 +586,37 @@ int main (int argc, char** argv)
      
     // getopt loop for additional parameters not parsed by TRAP
     int argret = 0;
-    int sym_rw_time = 0;
+    unsigned sym_rw_time = 0;
+    unsigned nf_threshold = 0;
     bool b_flag = false;
     string bog_filename;
+    string cnet_filename;
 
-    while ((argret = getopt(argc, argv, "b:s:")) != -1) {
+    while ((argret = getopt(argc, argv, "b:s:t:")) != -1) {
         switch (argret) {
             case 'b':
                 bog_filename = string(optarg);
                 b_flag = true;
                 break;
             
+            case 'c':
+                cnet_filename = string(optarg);
+                break;
+
             case 's':
                 sym_rw_time = atoi(optarg);
+                break;
+
+            case 't':
+                nf_threshold = atoi(optarg);
                 break;
             
             case '?':
                 if (argret == 'b') {
                     cerr << "Option -b requires an argument -- file with bogon prefixes." << endl;
+                    return EXIT_FAILURE;
+                } else if (argret == 't') {
+                    cerr << "Option -t requires an argument -- number of maximum new flows per source." << endl;
                     return EXIT_FAILURE;
                 }
                 break;
@@ -565,25 +655,39 @@ int main (int argc, char** argv)
     create_v4_mask_map(v4_masks);    
     create_v6_mask_map(v6_masks);
 
-    int v4 = 0;
-    int v6 = 0;
-    int spoof_count = 0;
-    int bogons = 0;
-    int syms = 0;
+    unsigned v4 = 0;
+    unsigned v6 = 0;
+    unsigned spoof_count = 0;
+    unsigned bogons = 0;
+    unsigned syms = 0;
+    unsigned nflows = 0;
 
+
+    // we don't have list of bogon prefixes loaded (usually first run)
+    retval = load_pref(bogon_list_v4, bogon_list_v6, bog_filename.c_str());
+//    retval = load_pref(bogon_list_v4, bogon_list_v6, cnet_filename.c_str());
+    if (retval == BOGON_FILE_ERROR) {
+        return retval;
+    }
+
+#ifdef DEBUG
+        for (int i = 0; i < bogon_list_v4.size(); i++) {
+            char dbg[INET6_ADDRSTRLEN];
+            ip_to_str(&(bogon_list_v4[i].ip), dbg);
+            cout << dbg << "/" << (int) bogon_list_v4[i].pref_length << endl;
+        }
+        for (int i = 0; i < bogon_list_v6.size(); i++) {           
+            char dbg[INET6_ADDRSTRLEN];
+            ip_to_str(&(bogon_list_v6[i].ip), dbg);
+            cout << dbg << "/" << (int) bogon_list_v6[i].pref_length << endl;
+        }
+#endif
+        
     // ***** Main processing loop *****
     while (!stop) {
         const void *data;
         uint16_t data_size;
                 
-        // we don't have list of bogon prefixes loaded (usually first run)
-        if (bogon_list.empty()) {
-            retval = load_pref(bogon_list, bog_filename.c_str());
-            if (retval == BOGON_FILE_ERROR) {
-                return retval;
-            }
-        }
-        
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         if (retval != TRAP_E_OK) {
@@ -617,11 +721,12 @@ int main (int argc, char** argv)
         } else {
             ++v6;
         }
+
         //go through all filters
         
 
         // ***** 1. bogon prefix filter *****
-        if (ip_is4(&(record->src_addr))) {
+/*        if (ip_is4(&(record->src_addr))) {
             retval = v4_bogon_filter(&(record->src_addr), bogon_list, v4_masks);
         } else {
             retval = v6_bogon_filter(&(record->src_addr), bogon_list, v6_masks);
@@ -652,8 +757,18 @@ int main (int argc, char** argv)
         //3. asymetric routing filter (will be implemented later)
         //4. new flow count check (TBA)
 
-
-        //return spoofed or not
+        if (ip_is4(&(record->src_addr))) {
+            retval = check_new_flows_v4(record, v4_flow_map, nf_threshold); // threshold hardcoded -- CHANGE
+        } else {
+            retval = check_new_flows_v6(record, v6_flow_map, nf_threshold);
+        }
+    
+        if (retval == SPOOF_POSITIVE) {
+            ++spoof_count;
+            ++nflows;
+            retval = ALL_OK;
+            continue;
+        }*/
     }
 
 #ifdef DEBUG
@@ -666,10 +781,12 @@ int main (int argc, char** argv)
     cout << dec << spoof_count << endl;
     cout << "Caught by bogon filter: " << bogons << endl;
     cout << "Caught by symetric routing filter: " << syms << endl;
+    cout << "Caught by using too many new flows: " << nflows << endl;
 #endif
 
     // clean up before termination
-    clear_bogon_filter(bogon_list);
+//    clear_bogon_filter(bogon_list_v4);
+//    clear_bogon_filter(bogon_list_v6);
     trap_finalize();
 
     return EXIT_SUCCESS;
