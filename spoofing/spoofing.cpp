@@ -72,7 +72,7 @@ void create_v4_mask_map(ipv4_mask_map_t& m)
 {
     m[0] = 0x00000000; // explicitly inserted or else it will be 0xFFFFFFFF
     for (int i = 1; i <= 32; i++) {
-        m[i] = (0xFFFFFFFF << (32 - i));
+        m[i] = (0xFFFFFFFF >> (32 - i));
     }
 }
 
@@ -91,31 +91,23 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 
     for (int i = 1; i <= 128; i++) {
         if (i < 64) {
-            m[i][0] = 0xFFFFFFFFFFFFFFFF << (64 - i);
+            m[i][0] = 0xFFFFFFFFFFFFFFFF >> (64 - i);
             m[i][1] = 0x0;
         } else {
             m[i][0] = 0xFFFFFFFFFFFFFFFF;
-            m[i][1] = 0xFFFFFFFFFFFFFFFF << (64 - i);
+            m[i][1] = 0xFFFFFFFFFFFFFFFF >> (64 - i);
         }
     }
 }
 
-unsigned i = 0;
-unsigned j = 0;
-
 bool sort_by_prefix_v4 (const ip_prefix_t& addr1, const ip_prefix_t& addr2)
 {
-    cout << "Begin sort " << ++i << endl;
     return (memcmp(&(addr1.ip.ui32[2]), &(addr2.ip.ui32[2]), 4) < 0) ? true : false;
 }
 
 bool sort_by_prefix_v6 (const ip_prefix_t& addr1, const ip_prefix_t& addr2)
 {
-    cout << "Begin sort " << ++j << endl;
-    if (memcmp(&addr1.ip.ui8, &addr2.ip.ui8, 16) < 0) {
-        return true;
-    }
-    return false;
+    return (memcmp(&addr1.ip.ui8, &addr2.ip.ui8, 16) < 0) ? true : false;
 }
 
 /**
@@ -176,7 +168,6 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
 
     }
 
-    cout << "Sorting ..." << endl;
     sort(prefix_list_v4.begin(), prefix_list_v4.end(), sort_by_prefix_v4);
     sort(prefix_list_v6.begin(), prefix_list_v6.end(), sort_by_prefix_v6);
 
@@ -195,17 +186,16 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
  * @param v4mm Array of every possible netmasks for protocol
  * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
  */
-int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
+int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
     //check source address of the record with each prefix
-    for (int i = 0; i < prefix_list.size(); i++) {
-        
-#ifdef DEBUG
-        char debug_ip_src[INET6_ADDRSTRLEN];
-        char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(checked, debug_ip_src);
-        ip_to_str(&(prefix_list[i].ip), debug_ip_pref);
-#endif
+    int begin, end, mid;
+    int mask_result;
+    ip_addr_t masked;
+    begin = 0;
+    end = prefix_list.size() - 1;
+    while (begin <= end) {
+        mid = (begin + end) >> 1;
 
         /* 
          * Matching address to prefix
@@ -213,8 +203,22 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
          * and mask of the bogon prefix. Spoofing is positive if the result
          * of this operation is equal to integer value of bogon ip address.
          */
-        if ((ip_get_v4_as_int(checked) & v4mm[prefix_list[i].pref_length])
-            == ip_get_v4_as_int(&(prefix_list[i].ip))) {
+        masked.ui32[2] = checked->src_addr.ui32[2] & v4mm[prefix_list[mid].pref_length];
+
+#ifdef DEBUG
+        char debug_ip_src[INET6_ADDRSTRLEN];
+        char debug_ip_pref[INET6_ADDRSTRLEN];
+        ip_to_str(&(checked->src_addr), debug_ip_src);
+        ip_to_str(&(prefix_list[mid].ip), debug_ip_pref);
+/*
+        cout << debug_ip_src << endl;
+        cout << debug_ip_pref << endl;
+        cout << "Midpoint " << mid << endl;*/
+#endif
+        mask_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
+        if (mask_result < 0) {
+            begin = mid + 1;
+        } else if (mask_result == 0) {
 
 #ifdef DEBUG
             cout << "Possible spoofing found: ";
@@ -223,12 +227,12 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
             cout << debug_ip_pref;
             cout <<"/";
             short a;
-            cout << dec <<  (a = prefix_list[i].pref_length) << endl;
+            cout << dec <<  (a = prefix_list[mid].pref_length) << endl;
 #endif
-
             return SPOOF_POSITIVE;
+        } else {
+            end = mid - 1;
         }
-        //else continue
     }
 
     // doesn't fit any bogon prefix
@@ -246,15 +250,23 @@ int v4_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv4_mask_map_
  * @param v4mm Array of every possible netmasks for protocol
  * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
  */
-int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
+int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
 {
-    for (int i = 0; i < prefix_list.size(); i++) {
-        
+
+    int begin, end, mid;
+    int mask_result;
+    ip_addr_t masked;
+    begin = 0;
+    end = prefix_list.size() - 1;
+
+    while (begin <= end) {
+    mid = (begin + end) >> 1;
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(checked, debug_ip_src);
-        ip_to_str(&(prefix_list[i].ip), debug_ip_pref);
+        ip_to_str(&(checked->src_addr), debug_ip_src);
+        ip_to_str(&(prefix_list[mid].ip), debug_ip_pref);
+
 #endif
         
         /* 
@@ -268,16 +280,19 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
          * is positive when the result of comparison fits the prefix.
          */
 
-        // Swap the halves of the addresses again
+/*        // Swap the halves of the addresses again
         *checked = ip_from_16_bytes_le((char *) checked);
         uint64_t tmp;
         tmp = checked->ui64[1];
         checked->ui64[1] = checked->ui64[0];
-        checked->ui64[0] = tmp;
+        checked->ui64[0] = tmp;*/
 
-        if (prefix_list[i].pref_length <= 64) {
-            if ((checked->ui64[0] & v6mm[prefix_list[i].pref_length][0]) 
-                 == prefix_list[i].ip.ui64[0]) {
+        if (prefix_list[mid].pref_length <= 64) {
+            masked.ui64[0] = checked->src_addr.ui64[0] & v6mm[prefix_list[mid].pref_length][0];
+            mask_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
+            if (mask_result < 0) {
+                begin = mid + 1;
+            } else if (mask_result == 0) {
 #ifdef DEBUG
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
@@ -285,14 +300,18 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
                 cout << debug_ip_pref;
                 cout <<"/";
                 short a;
-                cout << dec <<  (a = prefix_list[i].pref_length) << endl;
+                cout << dec <<  (a = prefix_list[mid].pref_length) << endl;
 #endif
                 return SPOOF_POSITIVE;
+            } else {
+                end = mid - 1;
             }
         } else {
-            if ((checked->ui64[1] & v6mm[prefix_list[i].pref_length][1]) 
-                 == prefix_list[i].ip.ui64[1]
-                 && checked->ui64[0] == prefix_list[i].ip.ui64[0]) {
+            masked.ui64[1] = checked->src_addr.ui64[1] & v6mm[prefix_list[mid].pref_length][1];
+            mask_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
+            if (mask_result < 0) {
+                begin = mid + 1;
+            } else if (mask_result == 0) {
 #ifdef DEBUG
                 cout << "Possible spoofing found: ";
                 cout << debug_ip_src;
@@ -300,28 +319,16 @@ int v6_bogon_filter(ip_addr_t *checked, pref_list_t& prefix_list, ipv6_mask_map_
                 cout << debug_ip_pref;
                 cout <<"/";
                 short a;
-                cout << dec <<  (a = prefix_list[i].pref_length) << endl;
+                cout << dec <<  (a = prefix_list[mid].pref_length) << endl;
 #endif
                 return SPOOF_POSITIVE;
+            } else {
+                end = mid - 1;
             }
         }
-  }
+    }
     return SPOOF_NEGATIVE;   
 }
-/**
- * Procedure for freeing memory used by prefix list.
- * Procedure goes through the vector and frees all memory used by its elements.
- *
- * @param prefix_list List to be erased.
- */
-/*void clear_bogon_filter(pref_list_t& prefix_list)
-{
-    for (int i = 0; i < prefix_list.size(); i++) {
-        delete prefix_list[i];
-    }
-    prefix_list.clear();
-}*/
-
 
 // **********   SYMETRIC ROUTING FILTER   **********
 
@@ -561,7 +568,9 @@ int main (int argc, char** argv)
 
     // lists of bogon prefixes
     pref_list_t bogon_list_v4; 
-    pref_list_t bogon_list_v6; 
+    pref_list_t bogon_list_v6;
+    pref_list_t spec_list_v4;
+    pref_list_t spec_list_v6;
 
     ipv4_mask_map_t v4_masks; // all possible IPv4 masks
     ipv6_mask_map_t v6_masks; // all possible IPv6 masks
@@ -592,7 +601,7 @@ int main (int argc, char** argv)
     string bog_filename;
     string cnet_filename;
 
-    while ((argret = getopt(argc, argv, "b:s:t:")) != -1) {
+    while ((argret = getopt(argc, argv, "b:c:s:t:")) != -1) {
         switch (argret) {
             case 'b':
                 bog_filename = string(optarg);
@@ -665,23 +674,11 @@ int main (int argc, char** argv)
 
     // we don't have list of bogon prefixes loaded (usually first run)
     retval = load_pref(bogon_list_v4, bogon_list_v6, bog_filename.c_str());
-//    retval = load_pref(bogon_list_v4, bogon_list_v6, cnet_filename.c_str());
+    retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
     if (retval == BOGON_FILE_ERROR) {
         return retval;
     }
 
-#ifdef DEBUG
-        for (int i = 0; i < bogon_list_v4.size(); i++) {
-            char dbg[INET6_ADDRSTRLEN];
-            ip_to_str(&(bogon_list_v4[i].ip), dbg);
-            cout << dbg << "/" << (int) bogon_list_v4[i].pref_length << endl;
-        }
-        for (int i = 0; i < bogon_list_v6.size(); i++) {           
-            char dbg[INET6_ADDRSTRLEN];
-            ip_to_str(&(bogon_list_v6[i].ip), dbg);
-            cout << dbg << "/" << (int) bogon_list_v6[i].pref_length << endl;
-        }
-#endif
         
     // ***** Main processing loop *****
     while (!stop) {
@@ -725,11 +722,17 @@ int main (int argc, char** argv)
         //go through all filters
         
 
-        // ***** 1. bogon prefix filter *****
-/*        if (ip_is4(&(record->src_addr))) {
-            retval = v4_bogon_filter(&(record->src_addr), bogon_list, v4_masks);
+        // ***** 1. bogon and specific prefix filter *****
+        if (ip_is4(&(record->src_addr))) {
+            retval = v4_bogon_filter(record, bogon_list_v4, v4_masks);
+            if (retval == SPOOF_NEGATIVE && record->dirbitfield == 0x01) {
+                retval = v4_bogon_filter(record, spec_list_v4, v4_masks);
+            }
         } else {
-            retval = v6_bogon_filter(&(record->src_addr), bogon_list, v6_masks);
+            retval = v6_bogon_filter(record, bogon_list_v6, v6_masks);
+            if (retval == SPOOF_NEGATIVE && record->dirbitfield == 0x01) {
+                retval = v6_bogon_filter(record, spec_list_v6, v6_masks);
+            }
         }
         
         // we caught a spoofed address by bogon prefix
@@ -738,7 +741,7 @@ int main (int argc, char** argv)
             ++bogons;
             retval = ALL_OK; // reset return value
             continue;
-        }
+        }/*
         // ***** 2. symetric routing filter *****
         if (ip_is4(&(record->src_addr))) {
             retval = check_symetry_v4(record, v4_route_sym, sym_rw_time);
