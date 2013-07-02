@@ -238,6 +238,44 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
     return ALL_OK;
 }
 
+int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t* v4mm, ipv6_mask_map_t* v6mm, pref_list_t& prefix_list)
+{
+    int begin, end, mid;
+    int mask_result;
+    ip_addr_t masked;
+    begin = 0;
+    end = prefix_list.size() - 1;
+    while (begin <= end) {
+        mid = (begin + end) >> 1;
+        if (ip_is4(searched)) {
+            masked.ui32[2] = searched->ui32[2] & *(v4mm[prefix_list[mid].pref_length]);
+            mask_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
+        } else {
+            if (prefix_list[mid].pref_length <= 64) {
+                masked.ui64[0] = searched->ui64[0] & *(v6mm[prefix_list[mid].pref_length][0]);
+                mask_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
+            } else {
+                masked.ui64[1] = searched->ui64[1] & *(v6mm[prefix_list[mid].pref_length][1]);
+                mask_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
+            } 
+            
+        }
+
+        if (mask_result < 0) {
+            begin = mid + 1;
+        } else if (mask_result > 0) {
+            end = mid - 1;
+        } else {
+            break;
+        }
+    }
+
+    if (mask_result == 0) {
+        return mid;
+    }
+    return IP_NOT_FOUND;
+}
+
 /**
  * Filter for checking ipv4 for bogon prefixes.
  * This function checks the given ip address  whether it matches 
@@ -252,33 +290,19 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
 int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
     //check source address of the record with each prefix
-    int begin, end, mid;
-    int mask_result;
-    ip_addr_t masked;
-    begin = 0;
-    end = prefix_list.size() - 1;
-    while (begin <= end) {
-        mid = (begin + end) >> 1;
-
-        /* 
-         * Matching address to prefix
-         * Perform bitwise AND operation on integer value of ip address
-         * and mask of the bogon prefix. Spoofing is positive if the result
-         * of this operation is equal to integer value of bogon ip address.
-         */
-        masked.ui32[2] = checked->src_addr.ui32[2] & v4mm[prefix_list[mid].pref_length];
+    int search_result;
+    search_result = ip_binary_search(&(checked->src_addr), &v4mm, NULL, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
         ip_to_str(&(checked->src_addr), debug_ip_src);
-        ip_to_str(&(prefix_list[mid].ip), debug_ip_pref);
+        ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
-        mask_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
-        if (mask_result < 0) {
-            begin = mid + 1;
-        } else if (mask_result == 0) {
 
+    if (search_result == IP_NOT_FOUND) {
+        return SPOOF_NEGATIVE;
+    } else {
 #ifdef DEBUG
             cout << "Possible spoofing found: ";
             cout << debug_ip_src;
@@ -286,12 +310,9 @@ int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mas
             cout << debug_ip_pref;
             cout <<"/";
             short a;
-            cout << dec <<  (a = prefix_list[mid].pref_length) << endl;
+            cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
 #endif
             return SPOOF_POSITIVE;
-        } else {
-            end = mid - 1;
-        }
     }
 
     // doesn't fit any bogon prefix
@@ -614,9 +635,6 @@ int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_
     is_present = filter[bf_active].flows[mid].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) { // the flow is already in filter --> will be ignored
-#ifdef DEBUG
-        cout << "Flow in filter --> ignore ... " << endl;
-#endif
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts

@@ -22,6 +22,8 @@ extern "C" {
 #define SPOOF_NEGATIVE 0
 #define BOGON_FILE_ERROR 1
 #define ALL_OK 0
+#define IP_NOT_FOUND -1
+
 #define SYM_RW_DEFAULT 45
 #define NEW_FLOW_DEFAULT 1000
 #define BF_SWAP_TIME 300
