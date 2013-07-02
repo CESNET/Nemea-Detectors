@@ -125,11 +125,13 @@ void clear_bogon_filter(pref_list_t& prefix_list);
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time);
 int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time);
 
-
-//
-void create_nflow_filters(int length, flow_filter_t* filters);
-
-//
+/**
+ * Functions for recording new incomming data flows.
+ * Functions get their respective sets of Bloom filters and lists of checked IP 
+ * prefixes and then it records all inbound traffic with these netwroks as 
+ * destinations. If any network has exceeded the threshold of flows then 
+ * all source addresses that want to communicate are reported as potentially spoofed.
+ */
 int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list);
 int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list);
 
