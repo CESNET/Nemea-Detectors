@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include "../unirec.h"
+#include "BloomFilter.hpp"
 
 #ifndef SPOOFING_H
 #define SPOOFING_H
@@ -22,7 +23,8 @@ extern "C" {
 #define BOGON_FILE_ERROR 1
 #define ALL_OK 0
 #define SYM_RW_DEFAULT 45
-#define NEW_FLOW_DEFAULT 100
+#define NEW_FLOW_DEFAULT 1000
+#define BF_SWAP_TIME 300
 
 // structure definitions
 
@@ -45,30 +47,23 @@ typedef struct symetric_src {
 // vector used as a container of all prefixes
 typedef std::vector<ip_prefix_t> pref_list_t;
 
-// map of link associated to source ip addresses
+// map of links associated to source ip addresses
 typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
 typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
 
-// set for keeping destinations of the flows
-typedef std::set<unsigned> v4_flow_dst_t;
-typedef std::set<uint64_t> v6_flow_dst_t;
 
 //
-typedef struct flow_count_v4_s {
-    v4_flow_dst_t v4_src;
+typedef struct flow_count_s {
+    bloom_filter* sources;    
     unsigned count;
-//    uint64_t add_timestamp;
-} flow_count_v4_t;
+} flow_count_t;
 
-typedef struct flow_count_v6_s {
-    v6_flow_dst_t v6_src;
-    unsigned count;
-//    uint64_t add_timestamp;
-} flow_count_v6_t;
 
 //
-typedef std::map<unsigned, flow_count_v4_t> v4_flows_t;
-typedef std::map<uint64_t, flow_count_v6_t> v6_flows_t;
+typedef struct flow_filter_s {
+    std::vector<flow_count_t> flows;
+    uint64_t timestamp;
+} flow_filter_t;
 
 
 // Array of ipv4 netmasks
@@ -132,8 +127,11 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
 
 
 //
-int check_new_flows_v4(ur_basic_flow_t *record, v4_flows_t& flow_map, unsigned threshold);
-int check_new_flows_v6(ur_basic_flow_t *record, v6_flows_t& flow_map, unsigned threshold);
+void create_nflow_filters(int length, flow_filter_t* filters);
+
+//
+int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list);
+int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list);
 
 #ifdef __cplusplus
 }
