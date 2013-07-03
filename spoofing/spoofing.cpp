@@ -88,6 +88,8 @@ void create_nflow_filters(int length, flow_filter_t* filters)
         filters[bf_active].flows.push_back(fca);
         filters[bf_learning].flows.push_back(fcl);
     }
+    filters[bf_active].timestamp = 0x0;
+    filters[bf_learning].timestamp = 0x0;
 }
 
 void clear_filters(flow_filter_t& filter_set)
@@ -188,7 +190,7 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
     ip_prefix_t pref;
     ifstream pref_file;
     
-    // open file with prefixes (hardcoded for now -- may be changed)
+    // open file with prefixes
     pref_file.open(bogon_file);
 
     // unable to open prefix file
@@ -237,8 +239,18 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
     pref_file.close();
     return ALL_OK;
 }
-
-int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t* v4mm, ipv6_mask_map_t* v6mm, pref_list_t& prefix_list)
+/**
+ * Function for binary searching in prefix lists.
+ * Function uses binary search algorithm to determine whehter the given ip 
+ * address fits any of the prefix in the list.
+ *
+ * @param searched IP address that we are checking.
+ * @param v4mm Map of IPv4 masks.
+ * @param v6mm Map of IPv6 masks.
+ * @param prefix_list List of prefixes to be compared with.
+ * @return IP_NOT_FOUND if the ip address doesn't fit any prefix. Index of the prefix otherwise.
+ */
+int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, pref_list_t& prefix_list)
 {
     int begin, end, mid;
     int mask_result;
@@ -248,14 +260,14 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t* v4mm, ipv6_mask_map_t
     while (begin <= end) {
         mid = (begin + end) >> 1;
         if (ip_is4(searched)) {
-            masked.ui32[2] = searched->ui32[2] & *(v4mm[prefix_list[mid].pref_length]);
+            masked.ui32[2] = searched->ui32[2] & v4mm[prefix_list[mid].pref_length];
             mask_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
         } else {
             if (prefix_list[mid].pref_length <= 64) {
-                masked.ui64[0] = searched->ui64[0] & *(v6mm[prefix_list[mid].pref_length][0]);
+                masked.ui64[0] = searched->ui64[0] & v6mm[prefix_list[mid].pref_length][0];
                 mask_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
             } else {
-                masked.ui64[1] = searched->ui64[1] & *(v6mm[prefix_list[mid].pref_length][1]);
+                masked.ui64[1] = searched->ui64[1] & v6mm[prefix_list[mid].pref_length][1];
                 mask_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
             } 
             
@@ -290,8 +302,9 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t* v4mm, ipv6_mask_map_t
 int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
     //check source address of the record with each prefix
+    ipv6_mask_map_t dummy;
     int search_result;
-    search_result = ip_binary_search(&(checked->src_addr), &v4mm, NULL, prefix_list);
+    search_result = ip_binary_search(&(checked->src_addr), v4mm, dummy, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
@@ -333,56 +346,30 @@ int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mas
 int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
 {
 
-    int begin, end, mid;
-    int mask_result;
-    ip_addr_t masked;
-    begin = 0;
-    end = prefix_list.size() - 1;
+    ipv4_mask_map_t dummy;    
+    int search_result;
+    search_result = ip_binary_search(&(checked->src_addr), dummy, v6mm, prefix_list);
 
-    while (begin <= end) {
-    mid = (begin + end) >> 1;
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
         ip_to_str(&(checked->src_addr), debug_ip_src);
-        ip_to_str(&(prefix_list[mid].ip), debug_ip_pref);
-
+        ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
-        
-        /* 
-         * Matching address to prefix
-         * We can decide which part to AND with bogon prefix by the length.
-         * If the length of the bogon prefix is shorter or equal to 64 bits
-         * we need to bitwise AND only the first half of the ip addre 
-         * and then compare it to the value of the first half of the bogon
-         * prefix. If it's longer then we AND the second half of the ip address 
-         * and then we compare the whole result with the bogon prefix. Spoofing 
-         * is positive when the result of comparison fits the prefix.
-         */
 
-        if (prefix_list[mid].pref_length <= 64) {
-            masked.ui64[0] = checked->src_addr.ui64[0] & v6mm[prefix_list[mid].pref_length][0];
-            mask_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
-        } else {
-            masked.ui64[1] = checked->src_addr.ui64[1] & v6mm[prefix_list[mid].pref_length][1];
-            mask_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
-        } 
-        if (mask_result < 0) {
-            begin = mid + 1;
-        } else if (mask_result == 0) {
+    if (search_result == IP_NOT_FOUND) {
+        return SPOOF_NEGATIVE;
+    } else {
 #ifdef DEBUG
-            cout << "Possible spoofing found: ";
-            cout << debug_ip_src;
-            cout << " fits bogon prefix ";
-            cout << debug_ip_pref;
-            cout <<"/";
-            short a;
-            cout << dec <<  (a = prefix_list[mid].pref_length) << endl;
+       cout << "Possible spoofing found: ";
+       cout << debug_ip_src;
+       cout << " fits bogon prefix ";
+       cout << debug_ip_pref;
+       cout <<"/";
+       short a;
+       cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
 #endif
-            return SPOOF_POSITIVE;
-        } else {
-            end = mid - 1;
-        }
+        return SPOOF_POSITIVE;
     }
     return SPOOF_NEGATIVE;   
 }
@@ -428,16 +415,13 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw
         v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
 
         if (src.count(v4_numeric)
-            && (((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) < rw_time)) {
-#ifdef DEBUG
-            cout <<(unsigned long long) (((record->first & 0xFFFFFFFF00000000) - src[v4_numeric].timestamp) < rw_time) << endl;
-#endif
+            && (((record->first & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
             src[v4_numeric].link |= record->linkbitfield;
             src[v4_numeric].timestamp = record->first;
         } else {
             sym_src_t src_rec;
             src_rec.link = record->linkbitfield;
-            src_rec.timestamp = record->first;
+            src_rec.timestamp = record->first & 0xFFFFFFFF00000000ULL;
             src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
         }
 
@@ -498,7 +482,7 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
 
     //  Swap the halves of the addresses again
     //  No idea why the address from recieved record is messed up
-    record->src_addr = ip_from_16_bytes_le((char *) &(record->src_addr));
+/*    record->src_addr = ip_from_16_bytes_le((char *) &(record->src_addr));
     record->dst_addr = ip_from_16_bytes_le((char *) &(record->dst_addr));
 
     uint64_t tmp;
@@ -508,7 +492,7 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
 
     tmp = record->dst_addr.ui64[1];
     record->dst_addr.ui64[1] = record->dst_addr.ui64[0];
-    record->dst_addr.ui64[0] = tmp;
+    record->dst_addr.ui64[0] = tmp;*/
 
     // check incomming/outgoing traffic
     if (record->dirbitfield == 0x0) {// outgoing traffic
@@ -516,7 +500,7 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
         // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
 
         if (src.count(record->dst_addr.ui64[0])
-            && ((record->first & 0xFFFFFFFF00000000) - src[record->dst_addr.ui64[0]].timestamp) < rw_time) {
+            && ((record->first & 0xFFFFFFFF00000000ULL) - src[record->dst_addr.ui64[0]].timestamp) < rw_time) {
             src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
 //            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
         } else {
@@ -573,81 +557,64 @@ int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_
     char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
     ip_to_str(&(record->src_addr), debug_ip_src);
-    ip_to_str(&(record->dst_addr), debug_ip_dst);
 #endif
 
     // check the timestamp of filters
-    uint64_t tf, tr;
-
-    tf = filter[bf_active].timestamp & 0xFFFFFFFF00000000;
-    tr = record->first & 0xFFFFFFFF00000000;
-
+    long long tf, tr, td;
+    tf = record->first >> 32;
+    tr = filter[bf_active].timestamp >> 32;
+    td = tr - tf;
 
     /*
      * Filter swapping will be implemented after the timestamps are ready to use
      */
 
-    /*
-    if ((tf - tr) > BF_SWAP_TIME) {
+    if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
-        filter[bf_active].timestamp = record->first;
-        filter[bf_learning].timestamp = record->first;
-    }*/
+        filter[bf_active].timestamp = record->first & 0xFFFFFFFF00000000;
+        filter[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000;
+    }
 
     char ip_key[INET6_ADDRSTRLEN];
     bool is_present = false;
 
     //test for cesnet or other specified prefixes
     
-    int begin, end, mid;
-    ip_addr_t masked;
+    ipv6_mask_map_t dummy;    
     int search_result;
-    begin = 0;
-    end = prefix_list.size() - 1;
-
-    while (begin <= end) {
-        mid = (begin + end) >> 1; // division by 2
-        masked.ui32[2] = record->dst_addr.ui32[2] & mm[prefix_list[mid].pref_length];
-        search_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
-        
-        if (search_result < 0) {
-            begin = mid + 1;
-        } else if (search_result > 0) {
-            end = mid -1;
-        } else {
-            break;
-        }
-    }
+    ip_addr_t flow_source;
+    search_result = ip_binary_search(&(record->dst_addr), mm, dummy, prefix_list);
 
     // Source address doesn't fit the watched networks --> ignored
-    if (search_result != 0) {
+    if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     }
 
-    masked = record->src_addr;
-    masked.ui32[2] &= mm[24]; // mask with 24-bit prefix for aggregation
+    flow_source = record->src_addr;
+    flow_source.ui32[2] &= mm[24]; // mask with 24-bit prefix for aggregation
 
     // convert to BF key
-    ip_to_str(&(masked), ip_key);
+    ip_to_str(&(flow_source), ip_key);
 
     //  test if the flow is present (BF)
-    is_present = filter[bf_active].flows[mid].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
+    is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) { // the flow is already in filter --> will be ignored
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts
-        filter[bf_active].flows[mid].sources->insert(ip_key, INET6_ADDRSTRLEN);
-        filter[bf_learning].flows[mid].sources->insert(ip_key, INET6_ADDRSTRLEN);
-        filter[bf_active].flows[mid].count++;
-        filter[bf_learning].flows[mid].count++;
+        filter[bf_active].flows[search_result].sources->insert(ip_key, INET6_ADDRSTRLEN);
+        filter[bf_learning].flows[search_result].sources->insert(ip_key, INET6_ADDRSTRLEN);
+        filter[bf_active].flows[search_result].count++;
+        filter[bf_learning].flows[search_result].count++;
 
-        if (filter[bf_active].flows[mid].count > threshold) {
+        if (filter[bf_active].flows[search_result].count > threshold) {
         // Flow limit exceeded
 #ifdef DEBUG
+            ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             cout << "Possible spoofing found: ";
-            cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[mid].count << ")." << endl;
+            cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[search_result].count << ")." << endl;
 #endif
             return SPOOF_POSITIVE;
         }
@@ -676,86 +643,65 @@ int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_
     char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
     ip_to_str(&(record->src_addr), debug_ip_src);
-    ip_to_str(&(record->dst_addr), debug_ip_dst);
 #endif
 
     // check the timestamp of filters
-    uint64_t tf, tr;
-
-    tf = filter[bf_active].timestamp & 0xFFFFFFFF00000000;
-    tr = record->first & 0xFFFFFFFF00000000;
-
+    long long tf, tr, td;
+    tf = record->first >> 32;
+    tr = filter[bf_active].timestamp >> 32;
+    td = tr - tf;
 
     /*
      * Filter swapping will be implemented after the timestamps are ready to use
      */
 
-    /*
-    if ((tf - tr) > BF_SWAP_TIME) {
+    
+    if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
         filter[bf_active].timestamp = record->first;
         filter[bf_learning].timestamp = record->first;
-    }*/
+    }
 
     char ip_key[INET6_ADDRSTRLEN];
     bool is_present = false;
 
     //test for cesnet or other specified prefixes
     
-    int begin, end, mid;
-    ip_addr_t masked;
+    ipv4_mask_map_t dummy;    
     int search_result;
-    begin = 0;
-    end = prefix_list.size() - 1;
-
-    while (begin <= end) {
-        mid = (begin + end) >> 1; // division by 2
-        if (prefix_list[mid].pref_length > 64) {
-            masked.ui64[0] = record->src_addr.ui64[0] & mm[prefix_list[mid].pref_length][0];
-            search_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
-        } else {
-            masked.ui64[1] = record->src_addr.ui64[1] & mm[prefix_list[mid].pref_length][1];
-            search_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
-        }
-        
-        if (search_result < 0) {
-            begin = mid + 1;
-        } else if (search_result > 0) {
-            end = mid -1;
-        } else {
-            break;
-        }
-    }
+    ip_addr_t flow_source;
+    search_result = ip_binary_search(&(record->dst_addr), dummy, mm, prefix_list);
 
 
-    if (search_result != 0) {
+    if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     }
 
-    masked = record->src_addr;
-    masked.ui64[0] &= mm[64][0]; // mask with 64-bit prefix for aggregation
-    masked.ui64[1] &= 0x0;
+    flow_source = record->src_addr;
+    flow_source.ui64[0] &= mm[64][0]; // mask with 64-bit prefix for aggregation
+    flow_source.ui64[1] &= 0x0;
 
     // convert to BF key
-    ip_to_str(&(masked), ip_key);
+    ip_to_str(&(flow_source), ip_key);
 
     //  test if the flow is present (BF)
-    is_present = filter[bf_active].flows[mid].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
+    is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) {
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts
-        filter[bf_active].flows[mid].sources->insert(ip_key, INET6_ADDRSTRLEN);
-        filter[bf_learning].flows[mid].sources->insert(ip_key, INET6_ADDRSTRLEN);
-        filter[bf_active].flows[mid].count++;
-        filter[bf_learning].flows[mid].count++;
+        filter[bf_active].flows[search_result].sources->insert(ip_key, INET6_ADDRSTRLEN);
+        filter[bf_learning].flows[search_result].sources->insert(ip_key, INET6_ADDRSTRLEN);
+        filter[bf_active].flows[search_result].count++;
+        filter[bf_learning].flows[search_result].count++;
 
-        if (filter[bf_active].flows[mid].count > threshold) {
+        if (filter[bf_active].flows[search_result].count > threshold) {
 #ifdef DEBUG
+            ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             cout << "Possible spoofing found: ";
-            cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[mid].count << ")." << endl;
+            cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[search_result].count << ")." << endl;
 #endif
             return SPOOF_POSITIVE;
         }
@@ -935,14 +881,23 @@ int main (int argc, char** argv)
 
         // Interpret data as unirec flow record
         record = (ur_basic_flow_t *) data;
-
+#ifdef DEBUG
         if (ip_is4(&(record->src_addr))) {
             ++v4;
         } else {
             ++v6;
         }
-
+#endif
         //go through all filters
+        // initialize the timestamp of bloom filters
+        if (v4_flows[bf_active].timestamp == 0x0 
+            && v4_flows[bf_learning].timestamp == 0x0) {
+            v4_flows[bf_active].timestamp = v4_flows[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000ULL;
+        }
+        if (v6_flows[bf_active].timestamp == 0x0 
+            && v6_flows[bf_learning].timestamp == 0x0) {
+            v6_flows[bf_active].timestamp = v6_flows[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000ULL;
+        }
         
 
         // ***** 1. bogon and specific prefix filter *****
@@ -1010,22 +965,19 @@ int main (int argc, char** argv)
     }
 
 #ifdef DEBUG
-    cout << "IPv4: ";
-    cout << dec << v4 << endl;
-
-    cout << "IPv6: ";
-    cout << dec << v6 << endl;
-    cout << "No. of possibly spoofed addresses: ";
-    cout << dec << spoof_count << endl;
+    cout << "IPv4: " << v4 << endl;
+    cout << "IPv6: " << v6 << endl;
+    cout << "No. of possibly spoofed addresses: " << spoof_count << endl;
     cout << "Caught by bogon filter: " << bogons << endl;
     cout << "Caught by symetric routing filter: " << syms << endl;
     cout << "Caught by using too many new flows: " << nflows << endl;
 #endif
 
+    trap_send_data(1, record, 1, TRAP_WAIT);
     // clean up before termination
     destroy_filters(v4_flows);
     destroy_filters(v6_flows);
-    trap_finalize();
+//    trap_finalize();
 
     return EXIT_SUCCESS;
 }
