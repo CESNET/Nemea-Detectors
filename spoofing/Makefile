@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -std=c99
-CXXFLAGS=-O2 -std=c++98
+CXXFLAGS=-pg -O2 -std=c++98
 LDFLAGS=
 LDLIBS=-ltrap -lcommlbr -lrt
 
