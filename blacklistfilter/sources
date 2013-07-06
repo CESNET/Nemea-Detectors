@@ -1,0 +1,7 @@
+malwaredomains_com http://mirror2.malwaredomains.com/files/justdomains
+zeus_domains https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
+zeus_ips https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist
+spyeye_domains https://spyeyetracker.abuse.ch/blocklist.php?download=domainblocklist
+spyeye_ips https://spyeyetracker.abuse.ch/blocklist.php?download=ipblocklist
+palevo https://palevotracker.abuse.ch/blocklists.php?download=combinedblocklist
+spamhaus_org http://www.spamhaus.org/drop/drop.txt

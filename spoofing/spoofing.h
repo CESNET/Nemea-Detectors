@@ -18,88 +18,142 @@
 extern "C" {
 #endif
 
+/**
+ * Return value for filters when spoofing is found.
+ */
 #define SPOOF_POSITIVE 1
+
+/**
+ * Return value for filters when the flow is clear.
+ */
 #define SPOOF_NEGATIVE 0
-#define BOGON_FILE_ERROR 1
+
+/**
+ * Return value when file with prefixes cannot be loaded 
+ * due the I/O error, wrong format or anything else.
+ */
+#define PREFIX_FILE_ERROR 1
+
+/**
+ * Return value if everything goes well. :-)
+ */
 #define ALL_OK 0
+
+/**
+ * Return value for binary search when the item is not found.
+ */
 #define IP_NOT_FOUND -1
 
+/**
+ * Default value for update time of records in symetric routing map in seconds.
+ */
 #define SYM_RW_DEFAULT 45
-#define NEW_FLOW_DEFAULT 1000
+
+/**
+ * Default threshold for new flow counter used for warning.
+ */
+#define NEW_FLOW_DEFAULT 100000
+
+/**
+ * Time setting for swapping the Bloom filters in seconds.
+ */
 #define BF_SWAP_TIME 300
 
 // structure definitions
 
-/*
- * structure for holding bogon prefixes 
+/**
+ * Structure for bogon prefixes
  */
-typedef struct bogon_prefix {
-    ip_addr_t ip;
-    uint8_t pref_length;
+typedef struct {
+    /*@{*/
+    ip_addr_t ip; /**< IP address of the prefix. */
+    uint8_t pref_length; /**< Length of the prefix. */
+    /*@}*/
 } ip_prefix_t;
 
-/*
- * structure for keeping the source addresses in symetric filter
+/**
+ * Structure for keeping the source addresses in symetric filter.
  */
-typedef struct symetric_src {
-    uint64_t link;
-    uint64_t timestamp;
+typedef struct {
+    /*@{*/
+    uint64_t link; /**< Bitmap of the links used by the sources */
+    uint64_t timestamp; /**< Timestamp of the structure being added to the filter */
+    /*@}*/
 } sym_src_t;
 
-// vector used as a container of all prefixes
+
+/**
+ * @typedef std::vector<ip_prefix_t> pref_list_t
+ * Vector used as a container of all prefixes.
+ */
 typedef std::vector<ip_prefix_t> pref_list_t;
 
-// map of links associated to source ip addresses
+/**
+ * @typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
+ * Map of links associated to source ip addresses (IPv4).
+ */
 typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
+
+/**
+ * @typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
+ * Map of links associated to source ip addresses (IPv6).
+ */
 typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
 
-
-//
-typedef struct flow_count_s {
-    bloom_filter* sources;    
-    unsigned count;
+/**
+ * Structure for new flow counter with bloom filter and counter
+ */
+typedef struct {
+    /*@{*/
+    bloom_filter* sources; /**< Pointer to bloom filter for the watched network */
+    unsigned count; /**< Number of currently used flows */
+    /*@}*/
 } flow_count_t;
 
 
-//
-typedef struct flow_filter_s {
-    std::vector<flow_count_t> flows;
-    uint64_t timestamp;
+/**
+ * Structure with set of bloom filters for the new flow counter.
+ */
+typedef struct {
+    /*@{*/
+    std::vector<flow_count_t> flows; /**< Vector with filters */
+    uint64_t timestamp; /**< Timestamp of activation of the set */
+    /*@}*/
 } flow_filter_t;
 
-
-// Array of ipv4 netmasks
+/**
+ * @typedef uint32_t ipv4_mask_map_t[33];
+ * Array of IPv4 netmasks.
+ */
 typedef uint32_t ipv4_mask_map_t[33];
 
-// Array of ipv6 netmasks
+/**
+ * @typedef uint64_t ipv6_mask_map_t[129][2];
+ * Array of IPv6 netmasks.
+ */
 typedef uint64_t ipv6_mask_map_t[129][2];
 
 // function prototypes
 
-/**
+/*
  * Procedures for creating an array of masks.
  * Procedure gets a reference for array and fills it with every netmask
  * possible for the ip protocol. (33 for IPv4 and 129 for IPv6).
- *
- * @param m Array to be filled
  */
 void create_v4_mask_map(ipv4_mask_map_t& m);
 void create_v6_mask_map(ipv6_mask_map_t& m);
 
-/**
+/*
  * Function for loading prefix file.
  * Function reads file with network prefixes and creates a vector for use
  * filters. This function should be called only once, since loading 
  * prefixes is needed only on "cold start of the detector" or if we want to 
  * teach the detector new file. (Possile changes to get signal for loading).
- *
- * @param prefix_list Reference to a structure for containing all prefixes
- * @return 0 if everything goes smoothly else 1
  */
 int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const char *bogon_file);
 
 
-/**
+/*
  * Functions for checking the ip address for bogon prefixes.
  * Function gets ip address, list of prefixes loaded from file
  * and correct mask array. Then the function tries to match the ip address
@@ -110,14 +164,7 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
 int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm);
 int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm);
 
-/**
- * Procedure for freeing memory used by bogon prefixes.
- * Procedure gets the prefix list and frees all the memory used by
- * every item in the list and then it removes all items from the list.
- */
-void clear_bogon_filter(pref_list_t& prefix_list);
-
-/**
+/*
  * Functions for checking routing symetry.
  * Functions get records and their respective maps of the links used for 
  * communication by devices in record (src and dst). If the flow keeps 
@@ -127,7 +174,7 @@ void clear_bogon_filter(pref_list_t& prefix_list);
 int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time);
 int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time);
 
-/**
+/*
  * Functions for recording new incomming data flows.
  * Functions get their respective sets of Bloom filters and lists of checked IP 
  * prefixes and then it records all inbound traffic with these netwroks as 
