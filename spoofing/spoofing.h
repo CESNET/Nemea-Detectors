@@ -78,6 +78,7 @@ typedef struct {
     /*@{*/
     uint64_t link; /**< Bitmap of the links used by the sources */
     uint64_t timestamp; /**< Timestamp of the structure being added to the filter */
+//    uint8_t ttl; // TTL of the packet going over this link
     /*@}*/
 } sym_src_t;
 
