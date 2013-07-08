@@ -7,8 +7,7 @@
 
 #include <vector>
 #include <map>
-#include <set>
-#include "../unirec.h"
+#include "../../unirec/unirec.h"
 #include "BloomFilter.hpp"
 
 #ifndef SPOOFING_H
@@ -162,8 +161,8 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
  * as positive spoofing and returns appropriate constant. Otherwise it
  * flags the address as negative.
  */ 
-int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm);
-int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm);
+int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm);
+int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm);
 
 /*
  * Functions for checking routing symetry.
@@ -172,8 +171,8 @@ int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mas
  * using the same link for the communication then it considered legit.
  * Otherwise it is flagged as possible spoofing.
  */
-int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time);
-int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time);
+int check_symetry_v4(ur_template_t* ur_tmp, const void *record, v4_sym_sources_t& src, unsigned rw_time);
+int check_symetry_v6(ur_template_t* ur_tmp, const void *record, v6_sym_sources_t& src, unsigned rw_time);
 
 /*
  * Functions for recording new incomming data flows.
@@ -182,8 +181,8 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
  * destinations. If any network has exceeded the threshold of flows then 
  * all source addresses that want to communicate are reported as potentially spoofed.
  */
-int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list);
-int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list);
+int check_new_flows_v4(ur_template_t* ur_tmp, const void *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list);
+int check_new_flows_v6(ur_template_t* ur_tmp, const void *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list);
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS=-O2 -std=c99
 CXXFLAGS=-pg -O2 -std=c++98
 LDFLAGS=
-LDLIBS=-ltrap -lcommlbr -lrt
+LDLIBS= ../../unirec/unirec.o -ltrap -lcommlbr -lrt
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
