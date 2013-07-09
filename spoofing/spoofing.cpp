@@ -26,7 +26,7 @@ extern "C" {
 #include "../ipaddr.h"
 #include "spoofing.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 
 using namespace std;
@@ -347,10 +347,11 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * any of the bogon prefixes in list. If it does filter returns 
  * positive spoofing constant and spoofing counter is increased.
  * 
- * @param checked IP address that is being checked
- * @param prefix_list List of bogon prefixes used for checking
- * @param v4mm Array of every possible netmasks for protocol
- * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
+ * @param ur_tmp Template used for UniRec record.
+ * @param checked Record being checked.
+ * @param prefix_list List of bogon prefixes used for checking.
+ * @param v4mm Array of every possible netmasks for protocol.
+ * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE.
  */
 int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
@@ -360,15 +361,13 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
 
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
-    ip_addr_t src;
-    src = ur_get(ur_tmp, checked, UR_SRC_IP);
 
-    search_result = ip_binary_search(&(src), v4mm, dummy, prefix_list);
+    search_result = ip_binary_search(&(ur_get(ur_tmp, checked, UR_SRC_IP)), v4mm, dummy, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(&(src), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
@@ -396,7 +395,8 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
  * any of the bogon prefixes in list. If it does filter returns 
  * positive spoofing constant and spoofing counter is increased.
  * 
- * @param checked IP address that is being checked
+ * @param ur_tmp Template used for UniRec record.
+ * @param checked Record being checked.
  * @param prefix_list List of bogon prefixes used for checking
  * @param v6mm Array of every possible netmasks for protocol
  * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
@@ -409,14 +409,12 @@ int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
 
-    ip_addr_t src;
-    src = ur_get(ur_tmp, checked, UR_SRC_IP);
-    search_result = ip_binary_search(&(src), dummy, v6mm, prefix_list);
+    search_result = ip_binary_search(&(ur_get(ur_tmp, checked, UR_SRC_IP)), dummy, v6mm, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(&(src), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
@@ -455,7 +453,8 @@ int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
  * 0x0 then there is no valid link for this communication and the source IP is 
  * flagged as spoofed.
  *
- * @param record Record (unirec format) that is being analyzed.
+ * @param ur_tmp Template used for UniRec record.
+ * @param record Record (UniRec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
@@ -470,14 +469,12 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
     ip_to_str(&(ur_get(ur_tmp, record, UR_SRC_IP)), debug_ip_src);
     ip_to_str(&(ur_get(ur_tmp, record, UR_DST_IP)), debug_ip_dst);
 #endif
-
-
     unsigned v4_numeric;
 
     // check incomming/outgoing traffic
     if (ur_get(ur_tmp, record, UR_DIR_BIT_FIELD) == 0x0) {// outgoing trafic
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_DST_IP))) & 0xFFFFFF00;
+        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_DST_IP))) & 0x00FFFFFF;
 
         if (src.count(v4_numeric)
             && (((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
@@ -492,9 +489,10 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
 
     } else { // incomming traffic --> check for validity
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_SRC_IP))) & 0xFFFFFF00;
+        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_SRC_IP))) & 0x00FFFFFF;
+
         if (src.count(v4_numeric)) {
-            int valid = src[v4_numeric].link & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            int valid = (src[v4_numeric].link) & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
@@ -529,7 +527,8 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
  * 0x0 then there is no valid link for this communication and the source IP is 
  * flagged as spoofed.
  *
- * @param record Record (unirec format) that is being analyzed.
+ * @param ur_tmp Template used for UniRec record.
+ * @param record Record (UniRec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
@@ -630,13 +629,14 @@ int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t
 
 /**
  * Function for cheking new flows for given source (IPv4).
- * Function gets the record and map of used data flows. Then it asks
- * the map for source source address. If the source is not present it adds the 
- * new source with its destination and initializes its counter to 1. If the 
- * source already communicated then the destination is added to the set of flows 
- * and the counter is increased. If the flow count exceeds the given threshold 
- * the source address is reported as spoofed.
+ * Function gets the record and map of used data flows. Then it tries 
+ * to find the source in the map represented by Bloom filters. If the 
+ * source is already present nothing happens. If not the source is added 
+ * to the filter and its respective counter is increased. If the counter 
+ * value exceeds the given threshold then every new flow is flagged as 
+ * possibly spoofed.
  *
+ * @param ur_tmp Template used for UniRec record.
  * @param record Record that is being analyzed.
  * @param threshold Maximum limit for flows per source.
  * @param filter Set of Bloom filters.
@@ -715,13 +715,14 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
 
 /**
  * Function for cheking new flows for given source (IPv6).
- * Function gets the record and map of used data flows. Then it asks
- * the map for source source address. If the source is not present it adds the 
- * new source with its destination and initializes its counter to 1. If the 
- * source already communicated then the destination is added to the set of flows 
- * and the counter is increased. If the flow count exceeds the given threshold 
- * the source address is reported as spoofed.
+ * Function gets the record and map of used data flows. Then it tries 
+ * to find the source in the map represented by Bloom filters. If the 
+ * source is already present nothing happens. If not the source is added 
+ * to the filter and its respective counter is increased. If the counter 
+ * value exceeds the given threshold then every new flow is flagged as 
+ * possibly spoofed.
  *
+ * @param ur_tmp Template used for UniRec record.
  * @param record Record that is being analyzed.
  * @param threshold Maximum limit for flows per source.
  * @param filter Set of Bloom filters.
@@ -811,7 +812,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,TIME_FIRST,LINK_BIT_FIELD,DIR_BIT_FIELD");
+    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
+//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
     // lists of bogon prefixes
     pref_list_t bogon_list_v4; 
@@ -949,10 +951,10 @@ int main (int argc, char** argv)
     cout << "Bloom filters created. " << endl;
 #endif
 
+    const void *data;
+    uint16_t data_size;
     // ***** Main processing loop *****
     while (!stop) {
-        const void *data;
-        uint16_t data_size;
                 
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
@@ -986,7 +988,7 @@ int main (int argc, char** argv)
             ++v6;
         }
 #endif
-        //go through all filters
+        // go through all filters
         // initialize the timestamp of bloom filters
         if (v4_flows[bf_active].timestamp == 0x0 
             && v4_flows[bf_learning].timestamp == 0x0) {
@@ -1018,10 +1020,11 @@ int main (int argc, char** argv)
             ++bogons;
 #endif
             //for future use
-//            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK; // reset return value
             continue;
         }
+
         // ***** 2. symetric routing filter *****
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time);
@@ -1036,7 +1039,7 @@ int main (int argc, char** argv)
             ++syms;
 #endif
             //for future use
-//            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK;
             continue;
         }
@@ -1057,7 +1060,7 @@ int main (int argc, char** argv)
             ++nflows;
 #endif
             //for future use
-//            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK;
             continue;
         }
@@ -1072,11 +1075,12 @@ int main (int argc, char** argv)
     cout << "Caught by using too many new flows: " << nflows << endl;
 #endif
 
-//    trap_send_data(0, record, 1, TRAP_WAIT);
+    trap_send_data(0, data, 1, TRAP_WAIT);
 
     // clean up before termination
     destroy_filters(v4_flows);
     destroy_filters(v6_flows);
+    ur_free_template(templ);
     trap_finalize();
 
     return retval;
