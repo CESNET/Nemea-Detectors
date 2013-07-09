@@ -1080,6 +1080,7 @@ int main (int argc, char** argv)
     // clean up before termination
     destroy_filters(v4_flows);
     destroy_filters(v6_flows);
+    ur_free_template(templ);
     trap_finalize();
 
     return retval;
