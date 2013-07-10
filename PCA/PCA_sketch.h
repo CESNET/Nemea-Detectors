@@ -32,7 +32,7 @@
 
 #define TIMEBIN_SIZE 30 // Size of single timebin in seconds
 
-#define WORKING_TIMEBIN_WINDOW_SIZE 100
+#define WORKING_TIMEBIN_WINDOW_SIZE 5
 
 enum features_order
 {

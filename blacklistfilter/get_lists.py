@@ -57,10 +57,10 @@ for i in range(0, len(sources)):
         report("Downloaded " + file_name + " as " + tmp_name)
         if os.path.getmtime(tmp_name) > os.path.getmtime(file_name):
             report(file_name + " is old, keeping new version.")
-            os.remove(sources[i].file_name)
+            os.remove(file_name)
             os.rename(tmp_name, file_name)
         else:
-            report(sources[i].file_name + " is up-to-date, removing temporary file.")
+            report(file_name + " is up-to-date, removing temporary file.")
             os.remove(tmp_name)
     else:
         report("Downloaded "+ file_name +" for the first time")

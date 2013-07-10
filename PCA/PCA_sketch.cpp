@@ -49,6 +49,8 @@
 #include "PCA_sketch.h"
 #include "alglib/dataanalysis.h"
 
+using namespace alglib;
+
 // ******** TEMPORARY:  IN FUTURE SHOULD BE IN "common.h ***********************
 /*
  * SuperFastHash by Paul Hsieh
@@ -168,6 +170,73 @@ void signal_handler(int signal)
    }
 }
 
+/**
+ * \brief Procedure for computing entropy of one sketch row
+ * \param[in] uint32_t pointer to sketch row which values will be processed.
+ * \param[in] Length of processed row.
+ * \param[in] Total count of all packets in flows in processed row.
+ * \return Entropy of one sketch row.
+ */
+float compute_entropy(uint32_t *sketch_row, unsigned int row_length, uint64_t packet_count)
+{
+   float entropy = 0.0;
+   for (int i = 0; i < row_length; i++)
+   {
+      if(sketch_row[i] >0){
+         float p = (float)sketch_row[i] / packet_count;
+         entropy -= p * log2(p);
+      }
+   }
+   return entropy;
+}
+
+/**
+ * \brief Procedure for computing entropy of one sketch row
+ *
+ * Procedure transform submatrix of "matrix_ptr" defined by column "start_index"
+ * and "last_index" to unit energy (last_index is first which is not affected)
+ * \param[in,out] alglib::real_2d_array pointer to matrix which should be normalized.
+ * \param[in] Start index - first column of submatrix.
+ * \param[in] Last index - last column of submatrix (first column which is not
+ * affected).
+ */
+void  transform_submatrix_unit_energy(real_2d_array *matrix_ptr, int start_index, int last_index)
+{
+  float energy_of_submatrix;
+
+  for(int i = start_index; i < last_index; i++){
+      for(int j = 0; j < matrix_ptr->rows(); j++){
+         energy_of_submatrix+=(*matrix_ptr)(j,i)*(*matrix_ptr)(j,i);
+      }
+  }
+  energy_of_submatrix/=(matrix_ptr->rows()*(last_index-start_index));
+
+  for(int i = start_index; i < last_index; i++){
+      for(int j = 0; j < matrix_ptr->rows(); j++){
+         (*matrix_ptr)(j,i)/=energy_of_submatrix;
+      }
+   }
+}
+
+/**
+ * \brief Procedure which transforms columns of matrix to have zero mean
+ * \param[in,out] alglib::real_2d_array pointer to matrix which should be normalized.
+ */
+void transform_matrix_zero_mean(real_2d_array *matrix_ptr)
+{
+   float mean;
+
+   for(int i = 0; i < matrix_ptr->cols(); i++){
+      for(int j = 0; j < matrix_ptr->rows(); j++){
+         mean+=(*matrix_ptr)(j, i);
+      }
+      mean/=matrix_ptr->rows();
+      for(int j = 0; j < matrix_ptr->rows(); j++){
+         (*matrix_ptr)(j,i)-=mean;
+      }
+   }
+}
+
 int main(int argc, char **argv)
 {
    int ret;
@@ -175,6 +244,7 @@ int main(int argc, char **argv)
 
    int i,j;
 
+   int need_more_timebins=WORKING_TIMEBIN_WINDOW_SIZE;
    uint8_t timebin_init_flag=1;
    uint32_t start_of_actual_flow;
    uint32_t timebin_counter; // counted from zero
@@ -187,10 +257,21 @@ int main(int argc, char **argv)
 
    uint32_t row_in_sketch;
 
-   static uint32_t address_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][ADDRESS_SKETCH_WIDTH*2];
-   static uint32_t port_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH*2];
+   static uint32_t sip_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][ADDRESS_SKETCH_WIDTH];
+   static uint32_t dip_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
+   static uint32_t sp_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
+   static uint32_t dp_sketches [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
 
-   uint64_t pkt_cnt_in_actual_timebin=0;
+   static uint64_t packet_counts [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
+
+   real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
+   real_2d_array principal_components[NUMBER_OF_HASH_FUNCTION];
+	real_1d_array eigenvalues[NUMBER_OF_HASH_FUNCTION];
+   ae_int_t info;
+
+   for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+      data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE,SKETCH_SIZE*4);
+   }
 
 //   void (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(type1 *, type2, ...);
    uint32_t (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(const char *, int , int );
@@ -276,128 +357,149 @@ int main(int argc, char **argv)
 
       // *** Timebin division (sampling) based on TIMEBIN_SIZE (in seconds) ***
       start_of_actual_flow = (ur_get(in_tmplt,in_rec,UR_TIME_FIRST))>>32;
+
       if(timebin_init_flag){ // initialization of counters with first flow
          timebin_init_flag = 0;
          start_of_next_timebin = start_of_actual_flow + TIMEBIN_SIZE;
-         timebin_counter = 1; // timebin_counter-1 == 1st index in DataTable
-         memset(address_sketches, 0, sizeof(address_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH*2);
-         memset(port_sketches, 0, sizeof(address_sketches[0][0][0])*SKETCH_SIZE*PORT_SKETCH_WIDTH*2*NUMBER_OF_HASH_FUNCTION);
-               #ifdef DEBUG_OUT
+         timebin_counter = 0; // "human-like timebin" = timebin_counter + 1
+
+         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
+         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
+         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
+         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
+         memset(packet_counts, 0, sizeof(packet_counts[0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE);
+               #ifdef DEBUG
                   printf("Start of %u. timebin in %u------------------------------"
                         "--------------\n",timebin_counter,start_of_next_timebin);
                #endif
       }
 
       if(start_of_actual_flow>start_of_next_timebin){
+         --need_more_timebins;
          for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
             for(j = 0; j < SKETCH_SIZE; j++){
 //               //// !!! OVERFLOW timebin_counter
-//               data_matrix[i][timebin_counter-1][j]=compute_entropy(address_sketches[i][j]);
-//               data_matrix[i][timebin_counter-1][j+SKETCH_SIZE]=compute_entropy(address_sketches[i][j]);
-//               data_matrix[i][timebin_counter-1][j+SKETCH_SIZE*2]=compute_entropy(address_sketches[i][j]);
-//               data_matrix[i][timebin_counter-1][j+SKETCH_SIZE*3]=compute_entropy(address_sketches[i][j]);
+//               printf("[%i] [%i] [%i]\n",i, (timebin_counter-1) % WORKING_TIMEBIN_WINDOW_SIZE,j);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j) =
+                  compute_entropy(sip_sketches[i][j],ADDRESS_SKETCH_WIDTH,packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE) =
+                  compute_entropy(sp_sketches[i][j],PORT_SKETCH_WIDTH,packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE*2) =
+                  compute_entropy(dip_sketches[i][j],ADDRESS_SKETCH_WIDTH,packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE*3) =
+                  compute_entropy(dp_sketches[i][j],PORT_SKETCH_WIDTH,packet_counts[i][j]);
             }
-            // preprocess_data_matrix();
-            // normalize_data_matrix();
+         }
+         if(!need_more_timebins){// *** Start detection (& identification) part ***
+            need_more_timebins++;
+            for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+//            printf("Detection...\n");
+
+            // preprocess_data_matrix( parametr timebin_to_find-in);
+
+            transform_matrix_zero_mean(&data_matrices[i]);
+				transform_submatrix_unit_energy(&data_matrices[i],0,SKETCH_SIZE);
+				transform_submatrix_unit_energy(&data_matrices[i],SKETCH_SIZE,2*SKETCH_SIZE);
+				transform_submatrix_unit_energy(&data_matrices[i],2*SKETCH_SIZE,3*SKETCH_SIZE);
+				transform_submatrix_unit_energy(&data_matrices[i],3*SKETCH_SIZE,4*SKETCH_SIZE);
+
+//				pcabuildbasis(data_matrices[i], data_matrices[i].cols(), data_matrices[i].rows(), info, eigenvalues[i], principal_components[i]);
+
             // proceed_with_detection();
             //// PCA();
             //// find_normal_subspace_size();
             //// compute_C-Residual();
             //// detection_by_SPE_test();
-          }
-         // merge_results();
-         // IF DETECTED:
-         //>YES> proceed_with_identification >> sending identificated flows
-         // drop_actual_flows ... proceed with another timebin
+            }
+            // merge_results();
+            // IF DETECTED:
+            //>YES> proceed_with_identification >> merge results from all re-hashing >>
+            // sending identificated & merged flows
+            // drop_actual_flows ... proceed with another timebin
+         }// *** END OF detection (& identification) part ***
 
          // !!!TODO overflow?
          ++timebin_counter;
          start_of_next_timebin += TIMEBIN_SIZE;
-         pkt_cnt_in_actual_timebin=0;
-         memset(address_sketches, 0, sizeof(address_sketches[0][0][0])*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH*2*NUMBER_OF_HASH_FUNCTION);
-         memset(port_sketches, 0, sizeof(address_sketches[0][0][0])*SKETCH_SIZE*PORT_SKETCH_WIDTH*2*NUMBER_OF_HASH_FUNCTION);
-         printf("Detection...\n");
-               #ifdef DEBUG_OUT
+               #ifdef DEBUG
                   printf("Start of %u. timebin in %u------------------------------"
                         "--------------\n",timebin_counter,start_of_next_timebin);
                #endif
+
+         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
+         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
+         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
+         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
+         memset(packet_counts, 0, sizeof(packet_counts[0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE);
+      } // *** END OF Timebin division ***
+      // *** Flow reading & structure filling ***
+      //    *** Getting HashKey ***
+      memset(hash_key,0,sizeof(hash_key));
+      if(ip_is4(ur_get_ptr(in_tmplt,in_rec,UR_SRC_IP))){
+         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
+         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
       } else {
-         // *** Getting HashKey ***
-         memset(hash_key,0,sizeof(hash_key));
-         if(ip_is4(ur_get_ptr(in_tmplt,in_rec,UR_SRC_IP))){
-            tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
-            hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
-            tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
-            hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
-         } else {
-            if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH){
-               hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-               hash_key[1] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-               hk_size = sizeof(hash_key[0])*2;
-            } else if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2) {
-               hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-               hash_key[1] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1];
-               hash_key[2] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-               hash_key[3] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1];
-               hk_size = sizeof(hash_key);
-            } else if(V6_HASH_KEY_PART < V6_BIT_PART_LENGTH) {
-               tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
-               hash_key[0] |= tmp_addr_part;
-               tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
-               hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
-               hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
-               hk_size = sizeof(hash_key[0])*2;
-            } else { // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
-               hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-               tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
-               hash_key[1] |= tmp_addr_part;
-               tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-               hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-               hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-               tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
-               hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-               hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-               hk_size = sizeof(hash_key);
-            }
-//                  #ifdef DEBUG
-//                     printf("SRC_IP_v6: %016llX:%016llX \tSRC_IP_v6: %016llX:%016"
-//                            "llX \n", ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0],
-//                            ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1],
-//                            ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0],
-//                            ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1]);
-//                     printf("HashKey_v6: %016llX:%016llX:%016llX:%016llX \n",
-//                         hash_key[0], hash_key[1], hash_key[2], hash_key[3]);
-//   //               printf("%" PRIu64 "\n", hash_key[0]);
-//                  #endif
-//                  #ifdef DEBUG
-//                     printf("pos_v6:\t%u\n", row_in_sketch);
-//                  #endif
-         }
-         // *** END OF Getting HashKey ***
-         // *** Adding feature occurrence in all sketches ***
-         for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){/*
-            row_in_sketch = SuperFastHash((char *)hash_key, hk_size, seeds[i]) % SKETCH_SIZE;
-            address_sketches [i][row_in_sketch]
-                             [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
-                                            sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                             += ur_get(in_tmplt, in_rec, UR_PACKETS);
-            address_sketches [i][row_in_sketch]
-                             [(SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
-                                            sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH) + ADDRESS_SKETCH_WIDTH]
-                             += ur_get(in_tmplt, in_rec, UR_PACKETS);
-            port_sketches [i][row_in_sketch]
-                          [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
-                                         sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                          += ur_get(in_tmplt, in_rec, UR_PACKETS);
-            port_sketches [i][row_in_sketch]
-                          [(SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
-                                         sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH) + PORT_SKETCH_WIDTH]
-                          += ur_get(in_tmplt, in_rec, UR_PACKETS);
-            pkt_cnt_in_actual_timebin += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         */}
-         // *** END OF Adding feature occurrence in all sketches ***
+//         if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH){
+         #if V6_HASH_KEY_PART == V6_BIT_PART_LENGTH
+            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+            hash_key[1] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+            hk_size = sizeof(hash_key[0])*2;
+//         } else if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2) {
+         #elif V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2
+            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+            hash_key[1] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1];
+            hash_key[2] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+            hash_key[3] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1];
+            hk_size = sizeof(hash_key);
+//         } else if(V6_HASH_KEY_PART < V6_BIT_PART_LENGTH) {
+         #elseif V6_HASH_KEY_PART < V6_BIT_PART_LENGTH
+            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
+            hash_key[0] |= tmp_addr_part;
+            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
+            hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
+            hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
+            hk_size = sizeof(hash_key[0])*2;
+//         } else { // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
+         #else // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
+            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
+            hash_key[1] |= tmp_addr_part;
+            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+            hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+            hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
+            hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+            hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+            hk_size = sizeof(hash_key);
+//         }
+         #endif
       }
-      // *** END OF Timebin division ***
+      //    *** END OF Getting HashKey ***
+      //    *** Adding feature occurrence in all sketches ***
+      for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+         row_in_sketch = SuperFastHash((char *)hash_key, hk_size, seeds[i]) % SKETCH_SIZE;
+         sip_sketches[i][row_in_sketch]
+                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
+                                   sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
+                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         dip_sketches[i][row_in_sketch]
+                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
+                                   sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
+                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         sp_sketches[i][row_in_sketch]
+                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
+                                  sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
+                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         dp_sketches[i][row_in_sketch]
+                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
+                                  sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
+                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
+      }
+         //    *** END OF Adding feature occurrence in all sketches ***
+         // *** END OF flow reading & structure filling ***
 
 //////      // Read FOO and BAR from input record and compute their sum
 //////      uint32_t baz = ur_get(in_tmplt, in_rec, UR_FOO) +
