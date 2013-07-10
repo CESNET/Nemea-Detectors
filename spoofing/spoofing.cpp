@@ -22,11 +22,11 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../unirec.h"
+#include "../../unirec/unirec.h"
 #include "../ipaddr.h"
 #include "spoofing.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 
 using namespace std;
@@ -41,8 +41,8 @@ trap_module_info_t module_info = {
     "3. Checking asymetric routes\n"
     "4. Counting new flows\n"
     "Interfaces:\n"
-    "   Inputs: 1 (ur_basic_flow)\n"
-    "   Outputs: 1\n" // will be 1 (ur_basic_flow_t)
+    "   Inputs: 1 (unirec record)\n"
+    "   Outputs: 1 (unirec record)\n" 
     "Additional parameters:\n"
     "   -b <filename>    File with list of bogon prefixes. This parameter is \n"
     "                    mandatory.\n"
@@ -52,15 +52,19 @@ trap_module_info_t module_info = {
     "   -t <num>         Threshold for reporting spoofed addresses from new \n"
     "                    filter. Default value is 1000 flows.\n",
     1, // Number of input interfaces
-    1, // Number of output interfaces (will be 1)
+    1, // Number of output interfaces
 };
+
+static int stop = 0;
 
 // *****    Bloom filter handling    *****
 
-static int stop = 0;
-static int bf_active = 0;
-static int bf_learning = 1;
+static int bf_active = 0; // index of currently used bloom filter
+static int bf_learning = 1; // index of inactive bloom filter
 
+/**
+ * Procedure for swapping the active filters
+ */
 void inline swap_filters() 
 {
     int tmp;
@@ -69,6 +73,11 @@ void inline swap_filters()
     bf_active = tmp;
 }
 
+/**
+ * Procedure for creating the sets of bloom filters for new flow counter.
+ * @param length Length of the vector with prefixes. Filters are on the same indexes as their respective prefixes.
+ * @param filters Set of Bloom filters to be created.
+ */
 void create_nflow_filters(int length, flow_filter_t* filters)
 {
     for (int i = 0; i < length; i++) {
@@ -92,6 +101,12 @@ void create_nflow_filters(int length, flow_filter_t* filters)
     filters[bf_learning].timestamp = 0x0;
 }
 
+/**
+ * Procedure for erasing the content of bloom filter that is being
+ * set inactive.
+ *
+ * @param filter_set Set of filters that is being cleared.
+ */
 void clear_filters(flow_filter_t& filter_set)
 {
     for (int i = 0;i < filter_set.flows.size(); i++) {
@@ -100,6 +115,11 @@ void clear_filters(flow_filter_t& filter_set)
     }
 }
 
+/**
+ * Procedure for destroying all filters for module termination
+ *
+ * @param filters Bloom filters to be freed from memory.
+ */
 void destroy_filters(flow_filter_t* filters)
 {
     for (int i = 0; i < filters[bf_active].flows.size(); i++) {
@@ -110,7 +130,7 @@ void destroy_filters(flow_filter_t* filters)
     filters[bf_active].flows.clear();
 }
 
-/*
+/**
  * Procedure for handling signals SIGTERM and SIGINT (Ctrl-C)
  */
 void signal_handler(int signal)
@@ -181,35 +201,44 @@ bool sort_by_prefix_v6 (const ip_prefix_t& addr1, const ip_prefix_t& addr2)
  * prefixes is needed only on "cold start of the detector" or if we want to 
  * teach the detector new file. (Possile changes to get signal for loading).
  *
- * @param prefix_list Reference to a structure for containing all prefixes
- * @return 0 if everything goes smoothly else 1
+ * @param prefix_list_v4 List of IPv4 prefixes to be filled.
+ * @param prefix_list_v6 List of IPv6 prefixes to be filled.
+ * @param prefix_file File with prefixes to be loaded and parsed to structures.
+ * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
  */
-int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const char *bogon_file)
+int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const char *prefix_file)
 {
     int error_cnt = 0;
     ip_prefix_t pref;
     ifstream pref_file;
     
     // open file with prefixes
-    pref_file.open(bogon_file);
+    pref_file.open(prefix_file);
 
     // unable to open prefix file
     if (!pref_file.is_open()) {
-        cerr << "ERROR: File with bogon prefixes couldn't be loaded.";
-        cerr << " Unable to continue." << endl;
-        return BOGON_FILE_ERROR;
+        cerr << "ERROR: File with network prefixes couldn't be opened. Unable to continue." << endl;
+        return PREFIX_FILE_ERROR;
     }
 
     // loading the prefixes to memory
     while (!(pref_file.eof())) {
 
-        // allocate memory for new item
+        string line;
         string raw_ip;
-        getline(pref_file, raw_ip, '/');
+        size_t pos;
+        getline(pref_file, line);
 
         // trim whitespaces from the input
-        raw_ip.erase(remove_if(raw_ip.begin(), raw_ip.end(), ::isspace), raw_ip.end());
-        
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+        pos = line.find_first_of('/');
+        if (pos == string::npos) {
+            // prefix length is missing from the line
+            continue;
+        }
+        raw_ip = line.substr(0, pos);
+
         /*
          * Convert input to ip address for use in program
          * If it fails (invalid ip address) free the memory and continue 
@@ -218,11 +247,18 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
         if (!ip_from_str(raw_ip.c_str(), &(pref.ip))) {
             continue;
         }
-        // load prefix length (netmask
-        getline(pref_file,raw_ip,'\n');
+        // load prefix length (+1 for skipping the '/' character
+        raw_ip = line.substr(pos + 1);
 
         // convert to number
         pref.pref_length = strtoul(raw_ip.c_str(), NULL, 0);
+
+        // length of the prefix is out of bounds (32 for IPv4, 128 for IPv6)
+        if (ip_is4(&(pref.ip)) &&  (pref.pref_length > 32)) {
+            continue;
+        } else if (ip_is6(&(pref.ip)) && (pref.pref_length > 128)) {
+            continue;
+        }
 
         if (ip_is4(&(pref.ip))) {
             prefix_list_v4.push_back(pref);
@@ -230,6 +266,12 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
             prefix_list_v6.push_back(pref);
         }
 
+    }
+
+    // nothing was loaded from the given file
+    if (prefix_list_v4.empty() && prefix_list_v6.empty()) {
+        cerr << "ERROR: No networks were loaded. File is probably in wrong format. Unable to continue." << endl;
+        return PREFIX_FILE_ERROR;
     }
 
     // sort lists for binary search used in filters
@@ -257,16 +299,27 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
     ip_addr_t masked;
     begin = 0;
     end = prefix_list.size() - 1;
+
     while (begin <= end) {
         mid = (begin + end) >> 1;
+
         if (ip_is4(searched)) {
             masked.ui32[2] = searched->ui32[2] & v4mm[prefix_list[mid].pref_length];
             mask_result = memcmp(&(prefix_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
         } else {
-            if (prefix_list[mid].pref_length <= 64) {
+            if (prefix_list[mid].pref_length <= 64) { 
+                /* 
+                 * we mask only the "upper part of the address and use
+                 * it for comparison (we don't need to compare the whole
+                 * address)
+                 */
                 masked.ui64[0] = searched->ui64[0] & v6mm[prefix_list[mid].pref_length][0];
                 mask_result = memcmp(&(prefix_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
-            } else {
+            } else { 
+                /*
+                 * we mask only the lower part of the address and use 
+                 * the whole address for comparison
+                 */
                 masked.ui64[1] = searched->ui64[1] & v6mm[prefix_list[mid].pref_length][1];
                 mask_result = memcmp(&(prefix_list[mid].ip.ui8), &(masked.ui8), 16);
             } 
@@ -282,7 +335,7 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
         }
     }
 
-    if (mask_result == 0) {
+    if (mask_result == 0) { // we found an address --> return index for it
         return mid;
     }
     return IP_NOT_FOUND;
@@ -294,28 +347,34 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * any of the bogon prefixes in list. If it does filter returns 
  * positive spoofing constant and spoofing counter is increased.
  * 
- * @param checked IP address that is being checked
- * @param prefix_list List of bogon prefixes used for checking
- * @param v4mm Array of every possible netmasks for protocol
- * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
+ * @param ur_tmp Template used for UniRec record.
+ * @param checked Record being checked.
+ * @param prefix_list List of bogon prefixes used for checking.
+ * @param v4mm Array of every possible netmasks for protocol.
+ * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE.
  */
-int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
+int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& prefix_list, ipv4_mask_map_t& v4mm)
 {
     //check source address of the record with each prefix
-    ipv6_mask_map_t dummy;
+
+    ipv6_mask_map_t dummy; // dummy structure for the binary search parameter
+
+    // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
-    search_result = ip_binary_search(&(checked->src_addr), v4mm, dummy, prefix_list);
+
+    search_result = ip_binary_search(&(ur_get(ur_tmp, checked, UR_SRC_IP)), v4mm, dummy, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(&(checked->src_addr), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
     if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     } else {
+        // address fits any of the prefix from the given list
 #ifdef DEBUG
             cout << "Possible spoofing found: ";
             cout << debug_ip_src;
@@ -327,8 +386,6 @@ int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mas
 #endif
             return SPOOF_POSITIVE;
     }
-
-    // doesn't fit any bogon prefix
     return SPOOF_NEGATIVE;
 }
 
@@ -338,28 +395,33 @@ int v4_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv4_mas
  * any of the bogon prefixes in list. If it does filter returns 
  * positive spoofing constant and spoofing counter is increased.
  * 
- * @param checked IP address that is being checked
+ * @param ur_tmp Template used for UniRec record.
+ * @param checked Record being checked.
  * @param prefix_list List of bogon prefixes used for checking
- * @param v4mm Array of every possible netmasks for protocol
+ * @param v6mm Array of every possible netmasks for protocol
  * @return SPOOF_POSITIVE if address fits the bogon prefix otherwise SPOOF_NEGATIVE
  */
-int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
+int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& prefix_list, ipv6_mask_map_t& v6mm)
 {
 
-    ipv4_mask_map_t dummy;    
+    ipv4_mask_map_t dummy; // dummy structure for the binary search parameter
+
+    // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
-    search_result = ip_binary_search(&(checked->src_addr), dummy, v6mm, prefix_list);
+
+    search_result = ip_binary_search(&(ur_get(ur_tmp, checked, UR_SRC_IP)), dummy, v6mm, prefix_list);
 
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
-        ip_to_str(&(checked->src_addr), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
     if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     } else {
+
 #ifdef DEBUG
        cout << "Possible spoofing found: ";
        cout << debug_ip_src;
@@ -369,6 +431,7 @@ int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mas
        short a;
        cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
 #endif
+
         return SPOOF_POSITIVE;
     }
     return SPOOF_NEGATIVE;   
@@ -390,51 +453,52 @@ int v6_bogon_filter(ur_basic_flow_t *checked, pref_list_t& prefix_list, ipv6_mas
  * 0x0 then there is no valid link for this communication and the source IP is 
  * flagged as spoofed.
  *
- * @param record Record (unirec format) that is being analyzed.
+ * @param ur_tmp Template used for UniRec record.
+ * @param record Record (UniRec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
-int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw_time)
+int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t& src, unsigned rw_time)
 {
 
 #ifdef DEBUG
     char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
-    ip_to_str(&(record->src_addr), debug_ip_src);
-    ip_to_str(&(record->dst_addr), debug_ip_dst);
+    ip_to_str(&(ur_get(ur_tmp, record, UR_SRC_IP)), debug_ip_src);
+    ip_to_str(&(ur_get(ur_tmp, record, UR_DST_IP)), debug_ip_dst);
 #endif
-
-
     unsigned v4_numeric;
 
     // check incomming/outgoing traffic
-    if (record->dirbitfield == 0x0) {// outgoing trafic
+    if (ur_get(ur_tmp, record, UR_DIR_BIT_FIELD) == 0x0) {// outgoing trafic
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(record->dst_addr)) & 0xFFFFFF00;
+        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_DST_IP))) & 0x00FFFFFF;
 
         if (src.count(v4_numeric)
-            && (((record->first & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
-            src[v4_numeric].link |= record->linkbitfield;
-            src[v4_numeric].timestamp = record->first;
+            && (((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
+            src[v4_numeric].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         } else {
             sym_src_t src_rec;
-            src_rec.link = record->linkbitfield;
-            src_rec.timestamp = record->first & 0xFFFFFFFF00000000ULL;
+            src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
             src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
         }
 
     } else { // incomming traffic --> check for validity
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(record->src_addr)) & 0xFFFFFF00;
+        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_SRC_IP))) & 0x00FFFFFF;
+
         if (src.count(v4_numeric)) {
-            int valid = src[v4_numeric].link & record->linkbitfield;
+            int valid = (src[v4_numeric].link) & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
                 cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
-                cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[v4_numeric].link  << endl;
+                cout << "Flow goes through " << (long long) ur_get(ur_tmp, record, UR_LINK_BIT_FIELD); 
+                cout << " while stored is " << (long long) src[v4_numeric].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;
@@ -463,64 +527,53 @@ int check_symetry_v4(ur_basic_flow_t *record, v4_sym_sources_t& src, unsigned rw
  * 0x0 then there is no valid link for this communication and the source IP is 
  * flagged as spoofed.
  *
- * @param record Record (unirec format) that is being analyzed.
+ * @param ur_tmp Template used for UniRec record.
+ * @param record Record (UniRec format) that is being analyzed.
  * @param src Map with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
 
-int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw_time)
+int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t& src, unsigned rw_time)
 {
 
 #ifdef DEBUG
     char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
-    ip_to_str(&(record->src_addr), debug_ip_src);
-    ip_to_str(&(record->dst_addr), debug_ip_dst);
+    ip_to_str(&(ur_get(ur_tmp, record, UR_SRC_IP)), debug_ip_src);
+    ip_to_str(&(ur_get(ur_tmp, record, UR_DST_IP)), debug_ip_dst);
 #endif
 
-    //  Swap the halves of the addresses again
-    //  No idea why the address from recieved record is messed up
-/*    record->src_addr = ip_from_16_bytes_le((char *) &(record->src_addr));
-    record->dst_addr = ip_from_16_bytes_le((char *) &(record->dst_addr));
-
-    uint64_t tmp;
-    tmp = record->src_addr.ui64[1];
-    record->src_addr.ui64[1] = record->src_addr.ui64[0];
-    record->src_addr.ui64[0] = tmp;
-
-    tmp = record->dst_addr.ui64[1];
-    record->dst_addr.ui64[1] = record->dst_addr.ui64[0];
-    record->dst_addr.ui64[0] = tmp;*/
-
     // check incomming/outgoing traffic
-    if (record->dirbitfield == 0x0) {// outgoing traffic
+    if (ur_get(ur_tmp, record, UR_DIR_BIT_FIELD) == 0x0) {// outgoing traffic
         // for future use with /48 prefix length
-        // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
+        // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000ULL;
 
-        if (src.count(record->dst_addr.ui64[0])
-            && ((record->first & 0xFFFFFFFF00000000ULL) - src[record->dst_addr.ui64[0]].timestamp) < rw_time) {
-            src[record->dst_addr.ui64[0]].link |= record->linkbitfield;
-//            src[record->dst_addr.ui64[0]].timestamp = "timestamp from unirec"
+        if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
+            && ((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL)
+                 - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) < rw_time) {
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         } else {
             sym_src_t src_rec;
-            src_rec.link = record->linkbitfield;
-//            src_rec.timestamp = "timestamp from unirec"
-            src.insert(pair<uint64_t, sym_src_t>(record->dst_addr.ui64[0], src_rec));
+            src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            src.insert(pair<uint64_t, sym_src_t>(ur_get(ur_tmp, record, UR_DST_IP).ui64[0], src_rec));
         }
 
     } else { // incomming traffic --> check for validity
         // for future use with /48 prefix length
-        //record->src_addr.ui64[0] &= 0xFFFFFFFFFFFF0000;
+        //record->src_addr.ui64[0] &= 0xFFFFFFFFFFFF0000ULL;
 
-        if (src.count(record->src_addr.ui64[0])) {
-            int valid = src[record->src_addr.ui64[0]].link & record->linkbitfield;
+        if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])) {
+            int valid = src[ur_get(ur_tmp, record, UR_SRC_IP).ui64[0]].link & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
                 cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
-                cout << "Flow goes through " << (long long) record->linkbitfield << " while stored is " << (long long) src[record->src_addr.ui64[0]].link  << endl;
+                cout << "Flow goes through " << (long long) ur_get(ur_tmp, record, UR_LINK_BIT_FIELD); 
+                cout << " while stored is " << (long long) src[ur_get(ur_tmp, record, UR_SRC_IP).ui64[0]].link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;
@@ -534,70 +587,108 @@ int check_symetry_v6(ur_basic_flow_t *record, v6_sym_sources_t& src, unsigned rw
     return SPOOF_NEGATIVE;
 }
 
+// **********   TTL CONSISTENCY CHECK   **********
+/*
+ *
+ * This part of the filter will be implemented when it's possible to 
+ * extract TTL data from the flow record.
+ * 
+ */ 
+
+// Learning process of HCF
+// 
+// check hop count in incomming traffic
+// if hop_count == 0
+//     insert new hop_count
+// else
+//     check timestamp
+//     if timestamp_from_record - timestamp_in table > update_time
+//         update hop_count item
+//     else
+//         keep item as is
+
+//int check_TTL_diff_v4 (/* unirec */ *record, v4_sym_sources_t& src)
+//int check_TTL_diff_v6 (/* unirec */ *record, v6_sym_sources_t& src)
+//{
+//     // for IPv4 only
+//     v4_numeric = ip_get_v4_as_int(record->src_addr) & 0xFFFFFF00;
+//     
+//     // the record is present in model and the ttl is different
+//     if (src.count(v4_numeric /* record->src_addr.ui64[0] */) 
+//         && (src[v4_numeric /* record->src_addr.ui64[0]].ttl - record->ttl != 0)) {
+//#ifdef DEBUG
+//             cout << "Possible spoofing found: Data flow TTL (" << record->ttl << ")";
+//             cout << " doesn't match the stored value (" << src[v4_numeric /*record->src_addr.ui64[0]].ttl << << ")." << endl;
+//#endif
+//             return SPOOF_POSITIVE;
+//         }
+//     return SPOOF_NEGATIVE;
+//}
+
 // **********   NEW FLOW COUNT FILTER   **********
 
 /**
  * Function for cheking new flows for given source (IPv4).
- * Function gets the record and map of used data flows. Then it asks
- * the map for source source address. If the source is not present it adds the 
- * new source with its destination and initializes its counter to 1. If the 
- * source already communicated then the destination is added to the set of flows 
- * and the counter is increased. If the flow count exceeds the given threshold 
- * the source address is reported as spoofed.
+ * Function gets the record and map of used data flows. Then it tries 
+ * to find the source in the map represented by Bloom filters. If the 
+ * source is already present nothing happens. If not the source is added 
+ * to the filter and its respective counter is increased. If the counter 
+ * value exceeds the given threshold then every new flow is flagged as 
+ * possibly spoofed.
  *
+ * @param ur_tmp Template used for UniRec record.
  * @param record Record that is being analyzed.
- * @param flow_map Map of all used flows.
  * @param threshold Maximum limit for flows per source.
+ * @param filter Set of Bloom filters.
+ * @param mm Map with mask prefixes (IPv4)
+ * @param prefix_list List of watched networks (prefixes)
  * @return SPOOF_POSITIVE if the flow count exceeds the threshold.
  */
-int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list)
+int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned threshold, flow_filter_t* filter, ipv4_mask_map_t& mm, pref_list_t& prefix_list)
 {
 
 #ifdef DEBUG
-    char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
-    ip_to_str(&(record->src_addr), debug_ip_src);
 #endif
 
-    // check the timestamp of filters
+    // check the timestamp of filters and record
     long long tf, tr, td;
-    tf = record->first >> 32;
+    tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
     tr = filter[bf_active].timestamp >> 32;
     td = tr - tf;
 
     /*
-     * Filter swapping will be implemented after the timestamps are ready to use
+     * If the time stamp is older than BF_SWAP_TIME constant
+     * the filters will be swwapped
      */
-
     if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
-        filter[bf_active].timestamp = record->first & 0xFFFFFFFF00000000;
-        filter[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000;
+        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
     }
 
     char ip_key[INET6_ADDRSTRLEN];
     bool is_present = false;
 
-    //test for cesnet or other specified prefixes
-    
+    // test for other specified prefixes
     ipv6_mask_map_t dummy;    
     int search_result;
     ip_addr_t flow_source;
-    search_result = ip_binary_search(&(record->dst_addr), mm, dummy, prefix_list);
+    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_DST_IP)), mm, dummy, prefix_list);
 
     // Source address doesn't fit the watched networks --> ignored
     if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     }
 
-    flow_source = record->src_addr;
+    flow_source = ur_get(ur_tmp, record, UR_SRC_IP);
     flow_source.ui32[2] &= mm[24]; // mask with 24-bit prefix for aggregation
 
-    // convert to BF key
+    // convert address to string key for bloom filter
     ip_to_str(&(flow_source), ip_key);
 
-    //  test if the flow is present (BF)
+    // test if the flow is present in bloom filter
     is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) { // the flow is already in filter --> will be ignored
@@ -610,7 +701,7 @@ int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_
         filter[bf_learning].flows[search_result].count++;
 
         if (filter[bf_active].flows[search_result].count > threshold) {
-        // Flow limit exceeded
+        // flow limit exceeded
 #ifdef DEBUG
             ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             cout << "Possible spoofing found: ";
@@ -624,71 +715,72 @@ int check_new_flows_v4(ur_basic_flow_t *record, unsigned threshold, flow_filter_
 
 /**
  * Function for cheking new flows for given source (IPv6).
- * Function gets the record and map of used data flows. Then it asks
- * the map for source source address. If the source is not present it adds the 
- * new source with its destination and initializes its counter to 1. If the 
- * source already communicated then the destination is added to the set of flows 
- * and the counter is increased. If the flow count exceeds the given threshold 
- * the source address is reported as spoofed.
+ * Function gets the record and map of used data flows. Then it tries 
+ * to find the source in the map represented by Bloom filters. If the 
+ * source is already present nothing happens. If not the source is added 
+ * to the filter and its respective counter is increased. If the counter 
+ * value exceeds the given threshold then every new flow is flagged as 
+ * possibly spoofed.
  *
+ * @param ur_tmp Template used for UniRec record.
  * @param record Record that is being analyzed.
- * @param flow_map Map of all used flows.
  * @param threshold Maximum limit for flows per source.
+ * @param filter Set of Bloom filters.
+ * @param mm Map with mask prefixes (IPv6)
+ * @param prefix_list List of watched networks (prefixes)
  * @return SPOOF_POSITIVE if the flow count exceeds the threshold.
  */
-int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list)
+int check_new_flows_v6(ur_template_t *ur_tmp, const void *record, unsigned threshold, flow_filter_t* filter, ipv6_mask_map_t& mm, pref_list_t& prefix_list)
 {
 
 #ifdef DEBUG
     char debug_ip_src[INET6_ADDRSTRLEN];
     char debug_ip_dst[INET6_ADDRSTRLEN];
-    ip_to_str(&(record->src_addr), debug_ip_src);
 #endif
 
-    // check the timestamp of filters
+    // check the timestamp of filters and the record
     long long tf, tr, td;
-    tf = record->first >> 32;
+    tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
     tr = filter[bf_active].timestamp >> 32;
     td = tr - tf;
 
     /*
-     * Filter swapping will be implemented after the timestamps are ready to use
-     */
-
-    
+     * If the time stamp is older than BF_SWAP_TIME constant
+     * the filters will be swwapped
+     */   
     if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
-        filter[bf_active].timestamp = record->first;
-        filter[bf_learning].timestamp = record->first;
+        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST);
+        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST);
     }
 
     char ip_key[INET6_ADDRSTRLEN];
     bool is_present = false;
 
-    //test for cesnet or other specified prefixes
+    // test for specified prefixes
     
     ipv4_mask_map_t dummy;    
     int search_result;
     ip_addr_t flow_source;
-    search_result = ip_binary_search(&(record->dst_addr), dummy, mm, prefix_list);
+    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_DST_IP)), dummy, mm, prefix_list);
 
-
+    // Source address doesn't fit the watched networks --> ignore
     if (search_result == IP_NOT_FOUND) {
         return SPOOF_NEGATIVE;
     }
 
-    flow_source = record->src_addr;
+    flow_source = ur_get(ur_tmp, record, UR_SRC_IP);
     flow_source.ui64[0] &= mm[64][0]; // mask with 64-bit prefix for aggregation
     flow_source.ui64[1] &= 0x0;
 
-    // convert to BF key
+    // convert address to string key for bloom filter
     ip_to_str(&(flow_source), ip_key);
 
-    //  test if the flow is present (BF)
+    // test if the flow is present in bloom filter
     is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
-    if (is_present) {
+    if (is_present) { // the flow is already in filter --> will be ignored
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts
@@ -698,6 +790,7 @@ int check_new_flows_v6(ur_basic_flow_t *record, unsigned threshold, flow_filter_
         filter[bf_learning].flows[search_result].count++;
 
         if (filter[bf_active].flows[search_result].count > threshold) {
+        // flow limit exceeded
 #ifdef DEBUG
             ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             cout << "Possible spoofing found: ";
@@ -719,7 +812,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_basic_flow_t *record; // pointer on flow record
+    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
+//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
     // lists of bogon prefixes
     pref_list_t bogon_list_v4; 
@@ -752,51 +846,59 @@ int main (int argc, char** argv)
     unsigned sym_rw_time = 0;
     unsigned nf_threshold = 0;
     bool b_flag = false;
+    bool c_flag = false;
     string bog_filename;
     string cnet_filename;
 
     while ((argret = getopt(argc, argv, "b:c:s:t:")) != -1) {
         switch (argret) {
-            case 'b':
+            case 'b': // file with bogon prefixes (mandatory)
                 bog_filename = string(optarg);
                 b_flag = true;
                 break;
             
-            case 'c':
+            case 'c': // file with other prefixes (mandatory)
+                c_flag = true;
                 cnet_filename = string(optarg);
                 break;
 
-            case 's':
+            case 's': // symetric filter update time (optional)
                 sym_rw_time = atoi(optarg);
                 break;
 
-            case 't':
+            case 't': // maximum of new flows per source allowed (optional)
                 nf_threshold = atoi(optarg);
                 break;
             
             case '?':
-                if (argret == 'b') {
-                    cerr << "Option -b requires an argument -- file with bogon prefixes." << endl;
+                if (optopt == 'b' || optopt == 'c' || optopt == 's' || optopt == 't') {
+                    cerr << "ERROR: Option -" << (char) optopt << " requires an argumet." << endl;
                     return EXIT_FAILURE;
-                } else if (argret == 't') {
-                    cerr << "Option -t requires an argument -- number of maximum new flows per source." << endl;
+                } else {
+                    cerr << "ERROR: Unknown parameter -" << (char) optopt << " given." << endl;
                     return EXIT_FAILURE;
                 }
+
                 break;
         }
     }
 
+    // check whether files with prefixes were specified
     if (! b_flag) {
         cerr << "ERROR: Bogon file not specified. Unable to continue." << endl;
+        return EXIT_FAILURE;
+    }
+    if (! c_flag) {
+        cerr << "ERROR: File with specific network prefixes not set. Unable to continue." << endl;
         return EXIT_FAILURE;
     }
 
 #ifdef DEBUG
     if (sym_rw_time == 0) {
-        cout << "Symetric filter update time not specified. Default time will be used instead." << endl;    
+        cout << "Symetric filter update time not specified. Default time (" << SYM_RW_DEFAULT << " seconds) will be used instead." << endl;    
     }
     if (nf_threshold == 0) {
-        cout << "New flow threshold set to 0. Default will be used instead." << endl;
+        cout << "New flow threshold not specified. Default (" << NEW_FLOW_DEFAULT << ") will be used instead." << endl;
     }
 #endif
 
@@ -837,7 +939,7 @@ int main (int argc, char** argv)
     retval = load_pref(bogon_list_v4, bogon_list_v6, bog_filename.c_str());
     retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
 
-    if (retval == BOGON_FILE_ERROR) {
+    if (retval == PREFIX_FILE_ERROR) {
         return retval;
     }
 
@@ -849,10 +951,10 @@ int main (int argc, char** argv)
     cout << "Bloom filters created. " << endl;
 #endif
 
+    const void *data;
+    uint16_t data_size;
     // ***** Main processing loop *****
     while (!stop) {
-        const void *data;
-        uint16_t data_size;
                 
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
@@ -868,48 +970,46 @@ int main (int argc, char** argv)
         }
 
         // check the data size 
-        if (data_size != sizeof(ur_basic_flow_t)) {
+        if (data_size != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
-                cerr << "Expected: " << sizeof(ur_basic_flow_t) << " ";
+                cerr << "Expected: " << ur_rec_static_size(templ) << " ";
                 cerr << "Recieved: " << data_size << endl;
                 break;
             }
         }
 
-        // Interpret data as unirec flow record
-        record = (ur_basic_flow_t *) data;
 #ifdef DEBUG
-        if (ip_is4(&(record->src_addr))) {
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             ++v4;
         } else {
             ++v6;
         }
 #endif
-        //go through all filters
+        // go through all filters
         // initialize the timestamp of bloom filters
         if (v4_flows[bf_active].timestamp == 0x0 
             && v4_flows[bf_learning].timestamp == 0x0) {
-            v4_flows[bf_active].timestamp = v4_flows[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000ULL;
+            v4_flows[bf_active].timestamp = v4_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         }
         if (v6_flows[bf_active].timestamp == 0x0 
             && v6_flows[bf_learning].timestamp == 0x0) {
-            v6_flows[bf_active].timestamp = v6_flows[bf_learning].timestamp = record->first & 0xFFFFFFFF00000000ULL;
+            v6_flows[bf_active].timestamp = v6_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         }
         
 
         // ***** 1. bogon and specific prefix filter *****
-        if (ip_is4(&(record->src_addr))) {
-            retval = v4_bogon_filter(record, bogon_list_v4, v4_masks);
-            if (retval == SPOOF_NEGATIVE && record->dirbitfield == 0x01) {
-                retval = v4_bogon_filter(record, spec_list_v4, v4_masks);
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+            retval = v4_bogon_filter(templ, data, bogon_list_v4, v4_masks);
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+                retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
             }
         } else {
-            retval = v6_bogon_filter(record, bogon_list_v6, v6_masks);
-            if (retval == SPOOF_NEGATIVE && record->dirbitfield == 0x01) {
-                retval = v6_bogon_filter(record, spec_list_v6, v6_masks);
+            retval = v6_bogon_filter(templ, data, bogon_list_v6, v6_masks);
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+                retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
             }
         }
        
@@ -920,15 +1020,16 @@ int main (int argc, char** argv)
             ++bogons;
 #endif
             //for future use
-            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK; // reset return value
             continue;
         }
+
         // ***** 2. symetric routing filter *****
-        if (ip_is4(&(record->src_addr))) {
-            retval = check_symetry_v4(record, v4_route_sym, sym_rw_time);
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+            retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time);
         } else {
-            retval = check_symetry_v6(record, v6_route_sym, sym_rw_time);
+            retval = check_symetry_v6(templ, data, v6_route_sym, sym_rw_time);
         }
         
         // we caught a spoofed address by not keeping to symteric routing
@@ -938,18 +1039,19 @@ int main (int argc, char** argv)
             ++syms;
 #endif
             //for future use
-            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK;
             continue;
         }
         
-        //3. asymetric routing filter (will be implemented later)
-        //4. new flow count check (TBA)
+        // 3. asymetric routing filter (will be implemented later)
 
-        if (ip_is4(&(record->src_addr))) {
-            retval = check_new_flows_v4(record, nf_threshold, v4_flows, v4_masks, spec_list_v4); 
+        // ***** 4. new flow count check *****
+
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+            retval = check_new_flows_v4(templ, data, nf_threshold, v4_flows, v4_masks, spec_list_v4); 
         } else {
-            retval = check_new_flows_v6(record, nf_threshold, v6_flows, v6_masks, spec_list_v6);
+            retval = check_new_flows_v6(templ, data, nf_threshold, v6_flows, v6_masks, spec_list_v6);
         }
     
         if (retval == SPOOF_POSITIVE) {
@@ -958,7 +1060,7 @@ int main (int argc, char** argv)
             ++nflows;
 #endif
             //for future use
-            trap_send_data(1, record, sizeof(ur_basic_flow_t), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
             retval = ALL_OK;
             continue;
         }
@@ -973,11 +1075,13 @@ int main (int argc, char** argv)
     cout << "Caught by using too many new flows: " << nflows << endl;
 #endif
 
-    trap_send_data(1, record, 1, TRAP_WAIT);
+    trap_send_data(0, data, 1, TRAP_WAIT);
+
     // clean up before termination
     destroy_filters(v4_flows);
     destroy_filters(v6_flows);
-//    trap_finalize();
+    ur_free_template(templ);
+    trap_finalize();
 
-    return EXIT_SUCCESS;
+    return retval;
 }
