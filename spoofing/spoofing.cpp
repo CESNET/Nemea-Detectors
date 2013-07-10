@@ -26,7 +26,7 @@ extern "C" {
 #include "../ipaddr.h"
 #include "spoofing.h"
 
-//#define DEBUG 1
+#define DEBUG 1
 
 
 using namespace std;
@@ -812,7 +812,7 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
+    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,DIR_BIT_FIELD");
 //    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
     // lists of bogon prefixes
@@ -1026,11 +1026,11 @@ int main (int argc, char** argv)
         }
 
         // ***** 2. symetric routing filter *****
-        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+/*        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time);
         } else {
             retval = check_symetry_v6(templ, data, v6_route_sym, sym_rw_time);
-        }
+        }*/
         
         // we caught a spoofed address by not keeping to symteric routing
         if (retval == SPOOF_POSITIVE) {
