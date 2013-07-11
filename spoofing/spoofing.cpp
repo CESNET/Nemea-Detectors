@@ -65,7 +65,7 @@ static int bf_learning = 1; // index of inactive bloom filter
 /**
  * Procedure for swapping the active filters
  */
-void inline swap_filters() 
+inline void swap_filters() 
 {
     int tmp;
     tmp = bf_learning;
