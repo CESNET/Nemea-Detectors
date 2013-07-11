@@ -49,6 +49,7 @@
 #include "PCA_sketch.h"
 #include "alglib/dataanalysis.h"
 
+using namespace std;
 using namespace alglib;
 
 // ******** TEMPORARY:  IN FUTURE SHOULD BE IN "common.h ***********************
@@ -314,6 +315,14 @@ int main(int argc, char **argv)
                                                 "DST_PORT,PROTOCOL,TIME_FIRST,"
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
+
+   // ****** Prepare structure for storing of actual flows *****
+//   vector <char [ur_rec_static_size(in_tmplt)]> actual_flows;
+   struct s_flow{
+      char flow[ur_rec_static_size(in_tmplt];
+   };
+   s_flow tmp_flow;
+   vector <s_flow> actual_flows;
 //   ur_template_t *work_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,TIME_FIRST,PACKETS");
 //////   ur_template_t *out_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
 
@@ -433,6 +442,10 @@ int main(int argc, char **argv)
          memset(packet_counts, 0, sizeof(packet_counts[0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE);
       } // *** END OF Timebin division ***
       // *** Flow reading & structure filling ***
+      //    *** Store flow from actual timebin ***
+      tmp_flow.flow=(char *) ur_cpy_alloc(in_tmplt, in_rec);
+      actual_flows.push_back(tmp_flow.flow);
+      //    *** END OF Store flow from actual timebin ***
       //    *** Getting HashKey ***
       memset(hash_key,0,sizeof(hash_key));
       if(ip_is4(ur_get_ptr(in_tmplt,in_rec,UR_SRC_IP))){
