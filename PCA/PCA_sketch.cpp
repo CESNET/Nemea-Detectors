@@ -240,6 +240,9 @@ void transform_matrix_zero_mean(real_2d_array *matrix_ptr)
 
 int main(int argc, char **argv)
 {
+   #ifdef DEBUG_OUT
+      int checker=5;
+   #endif
    int ret;
    trap_ifc_spec_t ifc_spec;
 
@@ -317,12 +320,7 @@ int main(int argc, char **argv)
                                                 "TCP_FLAGS");
 
    // ****** Prepare structure for storing of actual flows *****
-//   vector <char [ur_rec_static_size(in_tmplt)]> actual_flows;
-   struct s_flow{
-      char flow[ur_rec_static_size(in_tmplt];
-   };
-   s_flow tmp_flow;
-   vector <s_flow> actual_flows;
+   vector <char *> actual_flows;
 //   ur_template_t *work_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,TIME_FIRST,PACKETS");
 //////   ur_template_t *out_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
 
@@ -434,6 +432,14 @@ int main(int argc, char **argv)
                   printf("Start of %u. timebin in %u------------------------------"
                         "--------------\n",timebin_counter,start_of_next_timebin);
                #endif
+               #ifdef DEBUG_OUT
+                  printf("\t\t\t\t%u\n",ip_get_v4_as_int(ur_get_ptr(in_tmplt, (void *) actual_flows[checker-1], UR_SRC_IP)));
+               #endif
+
+         for (vector<char *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
+            ur_free((void *)*it);
+         }
+         actual_flows.clear();
 
          memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
          memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
@@ -443,8 +449,14 @@ int main(int argc, char **argv)
       } // *** END OF Timebin division ***
       // *** Flow reading & structure filling ***
       //    *** Store flow from actual timebin ***
-      tmp_flow.flow=(char *) ur_cpy_alloc(in_tmplt, in_rec);
-      actual_flows.push_back(tmp_flow.flow);
+      actual_flows.push_back((char *)ur_cpy_alloc(in_tmplt, in_rec));
+            #ifdef DEBUG_OUT
+               if(actual_flows.size()==checker)
+               {
+                  printf("%u. Timebin - %i. flow srcIP: %u\n",timebin_counter+1,i,ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)));
+         //         stop=1;
+               }
+            #endif
       //    *** END OF Store flow from actual timebin ***
       //    *** Getting HashKey ***
       memset(hash_key,0,sizeof(hash_key));
