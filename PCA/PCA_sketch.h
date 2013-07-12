@@ -17,7 +17,7 @@
                                             // V6_HASH_KEY_MASK is for 64 - V6_HASH_KEY_PART
 //#define V6_HASH_KEY_MASK ((0xFFFFFFFFFFFFFFFF >> (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART)) << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART))
 
-#define SKETCH_SIZE 512 // (2^9) - For better performance it should be power
+#define SKETCH_SIZE 16 // (2^9) - For better performance it should be power
                         // of 2 since the value is used for modulus
 #define ADDRESS_SKETCH_WIDTH 4096 // (2^12) - For better performance it should
                           // be power of 2 since the value is used for modulus
@@ -33,6 +33,10 @@
 #define TIMEBIN_SIZE 30 // Size of single timebin in seconds
 
 #define WORKING_TIMEBIN_WINDOW_SIZE 5
+
+//#define NORMAL_SUBSPACE_SIZE 10
+//#define NSS_BY_PERCENTAGE 0.9
+#define NSS_BY_DELTA_TEST 3
 
 enum features_order
 {
