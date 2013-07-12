@@ -70,12 +70,18 @@ using namespace alglib;
                        +(uint32_t)(((const uint8_t *)(d))[0]) )
 #endif
 
-
-//#define DEBUG
+#define DEBUG
 //#define DEBUG_OUT
-      #ifdef DEBUG_OUT
+   #ifdef DEBUG_OUT
       #include <inttypes.h>
-      #endif
+   #endif
+#define VALIDATION
+   #ifdef VALIDATION
+      #include <fstream>
+      #include <iostream>
+      #include <limits>
+      ofstream output;
+   #endif
 uint32_t SuperFastHash (const char *data, int len, int seed) {
    uint32_t hash = len + seed, tmp;
    int rem;
@@ -191,8 +197,9 @@ float compute_entropy(uint32_t *sketch_row, unsigned int row_length, uint64_t pa
    return entropy;
 }
 
+// ***************** MATRIX OPERATIONS *****************************************
 /**
- * \brief Procedure for computing entropy of one sketch row
+ * \brief Procedure for transforming submatrix of matrix to have unit energy.
  *
  * Procedure transform submatrix of "matrix_ptr" defined by column "start_index"
  * and "last_index" to unit energy (last_index is first which is not affected)
@@ -238,6 +245,139 @@ void transform_matrix_zero_mean(real_2d_array *matrix_ptr)
    }
 }
 
+/**
+ * \brief Procedure which multyply matrix by vector.
+ *
+ * Procedure multiply source matrix by column of second matrix (vector). Return
+ * result in third.
+ * \param[in] alglib::real_2d_array pointer to first matrix (A).
+ * \param[in] alglib::real_2d_array pointer to second matrix (B).
+ * \param[in] integer value which specifies column of second matrix (B).
+ * \param[out] alglib::real_1d_array pointer to matrix in which should be stored
+ * result of A * B[:PARAM3].
+ */
+void multiply_matrix_column_vector (real_2d_array *A_matrix_ptr,real_2d_array *B_matrix_ptr, unsigned int B_matrix_column, real_1d_array *result)
+{ //A*B=result
+   float row_sum;
+
+//  if(A_matrix_ptr->cols()==B_matrix_ptr->rows()){ //check if matrixes have proper size
+   for(int i = 0; i < result->length(); i++){
+      row_sum=0;
+      for (int j = 0; j < A_matrix_ptr->cols(); j++){
+         row_sum += (*A_matrix_ptr)(i,j) * (*B_matrix_ptr)(j,B_matrix_column);
+      }
+      (*result)(i) = row_sum;
+   }
+//  }
+}
+/**
+ * \brief Procedure which compute norm of vector.
+ * \param[in] alglib::real_1d_array pointer to vector.
+ * \return Returns real (float) value norm of vector.
+ */
+float norm_of_vector(real_1d_array *vector_ptr)
+{
+   float sum=0;
+
+   for(int i = 0; i < vector_ptr->length(); i++){
+      sum += (*vector_ptr)(i) * (*vector_ptr)(i);
+   }
+
+   return sqrt(sum);
+}
+/**
+ * \brief Procedure which divide vector by value.
+ *
+ * Procedure divide vector by value - overwrite original vector.
+ * \param[in] alglib::real_1d_array pointer to vector which should by divided.
+ * \param[in] Real (float) value by which should be vector divided.
+ */
+void divide_vector_by_value(real_1d_array *vector_ptr, float divider)
+{
+   for(int i = 0; i < vector_ptr->length(); i++){
+      (*vector_ptr)(i) /= divider;
+   }
+}
+
+/**
+ * \brief Procedure which divide vector by value.
+ *
+ * Procedure divide vector by value - overwrite original vector.
+ * \param[in] alglib::real_1d_array pointer to vector which should by divided.
+ * \param[in] Real (float) value by which should be vector divided.
+ */
+float mean_value_from_vector_power2(real_1d_array *vector_ptr)
+{
+   float sum=0;
+//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
+   for(int i = 0; i < vector_ptr->length(); i++){
+      sum += (*vector_ptr)(i) * (*vector_ptr)(i);
+   }
+
+   return sum / vector_ptr->length();
+}
+
+float mean_value_from_vector_power2_v2(real_1d_array *vector_ptr)
+{
+   float sum=0, tmp;
+   float mean=0;
+   for(int i = 0; i < vector_ptr->length(); i++){
+      mean+=(*vector_ptr)(i);
+   }
+   mean /= vector_ptr->length();
+//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
+   for(int i = 0; i < vector_ptr->length(); i++){
+      tmp = (*vector_ptr)(i) - mean;
+      sum += tmp * tmp;
+   }
+
+   return sum / (vector_ptr->length()-1) ;
+}
+
+/**
+ * \brief Procedure which multiply submatrix of matrix and transposed submatrix
+ * of the same matrix.
+ *
+ * Procedure multiply submatrix of "matrix_ptr" defined by column "0" and
+ * "column_delimiter" with the same submatrix transposed.
+ * \param[in] Source matrix.
+ * \param[in] Column delimiter - specifies size of submatrix (column count).
+ * \param[out] 2D array of float for result.
+ */
+void multiply_submatrix_by_transposed_submatrix (real_2d_array *matrix_ptr, unsigned int column_delimiter, float (*result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+{
+   uint16_t x,y;
+   float row_sum;
+
+   for(int i = 0; i < (matrix_ptr->rows() * matrix_ptr->rows()); i++){
+      row_sum = 0;
+
+      x = i / matrix_ptr->rows();
+      y = i % matrix_ptr->rows();
+
+      for (int j = 0; j < column_delimiter; j++){
+         row_sum += (*matrix_ptr)(x,j) * (*matrix_ptr)(y,j);
+      }
+
+      (*result_ptr)[x][y] = row_sum;
+   }
+}
+
+/**
+ * \brief Substitute second matrix from first. Stores result in second.
+ *
+ * \param[in] Pointer to First matrix.
+ * \param[in,out] Pointer to secod and result matrix.
+ */
+void substitute_matrix (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE], float (*B_matrix_result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+{
+   for(int i = 0; i < 4 * SKETCH_SIZE; i++){
+      for (int j = 0; j < 4 * SKETCH_SIZE; j++){
+         (*B_matrix_result_ptr)[i][j] = (*A_matrix_ptr)[i][j]  - (*B_matrix_result_ptr)[i][j];
+      }
+    }
+}
+// ***************** END OF MATRIX OPERATIONS **********************************
 int main(int argc, char **argv)
 {
    #ifdef DEBUG_OUT
@@ -246,7 +386,7 @@ int main(int argc, char **argv)
    int ret;
    trap_ifc_spec_t ifc_spec;
 
-   int i,j;
+   int i,j,k;
 
    int need_more_timebins=WORKING_TIMEBIN_WINDOW_SIZE;
    uint8_t timebin_init_flag=1;
@@ -254,8 +394,9 @@ int main(int argc, char **argv)
    uint32_t timebin_counter; // counted from zero
    uint32_t start_of_next_timebin=0;
 
+   vector <char *> actual_flows;
+
    uint64_t tmp_addr_part; // for IPv4
-   //TODO - dat dohromady v4 a v6 a zapisovat do nektere casti [0]/[3]
    uint64_t hash_key [4];
    int hk_size;
 
@@ -269,13 +410,21 @@ int main(int argc, char **argv)
    static uint64_t packet_counts [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
 
    real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
-   real_2d_array principal_components[NUMBER_OF_HASH_FUNCTION];
-	real_1d_array eigenvalues[NUMBER_OF_HASH_FUNCTION];
-   ae_int_t info;
-
    for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE,SKETCH_SIZE*4);
    }
+   real_2d_array principal_components;
+	real_1d_array eigenvalues;
+   ae_int_t info;
+
+   uint16_t normal_subspace_size;
+
+   static uint8_t identity_matrix [4*SKETCH_SIZE][4*SKETCH_SIZE];
+   memset(identity_matrix, 0, sizeof(identity_matrix[0][0])*4*SKETCH_SIZE*4*SKETCH_SIZE);
+   for(j = 0; j < 4 * SKETCH_SIZE; j++){
+      identity_matrix[j][j]=1;
+   }
+
 
 //   void (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(type1 *, type2, ...);
    uint32_t (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(const char *, int , int );
@@ -318,10 +467,7 @@ int main(int argc, char **argv)
                                                 "DST_PORT,PROTOCOL,TIME_FIRST,"
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
-
-   // ****** Prepare structure for storing of actual flows *****
-   vector <char *> actual_flows;
-//   ur_template_t *work_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,TIME_FIRST,PACKETS");
+   //   ur_template_t *work_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,TIME_FIRST,PACKETS");
 //////   ur_template_t *out_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
 
    // Allocate memory for output record
@@ -397,26 +543,217 @@ int main(int argc, char **argv)
                   compute_entropy(dp_sketches[i][j],PORT_SKETCH_WIDTH,packet_counts[i][j]);
             }
          }
-         if(!need_more_timebins){// *** Start detection (& identification) part ***
+         // *** Start detection (& identification) part ***
+         if(!need_more_timebins){
             need_more_timebins++;
             for(i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-//            printf("Detection...\n");
+               printf("Detection...\n");
 
-            // preprocess_data_matrix( parametr timebin_to_find-in);
+               // preprocess_data_matrix( parametr timebin_to_find-in);
+               //    *** Matrix normalization ***
+               transform_matrix_zero_mean(&data_matrices[i]);
+               transform_submatrix_unit_energy(&data_matrices[i],0,SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i],SKETCH_SIZE,2*SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i],2*SKETCH_SIZE,3*SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i],3*SKETCH_SIZE,4*SKETCH_SIZE);
+               //    *** END OF Matrix normalization
+               //    *** Computing of PCA ***
+               #ifdef VALIDATION
+               {
+                  output.open("DataMatrix.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < data_matrices[i].rows(); j++){
+                        for(k = 0; k < data_matrices[i].cols(); k++){
+                           output<<data_matrices[i](j,k)<<"\t";
+                        }
+                        output<<"\n";
+                     }
+                  }
+                  output.close();
+               }
+               #endif
+               pcabuildbasis(data_matrices[i], data_matrices[i].rows(), data_matrices[i].cols(), info, eigenvalues, principal_components);
+               //    *** END OF Computing of PCA ***
+               #ifdef VALIDATION
+               {
+                  output.open("PrincipalComponents.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < principal_components.rows(); j++){
+                        for(k = 0; k < principal_components.cols(); k++){
+                           output<<principal_components(j,k)<<"\t";
+                        }
+                        output<<"\n";
+                     }
+                  }
+                  output.close();
+                  output.open("Eigenvalues.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < eigenvalues.length(); j++){
+                        output<<eigenvalues(j)<<"\t";
+                     }
+                  }
+                  output.close();
+               }
+               #endif
+               //    *** Finding of normal subspace size ***
+               #ifdef NORMAL_SUBSPACE_SIZE
+                  normal_subspace_size=NORMAL_SUBSPACE_SIZE;
+               #elif defined NSS_BY_PERCENTAGE
+                  float variance_threshold,sum_variance=0;
+                  for(j = 0; j < eigenvalues.length(); j++){
+                     sum_variance+=eigenvalues(j);
+                  }
+                  variance_threshold=sum_variance*NSS_BY_PERCENTAGE;
+                  //data_matrices[i].cols() == eigenvalues.length() == 4*SKETCH_SIZE
+                  normal_subspace_size=eigenvalues.length();
+                  while(sum_variance>variance_threshold){
+                     sum_variance-=eigenvalues(--normal_subspace_size);
+                  }
+                  normal_subspace_size++;
+               #else//NO NSS_BY_PERCENTAGE or NO NORMAL_SUBSPACE_SIZE
+                  real_1d_array data2pc_projection;
+                     data2pc_projection.setlength(WORKING_TIMEBIN_WINDOW_SIZE);
+                  float norm, delta;
 
-            transform_matrix_zero_mean(&data_matrices[i]);
-				transform_submatrix_unit_energy(&data_matrices[i],0,SKETCH_SIZE);
-				transform_submatrix_unit_energy(&data_matrices[i],SKETCH_SIZE,2*SKETCH_SIZE);
-				transform_submatrix_unit_energy(&data_matrices[i],2*SKETCH_SIZE,3*SKETCH_SIZE);
-				transform_submatrix_unit_energy(&data_matrices[i],3*SKETCH_SIZE,4*SKETCH_SIZE);
+                  normal_subspace_size=0;
+                  j=0;
+                  #ifdef VALIDATION
+                  {
+                     multiply_matrix_column_vector(&data_matrices[i],&principal_components,j,&data2pc_projection);
+                     output.open("Data2PC.txt");
+                     output.precision(numeric_limits< double >::digits10);
+                     if(i == 0){
+                        for(j = 0; j < data2pc_projection.length(); j++){
+                           output<<data2pc_projection(j)<<"\n";
+                        }
+                     }
+                     norm=norm_of_vector(&data2pc_projection);
+                     output<<norm;
+                     output.close();
+                     divide_vector_by_value(&data2pc_projection,norm);
+                     output.open("Divided.txt");
+                     output.precision(numeric_limits< double >::digits10);
+                     if(i == 0){
+                        for(j = 0; j < data2pc_projection.length(); j++){
+                           output<<data2pc_projection(j)<<"\n";
+                        }
+                     }
+                     output.close();
+                     delta=sqrt(mean_value_from_vector_power2_v2(&data2pc_projection));
+                     cout<<delta<<"\n";
+                  }
+                  #endif
+                  while(!normal_subspace_size && j<4*SKETCH_SIZE){
+                     multiply_matrix_column_vector(&data_matrices[i],&principal_components,j,&data2pc_projection);
+                     norm=norm_of_vector(&data2pc_projection);
+                     divide_vector_by_value(&data2pc_projection,norm);
 
-//				pcabuildbasis(data_matrices[i], data_matrices[i].cols(), data_matrices[i].rows(), info, eigenvalues[i], principal_components[i]);
+                     delta=sqrt(mean_value_from_vector_power2_v2(&data2pc_projection));
+                     for(k = 0; k < data2pc_projection.length();k++){//"Delta" test
+                        if(fabs(data2pc_projection(j))>=NSS_BY_DELTA_TEST*delta){
+//                        if(data2pc_projection(j) >= NSS_BY_DELTA_TEST * delta
+//                        || data2pc_projection(j) <= -NSS_BY_DELTA_TEST * delta){
+                           normal_subspace_size=j;
+                        } //<if>
+                     } //<for j>
+                     j++;
+                  }
+               #endif //Normal subspace size definition
+               printf("NSS: %u\n",normal_subspace_size);
+               #ifdef VALIDATION
+               {
+                  output.open("NormalPCs.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < principal_components.rows(); j++){
+                        for(k = 0; k < normal_subspace_size; k++){
+                           output<<principal_components(j,k)<<"\t";
+                        }
+                        output<<"\n";
+                     }
+                  }
+                  output.close();
+               }
+               #endif
+               //    *** END OF Finding of normal subspace size ***
+               //    *** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) ***
+               //:     >>Creation (allocation) of matrices and arrays>>
+//
+////			callResult=create_matrix(&I,varCount,varCount);
+////			callResult=create_matrix(&normalPCs,varCount,normalSubspaceSize);
+////			callResult=create_matrix(&Pt,normalSubspaceSize,varCount);
+////			callResult=create_matrix(&C,varCount,varCount);
+////			callResult=create_matrix(&CResidual,varCount,varCount);
+////			callResult=create_matrix(&h,varCount,1);
+////			callResult=create_matrix(&hResidual,varCount,1);
+////			callResult=create_matrix(&vectorTMP,timeBinCount,1);
+//
+//			for (unsigned int ui=0;ui<normalSubspaceSize;ui++)
+//			{
+//				for (int i = 0; i < principalComponents.rows(); i++)
+//				{
+//					add_item(&normalPCs,i,ui,principalComponents(i,ui));
+//				} // <for i>
+//			} // <for ui>
+//
+//			//. NormalPCs corresponds to matrix P
+//			//. Get Pt: transpose P >> Pt
+//cerr << "Computing C-residual...";
+//			init_matrix(&I,0.0);
+//			set_main_diagonal_values(&I,1.0);
+//			transpose_matrix(&normalPCs,&Pt);
+//			//. Multiply P*Pt >> C
+//			multiply_matrix(&normalPCs,&Pt,&C);
+               static float lin_op_c_residual [4*SKETCH_SIZE][4*SKETCH_SIZE];
 
-            // proceed_with_detection();
-            //// PCA();
-            //// find_normal_subspace_size();
-            //// compute_C-Residual();
-            //// detection_by_SPE_test();
+               multiply_submatrix_by_transposed_submatrix(&principal_components,normal_subspace_size,&lin_op_c_residual);
+               #ifdef VALIDATION
+               {
+                  output.open("lin_op_c.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < 4*SKETCH_SIZE; j++){
+                        for(k = 0; k < 4*SKETCH_SIZE; k++){
+                           output<<lin_op_c_residual[j][k]<<"\t";
+                        }
+                        output<<"\n";
+                     }
+                  }
+                  output.close();
+
+               }
+               #endif
+               substitute_matrix(&identity_matrix,&lin_op_c_residual);
+               #ifdef VALIDATION
+               {
+                  output.open("lin_op_c_residual.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < 4*SKETCH_SIZE; j++){
+                        for(k = 0; k < 4*SKETCH_SIZE; k++){
+                           output<<lin_op_c_residual[j][k]<<"\t";
+                        }
+                        output<<"\n";
+                     }
+                  }
+                  output.close();
+                  stop=1;
+                  break;
+               }
+               #endif
+//
+//			// Get the linear operator, that performs projection onto anomaly subspace
+//			substitute_matrix(&eye,&lin_op_c_residual,&lin_op_anomal);
+//
+//			destroy_matrix(I);
+//			destroy_matrix(C);
+//			destroy_matrix(Pt);
+//			destroy_matrix(vectorTMP);
+               //    *** END OF Computing of linear operator C-residual ***
+               //// detection_by_SPE_test();
             }
             // merge_results();
             // IF DETECTED:
