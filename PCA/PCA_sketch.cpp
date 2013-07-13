@@ -75,7 +75,7 @@ using namespace alglib;
    #ifdef DEBUG_OUT
       #include <inttypes.h>
    #endif
-#define VALIDATION
+//#define VALIDATION
    #ifdef VALIDATION
       #include <fstream>
       #include <iostream>
@@ -377,6 +377,37 @@ void substitute_matrix (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE], f
       }
     }
 }
+
+/**
+ * \brief Procedure which multiply matrix and transposed row of another matrix.
+ *
+ * Procedure multiply matrix and transposed row of "B_matrix_ptr" defined by
+ * row_selector.
+ * \param[in] Pointer to first matrix.
+ * \param[in] Pointer to second matrix, which contains row, which is used as
+ * column vector (transposed row).
+ * \param[in] Row delimiter - specifies row of B_matrix_ptr.
+ * \param[out] alglib::real_1d:array pointer to vector for result.
+ */
+void multiply_matrix_by_transposed_line (float (*A_matrix_ptr) [4*SKETCH_SIZE][4*SKETCH_SIZE],
+                                         real_2d_array *B_matrix_ptr, unsigned int row_selector,
+                                         real_1d_array *result_ptr)
+{
+   uint16_t y;
+   float row_sum;
+
+   for(int i = 0; i < 4*SKETCH_SIZE; i++){
+      row_sum = 0;
+
+      y = i;
+
+      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+         row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)[row_selector][j];
+      }
+
+      (*result_ptr)(i) = row_sum;
+   }
+}
 // ***************** END OF MATRIX OPERATIONS **********************************
 int main(int argc, char **argv)
 {
@@ -603,6 +634,7 @@ int main(int argc, char **argv)
                   normal_subspace_size=NORMAL_SUBSPACE_SIZE;
                #elif defined NSS_BY_PERCENTAGE
                   float variance_threshold,sum_variance=0;
+
                   for(j = 0; j < eigenvalues.length(); j++){
                      sum_variance+=eigenvalues(j);
                   }
@@ -662,7 +694,7 @@ int main(int argc, char **argv)
                      j++;
                   }
                #endif //Normal subspace size definition
-               printf("NSS: %u\n",normal_subspace_size);
+               printf("Normal subspace size (by count of principal components): %u\n",normal_subspace_size);
                #ifdef VALIDATION
                {
                   output.open("NormalPCs.txt");
@@ -680,33 +712,6 @@ int main(int argc, char **argv)
                #endif
                //    *** END OF Finding of normal subspace size ***
                //    *** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) ***
-               //:     >>Creation (allocation) of matrices and arrays>>
-//
-////			callResult=create_matrix(&I,varCount,varCount);
-////			callResult=create_matrix(&normalPCs,varCount,normalSubspaceSize);
-////			callResult=create_matrix(&Pt,normalSubspaceSize,varCount);
-////			callResult=create_matrix(&C,varCount,varCount);
-////			callResult=create_matrix(&CResidual,varCount,varCount);
-////			callResult=create_matrix(&h,varCount,1);
-////			callResult=create_matrix(&hResidual,varCount,1);
-////			callResult=create_matrix(&vectorTMP,timeBinCount,1);
-//
-//			for (unsigned int ui=0;ui<normalSubspaceSize;ui++)
-//			{
-//				for (int i = 0; i < principalComponents.rows(); i++)
-//				{
-//					add_item(&normalPCs,i,ui,principalComponents(i,ui));
-//				} // <for i>
-//			} // <for ui>
-//
-//			//. NormalPCs corresponds to matrix P
-//			//. Get Pt: transpose P >> Pt
-//cerr << "Computing C-residual...";
-//			init_matrix(&I,0.0);
-//			set_main_diagonal_values(&I,1.0);
-//			transpose_matrix(&normalPCs,&Pt);
-//			//. Multiply P*Pt >> C
-//			multiply_matrix(&normalPCs,&Pt,&C);
                static float lin_op_c_residual [4*SKETCH_SIZE][4*SKETCH_SIZE];
 
                multiply_submatrix_by_transposed_submatrix(&principal_components,normal_subspace_size,&lin_op_c_residual);
@@ -740,19 +745,55 @@ int main(int argc, char **argv)
                      }
                   }
                   output.close();
-                  stop=1;
-                  break;
                }
                #endif
-//
-//			// Get the linear operator, that performs projection onto anomaly subspace
-//			substitute_matrix(&eye,&lin_op_c_residual,&lin_op_anomal);
-//
-//			destroy_matrix(I);
-//			destroy_matrix(C);
-//			destroy_matrix(Pt);
-//			destroy_matrix(vectorTMP);
                //    *** END OF Computing of linear operator C-residual ***
+
+               float phi [3] = {0,0,0};
+               float lambda,SPE,h0,delta_SPE;
+               real_1d_array mapped_data;
+               mapped_data.setlength(4*SKETCH_SIZE);
+
+               for(j = normal_subspace_size; j < 4*SKETCH_SIZE; j++){
+                  lambda=eigenvalues(j);
+                  phi[0] += lambda;
+                  lambda *= lambda;
+                  phi[1] += lambda;
+                  lambda *= lambda;
+                  phi[2] += lambda;
+               }
+               h0 = 1 - ((2 * phi[0] * phi[2]) / (3.0 * phi[1] * phi[1]));
+               delta_SPE = phi[0] * pow((
+                     ((ALPHA_PERCENTILE_99 * sqrt(2.0 * phi[1] * h0 * h0)) / phi[0])
+                     + 1 + ((phi[1] * h0 * (h0-1.0)) / (phi[0] * phi[0])) ) ,(1.0/h0));
+
+               multiply_matrix_by_transposed_line(&lin_op_c_residual, &data_matrices[i],
+                                                  timebin_counter%WORKING_TIMEBIN_WINDOW_SIZE, &mapped_data);
+               #ifdef VALIDATION
+               {
+                  output.open("mappedData.txt");
+                  output.precision(numeric_limits< double >::digits10);
+                  if(i == 0){
+                     for(j = 0; j < mapped_data.length(); j++){
+                        output<<mapped_data(j)<<"\n";
+                     }
+                  }
+                  norm=norm_of_vector(&mapped_data);
+                  output<<norm;
+                  output.close();
+               }
+               stop=1;
+               break;
+               #endif
+               SPE = norm_of_vector(&mapped_data);
+               SPE*=SPE;
+
+               if(SPE>delta_SPE){
+                  printf("!!! Anomaly in timebin %u !!!\n", timebin_counter);
+               } else {
+                  printf("NO Anomaly in timebin %u.\n", timebin_counter);
+               }
+
                //// detection_by_SPE_test();
             }
             // merge_results();

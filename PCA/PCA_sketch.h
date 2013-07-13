@@ -32,11 +32,15 @@
 
 #define TIMEBIN_SIZE 30 // Size of single timebin in seconds
 
-#define WORKING_TIMEBIN_WINDOW_SIZE 5
+#define WORKING_TIMEBIN_WINDOW_SIZE 8 // For better performance it should
+                          // be power of 2 since the value is used for modulus
 
 //#define NORMAL_SUBSPACE_SIZE 10
 //#define NSS_BY_PERCENTAGE 0.9
 #define NSS_BY_DELTA_TEST 3
+
+#define ALPHA_PERCENTILE_95 1.645
+#define ALPHA_PERCENTILE_99 2.326
 
 enum features_order
 {
