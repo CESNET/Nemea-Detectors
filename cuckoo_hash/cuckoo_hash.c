@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define HASH_SIZE 50
+#define COPY_KEY_BUFFER 101
 
 typedef struct {
     char *key;
@@ -10,21 +11,26 @@ typedef struct {
 } cc_item_t;
 
 //typedef cc_item_t *cc_hash_table_t[HASH_SIZE];
-typedef cc_item_t **cc_hash_table_t;
+typedef struct {
+    cc_item_t *table;
+    unsigned int data_size;
+} cc_hash_table_t;
 
-int ht_init(cc_hash_table_t* new_table, unsigned int table_size)
+int ht_init(cc_hash_table_t* new_table, unsigned int table_size, unsigned int data_size)
 {
-    *new_table = (cc_hash_table_t) calloc(table_size, sizeof(cc_item_t*));
+    new_table->table = (cc_item_t*) malloc(table_size * sizeof(cc_item_t*));
     
     if (new_table == NULL) {
         fprintf(stderr, "ERROR: Hash table couldn't be initialized.");
         return -1;
     }
-/*
+
+    new_table->data_size = data_size;
+
     for (int i = 0; i < HASH_SIZE; i++) {
-        (*new_table)[i] = NULL;
+        new_table->table[i].data = NULL;
     }
-*/
+
     return 0;
 }
 
@@ -53,30 +59,42 @@ unsigned int JSHash(char* key, unsigned int key_length)
     return hash % HASH_SIZE;
 }
 
-int ht_insert(cc_hash_table_t ht, cc_item_t *new_data)
+int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data)
 {
     int t;
     unsigned int pos, swap1, swap2;
-    cc_item_t *curr, *prev;
     pos = RSHash(new_data->key, strlen(new_data->key));
 
-    curr = new_data;
+    cc_item_t prev, curr;
+
+    prev.key = malloc(COPY_KEY_BUFFER);
+    prev.data = malloc(ht->data_size);
+    
+    curr.key = malloc(COPY_KEY_BUFFER);
+    curr.data = malloc(ht->data_size);
+
+    strcpy(curr.key, new_data->key);
+    memcpy(curr.data, new_data->data, ht->data_size);
+
     for (t = 0; t < 10; t++) {
-        if (ht[pos] == NULL) { // try empty
-            ht[pos] = curr;
+        if (ht->table[pos].data == NULL) { // try empty
+            ht->table[pos].key = curr.key;
+            ht->table[pos].data = curr.data;
+            free(prev.data);
+            free(prev.key);
             return 0;
         }
 
-//        memcpy(&prev.key, ht[pos]->key, strlen(ht[pos]->key));
-        memcpy(prev, ht[pos], sizeof(cc_item_t));
-
+        strcpy(prev.key, ht->table[pos].key);
+        memcpy(prev.data, ht->table[pos].data, ht->data_size);
         
         //copy new item
-        ht[pos] = new_data;
+        strcpy(ht->table[pos].key, curr.key);
+        memcpy(ht->table[pos].data, curr.data, ht->data_size);
 
         // compute both hashses
-        swap1 = RSHash(prev->key, strlen(prev->key));
-        swap2 = JSHash(prev->key, strlen(prev->key));
+        swap1 = RSHash(prev.key, strlen(prev.key));
+        swap2 = JSHash(prev.key, strlen(prev.key));
 
         // test which one was used
         if (swap2 == pos) {
@@ -84,30 +102,74 @@ int ht_insert(cc_hash_table_t ht, cc_item_t *new_data)
         } else {
             pos = swap2;
         }       
-        curr = prev;
+        strcpy(curr.key, prev.key);
+        memcpy(curr.data, prev.data, ht->data_size);
+    }
+
+    free(prev.data);
+    free(prev.key);
+    free(curr.data);
+    free(curr.key);
+    return -1;
+}
+
+void *ht_get(cc_hash_table_t* ht, char* key)
+{
+    unsigned int pos1, pos2;
+    
+    pos1 = RSHash(key, strlen(key));
+    pos2 = JSHash(key, strlen(key));
+
+    if (ht->table[pos1].data != NULL && strcmp(key, ht->table[pos1].key) == 0) {
+        return ht->table[pos1].data;
+    }
+    if (ht->table[pos2].data != NULL && strcmp(key, ht->table[pos2].key) == 0) {
+        return ht->table[pos2].data;
+    }
+    return NULL;
+}
+
+unsigned int ht_get_index(cc_hash_table_t* ht, char* key)
+{
+    unsigned int pos1, pos2;
+    
+    pos1 = RSHash(key, strlen(key));
+    pos2 = JSHash(key, strlen(key));
+
+    if (ht->table[pos1].data != NULL && strcmp(key, ht->table[pos1].key) == 0) {
+        return pos1;
+    }
+    if (ht->table[pos2].data != NULL && strcmp(key, ht->table[pos2].key) == 0) {
+        return pos2;
     }
     return -1;
 }
 
-/*void *ht_get(cc_hash_table_t ht, char* key)
+void ht_remove_by_key(cc_hash_table_t* ht, char* key)
 {
-*/  
-
-void ht_remove(cc_hash_table_t ht, char* key)
-{
-    unsigned int pos;
-    pos = RSHash(key, strlen(key));
+    unsigned int pos1, pos2;
+    pos1 = RSHash(key, strlen(key));
+    pos2 = JSHash(key, strlen(key));
  
-    if (ht[pos] != NULL && (strcmp(key, ht[pos]->key) == 0)) {
-        ht[pos] = NULL;
+    if (ht->table[pos1].data != NULL && (strcmp(key, ht->table[pos1].key) == 0)) {
+        free(ht->table[pos1].data);      
+        free(ht->table[pos1].key);
+        ht->table[pos1].data = NULL;
+        ht->table[pos1].key = NULL;
         return;
     }
 
-    pos = JSHash(key, strlen(key));
-    if (ht[pos] != NULL && (strcmp(key, ht[pos]->key) == 0)) {
-        ht[pos] = NULL;
+    if (ht->table[pos2].data != NULL && (strcmp(key, ht->table[pos2].key) == 0)) {
+        free(ht->table[pos2].data);      
+        free(ht->table[pos2].key);
+        ht->table[pos2].data = NULL;
+        ht->table[pos2].key = NULL;
         return;
     }
+}
+
+void ht_remove_by_index(cc_hash_table_t* ht, unsigned int index)
+{
 }
 
 int main()
@@ -119,7 +181,7 @@ int main()
 
     cc_hash_table_t ht;
 
-    ht_init(&ht, HASH_SIZE);
+    ht_init(&ht, HASH_SIZE, sizeof(int));
     
     cc_item_t *new_item;
     for (i = 'a', j = 'Z'; i <= 'z', j >= 'A';d++, i++, j--) {
@@ -128,13 +190,14 @@ int main()
         key[0] = (char) i;
         key[1] = (char) j;
         key[2] = '\0';
-        cc_item_t *new_item = (cc_item_t *) malloc(sizeof(cc_item_t));
+        cc_item_t *new_item = NULL;
+        new_item  = (cc_item_t *) malloc(sizeof(cc_item_t));
         new_item->key = (char *) malloc(strlen(key) * sizeof(char));
         strcpy(new_item->key, key);
         new_item->data = (int *)malloc(sizeof(int));
         *((int *) new_item->data) = d;
 
-        ret = ht_insert(ht, new_item);
+        ret = ht_insert(&ht, new_item);
         if (ret != 0) {
             printf("Item discared. HT full or item cycled.\n");
         }
@@ -143,37 +206,49 @@ int main()
     unsigned int pos;
    
     for (int i = 0;i < HASH_SIZE; i++) {
-        if (ht[i] != NULL)
-            printf("Item stored at %s (%d): %d\n", ht[i]->key, i, *((int *)ht[i]->data));
+        if (ht.table[i].data != NULL)
+            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
     }
 
     printf("//////////////////////////////////////////////\n");
 
-    ht_remove(ht, "aZ");
     for (int i = 0;i < HASH_SIZE; i++) {
-        if (ht[i] != NULL)
-            printf("Item stored at %s (%d): %d\n", ht[i]->key, i, *((int *)ht[i]->data));
+        if (ht.table[i].data != NULL)
+            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
     }
+
+    printf("Item at cX (%d): %d\n", ht_get_index(&ht, "cX"), *((int*)ht_get(&ht, "cX")));
+
+    ht_remove_by_key(&ht,"dW");
+
+    if (ht_get(&ht,"dW") == NULL)
+        printf("Item with \"dW\" key not in table\n");
     
-    for (i = 'a', j = 'Z'; i <= 'z', j >= 'A';d++, i++, j--) {
+    printf("//////////////////////////////////////////////\n");
+
+    for (int i = 0;i < HASH_SIZE; i++) {
+        if (ht.table[i].data != NULL)
+            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
+    }
+/*    for (i = 'a', j = 'Z'; i <= 'z', j >= 'A';d++, i++, j--) {
         char key[3];
         key[0] = (char) i;
         key[1] = (char) j;
         key[2] = '\0';
 
-        ht_remove(ht, key);
+        ht_remove(&ht, key);
     }
 
     int i_count = 0;
 
     for (int i = 0;i < HASH_SIZE; i++) {
-        if (ht[i] != NULL)
+        if (ht.table[i] != NULL)
             i_count++;
     }
 
     if (i_count == 0)
         printf("All data erased.\n");
 
-
+*/
     return 0;
 }
