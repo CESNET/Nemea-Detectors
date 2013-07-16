@@ -1,0 +1,21 @@
+Short howto for hashing table with cuckoo hashing.
+
+First initialize the table by using ht_init function.
+This function creates the table based on supplied parameters which are 
+size of the table, size of the data that will be stored within each item 
+(sizeof(*datatype*) and length of the key that will be used for accessing 
+the items.
+
+    For inserting the item use the ht_insert() function which you need to 
+supply with the hash table you want to insert the item in and the data 
+you want to insert. The data should be in the same structure (cc_item_t) 
+as the table is using.
+
+    You can get the data using the ht_get() function or an index for the 
+item with ht_get_index(). Both functions need only table and key as parameter.
+Item can be removed in similar way by using ht_remove_by_key() procedure which 
+needs same parameters as the "getters" or by using ht_remove_by_index function 
+which uses index to the item instead of key.
+
+    Before exiting the program use the ht_destroy() procedure to free any memory 
+used by the hash table.

@@ -1,9 +1,20 @@
+/**
+ * \file cuckoo_hash.c
+ * \brief Generic hash table with Cuckoo hashing support.
+ * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \date 2013
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cuckoo_hash.h"
 
-unsigned int RSHash(char* key, unsigned int key_length, unsigned int t_size)
+/*
+ * Hash function used for the table. Can be changed.
+ */
+
+static unsigned int hash_1(char* key, unsigned int key_length, unsigned int t_size)
 {
     unsigned int a = 63689;
     unsigned int b = 378551;
@@ -16,7 +27,7 @@ unsigned int RSHash(char* key, unsigned int key_length, unsigned int t_size)
     return hash % t_size;
 }
 
-unsigned int JSHash(char* key, unsigned int key_length, unsigned int t_size)
+static unsigned int hash_2(char* key, unsigned int key_length, unsigned int t_size)
 {
     unsigned int hash = 1315423911;
     unsigned int i    = 0;
@@ -38,7 +49,7 @@ unsigned int JSHash(char* key, unsigned int key_length, unsigned int t_size)
  * @param data_size Size of the data being stored in the table.
  * @return -1 if the table wasn't created, 0 otherwise.
  */
-int ht_init(cc_hash_table_t* new_table, unsigned int table_size, unsigned int data_size)
+int ht_init(cc_hash_table_t* new_table, unsigned int table_size, unsigned int data_size, unsigned int key_length)
 {
     // allocate the table itself
     new_table->table = (cc_item_t*) calloc(table_size, sizeof(cc_item_t));
@@ -52,14 +63,28 @@ int ht_init(cc_hash_table_t* new_table, unsigned int table_size, unsigned int da
     // set data size and current table size
     new_table->data_size = data_size;
     new_table->table_size = table_size;
+    new_table->key_length = key_length; 
 
     return 0;
 }
 
+/**
+ * Function for resizing/rehashing the table.
+ * This function is called only when the table is unable to hold anymore.
+ * items. It resizes the old table using double the capacity and rehashes 
+ * all items that were stored in the old table so far. Then it inserts the 
+ * item that would be discarded. If this function fails the table cannot be 
+ * used anymore and the program cannot continue due the lack of memory.
+ *
+ * @param ht Table to be resized and rehashed.
+ * @param Item to be inserted after rehashing.
+ * @return 0 on succes otherwise REHASH_FAILURE.
+ */
 int rehash(cc_hash_table_t* ht, cc_item_t* rest)
 {
     cc_item_t *old_table, *new_table;
-    cc_hash_table_t dummy;
+
+    // allocate new table
     new_table = (cc_item_t*) calloc((ht->table_size * 2), sizeof(cc_item_t));
 
     if (new_table == NULL) {
@@ -73,14 +98,17 @@ int rehash(cc_hash_table_t* ht, cc_item_t* rest)
     ht->table = new_table;
     ht->table_size *= 2;
 
+    // rehash and copy items from old table to new one
     for (int i = 0; i < old_size; i++) {
         if (old_table[i].key != NULL && old_table[i].data != NULL) {
             ht_insert(ht, &old_table[i]);
         }
     }
 
+    // insert the remaining item
     ht_insert(ht, rest);
 
+    // destroy old table
     for(int i = 0; i < old_size; i++) {
         if (old_table[i].key != NULL) {
             free(old_table[i].key);
@@ -96,62 +124,88 @@ int rehash(cc_hash_table_t* ht, cc_item_t* rest)
     return 0;
 }
 
+/**
+ * Function for inserting the item into the table.
+ * This function perform the insertion operation using the "Cuckoo hashing" 
+ * algorithm. It computes the one hash for the item and tries to insert it 
+ * on the retrieved position. If the positio is empty the item is inserted 
+ * without any other necessary operations. However if the position is already 
+ * occupied the residing item is kicked out and replaced with the currently 
+ * inserted item. Then the funstion computes both hashes for the kicked out 
+ * item and determines which one to use alternatively. Then it tries to insert 
+ * this item using the same method. For preventing infinite loop the "TTL" value 
+ * is implemented. If this is exceeded the table is resized and rehashed using 
+ * the rehash() function.
+ *
+ * @param ht Table in which we want to insert the item.
+ * @param new_data Pointer to new data to be inserted.
+ * @return 0 on succes otherwise REHASH_FAILURE when the rehashing function fails.
+ */
 int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data)
 {
     int t, ret;
     unsigned int pos, swap1, swap2;
-    pos = RSHash(new_data->key, strlen(new_data->key), ht->table_size);
+    pos = hash_1(new_data->key, ht->key_length, ht->table_size);
 
     cc_item_t prev, curr;
 
-    prev.key = malloc(COPY_KEY_BUFFER);
+    // prepare memory for storing "kicked" values
+    prev.key = malloc(ht->key_length);
     prev.data = malloc(ht->data_size);
     
-    curr.key = malloc(COPY_KEY_BUFFER);
+    // prepare memory for data
+    curr.key = malloc(ht->key_length);
     curr.data = malloc(ht->data_size);
 
-    strcpy(curr.key, new_data->key);
+    // make a working copy of inserted data
+    memcpy(curr.key, new_data->key, ht->key_length);
     memcpy(curr.data, new_data->data, ht->data_size);
 
     for (t = 1; t <= 10; t++) {
         if (ht->table[pos].data == NULL && ht->table[pos].key == NULL) { // try empty
+            // we insert a new value into the table
 
-            printf("Insert %d\n",t);
-
-            ht->table[pos].key = malloc((strlen(curr.key) + 1) * sizeof(char));
-            strcpy(ht->table[pos].key, curr.key);
+            // assign data and key pointers
+            ht->table[pos].key = curr.key; 
             ht->table[pos].data = curr.data;
-            free(curr.key);
+
+            // free the rest of the memory
             free(prev.data);
             free(prev.key);
+
             return 0;
         }
 
-        printf("Insert SWAP %d\n", t);
+        // computed position is occupied --> we kick the residing item out
         
-        strcpy(prev.key, ht->table[pos].key);
+        memcpy(prev.key, ht->table[pos].key, ht->key_length);
         memcpy(prev.data, ht->table[pos].data, ht->data_size);
         
         //copy new item
-        strcpy(ht->table[pos].key, curr.key);
+        memcpy(ht->table[pos].key, curr.key, ht->key_length);
         memcpy(ht->table[pos].data, curr.data, ht->data_size);
 
-        // compute both hashses
-        swap1 = RSHash(prev.key, strlen(prev.key), ht->table_size);
-        swap2 = JSHash(prev.key, strlen(prev.key), ht->table_size);
+        // compute both hashses for kicked item
+        swap1 = hash_1(prev.key, ht->key_length, ht->table_size);
+        swap2 = hash_2(prev.key, ht->key_length, ht->table_size);
 
         // test which one was used
         if (swap2 == pos) {
             pos = swap1;
         } else {
             pos = swap2;
-        }       
-        strcpy(curr.key, prev.key);
+        }
+        
+        // prepare the item for insertion
+        memcpy(curr.key, prev.key, ht->key_length);
         memcpy(curr.data, prev.data, ht->data_size);
     }
-    
+   
+    // TTL for insertion exceeded, rehash is needed 
     free(prev.data);
     free(prev.key);
+
+    // rehash the table and return the appropriate value is succesful
     ret = rehash(ht, &curr); 
     free(curr.data);
     free(curr.key);
@@ -159,45 +213,71 @@ int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data)
     
 }
 
+/**
+ * Function for getting the data from table.
+ * Function computes both hashes for the given key and checks the positions
+ * for the desired data. Pointer to the data is returned when found.
+ *
+ * @param ht Hash table to be searched for data.
+ * @param key Key of the desired item.
+ * @return Pointer to the data when found otherwise NULL.
+ */
 void *ht_get(cc_hash_table_t* ht, char* key)
 {
     unsigned int pos1, pos2;
     
-    pos1 = RSHash(key, strlen(key), ht->table_size);
-    pos2 = JSHash(key, strlen(key), ht->table_size);
+    pos1 = hash_1(key, ht->key_length, ht->table_size);
+    pos2 = hash_2(key, ht->key_length, ht->table_size);
 
-    if (ht->table[pos1].data != NULL && strcmp(key, ht->table[pos1].key) == 0) {
+    if (ht->table[pos1].data != NULL && memcmp(key, ht->table[pos1].key, ht->key_length) == 0) {
         return ht->table[pos1].data;
     }
-    if (ht->table[pos2].data != NULL && strcmp(key, ht->table[pos2].key) == 0) {
+    if (ht->table[pos2].data != NULL && memcmp(key, ht->table[pos2].key, ht->key_length) == 0) {
         return ht->table[pos2].data;
     }
     return NULL;
 }
 
+/**
+ * Function for getting the index of the item in table.
+ * Function computes both hashes for the given key and checks the positions
+ * for the desired item. Index is returned when found.
+ *
+ * @param ht Hash table to be searched for data.
+ * @param key Key of the desired item.
+ * @return Index of the item in table otherwise -1.
+ */
 unsigned int ht_get_index(cc_hash_table_t* ht, char* key)
 {
     unsigned int pos1, pos2;
     
-    pos1 = RSHash(key, strlen(key), ht->table_size);
-    pos2 = JSHash(key, strlen(key), ht->table_size);
+    pos1 = hash_1(key, ht->key_length, ht->table_size);
+    pos2 = hash_2(key, ht->key_length, ht->table_size);
 
-    if (ht->table[pos1].data != NULL && strcmp(key, ht->table[pos1].key) == 0) {
+    if (ht->table[pos1].data != NULL && memcmp(key, ht->table[pos1].key, ht->key_length) == 0) {
         return pos1;
     }
-    if (ht->table[pos2].data != NULL && strcmp(key, ht->table[pos2].key) == 0) {
+    if (ht->table[pos2].data != NULL && memcmp(key, ht->table[pos2].key, ht->key_length) == 0) {
         return pos2;
     }
     return -1;
 }
 
+/**
+ * Procedure for removing the item from table.
+ * Procedure searches for the data using the given key and frees any 
+ * used by the item. If the item is already empty the procedure does nothing.
+ *
+ * @param ht Hash table to be searched for data.
+ * @param key Key of the desired item.
+ */
 void ht_remove_by_key(cc_hash_table_t* ht, char* key)
 {
     unsigned int pos1, pos2;
-    pos1 = RSHash(key, strlen(key), ht->table_size);
-    pos2 = JSHash(key, strlen(key), ht->table_size);
+    pos1 = hash_1(key, ht->key_length, ht->table_size);
+    pos2 = hash_2(key, ht->key_length, ht->table_size);
  
-    if (ht->table[pos1].data != NULL && (strcmp(key, ht->table[pos1].key) == 0)) {
+    if (ht->table[pos1].data != NULL && (memcmp(key, ht->table[pos1].key, ht->key_length) == 0)) {
         free(ht->table[pos1].data);      
         free(ht->table[pos1].key);
         ht->table[pos1].data = NULL;
@@ -205,7 +285,7 @@ void ht_remove_by_key(cc_hash_table_t* ht, char* key)
         return;
     }
 
-    if (ht->table[pos2].data != NULL && (strcmp(key, ht->table[pos2].key) == 0)) {
+    if (ht->table[pos2].data != NULL && (memcmp(key, ht->table[pos2].key, ht->key_length) == 0)) {
         free(ht->table[pos2].data);      
         free(ht->table[pos2].key);
         ht->table[pos2].data = NULL;
@@ -214,10 +294,31 @@ void ht_remove_by_key(cc_hash_table_t* ht, char* key)
     }
 }
 
+/**
+ * Procedure for removing the item from table (index version).
+ * Procedure removes the item pointed by the index from the table.
+ * If the item is already empty the procedure does nothing.
+ *
+ * @param ht Hash table to be searched for data.
+ * @param key Key of the desired item.
+ */
 void ht_remove_by_index(cc_hash_table_t* ht, unsigned int index)
 {
+    if (ht->table[index].data != NULL && ht->table[index].key != NULL) {
+        free(ht->table[index].data);
+        free(ht->table[index].key);
+        ht->table[index].data = NULL;
+        ht->table[index].key = NULL;
+    }
 }
 
+
+/**
+ * Clean-up procedure.
+ * Procedure goes frees all the memory used by the table.
+ *
+ * @param ht Hash table to be searched for data.
+ */
 void ht_destroy(cc_hash_table_t *ht)
 {
     for(int i = 0; i < ht->table_size; i++) {
@@ -231,104 +332,4 @@ void ht_destroy(cc_hash_table_t *ht)
         }
     }
     free(ht->table);
-}
-        
-
-int main()
-{
-
-    int d = 1;
-    int ret;
-    int i,j;
-
-    cc_hash_table_t ht;
-
-    ht_init(&ht, HASH_SIZE, sizeof(int));
-    
-    cc_item_t *new_item;
-    for (i = 'a', j = 'Z'; i <= 'z', j >= 'A';d++, i++, j--) {
-        char key[3];
-        
-        key[0] = (char) i;
-        key[1] = (char) j;
-        key[2] = '\0';
-
-        cc_item_t *new_item = NULL;
-
-        new_item  = (cc_item_t *) malloc(sizeof(cc_item_t));
-
-        new_item->key = (char *) malloc((strlen(key) + 1)  * sizeof(char));
-
-        strcpy(new_item->key, key);
-
-        new_item->data = (int *)malloc(sizeof(int));
-
-        *((int *) new_item->data) = d;
-
-        ret = ht_insert(&ht, new_item);
-        if (ret != 0) {
-            fprintf(stderr, "Insertion failed due the maxed out capacity.\n" );
-            ht_destroy(&ht);
-            free(new_item->key);
-            free(new_item->data);
-            free(new_item);
-            return EXIT_FAILURE;
-        }
-
-        free(new_item->key);
-        free(new_item->data);
-        free(new_item);
-
-    }
-
-    unsigned int pos;
-   
-    for (int i = 0;i < ht.table_size; i++) {
-        if (ht.table[i].data != NULL)
-            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
-    }
-
-    printf("//////////////////////////////////////////////\n");
-
-    for (int i = 0;i < ht.table_size; i++) {
-        if (ht.table[i].data != NULL)
-            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
-    }
-
-    printf("Item at cX (%d): %d\n", ht_get_index(&ht, "cX"), *((int*)ht_get(&ht, "cX")));
-
-    ht_remove_by_key(&ht,"dW");
-
-    if (ht_get(&ht,"dW") == NULL)
-        printf("Item with \"dW\" key not in table\n");
-    
-    printf("//////////////////////////////////////////////\n");
-
-    for (int i = 0;i < ht.table_size; i++) {
-        if (ht.table[i].data != NULL)
-            printf("Item stored at %s (%d): %d\n", ht.table[i].key, i, *((int *)ht.table[i].data));
-    }
-
-    ht_destroy(&ht);
-/*    for (i = 'a', j = 'Z'; i <= 'z', j >= 'A';d++, i++, j--) {
-        char key[3];
-        key[0] = (char) i;
-        key[1] = (char) j;
-        key[2] = '\0';
-
-        ht_remove(&ht, key);
-    }
-
-    int i_count = 0;
-
-    for (int i = 0;i < HASH_SIZE; i++) {
-        if (ht.table[i] != NULL)
-            i_count++;
-    }
-
-    if (i_count == 0)
-        printf("All data erased.\n");
-
-*/
-    return 0;
 }
