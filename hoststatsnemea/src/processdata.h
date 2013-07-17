@@ -4,7 +4,6 @@
 #include <string>
 #include "hoststats.h"
 #include "BloomFilter.hpp"
-#include "../../../unirec/ipaddr_cpp.h"
 #include "../../../unirec/unirec.h"
 
 /*

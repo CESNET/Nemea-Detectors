@@ -8,8 +8,8 @@
 #include <vector>
 #include "../../unirec/unirec.h"
 
-#ifndef BLACKLIST_MAIN_H
-#define BLACKLIST_MAIN_H
+#ifndef BLACKLISTFILTER_H
+#define BLACKLISTFILTER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,4 +99,4 @@ int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& 
 }
 #endif
 
-#endif /* SPOOFING_H */
+#endif /* BLACKLISTFILTER_H */

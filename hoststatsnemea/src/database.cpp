@@ -297,10 +297,10 @@ int Database::getRecord(const string& timeslot, const hosts_key_t &key, hosts_re
          long i = (a+b)/2;
          file.seekg(header_size + i*record_size);
          file.read((char*)&my_key, sizeof(hosts_key_t));
-         if (key < my_key) {
+         if (IPaddr_cpp(&key) < IPaddr_cpp(&my_key)) {
             b = i-1;
          }
-         else if (key > my_key) {
+         else if (IPaddr_cpp(&key) > IPaddr_cpp(&my_key)) {
             a = i+1;
          }
          else { // Found
