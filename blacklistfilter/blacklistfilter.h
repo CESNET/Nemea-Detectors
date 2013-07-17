@@ -46,6 +46,7 @@ extern "C" {
 
 #define BL_ENTRY_UPDATED 1
 
+#define BL_HASH_SIZE 100000
 
 // structure definitions
 

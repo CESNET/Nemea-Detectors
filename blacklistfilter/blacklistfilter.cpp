@@ -130,7 +130,7 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
  * @param prefix_file File with prefixes to be loaded and parsed to structures.
  * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
  */
-int load_ip (cc_hash_table_t& ip_bl, const char *source_dir)
+int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 {
     DIR* dp; // directory pointer
     struct dirent *file; // file pointer
@@ -145,7 +145,7 @@ int load_ip (cc_hash_table_t& ip_bl, const char *source_dir)
 //    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
 //    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
 
-    dp = opendir(source_dir);
+    dp = opendir(source_dir.c_str());
 
     if (dp == NULL) { // directory cannot be openned
         cerr << "ERROR: Cannot open directory " << source_dir << ". Directory doesn't exist";
@@ -154,7 +154,13 @@ int load_ip (cc_hash_table_t& ip_bl, const char *source_dir)
     }
 
     while (file = readdir(dp)) { // iterate over files
-        input.open(file->d_name, ifstream::in);
+
+        if (string(file->d_name) == "." || string(file->d_name) == "..") {
+            // we don't need references to direcotry itself and its parent
+            continue;
+        }
+
+        input.open((source_dir + file->d_name).c_str(), ifstream::in);
         
         if (!input.is_open()) {
             cerr << "ERROR: File " << file->d_name << " cannot be opened and will be skipped." << endl;
@@ -479,7 +485,7 @@ int main (int argc, char** argv)
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
-    ht_init(&hash_blacklist);
+    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), 16);
 
     const void *data;
     uint16_t data_size;
