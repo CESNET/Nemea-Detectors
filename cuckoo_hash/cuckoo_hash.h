@@ -5,10 +5,22 @@
  * \date 2013
  */
 
+#ifndef CUCKOO_HASH_H
+#define CUCKOO_HASH_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Error constant returned by rehashing function when failing.
  */
 #define REHASH_FAILURE -1
+
+/**
+ * Constant return by index getter when an item is not found.
+ */
+#define NOT_FOUND -1
 
 /**
  * Structure of the item of the table.
@@ -50,7 +62,7 @@ int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data);
  * Getters for data/index to item in table.
  */
 void *ht_get(cc_hash_table_t* ht, char* key);
-unsigned int ht_get_index(cc_hash_table_t* ht, char* key);
+int ht_get_index(cc_hash_table_t* ht, char* key);
 
 /*
  * Procedures for removing single item from table.
@@ -62,3 +74,9 @@ void ht_remove_by_index(cc_hash_table_t* ht, unsigned int index);
  * Destructor of the table.
  */
 void ht_destroy(cc_hash_table_t *ht);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -247,7 +247,7 @@ void *ht_get(cc_hash_table_t* ht, char* key)
  * @param key Key of the desired item.
  * @return Index of the item in table otherwise -1.
  */
-unsigned int ht_get_index(cc_hash_table_t* ht, char* key)
+int ht_get_index(cc_hash_table_t* ht, char* key)
 {
     unsigned int pos1, pos2;
     

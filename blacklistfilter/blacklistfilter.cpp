@@ -35,8 +35,13 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP spoofing detection module", // Module name
+    "IP blacklist detection module", // Module name
     // Module description
+    "Module recieves the UniRec record and checks if the stored source address\n"
+    "or destination address isn't present in any blacklist that are available.\n"
+    "If any of the addresses is blacklisted the record is changed by adding \n"
+    "a number of the list which blacklisted the address. UniRec with this \n"
+    "flag is then sent to the next module.\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n", 
@@ -125,7 +130,7 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
  * @param prefix_file File with prefixes to be loaded and parsed to structures.
  * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
  */
-int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& pref_list_v6, const char *source_dir)
+int load_ip (cc_hash_table_t& ip_bl, const char *source_dir)
 {
     DIR* dp; // directory pointer
     struct dirent *file; // file pointer
@@ -137,8 +142,8 @@ int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& p
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
     
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
+//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
+//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
 
     dp = opendir(source_dir);
 
@@ -177,7 +182,7 @@ int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& p
                 } else {
                     bl_entry.pref_length = PREFIX_V6_DEFAULT;
                 }
-            } else {
+           /* } else { // commented out for future use with prefixes
                 ip = line.substr(0, str_pos);
     
                 if(!ip_from_str(ip.c_str(), &key)) {
@@ -192,6 +197,10 @@ int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& p
                 } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
                     continue;
                 }
+            }*/
+
+            } else { // prefix specified -- will drop for now
+                continue;
             }
             
             memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
@@ -206,23 +215,17 @@ int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& p
             }
 
             if (bl_entry.pref_length == 32) {
-                ht_insert(ip_bl, key, &bl_entry);
+                if (ht_get_index(&ip_bl, (char *) key.bytes) == NOT_FOUND) {
+                    ht_insert(&ip_bl, (char *) key.bytes, &bl_entry);
+                }
             }
 
-            if (ip_is4(&key) && (v4_dedup.count(key) == 0)) {
-                v4_dedup.insert(pair<ip_addr_t, ip_blist_t>(key, bl_entry));
-            } else if (ip_is6(&key) && (v6_dedup.count(key) == 0)) {
-                v6_dedup.insert(pair<ip_addr_t, ip_blist_t>(key, bl_entry));
-            }
         }
         input.close();
     }
 
-    if (v4_dedup.empty() && v6_dedup.empty()) {
-        cerr << "ERROR: No addresses were loaded. Unable to continue." << endl;
-        return BLIST_FILE_ERROR;
-    }
-
+/* commented out for future use with prefixes
+ *
     // we prepare vectors with ip addresses (maps are used only to prevent 
     // duplicate values)
 
@@ -241,7 +244,7 @@ int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& p
         v6_dedup_it->second.ip = v6_dedup_it->first;
         black_list_v6.push_back(v6_dedup_it->second);
     }
-
+*/
     closedir(dp);
     return ALL_OK;
 }
@@ -307,22 +310,22 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 
 /**
  */
-int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm)
+int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& ip_bl, ipv4_mask_map_t& v4mm)
 {
 
-    ipv6_mask_map_t dummy; // dummy structure for the binary search parameter
     bool marked = false;
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
-
-    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_SRC_IP)), v4mm, dummy, black_list);
-    if (search_result != IP_NOT_FOUND) {
-        // ur_set(ur_tmp, record, UR_SRC_BLACKLIST, black_list[search_result].in_blacklist);
+    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
+    search_result = ht_get_index(&ip_bl, ip_key);
+    if (search_result != NOT_FOUND) {
+//        ur_set(ur_tmp, record, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
-    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_DST_IP)), v4mm, dummy, black_list);
-    if (search_result != IP_NOT_FOUND) {
-        // ur_set(ur_tmp, record, UR_DST_BLACKLIST, black_list[search_result].in_blacklist);
+    ip_key = (char *) ur_get(ur_tmp, record, UR_DST_IP).bytes;
+    search_result = ht_get_index(&ip_bl, ip_key);
+    if (search_result != NOT_FOUND) {
+//        ur_set(ur_tmp, record, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
  
@@ -449,6 +452,8 @@ int main (int argc, char** argv)
     black_list_t v4_list; 
     black_list_t v6_list; 
 
+    cc_hash_table_t hash_blacklist;
+
 
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
@@ -473,6 +478,8 @@ int main (int argc, char** argv)
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
+
+    ht_init(&hash_blacklist);
 
     const void *data;
     uint16_t data_size;
@@ -541,6 +548,7 @@ int main (int argc, char** argv)
     // clean up before termination
     cout << count << " flows went through." << endl;
     ur_free_template(templ);
+    ht_destroy(&hash_blacklist);
     trap_finalize();
 
     return retval;
