@@ -7,9 +7,8 @@ size of the table, size of the data that will be stored within each item
 the items.
 
     For inserting the item use the ht_insert() function which you need to 
-supply with the hash table you want to insert the item in and the data 
-you want to insert. The data should be in the same structure (cc_item_t) 
-as the table is using.
+supply with the hash table you want to insert the item in, key to the data 
+and the data you want to insert.
 
     You can get the data using the ht_get() function or an index for the 
 item with ht_get_index(). Both functions need only table and key as parameter.
