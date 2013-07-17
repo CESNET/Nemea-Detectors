@@ -7,6 +7,8 @@
 extern "C" {
    #include <libtrap/trap.h>
 }
+//#include "../../../unirec/ipaddr.h"
+#include "../../../unirec/ipaddr_cpp.h"
 
 using namespace std;
 
@@ -27,16 +29,16 @@ void reportEvent(const Event& event)
       line << (int)*it;
    }
    line << ';';
-   for (vector<IPaddr_cpp>::const_iterator it = event.src_addr.begin(); it != event.src_addr.end(); ++it) {
+   for (vector<ip_addr_t>::const_iterator it = event.src_addr.begin(); it != event.src_addr.end(); ++it) {
       if (it != event.src_addr.begin())
          line << ',';
-      line << *it;
+      line << IPaddr_cpp(&(*it));
    }
    line << ';';
-   for (vector<IPaddr_cpp>::const_iterator it = event.dst_addr.begin(); it != event.dst_addr.end(); ++it) {
+   for (vector<ip_addr_t>::const_iterator it = event.dst_addr.begin(); it != event.dst_addr.end(); ++it) {
       if (it != event.dst_addr.begin())
          line << ',';
-      line << *it;
+      line << IPaddr_cpp(&(*it));
    }
    line << ';';
    for (vector<uint16_t>::const_iterator it = event.src_port.begin(); it != event.src_port.end(); ++it) {
@@ -95,7 +97,7 @@ void reportEvent(const Event& event)
    if (!warden_script.empty() && event.src_addr.size() == 1) {
       WardenReport wr;
       wr.time = y+"-"+m+"-"+d+"T"+h+":"+n+":00";
-      wr.source = event.src_addr[0].toString();
+      wr.source = IPaddr_cpp(&event.src_addr[0]).toString();
       if (event.proto.size() == 1)
          wr.target_proto = getProtoString(event.proto[0]);
       if (event.dst_port.size() == 1)
@@ -118,7 +120,66 @@ void reportEvent(const Event& event)
    }
 /*
    // Send event report to TRAP output interface (HALF_WAIT)
-   TODO: trap output here
+   int note_size = 0;
+   if (!event.note.size()) {
+      note_size = strlen(event.note.c_str());
+   }
+
+   void *rec = ur_create(tmpl_out, note_size);
+
+   if (event.src_addr.size()) {
+      if (event.src_addr.front().isIPv4()) {
+         char b[4] = {
+            event.src_addr[0].ad[0] >> 24,
+            event.src_addr[0].ad[0] >> 16,
+            event.src_addr[0].ad[0] >> 8, 
+            event.src_addr[0].ad[0] };
+         ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_4_bytes_le(b));
+      }
+      else {
+         char b[16];  
+         for (int i = 0; i < 8; i++) {
+            b[i] = event.src_addr[0].ad[1] >> ((7-i) * 8);
+            b[8+i] = event.src_addr[0].ad[0] >> ((7-i) * 8);
+         }
+         ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_16_bytes_le(b));
+      }
+   }
+
+   if (event.dst_addr.size()) {
+      if (event.dst_addr.front().isIPv4()) {
+         char b[4] = {
+            event.dst_addr[0].ad[0] >> 24,
+            event.dst_addr[0].ad[0] >> 16,
+            event.dst_addr[0].ad[0] >> 8, 
+            event.dst_addr[0].ad[0] };
+         ur_set(tmpl_out, rec, UR_DST_IP, ip_from_4_bytes_le(b));
+      }
+      else {
+         char b[16];  
+         for (int i = 0; i < 8; i++) {
+            b[i] = event.dst_addr[0].ad[1] >> ((7-i) * 8);
+            b[8+i] = event.dst_addr[0].ad[0] >> ((7-i) * 8);
+         }
+         ur_set(tmpl_out, rec, UR_DST_IP, ip_from_16_bytes_le(b));
+      }
+   }
+
+   if (event.src_port.size()) ur_set(tmpl_out, rec, UR_SRC_PORT, event.src_port.front());
+   if (event.dst_port.size()) ur_set(tmpl_out, rec, UR_DST_PORT, event.dst_port.front());
+   if (event.proto.size()) ur_set(tmpl_out, rec, UR_PROTOCOL, event.proto.front());
+
+   //NOTE
+   //memcpy(ur_get_dyn(tmpl_out, rec, UR_NOTE), event.note.c_str(), note_size);
+   //*(uint16_t*)ur_get_ptr(tmpl_out, rec, UR_NOTE) = note_size;
+
+   //ADD EVENT TYPE, TIMESLOT, SCALE,  
+   
+   // TODO: change to halfwait
+   printf(">>>>>>>>>ODESILAM DATA NA TRAPU\n");
+   int ret = trap_send_data(0, rec, ur_rec_size(tmpl_out, rec), TRAP_WAIT);
+   if (ret != TRAP_E_OK) printf("TRAP_SEND_DATA: %d\n", ret);
+   printf(">>>>>>>>>ODESLANO\n");
    */
 }
 

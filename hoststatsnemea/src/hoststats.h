@@ -48,7 +48,7 @@ struct flow_key_t{
                    (sport < key2.sport || (sport == key2.sport &&
                       (dport < key2.dport || (dport == key2.dport &&
                          (proto < key2.proto) )))))))); 
-   }
+    }
 };
 
 // flow-key -> flow_record map
@@ -93,10 +93,17 @@ struct hosts_record_t {
    }
 } __attribute__((packed));
 
-typedef IPaddr_cpp hosts_key_t;
+typedef ip_addr_t hosts_key_t;
+
+struct class_comp {
+   bool operator() (const ip_addr_t& first, const ip_addr_t& second) const
+   {
+         return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
+   }
+};
 
 // key->record map
-typedef std::map<hosts_key_t, hosts_record_t> stat_map_t;
+typedef std::map<hosts_key_t, hosts_record_t, class_comp> stat_map_t;
 typedef stat_map_t::iterator stat_map_iter;
 typedef stat_map_t::const_iterator stat_map_citer;
 
@@ -125,13 +132,13 @@ typedef struct stat_map_mutex{
 ////////////////////////////////////
 // Declaration of global variables
 
-//extern stat_map_t stat_map; // Main host statictics
+extern stat_map_t stat_map; // Main host statictics
 
 // Status information
 extern bool processing_data;
 extern bool data_available;
-// extern unsigned int flows_loaded;
-// extern unsigned int hosts_loaded;
+extern unsigned int flows_loaded;
+extern unsigned int hosts_loaded;
 extern std::string timeslot;
 
 #endif

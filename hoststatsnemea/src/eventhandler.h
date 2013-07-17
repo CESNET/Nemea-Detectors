@@ -7,7 +7,6 @@
 #include <cstdarg>
 
 #include "aux_func.h"
-#include "../../../unirec/ipaddr_cpp.h"
 #include "../../../unirec/unirec.h"
 
 enum EventType {PORTSCAN, PORTSCAN_H, PORTSCAN_V, DOS, DDOS, BRUTEFORCE, OTHER};
@@ -22,7 +21,7 @@ class Event
 public:
    EventType type;
    std::string timeslot;
-   std::vector<IPaddr_cpp> src_addr, dst_addr;
+   std::vector<ip_addr_t> src_addr, dst_addr;
    std::vector<uint16_t> src_port, dst_port;
    std::vector<uint8_t> proto;
    int scale;
@@ -33,12 +32,12 @@ public:
    { }
    
    // Methods to set parameters
-   Event& addSrcAddr(const IPaddr_cpp &addr)
+   Event& addSrcAddr(const ip_addr_t &addr)
    {
       this->src_addr.push_back(addr);
       return *this;
    }
-   Event& addDstAddr(const IPaddr_cpp &addr)
+   Event& addDstAddr(const ip_addr_t &addr)
    {
       this->dst_addr.push_back(addr);
       return *this;

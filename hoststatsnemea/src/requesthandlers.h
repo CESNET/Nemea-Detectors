@@ -3,7 +3,6 @@
 // Functions for handling requests from frontend
 
 #include <string>
-#include "../../../unirec/ipaddr_cpp.h"
 
 ////////////////////////////////////////////////////
 // Request codes
