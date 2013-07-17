@@ -27,6 +27,7 @@ extern "C" {
 #include "../../unirec/unirec.h"
 #include "../ipaddr.h"
 #include "blacklistfilter.h"
+#include "../cuckoo_hash/cuckoo_hash.h"
 
 #define DEBUG 1
 
@@ -60,7 +61,6 @@ void signal_handler(int signal)
     }
 }
 
-// **********   BOGON PREFIX FILTER   **********
 /**
  * Function for creating masks for IPv4 addresses.
  * Function fills the given array with every possible netmask for IPv4 address.
@@ -125,7 +125,7 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
  * @param prefix_file File with prefixes to be loaded and parsed to structures.
  * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
  */
-int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir)
+int load_ip (cc_hash_table_t& ip_bl, black_list_t& pref_list_v4, black_list_t& pref_list_v6, const char *source_dir)
 {
     DIR* dp; // directory pointer
     struct dirent *file; // file pointer
@@ -193,6 +193,8 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
                     continue;
                 }
             }
+            
+            memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
 
             // get source blacklist
             ip = string(file->d_name);
@@ -201,6 +203,10 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
             
             if (bl_entry.in_blacklist == 0) {
                 continue;
+            }
+
+            if (bl_entry.pref_length == 32) {
+                ht_insert(ip_bl, key, &bl_entry);
             }
 
             if (ip_is4(&key) && (v4_dedup.count(key) == 0)) {

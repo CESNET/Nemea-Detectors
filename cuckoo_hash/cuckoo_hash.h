@@ -26,13 +26,13 @@ typedef struct {
 typedef struct {
     /*@{*/
     cc_item_t *table; /**< Array of the item representing the storage */
-    unsigned int data_size; /**< Size of the data stored in every item (content of the data pointer) */.
+    unsigned int data_size; /**< Size of the data stored in every item (content of the data pointer) */
     unsigned int table_size; /**< Current size/capacity of the table */
     unsigned int key_length; /**< Length of the key used for items */
     /*@}*/
 } cc_hash_table_t;
 /*
- * Initialiyation function for the table.
+ * Initialization function for the table.
  */
 int ht_init(cc_hash_table_t* new_table, unsigned int table_size, unsigned int data_size, unsigned int key_length);
 
@@ -44,8 +44,7 @@ int rehash(cc_hash_table_t* ht, cc_item_t* rest);
 /*
  * Function for inserting an element.
  */
-int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data);
-
+int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data);
 
 /*
  * Getters for data/index to item in table.
