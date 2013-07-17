@@ -21,6 +21,7 @@
 #include "BloomFilter.hpp"
 #include "detectionrules.h"
 
+//#include "../../../unirec/ipaddr.h"
 extern "C" {
    #include <libtrap/trap.h>
 }
@@ -67,13 +68,12 @@ static bool threads_terminated = 0; // Threads for stat maps
 void UpdateStatsRecord(stat_map_t &stat_map, const flow_key_t &flow_key, 
                        const flow_record_t &flow_rec, bloom_filter &bf) {
    // find/add record in bloom filter
-
    ip_addr_t bkey[2] = {flow_key.sad, flow_key.dad};
    bool present = false;
    present = bf.containsinsert((const unsigned char *) bkey, 32);
    
-   hosts_key_t src_host_key = IPaddr_cpp(&flow_key.sad);
-   hosts_key_t dst_host_key = IPaddr_cpp(&flow_key.dad);
+   hosts_key_t src_host_key = flow_key.sad;
+   hosts_key_t dst_host_key = flow_key.dad;
 
    hosts_record_t& src_host_rec = stat_map[src_host_key];
    hosts_record_t& dst_host_rec = stat_map[dst_host_key];
@@ -117,7 +117,6 @@ void UpdateStatsRecord(stat_map_t &stat_map, const flow_key_t &flow_key,
       dst_host_rec.in_urg_cnt++;
 
    dst_host_rec.in_linkbitfield |= flow_rec.linkbitfield;
-
 }
 
 /*
