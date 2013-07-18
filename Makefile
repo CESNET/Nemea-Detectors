@@ -5,7 +5,8 @@ CXXFLAGS=-O2
 LDFLAGS=
 LDLIBS=-ltrap -lcommlbr -lrt
 
-SUBDIRS=nfreader flowcounter transitfilter
+SUBDIRS=nfreader flowcounter transitfilter 
+#traffic_repeater traffic_merger
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
