@@ -8,8 +8,8 @@
 #include <vector>
 #include "../../unirec/unirec.h"
 
-#ifndef BLACKLIST_MAIN_H
-#define BLACKLIST_MAIN_H
+#ifndef BLACKLISTFILTER_H
+#define BLACKLISTFILTER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,11 +46,12 @@ extern "C" {
 
 #define BL_ENTRY_UPDATED 1
 
+#define BL_HASH_SIZE 100000
 
 // structure definitions
 
 /**
- * Structure for bogon prefixes
+ * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
     /*@{*/
@@ -88,15 +89,15 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
 
 /*
  */
-int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir);
+//int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir);
 
 /*
  */ 
-int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm);
-int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv6_mask_map_t& v6mm);
+//int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm);
+//int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv6_mask_map_t& v6mm);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* SPOOFING_H */
+#endif /* BLACKLISTFILTER_H */

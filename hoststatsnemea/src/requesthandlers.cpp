@@ -15,6 +15,8 @@
 #include "synan.h"
 #include "config.h"
 
+#include "../../../unirec/ipaddr_cpp.h"
+
 using namespace std;
 
 extern bool processing_data;
@@ -99,7 +101,7 @@ public:
          case 2: return (*(uint16_t*)ptr1 > *(uint16_t*)ptr2);
          case 4: return (*(uint32_t*)ptr1 > *(uint32_t*)ptr2);
          case 8: return (*(uint64_t*)ptr1 > *(uint64_t*)ptr2);
-         default: return (IPaddr_cpp(pair1.first) < IPaddr_cpp(pair2.first)); // sort by IP addresses by default
+         default: return (IPaddr_cpp(&pair1.first) < IPaddr_cpp(&pair2.first)); // sort by IP addresses by default
       }
    }
 };
@@ -280,7 +282,7 @@ string get_timeslot(const Profile *profile, const string &timeslot,
    int i = 0;
    vector<pair<hosts_key_t, hosts_record_t> >::iterator it;
    for (it = result_stats.begin(); it != result_stats.end() && (limit < 0 || i < limit); ++it, ++i) {
-      out << it->first << ';';
+      out << IPaddr_cpp(&it->first).toString() << ';';
       out << it->second.in_flows << ';';
       out << it->second.in_packets << ';';
       out << it->second.in_bytes << ';';
@@ -404,10 +406,10 @@ string get_timeslot_ipmap(const Profile *profile, const string &timeslot,
    // Aggregate IP addresses by next 16 bits following the prefix
    map<uint32_t, SimpleStats> prefix_stats;
    for (stat_map_iter it = stat_map.begin(); it != stat_map.end(); ++it) {
-      if (ip_is6(it->first.data)) // Skip IPv6
+      if (ip_is6(&it->first)) // Skip IPv6
          continue;
       
-      uint32_t addr = it->first.data->ui32[2];
+      uint32_t addr = it->first.ui32[2];
       if (addr < range_start || addr > range_end)
          continue;
       
@@ -427,7 +429,7 @@ string get_timeslot_ipmap(const Profile *profile, const string &timeslot,
    int i = 0;
    for (map<uint32_t, SimpleStats>::const_iterator it = prefix_stats.begin(); it != prefix_stats.end(); ++it) {
       ip_addr_t tmp = ip_from_int(it->first);
-      out << IPaddr_cpp(&tmp) << ';';
+      out << IPaddr_cpp(&tmp).toString() << ';';
       out << it->second.in_flows << ';';
       out << it->second.in_packets << ';';
       out << it->second.in_bytes << ';';
@@ -578,7 +580,7 @@ string get_host_history(const string &params)
       return "ERROR: Invalid IP address \""+addr_str+"\""; 
    }
    
-   return get_host_history(profile, IPaddr_cpp(&address), timestart, timeend);
+   return get_host_history(profile, address, timestart, timeend);
 }
 
 

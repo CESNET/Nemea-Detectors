@@ -101,12 +101,12 @@ int rehash(cc_hash_table_t* ht, cc_item_t* rest)
     // rehash and copy items from old table to new one
     for (int i = 0; i < old_size; i++) {
         if (old_table[i].key != NULL && old_table[i].data != NULL) {
-            ht_insert(ht, &old_table[i]);
+            ht_insert(ht, old_table[i].key, old_table[i].data);
         }
     }
 
     // insert the remaining item
-    ht_insert(ht, rest);
+    ht_insert(ht, rest->key, rest->data);
 
     // destroy old table
     for(int i = 0; i < old_size; i++) {
@@ -141,11 +141,11 @@ int rehash(cc_hash_table_t* ht, cc_item_t* rest)
  * @param new_data Pointer to new data to be inserted.
  * @return 0 on succes otherwise REHASH_FAILURE when the rehashing function fails.
  */
-int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data)
+int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data)
 {
     int t, ret;
     unsigned int pos, swap1, swap2;
-    pos = hash_1(new_data->key, ht->key_length, ht->table_size);
+    pos = hash_1(key, ht->key_length, ht->table_size);
 
     cc_item_t prev, curr;
 
@@ -158,8 +158,8 @@ int ht_insert(cc_hash_table_t* ht, cc_item_t *new_data)
     curr.data = malloc(ht->data_size);
 
     // make a working copy of inserted data
-    memcpy(curr.key, new_data->key, ht->key_length);
-    memcpy(curr.data, new_data->data, ht->data_size);
+    memcpy(curr.key, key, ht->key_length);
+    memcpy(curr.data, new_data, ht->data_size);
 
     for (t = 1; t <= 10; t++) {
         if (ht->table[pos].data == NULL && ht->table[pos].key == NULL) { // try empty
@@ -247,7 +247,7 @@ void *ht_get(cc_hash_table_t* ht, char* key)
  * @param key Key of the desired item.
  * @return Index of the item in table otherwise -1.
  */
-unsigned int ht_get_index(cc_hash_table_t* ht, char* key)
+int ht_get_index(cc_hash_table_t* ht, char* key)
 {
     unsigned int pos1, pos2;
     

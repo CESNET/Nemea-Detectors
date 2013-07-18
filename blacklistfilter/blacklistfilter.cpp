@@ -27,15 +27,21 @@ extern "C" {
 #include "../../unirec/unirec.h"
 #include "../ipaddr.h"
 #include "blacklistfilter.h"
+#include "../cuckoo_hash/cuckoo_hash.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP spoofing detection module", // Module name
+    "IP blacklist detection module", // Module name
     // Module description
+    "Module recieves the UniRec record and checks if the stored source address\n"
+    "or destination address isn't present in any blacklist that are available.\n"
+    "If any of the addresses is blacklisted the record is changed by adding \n"
+    "a number of the list which blacklisted the address. UniRec with this \n"
+    "flag is then sent to the next module.\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n", 
@@ -60,7 +66,6 @@ void signal_handler(int signal)
     }
 }
 
-// **********   BOGON PREFIX FILTER   **********
 /**
  * Function for creating masks for IPv4 addresses.
  * Function fills the given array with every possible netmask for IPv4 address.
@@ -125,7 +130,7 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
  * @param prefix_file File with prefixes to be loaded and parsed to structures.
  * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
  */
-int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir)
+int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 {
     DIR* dp; // directory pointer
     struct dirent *file; // file pointer
@@ -137,10 +142,10 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
     
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
+//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
+//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
 
-    dp = opendir(source_dir);
+    dp = opendir(source_dir.c_str());
 
     if (dp == NULL) { // directory cannot be openned
         cerr << "ERROR: Cannot open directory " << source_dir << ". Directory doesn't exist";
@@ -149,7 +154,13 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
     }
 
     while (file = readdir(dp)) { // iterate over files
-        input.open(file->d_name, ifstream::in);
+
+        if (string(file->d_name) == "." || string(file->d_name) == "..") {
+            // we don't need references to direcotry itself and its parent
+            continue;
+        }
+
+        input.open((source_dir + file->d_name).c_str(), ifstream::in);
         
         if (!input.is_open()) {
             cerr << "ERROR: File " << file->d_name << " cannot be opened and will be skipped." << endl;
@@ -177,7 +188,7 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
                 } else {
                     bl_entry.pref_length = PREFIX_V6_DEFAULT;
                 }
-            } else {
+           /* } else { // commented out for future use with prefixes
                 ip = line.substr(0, str_pos);
     
                 if(!ip_from_str(ip.c_str(), &key)) {
@@ -192,31 +203,35 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
                 } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
                     continue;
                 }
+            }*/
+
+            } else { // prefix specified -- will drop for now
+                continue;
             }
+ 
+            memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
 
             // get source blacklist
             ip = string(file->d_name);
             str_pos = ip.find_last_of('.');
-            bl_entry.in_blacklist = strtoul(ip.substr(str_pos).c_str(), NULL, 0);
+            bl_entry.in_blacklist = strtoul(ip.substr(str_pos + 1).c_str(), NULL, 0);
             
             if (bl_entry.in_blacklist == 0) {
                 continue;
             }
 
-            if (ip_is4(&key) && (v4_dedup.count(key) == 0)) {
-                v4_dedup.insert(pair<ip_addr_t, ip_blist_t>(key, bl_entry));
-            } else if (ip_is6(&key) && (v6_dedup.count(key) == 0)) {
-                v6_dedup.insert(pair<ip_addr_t, ip_blist_t>(key, bl_entry));
+            if (bl_entry.pref_length == 32) {
+                if (ht_get_index(&ip_bl, (char *) key.bytes) == NOT_FOUND) {
+                    ht_insert(&ip_bl, (char *) key.bytes, &bl_entry);
+                }
             }
+
         }
         input.close();
     }
 
-    if (v4_dedup.empty() && v6_dedup.empty()) {
-        cerr << "ERROR: No addresses were loaded. Unable to continue." << endl;
-        return BLIST_FILE_ERROR;
-    }
-
+/* commented out for future use with prefixes
+ *
     // we prepare vectors with ip addresses (maps are used only to prevent 
     // duplicate values)
 
@@ -235,10 +250,96 @@ int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const cha
         v6_dedup_it->second.ip = v6_dedup_it->first;
         black_list_v6.push_back(v6_dedup_it->second);
     }
-
+*/
     closedir(dp);
     return ALL_OK;
 }
+
+int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& path)
+{
+/*
+ * directory
+ *
+ * DIR* dp; // directory pointer
+ * struct dirent *file; // file pointer
+ */
+
+ 
+    ifstream input; // data input
+
+    string line, ip;
+    size_t str_pos;
+
+    ip_addr_t key; // ip address (used as key in the map)
+    ip_blist_t bl_entry; // black list entry associated with ip address
+
+/*
+ * directory
+ *
+ * dp = opendir(path);
+ *
+ * if (dp == NULL) {
+ *     cerr << "Cannot open directory with updates. Will not update." << endl;
+ *     return BLIST_FILE_ERROR;
+ * }
+ *
+ * while (file = readdir(dp)) {
+ *      input.open((path + file->d_name).c_str(), ifstream::in);
+ */
+
+    input.open(path.c_str(), ifstream::in);
+
+    if (!input.is_open()) {
+        cerr << "Cannot open file with updates. Will be skipped." << endl; // or terminate update
+//        continue;
+        return BLIST_FILE_ERROR;
+    }
+
+    while (!input.eof()) {
+        getline(input, line);
+
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+        str_pos = line.find_first_of('/');
+
+        if (str_pos == string::npos) {
+            str_pos == line.find_first_of(';');
+            if (str_pos != string::npos) {
+                if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } else {
+            if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+                continue;
+            }
+            line.erase(0, str_pos + 1);
+            str_pos = line.find_first_of(';');
+            if (str_pos != string::npos) {
+                bl_entry.pref_length = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);
+            } else {
+                continue;
+            }
+        }
+
+        line.erase(0, str_pos + 1);
+
+        line.find_first_of(';');
+        bl_entry.in_blacklist = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);
+        
+        line.erase(0, str_pos + 1);
+
+        if (line.at(0) == 'A') {
+            update_list_a.push_back(bl_entry);
+        } else if (line.at(0) == 'R') {
+            update_list_rm.push_back(bl_entry);
+        }
+    }
+            
+}
+ 
 /**
  * Function for binary searching in prefix lists.
  * Function uses binary search algorithm to determine whehter the given ip 
@@ -300,23 +401,35 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 }
 
 /**
+ * BLACKLIST COMPARATOR
  */
-int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm)
+int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& ip_bl)
 {
 
-    ipv6_mask_map_t dummy; // dummy structure for the binary search parameter
+#ifdef DEBUG
+    char dst[INET6_ADDRSTRLEN];
+    char src[INET6_ADDRSTRLEN];
+    ip_to_str(&ur_get(ur_tmp, record, UR_SRC_IP), src);
+    ip_to_str(&ur_get(ur_tmp, record, UR_DST_IP), dst);
+    
+    cerr << src << " and " << dst << endl;
+#endif
+
     bool marked = false;
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
+    ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
+//    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
+    search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
 
-    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_SRC_IP)), v4mm, dummy, black_list);
-    if (search_result != IP_NOT_FOUND) {
-        // ur_set(ur_tmp, record, UR_SRC_BLACKLIST, black_list[search_result].in_blacklist);
+    if (search_result != NOT_FOUND) {
+//        ur_set(ur_tmp, record, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
-    search_result = ip_binary_search(&(ur_get(ur_tmp, record, UR_DST_IP)), v4mm, dummy, black_list);
-    if (search_result != IP_NOT_FOUND) {
-        // ur_set(ur_tmp, record, UR_DST_BLACKLIST, black_list[search_result].in_blacklist);
+    ip = ur_get(ur_tmp, record, UR_DST_IP);
+    search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
+    if (search_result != NOT_FOUND) {
+//        ur_set(ur_tmp, record, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
  
@@ -326,6 +439,8 @@ int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& 
     return ADDR_CLEAR;
 }
 
+
+///////////////
 int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, black_list_t& black_list)
 {
     int begin, end, mid;
@@ -370,7 +485,6 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
     }
 
     if (mask_result == 0) { // we found an address --> update the entry
-        black_list[mid].ip = updated->ip;
         black_list[mid].pref_length = updated->pref_length;
         black_list[mid].in_blacklist = updated->in_blacklist;
         return BL_ENTRY_UPDATED;
@@ -378,7 +492,8 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
         return begin;
     }
 }
-
+/* For future use with prefixes
+ * 
 void update_add(black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6)
 {
     int insert_index; // position for item insertion
@@ -426,6 +541,34 @@ void update_remove(black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_up
         }
     }
 }
+*/
+
+void ht_update_add(black_list_t& add_upd, cc_hash_table_t& ht)
+{
+    int insert_index; // position for item insertion
+
+    for (int i = 0; i < add_upd.size(); i++) { // go through updates
+        insert_index = ht_get_index(&ht, (char *) add_upd[i].ip.bytes);
+        if (insert_index == NOT_FOUND) { // item is not in table --> insert
+            ht_insert(&ht, (char *) add_upd[i].ip.bytes, &add_upd[i]);
+        } else { // item is in the table --> overwrite
+           ((ip_blist_t *)(ht.table[insert_index].data))->pref_length = add_upd[i].pref_length;
+           ((ip_blist_t *)(ht.table[insert_index].data))->in_blacklist = add_upd[i].in_blacklist;
+        }
+    }
+}
+
+void ht_update_remove(black_list_t& rm_upd, cc_hash_table_t& ht)
+{
+    int remove_index; // position of deleted item
+
+    for (int i = 0; i < rm_upd.size(); i++) { // go through updates
+        remove_index = ht_get_index(&ht, (char *) rm_upd[i].ip.bytes);
+        if (remove_index != NOT_FOUND) {
+            ht_remove_by_index(&ht, remove_index);
+        }
+    }
+}
 
 /*
  * MAIN FUNCTION
@@ -442,6 +585,8 @@ int main (int argc, char** argv)
 
     black_list_t v4_list; 
     black_list_t v6_list; 
+
+    cc_hash_table_t hash_blacklist;
 
 
     // Initialize TRAP library (create and init all interfaces)
@@ -460,6 +605,11 @@ int main (int argc, char** argv)
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
         return retval;
     }
+
+    if (argc != 2) {
+        cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
+        return EXIT_FAILURE;
+    }
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
@@ -468,12 +618,20 @@ int main (int argc, char** argv)
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
+    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), 16);
+
     const void *data;
     uint16_t data_size;
 
     ///////////////////
     int a = 0, b = 1, tmp;
-    int count = 0;
+    int count = 0, bl_count = 0;
+
+    string dir = string(argv[1]);
+
+    load_ip(hash_blacklist, dir);
+
+    char ip_tab[INET6_ADDRSTRLEN];
 
     // ***** Main processing loop *****
     while (!stop) {
@@ -502,28 +660,24 @@ int main (int argc, char** argv)
                 break;
             }
         }
-
+        
+        retval = v4_blacklist_check(templ, data, hash_blacklist);
         // try to match the ip addresses to blacklist
         // if (ip_is4(&(ur_get(templ, data, UR_SRC_IP) {
         //      retval = v4_blacklist_check(templ, data, black_list, v4_masks);
         // } else {
         //      retval = v6_blacklist_check(templ, data, black_list, v6_masks);
         // }
-        // if (retval = BLACKLISTED) {
-        //  send UniRec with blacklist marks
-        // }
+        
+        if (retval == BLACKLISTED) {
+            bl_count++;
+        }
         
         count++;
 
         if (update) {
         //  update black_list
             cout << "Updating black list ..." << endl;
-            for (int i = 0; i < 2000000000; i++) {
-                tmp = a;
-                a = b;
-                b = tmp;
-            }
-            update = 0;
             continue;
         }
 
@@ -533,8 +687,11 @@ int main (int argc, char** argv)
     trap_send_data(0, data, 1, TRAP_WAIT);
 
     // clean up before termination
-    cout << count << " flows went through." << endl;
+//    cout << count << " flows went through." << endl;
+  //  cout << bl_count << " were marked." << endl;
+    cout << hash_blacklist.table_size << endl;
     ur_free_template(templ);
+    ht_destroy(&hash_blacklist);
     trap_finalize();
 
     return retval;

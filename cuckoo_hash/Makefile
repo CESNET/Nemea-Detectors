@@ -6,8 +6,8 @@ LDFLAGS=
 
 BIN=cuckoo_hash
 
-$(BIN): cuckoo_hash.c cuckoo_hash.h
-	$(CC) $(CFLAGS) -o $@ $^ 
+$(BIN).o: cuckoo_hash.c cuckoo_hash.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o $(BIN)
