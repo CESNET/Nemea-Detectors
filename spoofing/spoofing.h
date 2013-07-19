@@ -87,7 +87,7 @@ extern "C" {
 /**
  * Default threshold for new flow counter used for warning.
  */
-#define NEW_FLOW_DEFAULT 100000
+#define NEW_FLOW_DEFAULT 100000000
 
 /**
  * Time setting for swapping the Bloom filters in seconds.
@@ -142,7 +142,7 @@ typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
 typedef struct {
     /*@{*/
     bloom_filter* sources; /**< Pointer to bloom filter for the watched network */
-    unsigned count; /**< Number of currently used flows */
+    unsigned long count; /**< Number of currently used flows */
     /*@}*/
 } flow_count_t;
 

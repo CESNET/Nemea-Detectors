@@ -7,6 +7,8 @@
 #ifndef _PCA_SKETCH_H_
 #define _PCA_SKETCH_H_
 
+//#define IDENTIFICATION
+
 #define V4_BIT_LENGTH 32 // Number of bits of IPv4 address length
 #define V6_BIT_PART_LENGTH 64 // Number of bits of one array field of IPv6 address
 
@@ -17,7 +19,7 @@
                                             // V6_HASH_KEY_MASK is for 64 - V6_HASH_KEY_PART
 //#define V6_HASH_KEY_MASK ((0xFFFFFFFFFFFFFFFF >> (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART)) << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART))
 
-#define SKETCH_SIZE 16 // (2^9) - For better performance it should be power
+#define SKETCH_SIZE 32 // (2^9) - For better performance it should be power
                         // of 2 since the value is used for modulus
 #define ADDRESS_SKETCH_WIDTH 4096 // (2^12) - For better performance it should
                           // be power of 2 since the value is used for modulus
@@ -36,11 +38,13 @@
                           // be power of 2 since the value is used for modulus
 
 //#define NORMAL_SUBSPACE_SIZE 10
-//#define NSS_BY_PERCENTAGE 0.9
-#define NSS_BY_DELTA_TEST 3
+#define NSS_BY_PERCENTAGE 0.95
+//#define NSS_BY_DELTA_TEST 3
 
 #define ALPHA_PERCENTILE_95 1.645
 #define ALPHA_PERCENTILE_99 2.326
+
+#define NUMBER_OF_TRUE_DETECTION_THRESHOLD NUMBER_OF_HASH_FUNCTION-1
 
 enum features_order
 {
