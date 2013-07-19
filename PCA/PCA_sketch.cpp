@@ -575,6 +575,7 @@ void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
    }
 }
 // ***************** END OF MATRIX OPERATIONS **********************************
+
 int main(int argc, char **argv)
 {
    int ret;
@@ -709,6 +710,7 @@ int main(int argc, char **argv)
 //   void *out_detailed_rec = ur_create(out_detailed_tmplt, 0);
 
    // ***** END OF Create UniRec templates & allocate memory for output records *****
+
    // ***** Main processing loop *****
    while (!stop) {
    // ***** Get input data *****
@@ -740,7 +742,7 @@ int main(int argc, char **argv)
    // ***** END OF Get input data *****
    // ***** Process the data *****
 
-      // *** Timebin division (sampling) based on TIMEBIN_SIZE ***
+     // *** Timebin division (sampling) based on TIMEBIN_SIZE ***
       start_of_actual_flow = (ur_get(in_tmplt, in_rec, UR_TIME_FIRST)) >> 32;
 
       if (timebin_init_flag){ // initialization of counters with first flow
@@ -758,95 +760,102 @@ int main(int argc, char **argv)
                         "--------------\n",timebin_counter,start_of_next_timebin);
                #endif
       }
-
-      if(start_of_actual_flow>start_of_next_timebin){
+      // *** One timebin completed ***
+      if (start_of_actual_flow > start_of_next_timebin){// end of actual timebin, start of new one
          --need_more_timebins;
-         for(int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-            for(int j = 0; j < SKETCH_SIZE; j++){
-//               //// !!! OVERFLOW timebin_counter
-//               printf("[%i] [%i] [%i]\n",i, (timebin_counter-1) % WORKING_TIMEBIN_WINDOW_SIZE,j);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j) =
-                  compute_entropy(sip_sketches[i][j],ADDRESS_SKETCH_WIDTH,packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE) =
-                  compute_entropy(sp_sketches[i][j],PORT_SKETCH_WIDTH,packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE*2) =
-                  compute_entropy(dip_sketches[i][j],ADDRESS_SKETCH_WIDTH,packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j+SKETCH_SIZE*3) =
-                  compute_entropy(dp_sketches[i][j],PORT_SKETCH_WIDTH,packet_counts[i][j]);
+         for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+            for (int j = 0; j < SKETCH_SIZE; j++){
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j) =
+                  compute_entropy(sip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j + SKETCH_SIZE) =
+                  compute_entropy(sp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j + SKETCH_SIZE * 2) =
+                  compute_entropy(dip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
+               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j + SKETCH_SIZE * 3) =
+                  compute_entropy(dp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
             }
          }
-//          *** Start detection (& identification) part ***
-         if(!need_more_timebins){
+         // *** Start detection (& identification) ***
+         if (!need_more_timebins){
+
             anomaly_detetected = 0;
 
             need_more_timebins++;
-            for(int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-               printf("Detection...\n");
+            // *** Detection part ***
+            for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+              #ifdef DEBUG //verbose
+               printf ("Starting detection...\n");
+              #endif
 
-               // preprocess_data_matrix( parametr timebin_to_find-in);
-               //    *** Matrix normalization ***
+               // !!!TODO preprocess_data_matrix( parametr timebin_to_find-in);
+
+               // ** Matrix normalization **
                transform_matrix_zero_mean(&data_matrices[i]);
-               transform_submatrix_unit_energy(&data_matrices[i],0,SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i],SKETCH_SIZE,2*SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i],2*SKETCH_SIZE,3*SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i],3*SKETCH_SIZE,4*SKETCH_SIZE);
-               //    *** END OF Matrix normalization
-               //    *** Computing of PCA ***
+               transform_submatrix_unit_energy(&data_matrices[i], 0, SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i], SKETCH_SIZE, 2 * SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i], 2 * SKETCH_SIZE, 3 * SKETCH_SIZE);
+               transform_submatrix_unit_energy(&data_matrices[i], 3 * SKETCH_SIZE, 4 * SKETCH_SIZE);
+               // ** END OF Matrix normalization **
+
+               // ** Computing of PCA **
                pcabuildbasis(data_matrices[i], data_matrices[i].rows(), data_matrices[i].cols(), info, eigenvalues, principal_components);
-               //    *** END OF Computing of PCA ***
-               //    *** Finding of normal subspace size ***
-               #ifdef NORMAL_SUBSPACE_SIZE
-                  normal_subspace_size = NORMAL_SUBSPACE_SIZE;
-               #elif defined NSS_BY_PERCENTAGE
-                  float variance_threshold, sum_variance=0;
+               // ** END OF Computing of PCA **
 
-                  for(int j = 0; j < eigenvalues.length(); j++){
-                     sum_variance += eigenvalues(j);
-                  }
-                  variance_threshold = sum_variance * NSS_BY_PERCENTAGE;
-                  //data_matrices[i].cols() == eigenvalues.length() == 4*SKETCH_SIZE
-                  normal_subspace_size=eigenvalues.length();
-                  while(sum_variance > variance_threshold){
-                     sum_variance -= eigenvalues(--normal_subspace_size);
-                  }
-                  normal_subspace_size++;
-               #else//NO NSS_BY_PERCENTAGE or NO NORMAL_SUBSPACE_SIZE
-// real_1d_array>>float                 real_1d_array data2pc_projection;
-//                     data2pc_projection.setlength(WORKING_TIMEBIN_WINDOW_SIZE);
-                  static float delta2pc_projection[WORKING_TIMEBIN_WINDOW_SIZE];
-                  float norm, delta;
+               // ** Finding of normal subspace size **
+              #ifdef NORMAL_SUBSPACE_SIZE
+               normal_subspace_size = NORMAL_SUBSPACE_SIZE;
+              #elif defined NSS_BY_PERCENTAGE
+               float variance_threshold, sum_variance = 0;
 
-                  normal_subspace_size = 0;
-                  int wj = 0;
-                  while(!normal_subspace_size && wj<4*SKETCH_SIZE){
-                     multiply_matrix_column_vector(&data_matrices[i], &principal_components, wj, &data2pc_projection);
-                     norm=norm_of_vector(&data2pc_projection);
-                     divide_vector_by_value(&data2pc_projection, norm);
+               for (int j = 0; j < eigenvalues.length(); j++){
+                  sum_variance += eigenvalues(j);
+               }
+               variance_threshold = sum_variance * NSS_BY_PERCENTAGE;
 
-                     delta=sqrt(vector_standard_deviation_v2(&data2pc_projection));
-                     for(k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
-                        if(fabs(data2pc_projection[wj]) >= NSS_BY_DELTA_TEST*delta){
-//                        if(data2pc_projection(j) >= NSS_BY_DELTA_TEST * delta
-//                        || data2pc_projection(j) <= -NSS_BY_DELTA_TEST * delta){
-                           normal_subspace_size = wj;
-                        }
+               normal_subspace_size = eigenvalues.length();// data_matrices[i].cols() == eigenvalues.length() == 4*SKETCH_SIZE
+               while(sum_variance > variance_threshold){
+                  sum_variance -= eigenvalues(--normal_subspace_size);
+               }
+               normal_subspace_size++;
+              #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE
+               static float delta2pc_projection[WORKING_TIMEBIN_WINDOW_SIZE];
+               float norm, delta;
+
+               normal_subspace_size = 0;
+               int wj = 0;
+               while (!normal_subspace_size && (wj < 4*SKETCH_SIZE)){
+                  multiply_matrix_column_vector(&data_matrices[i], &principal_components, wj, &data2pc_projection);
+                  norm = norm_of_vector(&data2pc_projection);
+                  divide_vector_by_value(&data2pc_projection, norm);
+                  delta = sqrt(vector_standard_deviation_v2(&data2pc_projection));
+
+                  for (k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
+//                     if (fabs(data2pc_projection[wj]) >= NSS_BY_DELTA_TEST * delta){
+                     if(data2pc_projection(j) >= NSS_BY_DELTA_TEST * delta
+                      || data2pc_projection(j) <= -NSS_BY_DELTA_TEST * delta){
+                        normal_subspace_size = wj;
                      }
-                     wj++;
                   }
-               #endif //Normal subspace size definition
-               printf("Normal subspace size (by count of principal components): %u\n",normal_subspace_size);
-               //    *** END OF Finding of normal subspace size ***
-               //    *** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) ***
-               multiply_submatrix_by_transposed_submatrix(&principal_components,normal_subspace_size,&lin_op_c_residual[i]);
-               substitute_matrix(&identity_matrix,&lin_op_c_residual[i]);
-               //    *** END OF Computing of linear operator C-residual ***
-               //    *** Detecting anomalies by "SPE" test ****
-               phi[0]=0;
-               phi[1]=0;
-               phi[2]=0;
+                  wj++;
+               }
+              #endif //Normal subspace size definition
+              #ifdef DEBUG //verbose
+               printf ("Normal subspace size (by count of principal components): %u\n",normal_subspace_size);
+              #endif DEBUG
+               // ** END OF Finding of normal subspace size **
 
-               for(int j = normal_subspace_size; j < 4*SKETCH_SIZE; j++){
-                  lambda=eigenvalues(j);
+               // ** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) **
+               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, &lin_op_c_residual[i]);
+               substitute_matrix(&identity_matrix, &lin_op_c_residual[i]);
+               // ** END OF Computing of linear operator C-residual ***
+
+               // ** Detecting anomalies by "SPE" test **
+               phi[0] = 0;
+               phi[1] = 0;
+               phi[2] = 0;
+
+               for (int j = normal_subspace_size; j < 4*SKETCH_SIZE; j++){
+                  lambda = eigenvalues(j);
                   phi[0] += lambda;
                   lambda *= lambda;
                   phi[1] += lambda;
@@ -856,22 +865,29 @@ int main(int argc, char **argv)
                h0 = 1 - ((2 * phi[0] * phi[2]) / (3.0 * phi[1] * phi[1]));
                delta_SPE = phi[0] * pow((
                      ((ALPHA_PERCENTILE_95 * sqrt(2.0 * phi[1] * h0 * h0)) / phi[0])
-                     + 1 + ((phi[1] * h0 * (h0-1.0)) / (phi[0] * phi[0])) ) ,(1.0/h0));
+                     + 1 + ((phi[1] * h0 * (h0-1.0)) / (phi[0] * phi[0])) ),(1.0/h0));
 
                multiply_matrix_by_transposed_line(&lin_op_c_residual[i], &data_matrices[i],
                                                   timebin_counter%WORKING_TIMEBIN_WINDOW_SIZE, &mapped_data);
                SPE = norm_of_vector(&mapped_data);
                SPE *= SPE;
 
-               if(SPE > delta_SPE){
+               if (SPE > delta_SPE){
                   anomaly_detetected++;
+              #ifdef DEBUG
                   printf("!!! Anomaly in timebin %u !!!\n", timebin_counter);
                } else {
                   printf("NO Anomaly in timebin %u.\n", timebin_counter);
+              #endif
                }
-               //    *** Detecting anomalies by "SPE" test ****
+               // ** Detecting anomalies by "SPE" test **
             }
-            //    *** END OF detection (& identification) part ***
+            // *** END OF detection part ***
+
+            // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
+           #ifdef DEBUG
+            printf(" Threshold: %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
+           #endif
             if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
                // Fill output record
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
@@ -880,38 +896,40 @@ int main(int argc, char **argv)
                       (uint64_t) start_of_actual_flow << 32 );
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_PORT,0);
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_PORT,0);
-               // Send record to interface 0, if ifc is not ready, wait at most 10ms
+               // Send record to interface 0
                printf("Sending data: %i - size: %u \n",
                       trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT),
                       ur_rec_static_size(out_preliminary_tmplt));
-//               trap_send_data(1, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
-//               trap_send_data(2, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
+              #ifdef DEBUG
                printf("ANOMALY DETECTED IN TIMEBIN:%u >> TIME: %u - %u!\n",
                       timebin_counter, start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
-            }
-            #ifdef IDENTIFICATION
-            //    *** Merging results & identification if an anomaly occured ***
-            printf(" Threshold: %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
-            if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD)
-            {
+              #endif
+               // *** END OF sending preliminary warning ***
+           #ifdef IDENTIFICATION
+               // *** Identification if an anomaly occured ***
+              #ifdef DEBUG //verbose
+               printf ("Starting identification...\n");
+              #endif
                static float theta_residual[4*SKETCH_SIZE][4];
                static float tmp[4][4];
                static float tmp2[4*SKETCH_SIZE][4];
                static float tmp4[4*SKETCH_SIZE][4*SKETCH_SIZE];
                static float tmp3[4*SKETCH_SIZE][4*SKETCH_SIZE];
                static float h_vectors[4*SKETCH_SIZE][4*SKETCH_SIZE];
-               printf("Identification\n");
-               for(int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-                  for(int j = 0; j < SKETCH_SIZE; j++){
+
+               for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+                  for (int j = 0; j < SKETCH_SIZE; j++){
+                    #ifdef DEBUG
                      printf("%i\n",j);
-                     memset(theta, 0, sizeof(theta[0][0])*4*SKETCH_SIZE*4);
-                     theta[(1-1)*SKETCH_SIZE+j][0]=1;
-                     theta[(2-1)*SKETCH_SIZE+j][1]=1;
-                     theta[(3-1)*SKETCH_SIZE+j][2]=1;
-                     theta[(4-1)*SKETCH_SIZE+j][3]=1;
+                    #endif
+                     memset(theta, 0, sizeof(theta[0][0]) * 4*SKETCH_SIZE * 4);
+                     theta[(1 - 1) * SKETCH_SIZE + j][0] = 1;
+                     theta[(2 - 1) * SKETCH_SIZE + j][1] = 1;
+                     theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
+                     theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
                      multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
                      printf("C-residual.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("C-residual.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -948,10 +966,10 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
                      printf("Trest-x-Tres.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("TresT-x-Tres.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -977,10 +995,10 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      multiply_matrices(&theta, &tmp, &tmp2);
                      printf("2t.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("2T-x-TresT.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -994,10 +1012,10 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
                      printf("3t.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("3thetas.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -1011,10 +1029,10 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
                      printf("4t.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("4thetas-x-cres.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -1028,10 +1046,10 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      substitute_matrix(&identity_matrix, &tmp4);
                      printf("sub.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("Substitution.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -1045,11 +1063,11 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                      printf("CHECK\n");
                      multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], j, &h_vectors[j]);
                      printf("vec.txt\n");
-                     #ifdef VALIDATION_IDENTIF
+                    #ifdef VALIDATION_IDENTIF
                      {
                         output.open("h_vec.txt");
                         output.precision(numeric_limits< double >::digits10);
@@ -1061,118 +1079,9 @@ int main(int argc, char **argv)
                         }
                         output.close();
                      }
-                     #endif
+                    #endif
                   }
-               }
-            }
-            #endif
-//               // trap_send(start_of_next_timebin-TIMEBIN_SIZE,start_of_next_timebin) - mezi tìmito èasy
-         }// *** END OF detection (& identification) part ***
-         ++timebin_counter;
-         start_of_next_timebin += TIMEBIN_SIZE;
-               #ifdef DEBUG
-                  printf("Start of %u. timebin in %u------------------------------"
-                        "--------------\n",timebin_counter,start_of_next_timebin);
-               #endif
-               #ifdef DEBUG_OUT
-                  printf("\t\t\t\t%u\n",ip_get_v4_as_int(ur_get_ptr(in_tmplt, (void *) actual_flows[checker-1], UR_SRC_IP)));
-               #endif
-         #ifdef IDENTIFICATION
-         for (vector<void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
-            ur_free(*it);
-         }
-         actual_flows.clear();
-         #endif
-
-         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
-         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*ADDRESS_SKETCH_WIDTH);
-         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
-         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE*PORT_SKETCH_WIDTH);
-         memset(packet_counts, 0, sizeof(packet_counts[0][0])*NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE);
-      } // *** END OF Timebin division ***
-      // *** Flow reading & structure filling ***
-      #ifdef IDENTIFICATION
-      //    *** Store flow from actual timebin ***
-      actual_flows.push_back(ur_cpy_alloc(in_tmplt, in_rec));
-
-            #ifdef DEBUG_OUT
-               if(actual_flows.size()==checker)
-               {
-                  printf("%u. Timebin - %i. flow srcIP: %u\n",timebin_counter+1,i,ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)));
-         //         stop=1;
-               }
-            #endif
-      //    *** END OF Store flow from actual timebin ***
-      #endif
-      //    *** Getting HashKey ***
-      memset(hash_key,0,sizeof(hash_key));
-      if(ip_is4(ur_get_ptr(in_tmplt,in_rec,UR_SRC_IP))){
-         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
-         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
-      } else {
-//         if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH){
-         #if V6_HASH_KEY_PART == V6_BIT_PART_LENGTH
-            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-            hash_key[1] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-            hk_size = sizeof(hash_key[0])*2;
-//         } else if(V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2) {
-         #elif V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2
-            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-            hash_key[1] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1];
-            hash_key[2] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-            hash_key[3] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1];
-            hk_size = sizeof(hash_key);
-//         } else if(V6_HASH_KEY_PART < V6_BIT_PART_LENGTH) {
-         #elseif V6_HASH_KEY_PART < V6_BIT_PART_LENGTH
-            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
-            hash_key[0] |= tmp_addr_part;
-            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
-            hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
-            hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
-            hk_size = sizeof(hash_key[0])*2;
-//         } else { // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
-         #else // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
-            hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
-            hash_key[1] |= tmp_addr_part;
-            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-            hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-            hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-            tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
-            hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-            hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-            hk_size = sizeof(hash_key);
-//         }
-         #endif
-      }
-      //    *** END OF Getting HashKey ***
-      //    *** Adding feature occurrence in all sketches ***
-      for(int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-         row_in_sketch = SuperFastHash((char *)hash_key, hk_size, seeds[i]) % SKETCH_SIZE;
-         sip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
-                                   sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
-                                   sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         sp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
-                                  sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
-                                  sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
-      }
-         //    *** END OF Adding feature occurrence in all sketches ***
-         // *** END OF flow reading & structure filling ***
-
-//////      // Read FOO and BAR from input record and compute their sum
+                  //////      // Read FOO and BAR from input record and compute their sum
 //////      uint32_t baz = ur_get(in_tmplt, in_rec, UR_FOO) +
 //////                     ur_get(in_tmplt, in_rec, UR_BAR);
 //////
@@ -1184,26 +1093,143 @@ int main(int argc, char **argv)
 
       // Send record to interface 0, if ifc is not ready, wait at most 10ms
 //////      trap_send_data(0, out_rec, ur_rec_static_size(out_tmplt), 10000);
-   // ***** END OF Process the data *****
+               }
+            // *** END OF Identification if an anomaly occured ***
+            #endif
+            }
+            // *** END OF Merging results ***
+         }
+         // *** END OF detection (& identification) ***
 
+         ++timebin_counter;
+         start_of_next_timebin += TIMEBIN_SIZE;
+
+        #ifdef DEBUG //verbose
+         printf("Start of %u. timebin in %u------------------------------"
+               "--------------\n",timebin_counter,start_of_next_timebin);
+        #endif
+        #ifdef DEBUG_OUT
+         printf("\t\t\t\t%u\n",ip_get_v4_as_int(ur_get_ptr(in_tmplt, (void *) actual_flows[checker - 1], UR_SRC_IP)));
+        #endif
+        #ifdef IDENTIFICATION
+         for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
+            ur_free(*it);
+         }
+         actual_flows.clear();
+        #endif
+
+         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
+         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
+         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
+         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
+         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
+      }
+      //   *** END OF One timebin completed ***
+
+      //   *** Flow reading & structure filling ***
+      #ifdef IDENTIFICATION
+      // ** Store flow from actual timebin **
+      actual_flows.push_back(ur_cpy_alloc(in_tmplt, in_rec));
+
+     #ifdef DEBUG_OUT
+      if (actual_flows.size()==5/*some value*/){
+         printf("%u. Timebin - %i. flow srcIP: %u\n",timebin_counter+1,i,ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)));
+      }
+     #endif
+      // ** END OF Store flow from actual timebin **
+      #endif
+      // ** Getting HashKey **
+      memset(hash_key, 0, sizeof(hash_key));
+      if (ip_is4(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP))){ // IPv4
+         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
+         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
+      } else { // IPv6
+        #if V6_HASH_KEY_PART == V6_BIT_PART_LENGTH
+         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+         hash_key[1] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+         hk_size = sizeof(hash_key[0]) * 2;
+        #elif V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2
+         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+         hash_key[1] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1];
+         hash_key[2] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+         hash_key[3] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1];
+         hk_size = sizeof(hash_key);
+        #elseif V6_HASH_KEY_PART < V6_BIT_PART_LENGTH
+         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part;
+         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
+         hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
+         hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
+         hk_size = sizeof(hash_key[0]) * 2;
+        #else // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
+         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
+         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
+         hash_key[1] |= tmp_addr_part;
+         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
+         hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+         hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
+         hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+         hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+         hk_size = sizeof(hash_key);
+        #endif
+      }
+      // ** END OF Getting HashKey **
+      // ** Adding feature occurrence in all sketches **
+      for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+         row_in_sketch = SuperFastHash((char *)hash_key, hk_size, seeds[i]) % SKETCH_SIZE;
+
+         sip_sketches[i][row_in_sketch]
+                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
+                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
+                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         dip_sketches[i][row_in_sketch]
+                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
+                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
+                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         sp_sketches[i][row_in_sketch]
+                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
+                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
+                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
+         dp_sketches[i][row_in_sketch]
+                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
+                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
+                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
+
+         packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
+      }
+      // ** END OF Adding feature occurrence in all sketches ***
+      //   *** END OF flow reading & structure filling ***
+
+     //   *** END OF Timebin division ***
+
+   // ***** END OF Process the data *****
    }
+   // ***** END OF Main processing loop *****
+
+   // ***** Cleanup *****
 
    // Send terminating signal to output interface
    char dummy[1] = {0};
    trap_send_data(0, dummy, 1, TRAP_WAIT);
 
-   // ***** Cleanup *****
+
    for (vector<void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
       ur_free(*it);
    }
    actual_flows.clear();
+
    trap_finalize();
+
    ur_free(out_preliminary_rec);
 //   ur_free(out_detailed_rec);
    ur_free_template(in_tmplt);
    ur_free_template(out_preliminary_tmplt);
 //   ur_free_template(out_detailed_tmplt);
    // ***** END OF Cleanup *****
+
    return 0;
 }
-
+// END OF PCA_sketch.c
