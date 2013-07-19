@@ -43,7 +43,6 @@
  */
 
 
-#include <map>
 #include <string>
 #include <cctype>
 #include <algorithm>
@@ -87,8 +86,8 @@ trap_module_info_t module_info = {
     1, // Number of output interfaces
 };
 
-static int stop = 0;
-static int update = 0;
+static int stop = 0; // global variable for stopping the program
+static int update = 0; // global variable for updating blacklists
 
 /**
  * Procedure for handling signals SIGTERM and SIGINT (Ctrl-C)
@@ -620,12 +619,19 @@ int main (int argc, char** argv)
 
     ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
 //    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,SRC_BLACKLIST,DST_BLACKLIST");
 
-    black_list_t v4_list; 
-    black_list_t v6_list; 
 
+      // for use with prefixes (not implemented now)
+//    black_list_t v4_list; 
+//    black_list_t v6_list;
+
+      // update lists
+//    black_list_t add_update;
+//    black_list_t rm_update;
+
+    // can be used for both v4 and v6
     cc_hash_table_t hash_blacklist;
-
 
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
@@ -662,7 +668,6 @@ int main (int argc, char** argv)
     uint16_t data_size;
 
     ///////////////////
-    int a = 0, b = 1, tmp;
     int count = 0, bl_count = 0;
 
     string dir = string(argv[1]);
@@ -715,7 +720,19 @@ int main (int argc, char** argv)
 
         if (update) {
         //  update black_list
+#ifdef DEBUG
             cout << "Updating black list ..." << endl;
+#endif
+
+            // Update procedure. NOT WORKING YET.
+//          load_update(add_update, rm_update, upd_filename);
+//          ht_update_remove(rm_update, hash_blacklist);
+//          ht_update_add(add_update, hash_blacklist);
+//          add_update.clear();
+//          rm_update.clear();
+#ifdef DEBUG
+            cout << "Blacklist succesfully updated." << endl;
+#endif
             continue;
         }
 
