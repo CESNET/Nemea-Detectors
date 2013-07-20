@@ -401,7 +401,7 @@ void multiply_submatrix_by_transposed_submatrix (real_2d_array *matrix_ptr,
       (*result_ptr)[x][y] = row_sum;
    }
 }
-
+int global_counter=0;
 /**
  * \brief Procedure multiplies matrix and transposed row of another matrix.
  * Procedure multiplies first matrix and transposed row of second matrix defined
@@ -419,13 +419,22 @@ void multiply_matrix_by_transposed_line (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*
    uint16_t y;
    float row_sum;
 
+   printf("GC: %i\n", global_counter++);
+
    for (int i = 0; i < 4*SKETCH_SIZE; i++){
       row_sum = 0;
 
       y = i;
 
       for (int j = 0; j < 4*SKETCH_SIZE; j++){
-         row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)[row_selector][j];
+         if(global_counter>=13){
+//            printf("Pos: %u x %i - value: %f \n", row_selector, j, (*B_matrix_ptr)(row_selector,j));
+         }
+         row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)(row_selector,j);
+      }
+
+      if(global_counter>=13){
+//         printf("Pos: %i - value: %f \n", i, row_sum);
       }
 
       (*result_ptr)[i] = row_sum;
@@ -587,6 +596,7 @@ int main(int argc, char **argv)
    uint8_t timebin_init_flag = 1;
    uint32_t start_of_actual_flow;
    uint32_t timebin_counter; // counted from zero
+   uint32_t round_timebin_counter; // counted from zero
    uint32_t start_of_next_timebin;
 // !!!CHANGE  uint32_t start_of_next_timebin = 0;
 
@@ -697,14 +707,18 @@ int main(int argc, char **argv)
                                                 "DST_PORT,PROTOCOL,TIME_FIRST,"
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
+//                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
    ur_template_t *out_preliminary_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
                                                 "DST_PORT,PROTOCOL,TIME_FIRST,"
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
+//                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 //   ur_template_t *out_detailed_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
 //                                                "DST_PORT,PROTOCOL,TIME_FIRST,"
 //                                                "TIME_LAST,PACKETS,BYTES,"
 //                                                "TCP_FLAGS");
+   FILE *log;
+   log = fopen("detector.pcalog","w");
 
    void *out_preliminary_rec = ur_create(out_preliminary_tmplt, 0);
 //   void *out_detailed_rec = ur_create(out_detailed_tmplt, 0);
@@ -765,13 +779,13 @@ int main(int argc, char **argv)
          --need_more_timebins;
          for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
             for (int j = 0; j < SKETCH_SIZE; j++){
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j) =
+               data_matrices[i](round_timebin_counter, j) =
                   compute_entropy(sip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j + SKETCH_SIZE) =
+               data_matrices[i](round_timebin_counter, j + SKETCH_SIZE) =
                   compute_entropy(sp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE, j + SKETCH_SIZE * 2) =
+               data_matrices[i](round_timebin_counter, j + SKETCH_SIZE * 2) =
                   compute_entropy(dip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE,j + SKETCH_SIZE * 3) =
+               data_matrices[i](round_timebin_counter,j + SKETCH_SIZE * 3) =
                   compute_entropy(dp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
             }
          }
@@ -868,7 +882,7 @@ int main(int argc, char **argv)
                      + 1 + ((phi[1] * h0 * (h0-1.0)) / (phi[0] * phi[0])) ),(1.0/h0));
 
                multiply_matrix_by_transposed_line(&lin_op_c_residual[i], &data_matrices[i],
-                                                  timebin_counter%WORKING_TIMEBIN_WINDOW_SIZE, &mapped_data);
+                                                  round_timebin_counter, &mapped_data);
                SPE = norm_of_vector(&mapped_data);
                SPE *= SPE;
 
@@ -890,16 +904,32 @@ int main(int argc, char **argv)
            #endif
             if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
                // Fill output record
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_IP,ur_get(in_tmplt, in_rec, UR_SRC_IP));
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_IP,ur_get(in_tmplt, in_rec, UR_SRC_IP));
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_PORT,0);
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_PORT,0);
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_PROTOCOL,0);
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_PACKETS,0);
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_BYTES,0);
+//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TCP_FLAGS,0);
+
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
-                      (uint64_t) (start_of_actual_flow - TIMEBIN_SIZE) << 32 );
+                      (uint64_t) (start_of_next_timebin - TIMEBIN_SIZE) << 32 );
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
-                      (uint64_t) start_of_actual_flow << 32 );
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_PORT,0);
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_PORT,0);
+                      (uint64_t) start_of_next_timebin << 32 );
+
                // Send record to interface 0
-               printf("Sending data: %i - size: %u \n",
-                      trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT),
-                      ur_rec_static_size(out_preliminary_tmplt));
+               trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
+               fprintf(log, "An anomaly detected from PCA_sketch module:\n"
+                      "\tstart time: %u \n"
+                      "\tend time: %u \n"
+                      "\n------------------------------------------------------------\n\n",
+                      start_of_next_timebin - TIMEBIN_SIZE,
+                      start_of_next_timebin);
+              #ifdef DEBUG_OUT
+               char dummy[1] = {0};
+               trap_send_data(0, dummy, 1, TRAP_WAIT);
+              #endif
               #ifdef DEBUG
                printf("ANOMALY DETECTED IN TIMEBIN:%u >> TIME: %u - %u!\n",
                       timebin_counter, start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
@@ -918,7 +948,7 @@ int main(int argc, char **argv)
                static float h_vectors[4*SKETCH_SIZE][4*SKETCH_SIZE];
 
                for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-                  for (int j = 0; j < SKETCH_SIZE; j++){
+                  for (int j = 0; j < data_matrices[i].rows(); j++){
                     #ifdef DEBUG
                      printf("%i\n",j);
                     #endif
@@ -928,7 +958,6 @@ int main(int argc, char **argv)
                      theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
                      theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
                      multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
-                     printf("C-residual.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("C-residual.txt");
@@ -968,7 +997,6 @@ int main(int argc, char **argv)
                      }
                     #endif
                      multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
-                     printf("Trest-x-Tres.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("TresT-x-Tres.txt");
@@ -997,7 +1025,6 @@ int main(int argc, char **argv)
                      }
                     #endif
                      multiply_matrices(&theta, &tmp, &tmp2);
-                     printf("2t.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("2T-x-TresT.txt");
@@ -1014,7 +1041,6 @@ int main(int argc, char **argv)
                      }
                     #endif
                      multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
-                     printf("3t.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("3thetas.txt");
@@ -1031,7 +1057,6 @@ int main(int argc, char **argv)
                      }
                     #endif
                      multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
-                     printf("4t.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("4thetas-x-cres.txt");
@@ -1048,7 +1073,6 @@ int main(int argc, char **argv)
                      }
                     #endif
                      substitute_matrix(&identity_matrix, &tmp4);
-                     printf("sub.txt\n");
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("Substitution.txt");
@@ -1064,9 +1088,7 @@ int main(int argc, char **argv)
                         output.close();
                      }
                     #endif
-                     printf("CHECK\n");
-                     multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], j, &h_vectors[j]);
-                     printf("vec.txt\n");
+                     multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], round_timebin_counter, &h_vectors[j]);
                     #ifdef VALIDATION_IDENTIF
                      {
                         output.open("h_vec.txt");
@@ -1103,6 +1125,7 @@ int main(int argc, char **argv)
 
          ++timebin_counter;
          start_of_next_timebin += TIMEBIN_SIZE;
+         round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
 
         #ifdef DEBUG //verbose
          printf("Start of %u. timebin in %u------------------------------"
@@ -1212,9 +1235,9 @@ int main(int argc, char **argv)
    // ***** Cleanup *****
 
    // Send terminating signal to output interface
-   char dummy[1] = {0};
-   trap_send_data(0, dummy, 1, TRAP_WAIT);
-
+//   char dummy[1] = {0};
+//   trap_send_data(0, dummy, 1, TRAP_WAIT);
+   fclose(log);
 
    for (vector<void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
       ur_free(*it);
