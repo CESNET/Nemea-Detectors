@@ -925,10 +925,11 @@ int main (int argc, char** argv)
         cerr << "ERROR: Bogon file not specified. Unable to continue." << endl;
         return EXIT_FAILURE;
     }
-    if (! c_flag) {
-        cerr << "ERROR: File with specific network prefixes not set. Unable to continue." << endl;
-        return EXIT_FAILURE;
+#ifdef DEBUG
+    if (!c_flag) {
+        cout << "No other file with prefixes has been specified." << endl;
     }
+#endif
 
 #ifdef DEBUG
     if (sym_rw_time == 0) {
@@ -974,7 +975,9 @@ int main (int argc, char** argv)
 
     // we don't have list of bogon prefixes loaded (usually first run)
     retval = load_pref(bogon_list_v4, bogon_list_v6, bog_filename.c_str());
-    retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
+
+    if (c_flag)
+        retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
 
     if (retval == PREFIX_FILE_ERROR) {
         return retval;
@@ -994,7 +997,7 @@ int main (int argc, char** argv)
     while (!stop) {
                 
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_HALFWAIT);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;
@@ -1040,12 +1043,12 @@ int main (int argc, char** argv)
         // ***** 1. bogon and specific prefix filter *****
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = v4_bogon_filter(templ, data, bogon_list_v4, v4_masks);
-            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
                 retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
             }
         } else {
             retval = v6_bogon_filter(templ, data, bogon_list_v6, v6_masks);
-            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
                 retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
             }
         }
@@ -1057,17 +1060,17 @@ int main (int argc, char** argv)
             ++bogons;
 #endif
             //for future use
-            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
+            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK; // reset return value
             continue;
         }
 
         // ***** 2. symetric routing filter *****
-/*        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time);
         } else {
             retval = check_symetry_v6(templ, data, v6_route_sym, sym_rw_time);
-        }*/
+        }
         
         // we caught a spoofed address by not keeping to symteric routing
         if (retval == SPOOF_POSITIVE) {
