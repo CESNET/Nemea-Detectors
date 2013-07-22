@@ -47,7 +47,7 @@ import aux
 report = aux.report
 
 program_prefix = sys.argv[0]
-main_program = 'blacklistfilter'
+main_program = os.getcwd() + 'blacklistfilter'
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
 
 if len(sys.argv) != 2:
@@ -65,7 +65,7 @@ if sys.argv[1] == 'start':
       exit(1)
 
    tmp = subprocess.Popen(
-   [sys.executable, main_program],
+   ['/usr/bin/sh', main_program],
    stdout=subprocess.PIPE,
    stderr=subprocess.PIPE,
    stdin=subprocess.PIPE
@@ -121,7 +121,7 @@ elif sys.argv[1] == 'install':
       report("Wrong update time specified in the config file.")
       exit(1)
 
-   command += user + ' /usr/bin/python ' + os.getcwd() + '/' + program_prefix + ' download\n\n'
+   command += user + ' ' + sys.executable + os.getcwd() + '/' + program_prefix + ' download\n\n'
 
    try:
       cron_file = open(cron_path, 'r')
