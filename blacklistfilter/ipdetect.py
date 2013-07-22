@@ -47,7 +47,8 @@ import aux
 report = aux.report
 
 program_prefix = sys.argv[0]
-main_program = os.getcwd() + 'blacklistfilter'
+main_program = os.getcwd() + '/blacklistfilter'
+
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
 
 if len(sys.argv) != 2:
@@ -65,16 +66,19 @@ if sys.argv[1] == 'start':
       exit(1)
 
    tmp = subprocess.Popen(
-   ['/usr/bin/sh', main_program],
-   stdout=subprocess.PIPE,
-   stderr=subprocess.PIPE,
-   stdin=subprocess.PIPE
+   [main_program, '-i', 'tb;localhost,7000;', os.getcwd() + '/test_src/'],
+   stdout = subprocess.PIPE,
+   stderr = subprocess.PIPE,
+   stdin = subprocess.PIPE
    )
-   if tmp.poll() != 0:
+
+   tmp.poll()
+   if tmp.returncode != None:
       report("Couldn\'t start main program.")
       pid_file.close()
       exit(1)
-   pid_file.write(tmp)
+
+   pid_file.write(str(tmp.pid))
    pid_file.close()
 
 elif sys.argv[1] == 'stop':
@@ -91,7 +95,7 @@ elif sys.argv[1] == 'stop':
    pid_file.close()
 
    if not pid:
-      report("Main program is not running.")
+      report("Main program is not running. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -99,10 +103,10 @@ elif sys.argv[1] == 'stop':
    output = tmp.communicate()
 
    if not output[0]:
-      report("Main program is not running.")
+      report("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(['kill', pid], shell = True)
+      subprocess.Popen(['-c', 'kill ' + pid], shell = True)
 
 elif sys.argv[1] == 'install':
    config = aux.read_config()
