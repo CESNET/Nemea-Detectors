@@ -53,6 +53,7 @@ using namespace std;
 using namespace alglib;
 
 
+#define VERBOSE_MSG
 #define DEBUG
 //#define DEBUG_OUT
    #ifdef DEBUG_OUT
@@ -169,6 +170,157 @@ void signal_handler (int signal)
       stop = 1; // breaks the main loop
       trap_terminate(); // interrupt a possible waiting in recv/send functions
    }
+}
+
+
+/**
+ * \brief Provedure computes standard deviation from vector (1st version).
+ *
+ * Provedure computes standard deviation from vector in two different ways - two
+ * versions (according to: http://www.mathworks.com/help/matlab/ref/std.html).
+ * \param[in] vector_ptr Pointer to vector.
+ * \return Real (float) value of stadard deviation.
+ */
+float vector_standard_deviation (float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE])
+{
+   float sum=0;
+//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
+   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
+      sum += (*vector_ptr)[i] * (*vector_ptr)[i];
+   }
+//   printf("\tSUM: %f ---------------------------\n", sum);
+   return sqrt(sum / WORKING_TIMEBIN_WINDOW_SIZE);
+}
+/**
+ * \brief Provedure computes standard deviation from vector (2nd version).
+ * \param[in] vector_ptr Pointer to vector.
+ * \return Real (float) value of stadard deviation.
+ */
+float vector_standard_deviation_v2(float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE])
+{
+   float sum = 0, tmp;
+   float mean = 0;
+
+   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
+      mean += (*vector_ptr)[i];
+   }
+//   printf("MEAN: %f ---------------------------\n", mean);
+   mean /= WORKING_TIMEBIN_WINDOW_SIZE;
+
+   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
+      tmp = (*vector_ptr)[i] - mean;
+      sum += tmp * tmp;
+   }
+//   printf("\tSUM: %f ---------------------------\n", sum);
+
+//   return sqrt(sum / (WORKING_TIMEBIN_WINDOW_SIZE));
+   return sqrt(sum / (WORKING_TIMEBIN_WINDOW_SIZE-1));
+}
+/**
+*/
+float mean_value_from_matrix_column (real_2d_array *data_matrix, unsigned int column)
+{
+   float sum=0;
+
+   for (int i = 0; i < data_matrix->rows(); i++){
+      sum += (*data_matrix)(i,column);
+   }
+   return sum / data_matrix->rows();
+}
+/**
+ */
+float vector_standard_deviation_v2(real_2d_array *data_matrix, unsigned int column)
+{
+   float sum = 0, tmp;
+   float mean = 0;
+
+   mean = mean_value_from_matrix_column(data_matrix, column);
+
+   for (int i = 0; i < data_matrix->rows(); i++){
+      tmp = (*data_matrix)(i,column) - mean;
+      sum += tmp * tmp;
+   }
+//   return sqrt(sum / (data_matrix->rows()));
+   return sqrt(sum / (data_matrix->rows()-1));
+}
+
+
+//################################################
+//## Preprocess data - eliminate x% highest and x% lowest
+//#		values, compute mean and crop deviations, bigger then parameter
+void preprocess_data(real_2d_array *data_matrix, uint32_t actual_timebin)
+{
+	double mean, delta_threshold;
+
+   for(int i = 0; i < data_matrix->cols(); i++){
+      mean = mean_value_from_matrix_column(data_matrix, i);
+//      meanP2 = mean_value_from_matrix_column_power2(dataMatrix, i, NORMAL);
+//      delta = sqrt(meanP2);
+      delta_threshold = vector_standard_deviation_v2(data_matrix, i);
+      delta_threshold *= PREPROCESS_DATA_DEV_MULTIPLIER;
+      for(int j = 0; j < data_matrix->rows(); j++){
+         if((*data_matrix)(j,i) > (mean + delta_threshold)){
+            (*data_matrix)(j,i) = mean;
+
+            if(j == actual_timebin){
+               //!!!TODO send / notify ???
+            }
+         }
+         else if((*data_matrix)(j,i) < (mean - delta_threshold)){
+            (*data_matrix)(j,i) = mean;
+
+            if(j == actual_timebin){
+               //!!!TODO send / notify ???
+            }
+         }
+      }
+   }
+}
+
+uint32_t get_row_in_sketch (ur_template_t *tmplt, const void *rec, int seed)
+{
+   uint64_t tmp_addr_part;
+   uint64_t hash_key[4];
+   int hk_size;
+
+   memset(hash_key, 0, sizeof(hash_key));
+   if (ip_is4(ur_get_ptr(tmplt, rec, UR_SRC_IP))){ // IPv4
+      tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(tmplt, rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
+      hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
+      tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(tmplt, rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
+      hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
+   } else { // IPv6
+     #if V6_HASH_KEY_PART == V6_BIT_PART_LENGTH
+      hash_key[0] = ur_get(tmplt, rec, UR_SRC_IP).ui64[0];
+      hash_key[1] = ur_get(tmplt, rec, UR_DST_IP).ui64[0];
+      hk_size = sizeof(hash_key[0]) * 2;
+     #elif V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2
+      hash_key[0] = ur_get(tmplt, rec, UR_SRC_IP).ui64[0];
+      hash_key[1] = ur_get(tmplt, rec, UR_SRC_IP).ui64[1];
+      hash_key[2] = ur_get(tmplt, rec, UR_DST_IP).ui64[0];
+      hash_key[3] = ur_get(tmplt, rec, UR_DST_IP).ui64[1];
+      hk_size = sizeof(hash_key);
+     #elseif V6_HASH_KEY_PART < V6_BIT_PART_LENGTH
+      tmp_addr_part = ur_get(tmplt, rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
+      hash_key[0] |= tmp_addr_part;
+      tmp_addr_part = ur_get(tmplt, rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
+      hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
+      hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
+      hk_size = sizeof(hash_key[0]) * 2;
+     #else // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
+      hash_key[0] = ur_get(tmplt, rec, UR_SRC_IP).ui64[0];
+      tmp_addr_part = ur_get(tmplt, rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
+      hash_key[1] |= tmp_addr_part;
+      tmp_addr_part = ur_get(tmplt, rec, UR_DST_IP).ui64[0];
+      hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+      hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+      tmp_addr_part = ur_get(tmplt, rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
+      hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
+      hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
+      hk_size = sizeof(hash_key);
+     #endif
+   }
+   return SuperFastHash((char *)hash_key, hk_size, seed) % SKETCH_SIZE;
 }
 
 /**
@@ -289,11 +441,11 @@ float norm_of_vector (float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE])
 }
 /**
 */
-float norm_of_vector (float (*vector_ptr)[4*SKETCH_SIZE])
+float norm_of_vector (float (*vector_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    float sum = 0;
 
-   for (int i = 0; i < 4*SKETCH_SIZE; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
       sum += (*vector_ptr)[i] * (*vector_ptr)[i];
    }
 
@@ -315,57 +467,17 @@ void divide_vector_by_value (float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE], f
 }
 
 /**
- * \brief Provedure computes standard deviation from vector (1st version).
- *
- * Provedure computes standard deviation from vector in two different ways - two
- * versions (according to: http://www.mathworks.com/help/matlab/ref/std.html).
- * \param[in] vector_ptr Pointer to vector.
- * \return Real (float) value of stadard deviation.
- */
-float vector_standard_deviation (float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE])
-{
-   float sum=0;
-//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
-   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
-      sum += (*vector_ptr)[i] * (*vector_ptr)[i];
-   }
-
-   return sum / WORKING_TIMEBIN_WINDOW_SIZE;
-}
-/**
- * \brief Provedure computes standard deviation from vector (2nd version).
- * \param[in] vector_ptr Pointer to vector.
- * \return Real (float) value of stadard deviation.
- */
-float vector_standard_deviation_v2(float (*vector_ptr)[WORKING_TIMEBIN_WINDOW_SIZE])
-{
-   float sum = 0, tmp;
-   float mean = 0;
-   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
-      mean+=(*vector_ptr)[i];
-   }
-   mean /= WORKING_TIMEBIN_WINDOW_SIZE;
-//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
-   for (int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
-      tmp = (*vector_ptr)[i] - mean;
-      sum += tmp * tmp;
-   }
-
-   return sum / (WORKING_TIMEBIN_WINDOW_SIZE-1) ;
-}
-
-/**
  * \brief Procedure substitutes two matrices.
  *
  * Procedure substitutes second matrix from first. Stores result in second.
  * \param[in] A_matrix_ptr Pointer to first matrix.
  * \param[in,out] B_matrix_result_ptr Pointer to secod and result matrix.
  */
-void substitute_matrix (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
-                        float (*B_matrix_result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+void substitute_matrices (uint8_t (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
+                        float (*B_matrix_result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
-   for (int i = 0; i < 4*SKETCH_SIZE; i++){
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          (*B_matrix_result_ptr)[i][j] = (*A_matrix_ptr)[i][j]  - (*B_matrix_result_ptr)[i][j];
       }
     }
@@ -383,7 +495,7 @@ void substitute_matrix (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
  */
 void multiply_submatrix_by_transposed_submatrix (real_2d_array *matrix_ptr,
                                                  unsigned int column_delimiter,
-                                                 float (*result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+                                                 float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    uint16_t x,y;
    float row_sum;
@@ -401,7 +513,7 @@ void multiply_submatrix_by_transposed_submatrix (real_2d_array *matrix_ptr,
       (*result_ptr)[x][y] = row_sum;
    }
 }
-int global_counter=0;
+
 /**
  * \brief Procedure multiplies matrix and transposed row of another matrix.
  * Procedure multiplies first matrix and transposed row of second matrix defined
@@ -412,29 +524,45 @@ int global_counter=0;
  * \param[in] row_selector Specifies row of B_matrix_ptr.
  * \param[out] result_ptr Pointer to vector for result.
  */
-void multiply_matrix_by_transposed_line (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
+void multiply_matrix_by_transposed_line (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
                                          real_2d_array *B_matrix_ptr, unsigned int row_selector,
-                                         float (*result_ptr)[4*SKETCH_SIZE])
+                                         float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    uint16_t y;
    float row_sum;
 
-   printf("GC: %i\n", global_counter++);
-
-   for (int i = 0; i < 4*SKETCH_SIZE; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
       row_sum = 0;
 
       y = i;
 
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
-         if(global_counter>=13){
-//            printf("Pos: %u x %i - value: %f \n", row_selector, j, (*B_matrix_ptr)(row_selector,j));
-         }
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)(row_selector,j);
       }
 
-      if(global_counter>=13){
-//         printf("Pos: %i - value: %f \n", i, row_sum);
+      (*result_ptr)[i] = row_sum;
+   }
+}
+/**
+ * \brief Procedure multiplies matrix and with column vector (float array).
+ * \param[in] A_matrix_ptr Pointer to matrix.
+ * \param[in] B_matrix_ptr Pointer to vector.
+ * \param[out] result_ptr Pointer to vector for result.
+ */
+void multiply_matrix_by_vector (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
+                                         float (*B_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE],
+                                         float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE])
+{
+   uint16_t y;
+   float row_sum;
+
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
+      row_sum = 0;
+
+      y = i;
+
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
+         row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)[j];
       }
 
       (*result_ptr)[i] = row_sum;
@@ -449,20 +577,20 @@ void multiply_matrix_by_transposed_line (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*
  * computation).
  * \param[out] result_ptr Pointer to matrix for result.
  */
-void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[4*SKETCH_SIZE][4],
-                                           float (*B_matrix_ptr)[4*SKETCH_SIZE][4],
-                                           float (*result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES],
+                                           float (*B_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES],
+                                           float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    uint16_t x,y;
    float row_sum;
 
-   for (int i = 0; i < 4*SKETCH_SIZE * 4*SKETCH_SIZE; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
       row_sum = 0;
 
-      x = i / (4*SKETCH_SIZE);
-      y = i % (4*SKETCH_SIZE);
+      x = i / (NUMBER_OF_FEATURES*SKETCH_SIZE);
+      y = i % (NUMBER_OF_FEATURES*SKETCH_SIZE);
 
-      for (int j = 0; j < 4; j++){
+      for (int j = 0; j < NUMBER_OF_FEATURES; j++){
          row_sum += (*A_matrix_ptr)[x][j] * (*B_matrix_ptr)[y][j];
       }
 
@@ -471,19 +599,19 @@ void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[4*SKETCH_SIZE][
 }
 /**
 */
-void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[4*SKETCH_SIZE][4],
-                                           float (*result_ptr)[4][4])
+void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES],
+                                           float (*result_ptr)[NUMBER_OF_FEATURES][NUMBER_OF_FEATURES])
 {
    uint16_t x,y;
    float row_sum;
 
-   for (int i = 0; i < 4 * 4; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES * NUMBER_OF_FEATURES; i++){
       row_sum = 0;
 
-      x = i / 4;
-      y = i % 4;
+      x = i / NUMBER_OF_FEATURES;
+      y = i % NUMBER_OF_FEATURES;
 
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          row_sum += (*A_matrix_ptr)[j][x] * (*A_matrix_ptr)[j][y];
       }
 
@@ -498,20 +626,20 @@ void multiply_matrix_by_transposed_matrix (float (*A_matrix_ptr)[4*SKETCH_SIZE][
  * computation).
  * \param[out] result_ptr Pointer to matrix for result.
  */
-void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
-                        uint8_t (*B_matrix_ptr)[4*SKETCH_SIZE][4],
-                        float (*result_ptr)[4*SKETCH_SIZE][4])
+void multiply_matrices (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
+                        uint8_t (*B_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES],
+                        float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES])
 {
    uint16_t x,y;
    float row_sum;
 
-   for (int i = 0; i < 4*SKETCH_SIZE * 4; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES; i++){
       row_sum = 0;
 
-      x = i / 4;
-      y = i % 4;
+      x = i / NUMBER_OF_FEATURES;
+      y = i % NUMBER_OF_FEATURES;
 
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          row_sum += (*A_matrix_ptr)[x][j] * (unsigned int) (*B_matrix_ptr)[j][y];
       }
 
@@ -520,20 +648,20 @@ void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
 }
 /**
 */
-void multiply_matrices (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4],
-                        float (*B_matrix_ptr)[4][4],
-                        float (*result_ptr)[4*SKETCH_SIZE][4])
+void multiply_matrices (uint8_t (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES],
+                        float (*B_matrix_ptr)[NUMBER_OF_FEATURES][NUMBER_OF_FEATURES],
+                        float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES])
 {
    uint16_t x,y;
    float row_sum;
 
-   for(int i = 0; i < 4*SKETCH_SIZE * 4; i++){
+   for(int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES; i++){
       row_sum = 0;
 
-      x = i / 4;
-      y = i % 4;
+      x = i / NUMBER_OF_FEATURES;
+      y = i % NUMBER_OF_FEATURES;
 
-      for (int j = 0; j < 4; j++){
+      for (int j = 0; j < NUMBER_OF_FEATURES; j++){
          row_sum += (unsigned int)(*A_matrix_ptr)[x][j] * (*B_matrix_ptr)[j][y];
       }
 
@@ -542,19 +670,19 @@ void multiply_matrices (uint8_t (*A_matrix_ptr)[4*SKETCH_SIZE][4],
 }
 /**
 */
-void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
-                        float (*B_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
-                        float (*result_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE])
+void multiply_matrices (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
+                        float (*B_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
+                        float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    uint16_t x, y;
    float row_sum;
 
-   for (int i = 0; i < 4*SKETCH_SIZE * 4*SKETCH_SIZE; i++){
+   for (int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
       row_sum = 0;
 
-      x = i / (4*SKETCH_SIZE);
-      y = i % (4*SKETCH_SIZE);
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+      x = i / (NUMBER_OF_FEATURES*SKETCH_SIZE);
+      y = i % (NUMBER_OF_FEATURES*SKETCH_SIZE);
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          row_sum += (*A_matrix_ptr)[x][j] * (*B_matrix_ptr)[j][y];
       }
 
@@ -563,20 +691,20 @@ void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
 }
 /**
 */
-void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
+void multiply_matrices (float (*A_matrix_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE],
                         real_2d_array *B_matrix_ptr,
                         unsigned int row_selector,
-                        float (*result_ptr)[4*SKETCH_SIZE])
+                        float (*result_ptr)[NUMBER_OF_FEATURES*SKETCH_SIZE])
 {
    uint16_t y;
    float row_sum;
 
-   for(int i = 0; i < 4*SKETCH_SIZE; i++){
+   for(int i = 0; i < NUMBER_OF_FEATURES*SKETCH_SIZE; i++){
       row_sum = 0;
 
       y = i;
 
-      for (int j = 0; j < 4*SKETCH_SIZE; j++){
+      for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
          row_sum += (*A_matrix_ptr)[y][j] * (*B_matrix_ptr)[row_selector][j];
       }
 
@@ -584,7 +712,6 @@ void multiply_matrices (float (*A_matrix_ptr)[4*SKETCH_SIZE][4*SKETCH_SIZE],
    }
 }
 // ***************** END OF MATRIX OPERATIONS **********************************
-
 int main(int argc, char **argv)
 {
    int ret;
@@ -598,13 +725,8 @@ int main(int argc, char **argv)
    uint32_t timebin_counter; // counted from zero
    uint32_t round_timebin_counter; // counted from zero
    uint32_t start_of_next_timebin;
-// !!!CHANGE  uint32_t start_of_next_timebin = 0;
 
    vector <void *> actual_flows;
-
-   uint64_t tmp_addr_part;
-   uint64_t hash_key[4];
-   int hk_size;
 
    uint32_t row_in_sketch;
 
@@ -617,7 +739,7 @@ int main(int argc, char **argv)
 
    real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
     for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE, SKETCH_SIZE*4);
+       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE);
     }
    real_2d_array principal_components;
 	real_1d_array eigenvalues;
@@ -625,18 +747,18 @@ int main(int argc, char **argv)
 
    uint16_t normal_subspace_size;
 
-   static float lin_op_c_residual[NUMBER_OF_HASH_FUNCTION][4*SKETCH_SIZE][4*SKETCH_SIZE];
-   static uint8_t identity_matrix[4*SKETCH_SIZE][4*SKETCH_SIZE];
-    memset(identity_matrix, 0, sizeof(identity_matrix[0][0]) * 4*SKETCH_SIZE * 4*SKETCH_SIZE);
-    for (int j = 0; j < 4*SKETCH_SIZE; j++){
+   static float lin_op_c_residual[NUMBER_OF_HASH_FUNCTION][NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
+   static uint8_t identity_matrix[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
+    memset(identity_matrix, 0, sizeof(identity_matrix[0][0]) * NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES*SKETCH_SIZE);
+    for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
        identity_matrix[j][j] = 1;
     }
 
-   static float mapped_data[4*SKETCH_SIZE];
+   static float mapped_data[NUMBER_OF_FEATURES*SKETCH_SIZE];
    float phi [3];
    float lambda,SPE,h0,delta_SPE;
    uint8_t anomaly_detetected;
-   static uint8_t theta [4*SKETCH_SIZE][4];
+   static uint8_t theta [NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
 
 //   void (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(type1 *, type2, ...);
    uint32_t (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(const char *, int , int );
@@ -760,23 +882,38 @@ int main(int argc, char **argv)
       start_of_actual_flow = (ur_get(in_tmplt, in_rec, UR_TIME_FIRST)) >> 32;
 
       if (timebin_init_flag){ // initialization of counters with first flow
+        #ifdef VERBOSE_MSG
+         printf("Starting first initialization...");
+        #endif
          timebin_init_flag = 0;
          start_of_next_timebin = start_of_actual_flow + TIMEBIN_SIZE;
          timebin_counter = 0; // "human-like timebin" = timebin_counter + 1
+         round_timebin_counter = timebin_counter;
 
          memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
          memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
          memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
          memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
          memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
-               #ifdef DEBUG
-                  printf("Start of %u. timebin in %u------------------------------"
-                        "--------------\n",timebin_counter,start_of_next_timebin);
-               #endif
+        #ifdef VERBOSE_MSG
+         printf("... DONE.\n");
+        #endif
+        #ifdef VERBOSE_MSG
+         printf("Start of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
+        #endif
       }
+
       // *** One timebin completed ***
       if (start_of_actual_flow > start_of_next_timebin){// end of actual timebin, start of new one
+        #ifdef VERBOSE_MSG
+         printf("--- one timebin received.\n");
+        #endif
+
          --need_more_timebins;
+
+        #ifdef VERBOSE_MSG
+         printf("Counting entropy...");
+        #endif
          for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
             for (int j = 0; j < SKETCH_SIZE; j++){
                data_matrices[i](round_timebin_counter, j) =
@@ -789,6 +926,10 @@ int main(int argc, char **argv)
                   compute_entropy(dp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
             }
          }
+        #ifdef VERBOSE_MSG
+         printf("... DONE.\n");
+        #endif
+
          // *** Start detection (& identification) ***
          if (!need_more_timebins){
 
@@ -797,12 +938,23 @@ int main(int argc, char **argv)
             need_more_timebins++;
             // *** Detection part ***
             for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-              #ifdef DEBUG //verbose
-               printf ("Starting detection...\n");
+              #ifdef VERBOSE_MSG //verbose
+               printf ("Starting detection for hash function %i...\n", i);
               #endif
 
-               // !!!TODO preprocess_data_matrix( parametr timebin_to_find-in);
+              #ifdef PREPROCESS_DATA
+              #ifdef VERBOSE_MSG
+               printf("\tPreprocessing data...");
+              #endif
+               preprocess_data(&data_matrices[i], round_timebin_counter);
+              #ifdef VERBOSE_MSG
+               printf("... DONE.\n");
+              #endif
+              #endif
 
+              #ifdef VERBOSE_MSG
+               printf("\tNormalizing data matrix...");
+              #endif
                // ** Matrix normalization **
                transform_matrix_zero_mean(&data_matrices[i]);
                transform_submatrix_unit_energy(&data_matrices[i], 0, SKETCH_SIZE);
@@ -810,15 +962,30 @@ int main(int argc, char **argv)
                transform_submatrix_unit_energy(&data_matrices[i], 2 * SKETCH_SIZE, 3 * SKETCH_SIZE);
                transform_submatrix_unit_energy(&data_matrices[i], 3 * SKETCH_SIZE, 4 * SKETCH_SIZE);
                // ** END OF Matrix normalization **
+              #ifdef VERBOSE_MSG
+               printf("... DONE.\n");
+              #endif
 
+              #ifdef VERBOSE_MSG
+               printf("\tComputing PCA...");
+              #endif
                // ** Computing of PCA **
                pcabuildbasis(data_matrices[i], data_matrices[i].rows(), data_matrices[i].cols(), info, eigenvalues, principal_components);
                // ** END OF Computing of PCA **
+              #ifdef VERBOSE_MSG
+               printf("... DONE.\n");
+              #endif
 
                // ** Finding of normal subspace size **
               #ifdef NORMAL_SUBSPACE_SIZE
+              #ifdef VERBOSE_MSG
+               printf("\tNormal subspace size by fixed value: ");
+              #endif
                normal_subspace_size = NORMAL_SUBSPACE_SIZE;
               #elif defined NSS_BY_PERCENTAGE
+              #ifdef VERBOSE_MSG
+               printf("\tNormal subspace size by percentage part of total variance: ");
+              #endif
                float variance_threshold, sum_variance = 0;
 
                for (int j = 0; j < eigenvalues.length(); j++){
@@ -826,49 +993,69 @@ int main(int argc, char **argv)
                }
                variance_threshold = sum_variance * NSS_BY_PERCENTAGE;
 
-               normal_subspace_size = eigenvalues.length();// data_matrices[i].cols() == eigenvalues.length() == 4*SKETCH_SIZE
+               normal_subspace_size = eigenvalues.length();// data_matrices[i].cols() == eigenvalues.length() == NUMBER_OF_FEATURES*SKETCH_SIZE
                while(sum_variance > variance_threshold){
                   sum_variance -= eigenvalues(--normal_subspace_size);
                }
                normal_subspace_size++;
               #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE
-               static float delta2pc_projection[WORKING_TIMEBIN_WINDOW_SIZE];
-               float norm, delta;
+              #ifdef VERBOSE_MSG
+               printf("\tNormal subspace size by %i * \"DELTA\" test: ", NSS_BY_DELTA_TEST);
+              #endif
+//               static float delta2pc_projection[WORKING_TIMEBIN_WINDOW_SIZE];
+               static float data2pc_projection[WORKING_TIMEBIN_WINDOW_SIZE];
+               float norm, delta_threshold;
 
                normal_subspace_size = 0;
                int wj = 0;
-               while (!normal_subspace_size && (wj < 4*SKETCH_SIZE)){
+               while (!normal_subspace_size && (wj < NUMBER_OF_FEATURES*SKETCH_SIZE)){
                   multiply_matrix_column_vector(&data_matrices[i], &principal_components, wj, &data2pc_projection);
                   norm = norm_of_vector(&data2pc_projection);
                   divide_vector_by_value(&data2pc_projection, norm);
-                  delta = sqrt(vector_standard_deviation_v2(&data2pc_projection));
+                 #if defined STD_DEV
+                  delta_threshold = STD_DEV;
+                 #elif defined STD_DEV_VERSION2
+                  delta_threshold = vector_standard_deviation_v2(&data2pc_projection);
+                 #else
+                  delta_threshold = vector_standard_deviation(&data2pc_projection);
+                 #endif
+//                  printf("delta: %f\n", delta_threshold);
 
-                  for (k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
-//                     if (fabs(data2pc_projection[wj]) >= NSS_BY_DELTA_TEST * delta){
-                     if(data2pc_projection(j) >= NSS_BY_DELTA_TEST * delta
-                      || data2pc_projection(j) <= -NSS_BY_DELTA_TEST * delta){
+                  delta_threshold *= NSS_BY_DELTA_TEST;
+                  for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
+//                     if (fabs(data2pc_projection[wj]) >= NSS_BY_DELTA_TEST * delta_threshold){
+                     if(data2pc_projection[wj] >= delta_threshold
+                      || data2pc_projection[wj] <= -delta_threshold){
                         normal_subspace_size = wj;
                      }
                   }
                   wj++;
                }
               #endif //Normal subspace size definition
-              #ifdef DEBUG //verbose
-               printf ("Normal subspace size (by count of principal components): %u\n",normal_subspace_size);
-              #endif DEBUG
+              #ifdef VERBOSE_MSG //verbose
+               printf ("%u (by count of principal components).\n",normal_subspace_size);
+              #endif
                // ** END OF Finding of normal subspace size **
 
+              #ifdef VERBOSE_MSG
+               printf("\tComputing linear operator C-residual...");
+              #endif
                // ** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) **
                multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, &lin_op_c_residual[i]);
-               substitute_matrix(&identity_matrix, &lin_op_c_residual[i]);
+               substitute_matrices(&identity_matrix, &lin_op_c_residual[i]);
                // ** END OF Computing of linear operator C-residual ***
-
+              #ifdef VERBOSE_MSG
+               printf("... DONE.\n");
+              #endif
+              #ifdef VERBOSE_MSG
+               printf("\tStarting detection by SPE-test for %u.timebin...\n", timebin_counter);
+              #endif
                // ** Detecting anomalies by "SPE" test **
                phi[0] = 0;
                phi[1] = 0;
                phi[2] = 0;
 
-               for (int j = normal_subspace_size; j < 4*SKETCH_SIZE; j++){
+               for (int j = normal_subspace_size; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
                   lambda = eigenvalues(j);
                   phi[0] += lambda;
                   lambda *= lambda;
@@ -889,18 +1076,23 @@ int main(int argc, char **argv)
                if (SPE > delta_SPE){
                   anomaly_detetected++;
               #ifdef DEBUG
-                  printf("!!! Anomaly in timebin %u !!!\n", timebin_counter);
+                  printf("## !!! ## Anomaly in timebin %u - %i.hash functon !!!\n", timebin_counter, i);
                } else {
-                  printf("NO Anomaly in timebin %u.\n", timebin_counter);
+                  printf("## NO ## NO Anomaly in timebin %u - %i.hash functon.\n", timebin_counter, i);
               #endif
                }
                // ** Detecting anomalies by "SPE" test **
+              #ifdef VERBOSE_MSG
+               printf("\t... detecting by SPE-test DONE.\n");
+              #endif
             }
             // *** END OF detection part ***
-
+           #ifdef VERBOSE_MSG
+            printf("...detection part DONE.\n");
+           #endif
             // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
-           #ifdef DEBUG
-            printf(" Threshold: %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
+           #ifdef VERBOSE_MSG
+            printf("Identification threshold is %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
            #endif
             if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
                // Fill output record
@@ -913,211 +1105,164 @@ int main(int argc, char **argv)
 //               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_BYTES,0);
 //               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TCP_FLAGS,0);
 
+           #ifdef VERBOSE_MSG
+            printf("There is an anomaly in %u.timebin (%u - %u) ... fill preliminary record ...", timebin_counter,
+                   start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
+           #endif
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
                       (uint64_t) (start_of_next_timebin - TIMEBIN_SIZE) << 32 );
                ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
                       (uint64_t) start_of_next_timebin << 32 );
-
+              #ifdef VERBOSE_MSG
+               printf(" sendning ");
+              #endif
                // Send record to interface 0
                trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
-               fprintf(log, "An anomaly detected from PCA_sketch module:\n"
-                      "\tstart time: %u \n"
-                      "\tend time: %u \n"
-                      "\n------------------------------------------------------------\n\n",
-                      start_of_next_timebin - TIMEBIN_SIZE,
-                      start_of_next_timebin);
               #ifdef DEBUG_OUT
                char dummy[1] = {0};
                trap_send_data(0, dummy, 1, TRAP_WAIT);
               #endif
-              #ifdef DEBUG
-               printf("ANOMALY DETECTED IN TIMEBIN:%u >> TIME: %u - %u!\n",
-                      timebin_counter, start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
+              #ifdef VERBOSE_MSG
+               printf("...DONE.\n\n");
               #endif
                // *** END OF sending preliminary warning ***
            #ifdef IDENTIFICATION
                // *** Identification if an anomaly occured ***
-              #ifdef DEBUG //verbose
-               printf ("Starting identification...\n");
-              #endif
-               static float theta_residual[4*SKETCH_SIZE][4];
-               static float tmp[4][4];
-               static float tmp2[4*SKETCH_SIZE][4];
-               static float tmp4[4*SKETCH_SIZE][4*SKETCH_SIZE];
-               static float tmp3[4*SKETCH_SIZE][4*SKETCH_SIZE];
-               static float h_vectors[4*SKETCH_SIZE][4*SKETCH_SIZE];
+               static float theta_residual[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
+               static float tmp[NUMBER_OF_FEATURES][NUMBER_OF_FEATURES];
+               static float tmp2[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
+               static float tmp4[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
+               static float tmp3[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
+               static float h_vector[5][NUMBER_OF_FEATURES*SKETCH_SIZE];
+               uint8_t flip_index, stored_flip_index, switching_addition;
+               uint8_t anomalous_flows_hash_values [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
+               uint16_t arg_min, hit_ttl;
+               float min, tmp_norm;
 
+               memset(anomalous_flows_hash_values, 0, sizeof(anomalous_flows_hash_values[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
                for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-                  for (int j = 0; j < data_matrices[i].rows(); j++){
-                    #ifdef DEBUG
-                     printf("%i\n",j);
-                    #endif
-                     memset(theta, 0, sizeof(theta[0][0]) * 4*SKETCH_SIZE * 4);
+                 #ifdef VERBOSE_MSG //verbose
+                  printf ("Starting identification for hash function %i ...\n", i);
+                 #endif
+                  switching_addition = 0;
+                  flip_index = 0;
+                  arg_min = 0;
+                  min = REALLY_BIG_REAL_NUMBER; // ugly :-/switching_addition = 0
+                 #ifdef VERBOSE_MSG //verbose
+                  printf ("\tComputing %i h-vectors & finding 1. arg-min: \n", NUMBER_OF_FEATURES*SKETCH_SIZE);
+                 #endif
+                  // computing h* vectors
+                  for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
+                     flip_index = 0;
+                     arg_min = 0;
+                     min = REALLY_BIG_REAL_NUMBER; // ugly :-/
+                     memset(theta, 0, sizeof(theta[0][0]) * NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES);
                      theta[(1 - 1) * SKETCH_SIZE + j][0] = 1;
                      theta[(2 - 1) * SKETCH_SIZE + j][1] = 1;
                      theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
                      theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
+
                      multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("C-residual.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4*SKETCH_SIZE; vk++){
-                                 output<<lin_op_c_residual[i][vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                        output.open("Theta.txt");
-//                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4; vk++){
-                                 output<<(unsigned int) theta[vj][vk]<<"\t";
-//                                 printf("%k\t",theta[i][k]);
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                        output.open("Theta-residual.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4; vk++){
-                                 output<<theta_residual[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
                      multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("TresT-x-Tres.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4; vj++){
-                              for(int vk = 0; vk < 4; vk++){
-                                 output<<tmp[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                        output.open("Theta2.txt");
-//                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4; vk++){
-                                 output<<(unsigned int) theta[vj][vk]<<"\t";
-//                                 printf("%k\t",theta[i][k]);
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
                      multiply_matrices(&theta, &tmp, &tmp2);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("2T-x-TresT.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4; vk++){
-                                 output<<tmp2[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
                      multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("3thetas.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4*SKETCH_SIZE; vk++){
-                                 output<<tmp3[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
                      multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("4thetas-x-cres.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4*SKETCH_SIZE; vk++){
-                                 output<<tmp4[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
+                     substitute_matrices(&identity_matrix, &tmp4);
+                     multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], round_timebin_counter, &h_vector[flip_index]);
+                     // finding arg min
+                     multiply_matrix_by_vector(&lin_op_c_residual[i], &h_vector[flip_index], &h_vector[5]);
+                     tmp_norm = norm_of_vector(&h_vector[5]);
+                     if(tmp_norm < min){
+                        min = tmp_norm;
+                        arg_min = j;
+                        stored_flip_index = flip_index;
+                        flip_index = (++flip_index & 0x01) + switching_addition;
                      }
-                    #endif
-                     substitute_matrix(&identity_matrix, &tmp4);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("Substitution.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              for(int vk = 0; vk < 4*SKETCH_SIZE; vk++){
-                                 output<<tmp4[vj][vk]<<"\t";
-                              }
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
-                     multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], round_timebin_counter, &h_vectors[j]);
-                    #ifdef VALIDATION_IDENTIF
-                     {
-                        output.open("h_vec.txt");
-                        output.precision(numeric_limits< double >::digits10);
-                        if(i == 0){
-                           for(int vj = 0; vj < 4*SKETCH_SIZE; vj++){
-                              output<<h_vectors[0][vj];
-                              output<<"\n";
-                           }
-                        }
-                        output.close();
-                     }
-                    #endif
                   }
-                  //////      // Read FOO and BAR from input record and compute their sum
-//////      uint32_t baz = ur_get(in_tmplt, in_rec, UR_FOO) +
-//////                     ur_get(in_tmplt, in_rec, UR_BAR);
-//////
-//////      // Fill output record
-//////      ur_set(out_tmplt, out_rec, UR_FOO, ur_get(in_tmplt, in_rec, UR_FOO));
-//////      ur_set(out_tmplt, out_rec, UR_BAR, ur_get(in_tmplt, in_rec, UR_BAR));
-//////      ur_set(out_tmplt, out_rec, UR_BAZ, baz);
+                 #ifdef VERBOSE_MSG //verbose
+                  printf ("\t\tnew arg-min is: %i\n", arg_min);
+                 #endif
+                  ++anomalous_flows_hash_values[i][arg_min % NUMBER_OF_FEATURES];
 
+                  while(min >= NORM_AMOUNT_INDETIFICATION_THRESHOLD &&
+                        anomalous_flows_hash_values[i][arg_min] < IDENTIFICATION_TTL){
+                    #ifdef VERBOSE_MSG //verbose
+                     printf ("\tComputing %i h-vectors & finding next argmin:\n", NUMBER_OF_FEATURES*SKETCH_SIZE);
+                    #endif
+                     switching_addition = (switching_addition + 2) & 0x02;
+                     flip_index = switching_addition;
+                     arg_min = 0;
+                     min = REALLY_BIG_REAL_NUMBER; // ugly :-/
 
-      // Send record to interface 0, if ifc is not ready, wait at most 10ms
-//////      trap_send_data(0, out_rec, ur_rec_static_size(out_tmplt), 10000);
+                     for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
+                        memset(theta, 0, sizeof(theta[0][0]) * NUMBER_OF_FEATURES*SKETCH_SIZE * 4);
+                        theta[(1 - 1) * SKETCH_SIZE + j][0] = 1;
+                        theta[(2 - 1) * SKETCH_SIZE + j][1] = 1;
+                        theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
+                        theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
+
+                        multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
+                        multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
+                        multiply_matrices(&theta, &tmp, &tmp2);
+                        multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
+                        multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
+                        substitute_matrices(&identity_matrix, &tmp4);
+                        multiply_matrix_by_vector(&tmp4, &h_vector[stored_flip_index], &h_vector[flip_index]);
+                        // finding arg min
+                        multiply_matrix_by_vector(&lin_op_c_residual[i], &h_vector[flip_index], &h_vector[5]);
+                        tmp_norm = norm_of_vector(&h_vector[5]);
+                        if(tmp_norm < min){
+                           min = tmp_norm;
+                           arg_min = j;
+                           stored_flip_index = flip_index;
+                           flip_index = (++flip_index & 0x01) + switching_addition;
+                        }
+                     }
+                    #ifdef VERBOSE_MSG //verbose
+                     printf ("\t\tnew arg-min is: %i\n", arg_min);
+                    #endif
+                     ++anomalous_flows_hash_values[i][arg_min % NUMBER_OF_FEATURES];
+                  }
+                 #ifdef VERBOSE_MSG //verbose
+                  printf ("\n\tAll flow's hash-values (arg-mins) for hash function %i were found\n", i);
+                 #endif
                }
+                 #ifdef VERBOSE_MSG
+                  printf ("\tRe-hashing flows...\n");
+                 #endif
+                  for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
+                     int i = 0;
+//                     printf("Vector size: %i\n", actual_flows.size());
+                     while (i < NUMBER_OF_HASH_FUNCTION){
+//                       printf("CHECK: %i\n", i);
+                        row_in_sketch = get_row_in_sketch(in_tmplt, *it, seeds[i]);
+                        i++; //  TMP
+                        if (anomalous_flows_hash_values[i][row_in_sketch]){
+//                           i++;
+                           if (i == NUMBER_OF_HASH_FUNCTION){
+                             #ifdef VERBOSE_MSG
+//                              printf ("\t\tAnomalous flow found in timebin %u ... sending ...", timebin_counter);
+                             #endif
+                               trap_send_data(1, *it, ur_rec_static_size(in_tmplt), TRAP_WAIT);
+                             #ifdef VERBOSE_MSG
+//                              printf ("...DONE.\n", i);
+                             #endif
+                              ur_free(*it);
+//                              actual_flows.erase(it);
+                           }
+                        } else {
+                           ur_free(*it);
+//                           actual_flows.erase(it);
+                           i = NUMBER_OF_HASH_FUNCTION; // == break;
+                        }
+                     }
+                  }
+                  actual_flows.clear();
             // *** END OF Identification if an anomaly occured ***
-            #endif
+           #ifdef VERBOSE_MSG
+            printf ("...identification DONE.\n");
+           #endif
+           #endif
             }
             // *** END OF Merging results ***
          }
@@ -1127,18 +1272,18 @@ int main(int argc, char **argv)
          start_of_next_timebin += TIMEBIN_SIZE;
          round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
 
-        #ifdef DEBUG //verbose
-         printf("Start of %u. timebin in %u------------------------------"
-               "--------------\n",timebin_counter,start_of_next_timebin);
+        #ifdef VERBOSE_MSG //verbose
+         printf("\n\nStart of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
         #endif
-        #ifdef DEBUG_OUT
-         printf("\t\t\t\t%u\n",ip_get_v4_as_int(ur_get_ptr(in_tmplt, (void *) actual_flows[checker - 1], UR_SRC_IP)));
-        #endif
+
         #ifdef IDENTIFICATION
-         for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
-            ur_free(*it);
+         if (!actual_flows.empty()){
+//            printf("\nVector size: %i\n", actual_flows.size());
+            for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
+               ur_free(*it);
+            }
+            actual_flows.clear();
          }
-         actual_flows.clear();
         #endif
 
          memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
@@ -1150,59 +1295,13 @@ int main(int argc, char **argv)
       //   *** END OF One timebin completed ***
 
       //   *** Flow reading & structure filling ***
-      #ifdef IDENTIFICATION
-      // ** Store flow from actual timebin **
+     #ifdef IDENTIFICATION
+      // store flow from actual timebin
       actual_flows.push_back(ur_cpy_alloc(in_tmplt, in_rec));
-
-     #ifdef DEBUG_OUT
-      if (actual_flows.size()==5/*some value*/){
-         printf("%u. Timebin - %i. flow srcIP: %u\n",timebin_counter+1,i,ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)));
-      }
      #endif
-      // ** END OF Store flow from actual timebin **
-      #endif
-      // ** Getting HashKey **
-      memset(hash_key, 0, sizeof(hash_key));
-      if (ip_is4(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP))){ // IPv4
-         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP)) & V4_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH); // left aligment on 64 bits of uint64_t
-         tmp_addr_part = ip_get_v4_as_int(ur_get_ptr(in_tmplt, in_rec, UR_DST_IP)) & V4_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part << (V4_BIT_LENGTH - V4_HASH_KEY_PART);
-      } else { // IPv6
-        #if V6_HASH_KEY_PART == V6_BIT_PART_LENGTH
-         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-         hash_key[1] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-         hk_size = sizeof(hash_key[0]) * 2;
-        #elif V6_HASH_KEY_PART == V6_BIT_PART_LENGTH*2
-         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-         hash_key[1] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1];
-         hash_key[2] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-         hash_key[3] = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1];
-         hk_size = sizeof(hash_key);
-        #elseif V6_HASH_KEY_PART < V6_BIT_PART_LENGTH
-         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0] & V6_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part;
-         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0] & V6_HASH_KEY_MASK;
-         hash_key[0] |= tmp_addr_part >> V6_HASH_KEY_PART;
-         hash_key[1] |= tmp_addr_part << (V6_BIT_PART_LENGTH - V6_HASH_KEY_PART);
-         hk_size = sizeof(hash_key[0]) * 2;
-        #else // V6_HASH_KEY_PART > V6_BIT_PART_LENGTH
-         hash_key[0] = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[0];
-         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_SRC_IP).ui64[1] & V6_HASH_KEY_MASK;
-         hash_key[1] |= tmp_addr_part;
-         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[0];
-         hash_key[1] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-         hash_key[2] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-         tmp_addr_part = ur_get(in_tmplt, in_rec, UR_DST_IP).ui64[1] & V6_HASH_KEY_MASK;
-         hash_key[2] |= tmp_addr_part >> (V6_HASH_KEY_PART % 64);
-         hash_key[3] |= tmp_addr_part << (V6_BIT_PART_LENGTH - (V6_HASH_KEY_PART % 64));
-         hk_size = sizeof(hash_key);
-        #endif
-      }
-      // ** END OF Getting HashKey **
-      // ** Adding feature occurrence in all sketches **
+      // adding feature occurrence in all sketches
       for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-         row_in_sketch = SuperFastHash((char *)hash_key, hk_size, seeds[i]) % SKETCH_SIZE;
+         row_in_sketch = get_row_in_sketch(in_tmplt, in_rec, seeds[i]);
 
          sip_sketches[i][row_in_sketch]
                      [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
@@ -1223,7 +1322,7 @@ int main(int argc, char **argv)
 
          packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
       }
-      // ** END OF Adding feature occurrence in all sketches ***
+      // END OF Adding feature occurrence in all sketches ***
       //   *** END OF flow reading & structure filling ***
 
      //   *** END OF Timebin division ***
