@@ -94,7 +94,7 @@ typedef struct {
     /*@{*/
     ip_addr_t ip;
     uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */  
-    unsigned in_blacklist; /**< ID number of blacklist for the address. */
+    uint8_t in_blacklist; /**< ID number of blacklist for the address. */
     /*@}*/
 } ip_blist_t;
 
