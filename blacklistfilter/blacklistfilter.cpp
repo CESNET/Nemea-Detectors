@@ -1,5 +1,5 @@
 /**
- * \file spoofing.cpp
+ * \file blacklistfilter.cpp
  * \brief Main module for IPBlackLIstDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
@@ -66,7 +66,7 @@ extern "C" {
 #include "blacklistfilter.h"
 #include "../cuckoo_hash/cuckoo_hash.h"
 
-//#define DEBUG 1
+#define DEBUG 1
 
 
 using namespace std;
@@ -156,16 +156,8 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
 }
 
 /**
- * Function for loading prefix file.
- * Function reads file with network prefixes and creates a vector for use
- * filters. This function should be called only once, since loading 
- * prefixes is needed only on "cold start of the detector" or if we want to 
- * teach the detector new file. (Possile changes to get signal for loading).
  *
- * @param prefix_list_v4 List of IPv4 prefixes to be filled.
- * @param prefix_list_v6 List of IPv6 prefixes to be filled.
- * @param prefix_file File with prefixes to be loaded and parsed to structures.
- * @return ALL_OK if everything goes smoothly otherwise PREFIX_FILE_ERROR.
+ * Function for loading source files.
  */
 int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 {
@@ -214,9 +206,6 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 
             // prefix length is not specified --> will use 32
             if (str_pos == string::npos) {
-#ifdef DEBUG
-                cout << line << endl;
-#endif
                 if(!ip_from_str(line.c_str(), &key)) {
                     continue;
                 }
@@ -626,9 +615,9 @@ int main (int argc, char** argv)
 //    black_list_t v4_list; 
 //    black_list_t v6_list;
 
-      // update lists
-//    black_list_t add_update;
-//    black_list_t rm_update;
+    // update lists
+    black_list_t add_update;
+    black_list_t rm_update;
 
     // can be used for both v4 and v6
     cc_hash_table_t hash_blacklist;
@@ -667,8 +656,9 @@ int main (int argc, char** argv)
     const void *data;
     uint16_t data_size;
 
-    ///////////////////
+#ifdef DEBUG
     int count = 0, bl_count = 0;
+#endif
 
     string dir = string(argv[1]);
 
@@ -680,7 +670,7 @@ int main (int argc, char** argv)
     while (!stop) {
                 
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_HALFWAIT);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;
@@ -713,10 +703,13 @@ int main (int argc, char** argv)
         // }
         
         if (retval == BLACKLISTED) {
+#ifdef DEBUG
             bl_count++;
+#endif
         }
-        
+#ifdef DEBUG        
         count++;
+#endif
 
         if (update) {
         //  update black_list
@@ -726,8 +719,12 @@ int main (int argc, char** argv)
 
             // Update procedure. NOT WORKING YET.
 //          load_update(add_update, rm_update, upd_filename);
-//          ht_update_remove(rm_update, hash_blacklist);
-//          ht_update_add(add_update, hash_blacklist);
+//          if (!rm_update.empty()) {              
+//              ht_update_remove(rm_update, hash_blacklist);
+//          }
+//          if (!add_update.empty()) {
+//              ht_update_add(add_update, hash_blacklist);
+//          }
 //          add_update.clear();
 //          rm_update.clear();
 #ifdef DEBUG
@@ -741,9 +738,11 @@ int main (int argc, char** argv)
 
     trap_send_data(0, data, 1, TRAP_WAIT);
 
+#ifdef DEBUG
+    cout << count << " flows went through." << endl;
+    cout << bl_count << " were marked." << endl;
+#endif
     // clean up before termination
-//    cout << count << " flows went through." << endl;
-  //  cout << bl_count << " were marked." << endl;
     ur_free_template(templ);
     ht_destroy(&hash_blacklist);
     trap_finalize();

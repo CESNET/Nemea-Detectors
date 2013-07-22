@@ -9,35 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cuckoo_hash.h"
+#include "hashes.h"
 
-/*
- * Hash function used for the table. Can be changed.
- */
-
-static unsigned int hash_1(char* key, unsigned int key_length, unsigned int t_size)
-{
-    unsigned int a = 63689;
-    unsigned int b = 378551;
-    unsigned int hash = 0;
-
-    for (unsigned int i = 0; i < key_length; key++, i++) {
-        hash = hash * a  + (*key);
-        a = a * b;
-    }
-    return hash % t_size;
-}
-
-static unsigned int hash_2(char* key, unsigned int key_length, unsigned int t_size)
-{
-    unsigned int hash = 1315423911;
-    unsigned int i    = 0;
-
-    for(i = 0; i < key_length; key++, i++) {
-        hash ^= ((hash << 5) + (*key) + (hash >> 2));
-    }
-
-    return hash % t_size;
-}
 /**
  * Initialization function for the hash table.
  * Function gets the pointer to the structure with the table and creates a new 
