@@ -39,96 +39,157 @@
 """
 
 import getpass
+import os
 import sys
 import subprocess
 
-from read_config import read_config
+import funcs
+perror = funcs.perror
 
 program_prefix = sys.argv[0]
-main_program = 'blacklistfilter'
+main_program = os.getcwd() + '/blacklistfilter'
+
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
 
-def report(rep_str):
-   print program_prefix + ": " + rep_str
-
 if len(sys.argv) != 2:
-   report("Bad argument count supplied.\n" + usage)
+   perror("Bad argument count supplied.\n" + usage)
    exit(1)
 
 if sys.argv[1] == 'start':
-   config = read_config()
+   config = funcs.read_config()
 
-   pid_name = config[pid_loc]
+   pid_name = config['pid_loc']
    try:
       pid_file = open(pid_name, 'w')
    except IOError:
-      report("Unable to open \'" + pid_name + "\' file for writing.")
+      perror("Unable to open \'" + pid_name + "\' file for writing.")
       exit(1)
 
    tmp = subprocess.Popen(
-   [sys.executable, main_program],
-   stdout=subprocess.PIPE,
-   stderr=subprocess.PIPE,
-   stdin=subprocess.PIPE
+   [main_program, '-i', 'tb;localhost,7000;', os.getcwd() + '/test_src/'],
+   stdout = subprocess.PIPE,
+   stderr = subprocess.PIPE,
+   stdin = subprocess.PIPE
    )
-   if tmp.poll() != 0:
-      report("Couldn't start main program.")
+
+   tmp.poll()
+   if tmp.returncode != None:
+      perror("Couldn\'t start main program.")
       pid_file.close()
       exit(1)
-   pid_file.write(tmp)
+
+   pid_file.write(str(tmp.pid))
    pid_file.close()
 
 elif sys.argv[1] == 'stop':
-   config = read_config()
+   config = funcs.read_config()
 
-   pid_name = config[pid_loc]
+   pid_name = config['pid_loc']
    try:
       pid_file = open(pid_name, 'r')
    except IOError:
-      report("Unable to open \'" + pid_name + "\' file for reading.")
+      perror("Unable to open \'" + pid_name + "\' file for reading.")
       exit(1)
 
    pid = pid_file.readline().rstrip()
    pid_file.close()
 
-   command = "ps -e | grep " + pid
-   tmp = subprocess.Popen(["-c", command], stdout=subprocess.PIPE, shell=True)
+   if not pid:
+      perror("Main program is not running. No PID in PID file.")
+      exit(1)
+
+   command = 'ps -e | grep ' + pid
+   tmp = subprocess.Popen(['-c', command], stdout = subprocess.PIPE, shell = True)
    output = tmp.communicate()
 
    if not output[0]:
-      report("Main program is not running.")
+      perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(["kill", pid], shell=True)
+      subprocess.Popen(['-c', 'kill ' + pid], shell = True)
 
 elif sys.argv[1] == 'install':
-   config = read_config()
+   config = funcs.read_config()
 
-   ref = config[refresh_time]
-   cron_path = config[cron_loc]
+   ref = config['refresh_time']
+   cron_path = config['cron_loc']
    user = getpass.getuser()
 
-   command = sys.executable + "/" + program_prefix() + " download"
+   if int(ref) == 60:
+      command = '0 */1 * * * '
 
-   if ref == 60:
-      command = "0 */1 * * *" + user + command
-
-   elif ref > 0 and ref < 60:
-      command = "*/" + ref + " * * * *" + user + command
+   elif int(ref) > 0 and int(ref) < 60:
+      command = '*/' + ref + ' * * * * '
 
    else:
-      report("Wrong update time specified")
+      perror("Wrong update time specified in the config file.")
       exit(1)
+
+   command += user + ' ' + sys.executable + os.getcwd() + '/' + program_prefix + ' download\n\n'
 
    try:
-      cron_file = open(cron_path, 'r+')
+      cron_file = open(cron_path, 'r')
    except IOError:
-      report("Unable to open \'" + cron_file + "\' file for writing.")
+      perror("Unable to open \'" + cron_path + "\' file for reading.")
       exit(1)
 
+   cron_line = cron_file.readline()
+   whole_cron = ''
+
+   while cron_line:
+      if cron_line[0] == '#' or cron_line == '\n':
+         whole_cron += cron_line
+         cron_line = cron_file.readline()
+         continue
+
+      if cron_line.find(program_prefix) != -1:
+         cron_line = cron_file.readline()
+         continue
+
+      whole_cron += cron_line
+      cron_line = cron_file.readline()
+   cron_file.close()
+
+   try:
+      cron_file = open(cron_path, 'w')
+   except IOError:
+      perror("Unable to open \'" + cron_path + "\' file for writing.")
+      exit(1)
+
+   cron_file.write(whole_cron + command)
+   cron_file.close()
+
 elif sys.argv[1] == 'download':
-   subprocess.Popen(["-c", "kill -USR1 \'ps -e | grep " + main_program + "\'"], shell=True)
+   subprocess.call(['python get_lists.py'], shell = True)
+
+   config = funcs.read_config()
+
+   pid_name = config['pid_loc']
+   try:
+      pid_file = open(pid_name, 'r')
+   except IOError:
+      perror("Unable to open \'" + pid_name + "\' file for reading.")
+      exit(1)
+
+   pid = pid_file.readline().rstrip()
+   pid_file.close()
+
+   if not pid:
+      perror("Main program is not running. No PID in PID file.")
+      exit(1)
+
+   command = 'ps -e | grep ' + pid
+   tmp = subprocess.Popen(['-c', command], stdout = subprocess.PIPE, shell = True)
+   output = tmp.communicate()
+
+   if not output[0]:
+      perror("Main program is not running. Couldn\'t find process specified in PID file.")
+      exit(1)
+   else:
+      subprocess.Popen(['kill', '-USR1 ' + pid], shell = True)
 
 else:
-   report("Bad arguments supplied.\n" + usage)
+   perror("Bad arguments supplied.\n" + usage)
    exit(1)
+
+exit(0)

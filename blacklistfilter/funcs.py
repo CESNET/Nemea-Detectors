@@ -38,7 +38,16 @@
  *
 """
 
-from ipdetect import report
+import os
+import sys
+
+def report(rep_str):
+   program_prefix = sys.argv[0]
+   print program_prefix + ": " + rep_str
+
+def perror(err_str):
+   program_prefix = sys.argv[0]
+   print os.strerror(program_prefix + ": " + err_str)
 
 def read_config(conf_name = '.conf', delimiter = ' ', comment = '#'):
    try:
@@ -55,15 +64,19 @@ def read_config(conf_name = '.conf', delimiter = ' ', comment = '#'):
 
    config = {}
    while conf_line:
-      if conf_line[0] != comment:
-         conf_line = conf_line.rstrip().split(delimiter)
-         if len(conf_line) != 2:
-            report("Wrong configuration file format.")
-            conf_file.close()
-            exit(1)
-         conf_key = conf_line[0]
-         conf_val = conf_line[1]
-         config[conf_key] = conf_val
+      if conf_line[0] == comment or conf_line == '\n':
+         conf_line = conf_file.readline()
+         continue
+
+      conf_line = conf_line.rstrip().split(delimiter)
+      if len(conf_line) != 2:
+         report("Wrong configuration file format.")
+         conf_file.close()
+         exit(1)
+      conf_key = conf_line[0]
+      conf_val = conf_line[1]
+      config[conf_key] = conf_val
+      conf_line = conf_file.readline()
 
    conf_file.close()
    return config
