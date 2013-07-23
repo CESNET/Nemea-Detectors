@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -std=c99
-CXXFLAGS=-std=c++98 -O2
+CXXFLAGS=-std=c++98 -O2 -g
 LDFLAGS=
 LDLIBS= ../../unirec/unirec.o ../cuckoo_hash/cuckoo_hash.o -ltrap -lcommlbr -lrt
 
