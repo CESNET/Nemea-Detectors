@@ -43,8 +43,8 @@ import os
 import sys
 import subprocess
 
-import aux
-report = aux.report
+import funcs
+perror = funcs.perror
 
 program_prefix = sys.argv[0]
 main_program = os.getcwd() + '/blacklistfilter'
@@ -52,17 +52,17 @@ main_program = os.getcwd() + '/blacklistfilter'
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
 
 if len(sys.argv) != 2:
-   report("Bad argument count supplied.\n" + usage)
+   perror("Bad argument count supplied.\n" + usage)
    exit(1)
 
 if sys.argv[1] == 'start':
-   config = aux.read_config()
+   config = funcs.read_config()
 
    pid_name = config['pid_loc']
    try:
       pid_file = open(pid_name, 'w')
    except IOError:
-      report("Unable to open \'" + pid_name + "\' file for writing.")
+      perror("Unable to open \'" + pid_name + "\' file for writing.")
       exit(1)
 
    tmp = subprocess.Popen(
@@ -74,7 +74,7 @@ if sys.argv[1] == 'start':
 
    tmp.poll()
    if tmp.returncode != None:
-      report("Couldn\'t start main program.")
+      perror("Couldn\'t start main program.")
       pid_file.close()
       exit(1)
 
@@ -82,20 +82,20 @@ if sys.argv[1] == 'start':
    pid_file.close()
 
 elif sys.argv[1] == 'stop':
-   config = aux.read_config()
+   config = funcs.read_config()
 
    pid_name = config['pid_loc']
    try:
       pid_file = open(pid_name, 'r')
    except IOError:
-      report("Unable to open \'" + pid_name + "\' file for reading.")
+      perror("Unable to open \'" + pid_name + "\' file for reading.")
       exit(1)
 
    pid = pid_file.readline().rstrip()
    pid_file.close()
 
    if not pid:
-      report("Main program is not running. No PID in PID file.")
+      perror("Main program is not running. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -103,13 +103,13 @@ elif sys.argv[1] == 'stop':
    output = tmp.communicate()
 
    if not output[0]:
-      report("Main program is not running. Couldn\'t find process specified in PID file.")
+      perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
       subprocess.Popen(['-c', 'kill ' + pid], shell = True)
 
 elif sys.argv[1] == 'install':
-   config = aux.read_config()
+   config = funcs.read_config()
 
    ref = config['refresh_time']
    cron_path = config['cron_loc']
@@ -122,7 +122,7 @@ elif sys.argv[1] == 'install':
       command = '*/' + ref + ' * * * * '
 
    else:
-      report("Wrong update time specified in the config file.")
+      perror("Wrong update time specified in the config file.")
       exit(1)
 
    command += user + ' ' + sys.executable + os.getcwd() + '/' + program_prefix + ' download\n\n'
@@ -130,7 +130,7 @@ elif sys.argv[1] == 'install':
    try:
       cron_file = open(cron_path, 'r')
    except IOError:
-      report("Unable to open \'" + cron_path + "\' file for reading.")
+      perror("Unable to open \'" + cron_path + "\' file for reading.")
       exit(1)
 
    cron_line = cron_file.readline()
@@ -153,7 +153,7 @@ elif sys.argv[1] == 'install':
    try:
       cron_file = open(cron_path, 'w')
    except IOError:
-      report("Unable to open \'" + cron_path + "\' file for writing.")
+      perror("Unable to open \'" + cron_path + "\' file for writing.")
       exit(1)
 
    cron_file.write(whole_cron + command)
@@ -162,20 +162,20 @@ elif sys.argv[1] == 'install':
 elif sys.argv[1] == 'download':
    subprocess.call(['python get_lists.py'], shell = True)
 
-   config = aux.read_config()
+   config = funcs.read_config()
 
    pid_name = config['pid_loc']
    try:
       pid_file = open(pid_name, 'r')
    except IOError:
-      report("Unable to open \'" + pid_name + "\' file for reading.")
+      perror("Unable to open \'" + pid_name + "\' file for reading.")
       exit(1)
 
    pid = pid_file.readline().rstrip()
    pid_file.close()
 
    if not pid:
-      report("Main program is not running. No PID in PID file.")
+      perror("Main program is not running. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -183,13 +183,13 @@ elif sys.argv[1] == 'download':
    output = tmp.communicate()
 
    if not output[0]:
-      report("Main program is not running. Couldn\'t find process specified in PID file.")
+      perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
       subprocess.Popen(['kill', '-USR1 ' + pid], shell = True)
 
 else:
-   report("Bad arguments supplied.\n" + usage)
+   perror("Bad arguments supplied.\n" + usage)
    exit(1)
 
 exit(0)
