@@ -977,11 +977,11 @@ int main(int argc, char **argv)
               #endif
 
                // ** Finding of normal subspace size **
-              #ifdef NORMAL_SUBSPACE_SIZE
+              #ifdef NORMAL_SUBSPACE_SIZE_FIXED
               #ifdef VERBOSE_MSG
                printf("\tNormal subspace size by fixed value: ");
               #endif
-               normal_subspace_size = NORMAL_SUBSPACE_SIZE;
+               normal_subspace_size = NORMAL_SUBSPACE_SIZE_FIXED;
               #elif defined NSS_BY_PERCENTAGE
               #ifdef VERBOSE_MSG
                printf("\tNormal subspace size by percentage part of total variance: ");
@@ -998,7 +998,7 @@ int main(int argc, char **argv)
                   sum_variance -= eigenvalues(--normal_subspace_size);
                }
                normal_subspace_size++;
-              #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE
+              #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE_FIXED
               #ifdef VERBOSE_MSG
                printf("\tNormal subspace size by %i * \"DELTA\" test: ", NSS_BY_DELTA_TEST);
               #endif
@@ -1075,7 +1075,7 @@ int main(int argc, char **argv)
 
                if (SPE > delta_SPE){
                   anomaly_detetected++;
-              #ifdef DEBUG
+              #ifdef VERBOSE_MSG
                   printf("## !!! ## Anomaly in timebin %u - %i.hash functon !!!\n", timebin_counter, i);
                } else {
                   printf("## NO ## NO Anomaly in timebin %u - %i.hash functon.\n", timebin_counter, i);
