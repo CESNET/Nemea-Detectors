@@ -94,6 +94,21 @@ int main(int argc, char **argv)
    // ***** TRAP initialization *****
    trap_ifc_spec_t ifc_spec;
    
+   signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
+
+   char opt;
+   while ((opt = getopt(argc, argv, "f:i:")) != -1) {
+      switch (opt) {
+         case 'f':
+            output_file = optarg;
+            break;
+      }
+   }
+   if (output_file == NULL) {
+      fprintf(stderr, "Output file path was not given.\n");
+      exit(1);
+   }
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -112,24 +127,6 @@ int main(int argc, char **argv)
    }
    trap_free_ifc_spec(ifc_spec);
    
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
-   
-   char opt;
-   while ((opt = getopt(argc, argv, "f:")) != -1) {
-      switch (opt) {
-         case 'f':
-            output_file = optarg;
-            break;
-         default:
-            fprintf(stderr, "Invalid arguments.\n");
-            return 3;
-      }
-   }
-   if (output_file == NULL); {
-   	fprintf(stderr, "Output file path was not given.\n");
-	exit(1);
-   }
    
    fout = fopen(output_file, "a");
    if (fout == NULL) {

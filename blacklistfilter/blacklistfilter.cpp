@@ -240,6 +240,11 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
             // get source blacklist
             ip = string(file->d_name);
             str_pos = ip.find_last_of('.');
+            if (str_pos == string::npos) {
+                cerr << "ERROR: Unable to determine the source blacklist. File " << file->d_name << " will be skipped." << endl;
+                input.close();
+                break;
+            }
             bl_entry.in_blacklist = strtoul(ip.substr(str_pos + 1).c_str(), NULL, 0);
             
             if (bl_entry.in_blacklist == 0) {
@@ -283,13 +288,8 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 
 int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& path)
 {
-/*
- * directory
- *
- * DIR* dp; // directory pointer
- * struct dirent *file; // file pointer
- */
-
+    DIR* dp; // directory pointer
+    struct dirent *file; // file pointer
  
     ifstream input; // data input
 
@@ -299,71 +299,75 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
 
-/*
- * directory
- *
- * dp = opendir(path);
- *
- * if (dp == NULL) {
- *     cerr << "Cannot open directory with updates. Will not update." << endl;
- *     return BLIST_FILE_ERROR;
- * }
- *
- * while (file = readdir(dp)) {
- *      input.open((path + file->d_name).c_str(), ifstream::in);
- */
+    dp = opendir(path.c_str());
 
-    input.open(path.c_str(), ifstream::in);
-
-    if (!input.is_open()) {
-        cerr << "Cannot open file with updates. Will be skipped." << endl; // or terminate update
-//        continue;
+    if (dp == NULL) {
+        cerr << "Cannot open directory with updates. Will not update." << endl;
         return BLIST_FILE_ERROR;
     }
 
-    while (!input.eof()) {
-        getline(input, line);
+    while (file = readdir(dp)) {
+        input.open((path + file->d_name).c_str(), ifstream::in);
 
-        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+        if (!input.is_open()) {
+            cerr << "Cannot open file with updates. Will be skipped." << endl; // or terminate update
+            continue;
+        }
 
-        str_pos = line.find_first_of('/');
+        while (!input.eof()) {
+            getline(input, line);
 
-        if (str_pos == string::npos) {
-            str_pos == line.find_first_of(';');
-            if (str_pos != string::npos) {
-                if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+            str_pos = line.find_first_of('/');
+
+            if (str_pos == string::npos) {
+                str_pos == line.find_first_of(';');
+                if (str_pos != string::npos) {
+                    if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+                        continue;
+                    }
+                } else {
                     continue;
                 }
             } else {
-                continue;
+                if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+                    continue;
+                }
+                line.erase(0, str_pos + 1);
+                str_pos = line.find_first_of(';');
+                if (str_pos != string::npos) {
+                    bl_entry.pref_length = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);
+                } else {
+                    continue;
+                }
             }
-        } else {
-            if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
-                continue;
-            }
+
             line.erase(0, str_pos + 1);
-            str_pos = line.find_first_of(';');
-            if (str_pos != string::npos) {
-                bl_entry.pref_length = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);
-            } else {
-                continue;
+
+            string bl = string(file->d_name);
+            str_pos = bl.find_last_of('.');
+            if (str_pos == string::npos) {
+                cerr << "ERROR: Unable to determine the source blacklist. File " << file->d_name << " will be skipped." << endl;
+                input.close();
+                break;
             }
-        }
-
-        line.erase(0, str_pos + 1);
-
-        line.find_first_of(';');
-        bl_entry.in_blacklist = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);
+            bl_entry.in_blacklist = strtoul(line.substr(0, str_pos).c_str(), NULL, 0);           
+            if (bl_entry.in_blacklist == 0x0) {
+                cerr << "ERROR: Unable to determine the source blacklist. File " << file->d_name << " will be skipped." << endl;
+                input.close();
+                break;
+            }
         
-        line.erase(0, str_pos + 1);
+            line.erase(0, str_pos + 1);
 
-        if (line.at(0) == 'A') {
-            update_list_a.push_back(bl_entry);
-        } else if (line.at(0) == 'R') {
-            update_list_rm.push_back(bl_entry);
+            if (line.at(0) == 'A') {
+                update_list_a.push_back(bl_entry);
+            } else if (line.at(0) == 'R') {
+                update_list_rm.push_back(bl_entry);
+            }
         }
     }
-            
 }
  
 /**
@@ -429,7 +433,7 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 /**
  * BLACKLIST COMPARATOR
  */
-int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& ip_bl)
+int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected, cc_hash_table_t& ip_bl)
 {
 
 #ifdef DEBUG
@@ -449,13 +453,13 @@ int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, cc_hash_table_
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
 
     if (search_result != NOT_FOUND) {
-//        ur_set(ur_tmp, record, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_tmp, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
     if (search_result != NOT_FOUND) {
-//        ur_set(ur_tmp, record, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_tmp, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
  
@@ -606,9 +610,18 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
-//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
+    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 //    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,SRC_BLACKLIST,DST_BLACKLIST");
+    ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
+                                                  "PROTOCOL,TIME_FIRST,TIME_LAST,"
+                                                  "PACKETS,BYTES,TCP_FLAGS,"
+                                                  "LINK_BIT_FIELD,ASTUTE_5T," 
+                                                  "ASTUTE_IP,ASTUTE_SRCIP,ASTUTE_DSTIP,"
+                                                  "ASTUTE_SRCPORT,ASTUTE_DSTPORT,"
+                                                  "EVENT_TYPE,SCALE,"
+                                                  "SRC_BLACKLIST,DST_BLACKLIST"
+                                                );
 
 
       // for use with prefixes (not implemented now)
@@ -622,6 +635,7 @@ int main (int argc, char** argv)
     // can be used for both v4 and v6
     cc_hash_table_t hash_blacklist;
 
+    void *detection = NULL;
     // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
@@ -666,6 +680,12 @@ int main (int argc, char** argv)
 
     char ip_tab[INET6_ADDRSTRLEN];
 
+    detection = ur_create(tmpl_det,0);
+    if (detection == NULL) {
+        cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
+        stop = 1;
+    }
+
     // ***** Main processing loop *****
     while (!stop) {
                 
@@ -694,7 +714,7 @@ int main (int argc, char** argv)
             }
         }
         
-        retval = v4_blacklist_check(templ, data, hash_blacklist);
+        retval = v4_blacklist_check(templ, data, detection, hash_blacklist);
         // try to match the ip addresses to blacklist
         // if (ip_is4(&(ur_get(templ, data, UR_SRC_IP) {
         //      retval = v4_blacklist_check(templ, data, black_list, v4_masks);
@@ -704,6 +724,7 @@ int main (int argc, char** argv)
         
         if (retval == BLACKLISTED) {
 #ifdef DEBUG
+            trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_WAIT);
             bl_count++;
 #endif
         }
@@ -718,18 +739,38 @@ int main (int argc, char** argv)
 #endif
 
             // Update procedure. NOT WORKING YET.
-//          load_update(add_update, rm_update, upd_filename);
-//          if (!rm_update.empty()) {              
-//              ht_update_remove(rm_update, hash_blacklist);
-//          }
-//          if (!add_update.empty()) {
-//              ht_update_add(add_update, hash_blacklist);
-//          }
-//          add_update.clear();
-//          rm_update.clear();
+            retval = load_update(add_update, rm_update, dir);
+            if (retval == BLIST_FILE_ERROR) {
+                cerr << "ERROR: Unable to load update files. Will use the old tables instead." << endl;
+                update = 0;
+                continue;
+            }
+#ifdef DEBUG
+            cout << "Updates loaded. Performing update operations..." << endl;
+#endif
+            if (!rm_update.empty()) {
+#ifdef DEBUG
+            cout << "Removing invalid entries..." << endl;
+#endif
+                ht_update_remove(rm_update, hash_blacklist);
+            }
+            if (!add_update.empty()) {
+#ifdef DEBUG
+            cout << "Adding new entries and updating persistent entries... " << endl;
+#endif
+                ht_update_add(add_update, hash_blacklist);
+            }
+
+#ifdef DEBUG
+            cout << "Cleaning update lists ...  " << endl;
+#endif
+
+            add_update.clear();
+            rm_update.clear();
 #ifdef DEBUG
             cout << "Blacklist succesfully updated." << endl;
 #endif
+            update = 0;
             continue;
         }
 
@@ -743,7 +784,12 @@ int main (int argc, char** argv)
     cout << bl_count << " were marked." << endl;
 #endif
     // clean up before termination
+    if (detection != NULL) {
+        ur_free(detection);
+        detection = NULL;
+    }
     ur_free_template(templ);
+    ur_free_template(tmpl_det);
     ht_destroy(&hash_blacklist);
     trap_finalize();
 
