@@ -64,7 +64,7 @@ extern "C" {
 #include "../../unirec/unirec.h"
 #include "../ipaddr.h"
 #include "blacklistfilter.h"
-#include "../cuckoo_hash/cuckoo_hash.h"
+#include "../../commons/cuckoo_hash/cuckoo_hash.h"
 
 #define DEBUG 1
 
