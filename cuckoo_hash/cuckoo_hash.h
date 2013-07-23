@@ -23,6 +23,11 @@ extern "C" {
 #define NOT_FOUND -1
 
 /**
+ * Error constant returned by insert function when failing due no memory
+ */
+#define INSERT_FAILURE -2
+
+/**
  * Structure of the item of the table.
  */
 typedef struct {
@@ -69,6 +74,11 @@ int ht_get_index(cc_hash_table_t* ht, char* key);
  */
 void ht_remove_by_key(cc_hash_table_t* ht, char* key);
 void ht_remove_by_index(cc_hash_table_t* ht, unsigned int index);
+
+/*
+ * Procedure for removing all items from table.
+ */
+void ht_clear(cc_hash_table_t *ht);
 
 /*
  * Destructor of the table.

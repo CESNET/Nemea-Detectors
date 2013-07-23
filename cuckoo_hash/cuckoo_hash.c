@@ -123,18 +123,23 @@ int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data)
     cc_item_t prev, curr;
 
     // prepare memory for storing "kicked" values
-    prev.key = malloc(ht->key_length);
-    prev.data = malloc(ht->data_size);
+    prev.key = NULL;
+    prev.data = NULL;
     
     // prepare memory for data
     curr.key = malloc(ht->key_length);
     curr.data = malloc(ht->data_size);
 
+    if (curr.key == NULL || curr.data == NULL) {
+        fprintf(stderr, "ERROR: No memory available for another data. Item will be discarded.\n");
+        return INSERT_FAILURE;
+    }
+
     // make a working copy of inserted data
     memcpy(curr.key, key, ht->key_length);
     memcpy(curr.data, new_data, ht->data_size);
 
-    for (t = 1; t <= 10; t++) {
+    for (t = 1; t <= (ht->table_size/10); t++) {
         if (ht->table[pos].data == NULL && ht->table[pos].key == NULL) { // try empty
             // we insert a new value into the table
 
@@ -142,21 +147,16 @@ int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data)
             ht->table[pos].key = curr.key; 
             ht->table[pos].data = curr.data;
 
-            // free the rest of the memory
-            free(prev.data);
-            free(prev.key);
-
             return 0;
         }
 
-        // computed position is occupied --> we kick the residing item out
+        // computed position is occupied --> we kick the residing item out      
+        prev.key = ht->table[pos].key;
+        prev.data = ht->table[pos].data; 
         
-        memcpy(prev.key, ht->table[pos].key, ht->key_length);
-        memcpy(prev.data, ht->table[pos].data, ht->data_size);
-        
-        //copy new item
-        memcpy(ht->table[pos].key, curr.key, ht->key_length);
-        memcpy(ht->table[pos].data, curr.data, ht->data_size);
+        //copy new item       
+        ht->table[pos].key = curr.key;
+        ht->table[pos].data = curr.data;
 
         // compute both hashses for kicked item
         swap1 = hash_1(prev.key, ht->key_length, ht->table_size);
@@ -169,14 +169,12 @@ int ht_insert(cc_hash_table_t* ht, char *key, const void *new_data)
             pos = swap2;
         }
         
-        // prepare the item for insertion
-        memcpy(curr.key, prev.key, ht->key_length);
-        memcpy(curr.data, prev.data, ht->data_size);
+        // prepare the item for insertion       
+        curr.key = prev.key;
+        curr.data = prev.data;
     }
    
     // TTL for insertion exceeded, rehash is needed 
-    free(prev.data);
-    free(prev.key);
 
     // rehash the table and return the appropriate value is succesful
     ret = rehash(ht, &curr); 
@@ -285,14 +283,14 @@ void ht_remove_by_index(cc_hash_table_t* ht, unsigned int index)
     }
 }
 
-
 /**
- * Clean-up procedure.
- * Procedure goes frees all the memory used by the table.
+ * Procedure for cleaning the table
+ * Procedure removes all items from the table keeping the table intact.
  *
- * @param ht Hash table to be searched for data.
+ * @param ht Table to be cleared.
  */
-void ht_destroy(cc_hash_table_t *ht)
+
+void ht_clear(cc_hash_table_t *ht)
 {
     for(int i = 0; i < ht->table_size; i++) {
         if (ht->table[i].key != NULL) {
@@ -304,5 +302,17 @@ void ht_destroy(cc_hash_table_t *ht)
             ht->table[i].data = NULL;
         }
     }
+}
+
+
+/**
+ * Clean-up procedure.
+ * Procedure goes frees all the memory used by the table.
+ *
+ * @param ht Hash table to be searched for data.
+ */
+void ht_destroy(cc_hash_table_t *ht)
+{
+    ht_clear(ht);
     free(ht->table);
 }
