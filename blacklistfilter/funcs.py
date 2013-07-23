@@ -38,11 +38,16 @@
  *
 """
 
+import os
 import sys
 
 def report(rep_str):
-   program_prefix = sys.argv[0] 
+   program_prefix = sys.argv[0]
    print program_prefix + ": " + rep_str
+
+def perror(err_str):
+   program_prefix = sys.argv[0]
+   print os.strerror(program_prefix + ": " + err_str)
 
 def read_config(conf_name = '.conf', delimiter = ' ', comment = '#'):
    try:
@@ -65,7 +70,6 @@ def read_config(conf_name = '.conf', delimiter = ' ', comment = '#'):
 
       conf_line = conf_line.rstrip().split(delimiter)
       if len(conf_line) != 2:
-         print conf_line
          report("Wrong configuration file format.")
          conf_file.close()
          exit(1)
