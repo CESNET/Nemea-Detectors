@@ -253,13 +253,13 @@ for i in range(0, len(sources)):
    if os.path.exists(file_path):
       report("Downloaded " + file_name + " as " + tmp_name)
 
-      """if os.path.getmtime(tmp_path) <= os.path.getmtime(file_path):
+      if os.path.getmtime(tmp_path) <= os.path.getmtime(file_path):
          report(file_name + " is up-to-date, removing temporary file and update file.")
          update_path = updates_path + order
          if os.path.exists(update_path):
             os.remove(update_path)
          os.remove(tmp_path)
-         continue"""
+         continue
 
       report("Downloaded file is newer.")
       new_path = convert_tmp_file(tmp_path, file_name, order)
