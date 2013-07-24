@@ -47,9 +47,18 @@ def report(rep_str):
 
 def perror(err_str):
    program_prefix = sys.argv[0]
-   print os.strerror(program_prefix + ": " + err_str)
+   sys.stderr.write(program_prefix + ": " + err_str)
 
-def read_config(conf_name = '.conf', delimiter = ' ', comment = '#'):
+def create_directory(dir_path):
+   if not os.path.exists(dir_path):
+      try:
+         os.mkdir(dir_path)
+      except OSError:
+         perror("Failed to create " + dir_path + " directory.")
+         return False
+   return True
+
+def read_config(conf_name = '/configure/.conf', delimiter = ' ', comment = '#'):
    try:
       conf_file = open(conf_name, 'r')
    except IOError:

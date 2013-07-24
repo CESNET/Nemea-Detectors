@@ -43,8 +43,8 @@ import os
 import sys
 import subprocess
 
-import funcs
-perror = funcs.perror
+from funcs import perror
+from funcs import read_config
 
 program_prefix = sys.argv[0]
 main_program = os.getcwd() + '/blacklistfilter'
@@ -56,7 +56,7 @@ if len(sys.argv) != 2:
    exit(1)
 
 if sys.argv[1] == 'start':
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -76,6 +76,7 @@ if sys.argv[1] == 'start':
    if tmp.returncode != None:
       perror("Couldn\'t start main program.")
       pid_file.close()
+      os.remove(pid_name)
       exit(1)
 
    pid_file.write(str(tmp.pid))
@@ -107,6 +108,7 @@ elif sys.argv[1] == 'stop':
       exit(1)
    else:
       subprocess.Popen(['-c', 'kill ' + pid], shell = True)
+      os.remove(pid_name)
 
 elif sys.argv[1] == 'install':
    config = funcs.read_config()
