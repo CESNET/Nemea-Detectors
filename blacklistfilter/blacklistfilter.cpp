@@ -62,7 +62,6 @@ extern "C" {
 }
 #endif
 #include "../../unirec/unirec.h"
-#include "../ipaddr.h"
 #include "blacklistfilter.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
 
@@ -241,14 +240,7 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
             memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
 
             // get source blacklist
-            ip = string(file->d_name);
-            str_pos = ip.find_last_of('.');
-            if (str_pos == string::npos) {
-                cerr << "ERROR: Unable to determine the source blacklist. File " << file->d_name << " will be skipped." << endl;
-                input.close();
-                break;
-            }
-            bl_entry.in_blacklist = strtoul(ip.substr(str_pos + 1).c_str(), NULL, 0);
+            bl_entry.in_blacklist = strtoul(file->d_name, NULL, 0);
             
             if (bl_entry.in_blacklist == 0) {
                 continue;
@@ -258,33 +250,18 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
                 if (ht_get_index(&ip_bl, (char *) key.bytes) == NOT_FOUND) {
                     ht_insert(&ip_bl, (char *) key.bytes, &bl_entry);
                 }
-            }
-
+            }               
+            // else
+            //  if ip_is4
+            //      pushback to v4 prefix list
+            //  else
+            //      pushback to v6 prefix list
+            //
+            // sort both vectors (for binary search)
         }
         input.close();
     }
 
-/* commented out for future use with prefixes
- *
-    // we prepare vectors with ip addresses (maps are used only to prevent 
-    // duplicate values)
-
-    black_list_v4.reserve(v4_dedup.size());
-    black_list_v6.reserve(v6_dedup.size());
-
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)>::iterator v4_dedup_it;
-    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)>::iterator v6_dedup_it;
-
-    // copy maps into the respective vectors
-    for (v4_dedup_it = v4_dedup.begin(); v4_dedup_it != v4_dedup.end(); ++v4_dedup_it) {
-        v4_dedup_it->second.ip = v4_dedup_it->first;
-        black_list_v4.push_back(v4_dedup_it->second);
-    }
-    for (v6_dedup_it = v6_dedup.begin(); v6_dedup_it != v6_dedup.end(); ++v6_dedup_it) {
-        v6_dedup_it->second.ip = v6_dedup_it->first;
-        black_list_v6.push_back(v6_dedup_it->second);
-    }
-*/
     closedir(dp);
     return ALL_OK;
 }
@@ -469,6 +446,9 @@ int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
 //    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
+// if (search_result == NOT_FOUND)
+//  try prefixes
+// if (search_result != NOT_FOUND) ...
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_tmp, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
@@ -476,6 +456,55 @@ int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
+    if (search_result != NOT_FOUND) {
+        ur_set(ur_tmp, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        marked = true;
+    }
+ 
+// else
+//  try prefixes
+// if (search_result != NOT_FOUND)
+//  ur_set(det_tmp, detected, UR_DST_BLACKLIST
+    if (marked) {
+        return BLACKLISTED;
+    }
+    return ADDR_CLEAR;
+}
+
+/**
+ * BLACKLIST COMPARATOR
+ */
+int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected, cc_hash_table_t& ip_bl)
+{
+
+#ifdef DEBUG
+    char dst[INET6_ADDRSTRLEN];
+    char src[INET6_ADDRSTRLEN];
+    ip_to_str(&ur_get(ur_tmp, record, UR_SRC_IP), src);
+    ip_to_str(&ur_get(ur_tmp, record, UR_DST_IP), dst);
+    
+    cerr << src << " and " << dst << endl;
+#endif
+
+    bool marked = false;
+    // index of the prefix the source ip fits in (return value of binary search)
+    int search_result;
+    ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
+//    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
+    search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
+// if (search_result == NOT_FOUND)
+//  try prefixes
+// if (search_result != NOT_FOUND) ...
+
+    if (search_result != NOT_FOUND) {
+        ur_set(ur_tmp, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        marked = true;
+    }
+    ip = ur_get(ur_tmp, record, UR_DST_IP);
+    search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
+// if (search_result == NOT_FOUND)
+//  try prefixes
+// if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
         ur_set(ur_tmp, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
@@ -745,7 +774,15 @@ int main (int argc, char** argv)
 
     string dir = string(argv[1]);
 
-    load_ip(hash_blacklist, dir);
+    retval = load_ip(hash_blacklist, dir);
+    
+    if (retval == BLIST_FILE_ERROR) {
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        ht_destroy(&hash_blacklist);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
 
     char ip_tab[INET6_ADDRSTRLEN];
 
@@ -759,7 +796,7 @@ int main (int argc, char** argv)
     while (!stop) {
                
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_HALFWAIT);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;
@@ -806,7 +843,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Updating black list ..." << endl;
 #endif
-            string upd_path = dir + "updates/";
+            string upd_path = dir;
             // Update procedure.
             retval = load_update(add_update, rm_update, upd_path);
             if (retval == BLIST_FILE_ERROR) {
