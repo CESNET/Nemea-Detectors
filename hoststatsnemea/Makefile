@@ -3,7 +3,7 @@ CC=gcc
 #CXXFLAGS=-pthread -g
 CXXFLAGS=-pthread -O2
 LDFLAGS=-pthread
-LDLIBS= -ltrap -lcommlbr ../../unirec/unirec.o
+LDLIBS= -ltrap ../../unirec/unirec.o
 
 all: obj hoststatserv #comphoststats
 
