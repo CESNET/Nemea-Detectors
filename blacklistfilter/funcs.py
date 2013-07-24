@@ -47,7 +47,7 @@ def report(rep_str):
 
 def perror(err_str):
    program_prefix = sys.argv[0]
-   sys.stderr.write(program_prefix + ": " + err_str)
+   sys.stderr.write(program_prefix + ": " + err_str + '\n')
 
 def create_directory(dir_path):
    if not os.path.exists(dir_path):
@@ -58,7 +58,7 @@ def create_directory(dir_path):
          return False
    return True
 
-def read_config(conf_name = '/configure/.conf', delimiter = ' ', comment = '#'):
+def read_config(conf_name = './configure/.conf', delimiter = ' ', comment = '#'):
    try:
       conf_file = open(conf_name, 'r')
    except IOError:

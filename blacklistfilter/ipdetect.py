@@ -40,6 +40,7 @@
 
 import getpass
 import os
+import signal
 import sys
 import subprocess
 
@@ -83,7 +84,7 @@ if sys.argv[1] == 'start':
    pid_file.close()
 
 elif sys.argv[1] == 'stop':
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -107,11 +108,11 @@ elif sys.argv[1] == 'stop':
       perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(['-c', 'kill ' + pid], shell = True)
+      os.kill(int(pid), signal.SIGTERM)
       os.remove(pid_name)
 
 elif sys.argv[1] == 'install':
-   config = funcs.read_config()
+   config = read_config()
 
    ref = config['refresh_time']
    cron_path = config['cron_loc']
@@ -164,7 +165,7 @@ elif sys.argv[1] == 'install':
 elif sys.argv[1] == 'download':
    subprocess.call(['python get_lists.py'], shell = True)
 
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -188,7 +189,7 @@ elif sys.argv[1] == 'download':
       perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(['kill', '-USR1 ' + pid], shell = True)
+      os.kill(int(pid), signal.SIGUSR1)
 
 else:
    perror("Bad arguments supplied.\n" + usage)
