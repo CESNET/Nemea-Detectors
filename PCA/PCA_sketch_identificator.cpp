@@ -47,29 +47,12 @@
 #include "../../unirec/unirec.h"
 
 #include "PCA_sketch.h"
-#include "alglib/dataanalysis.h"
 
 using namespace std;
-using namespace alglib;
 
-
-//#define USE_TURBO_FUNCTION
 #define USE_JOINT_MATRIX_OP
 #define VERBOSE_MSG
 //#define DEBUG
-//#define DEBUG_OUT
-   #ifdef DEBUG_OUT
-      #include <inttypes.h>
-   #endif
-//#define VALIDATION_IDENTIF
-//#define VALIDATION
-//   #if defined VALIDATION || defined VALIDATION_IDENTIF
-      #include <fstream>
-      #include <iostream>
-      #include <limits>
-      ofstream output;
-      ofstream output2;
-//   #endif
 
 // ******** TEMPORARY:  IN FUTURE SHOULD BE IN "common.h ***********************
 /*
@@ -159,128 +142,11 @@ trap_module_info_t module_info = {
    2, // Number of output interfaces
 };
 
-
 static int stop = 0;
 
-/*
- * Procedure for handling signals SIGTERM and SIGINT
- */
-void signal_handler (int signal)
-{
-   if (trap_get_verbose_level() > 0)
-      printf("Signal received\n");
-   if (signal == SIGTERM || signal == SIGINT) {
-      stop = 1; // breaks the main loop
-      trap_terminate(); // interrupt a possible waiting in recv/send functions
-   }
-}
+// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-
-/**
- * \brief Provedure computes standard deviation from vector (1st version).
- *
- * Provedure computes standard deviation from vector in two different ways - two
- * versions (according to: http://www.mathworks.com/help/matlab/ref/std.html).
- * \param[in] vector_ptr Pointer to vector.
- * \param[in] vector_size Size of vector.
- * \return Real (float) value of stadard deviation.
- */
-float vector_standard_deviation (float *vector_ptr, unsigned int vector_size)
-{
-   float sum=0;
-//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
-   for (int i = 0; i < vector_size; i++){
-      sum += vector_ptr[i] * vector_ptr[i];
-   }
-//   printf("\tSUM: %f ---------------------------\n", sum);
-   return sqrt(sum / vector_size);
-}
-/**
- * \brief Provedure computes standard deviation from vector (2nd version).
- * \param[in] vector_ptr Pointer to vector.
- * \param[in] vector_size Size of vector.
- * \return Real (float) value of stadard deviation.
- */
-float vector_standard_deviation_v2(float *vector_ptr, unsigned int vector_size)
-{
-   float sum = 0, tmp;
-   float mean = 0;
-
-   for (int i = 0; i < vector_size; i++){
-      mean += vector_ptr[i];
-   }
-//   printf("MEAN: %f ---------------------------\n", mean);
-   mean /= vector_size;
-
-   for (int i = 0; i < vector_size; i++){
-      tmp = vector_ptr[i] - mean;
-      sum += tmp * tmp;
-   }
-//   printf("\tSUM: %f ---------------------------\n", sum);
-
-//   return sqrt(sum / (vector_size));
-   return sqrt(sum / (vector_size-1));
-}
-/**
-*/
-float mean_value_from_matrix_column (real_2d_array *data_matrix, unsigned int column)
-{
-   float sum=0;
-
-   for (int i = 0; i < data_matrix->rows(); i++){
-      sum += (*data_matrix)(i,column);
-   }
-   return sum / data_matrix->rows();
-}
-/**
- */
-float vector_standard_deviation_v2(real_2d_array *data_matrix, unsigned int column)
-{
-   float sum = 0, tmp;
-   float mean = 0;
-
-   mean = mean_value_from_matrix_column(data_matrix, column);
-
-   for (int i = 0; i < data_matrix->rows(); i++){
-      tmp = (*data_matrix)(i,column) - mean;
-      sum += tmp * tmp;
-   }
-//   return sqrt(sum / (data_matrix->rows()));
-   return sqrt(sum / (data_matrix->rows()-1));
-}
-
-
-//################################################
-//## Preprocess data - eliminate x% highest and x% lowest
-//#		values, compute mean and crop deviations, bigger then parameter
-void preprocess_data(real_2d_array *data_matrix, uint32_t actual_timebin)
-{
-	float mean, delta_threshold;
-
-   for(int i = 0; i < data_matrix->cols(); i++){
-      mean = mean_value_from_matrix_column(data_matrix, i);
-//      meanP2 = mean_value_from_matrix_column_power2(dataMatrix, i, NORMAL);
-//      delta = sqrt(meanP2);
-      delta_threshold = vector_standard_deviation_v2(data_matrix, i);
-      delta_threshold *= PREPROCESS_DATA_DEV_MULTIPLIER;
-      for(int j = 0; j < data_matrix->rows(); j++){
-         if((*data_matrix)(j,i) > (mean + delta_threshold)){
-            (*data_matrix)(j,i) = mean;
-
-            if(j == actual_timebin){
-               //!!!TODO send / notify ???
-            }
-         }
-         else if((*data_matrix)(j,i) < (mean - delta_threshold)){
-            (*data_matrix)(j,i) = mean;
-
-            if(j == actual_timebin){
-               //!!!TODO send / notify ???
-            }
-         }
-      }
-   }
-}
 
 uint32_t get_row_in_sketch (ur_template_t *tmplt, const void *rec, int seed)
 {
@@ -328,6 +194,54 @@ uint32_t get_row_in_sketch (ur_template_t *tmplt, const void *rec, int seed)
    }
    return SuperFastHash((char *)hash_key, hk_size, seed) % SKETCH_SIZE;
 }
+
+/**
+ * \brief Provedure computes standard deviation from vector (1st version).
+ *
+ * Provedure computes standard deviation from vector in two different ways - two
+ * versions (according to: http://www.mathworks.com/help/matlab/ref/std.html).
+ * \param[in] vector_ptr Pointer to vector.
+ * \param[in] vector_size Size of vector.
+ * \return Real (float) value of stadard deviation.
+ */
+float vector_standard_deviation (float *vector_ptr, unsigned int vector_size)
+{
+   float sum=0;
+//  SINCE VALUES_ARE_MEAN_CENTERED - HAVE_ZERO_MEAN >> Simplier version:
+   for (int i = 0; i < vector_size; i++){
+      sum += vector_ptr[i] * vector_ptr[i];
+   }
+//   printf("\tSUM: %f ---------------------------\n", sum);
+   return sqrt(sum / vector_size);
+}
+/**
+ * \brief Provedure computes standard deviation from vector (2nd version).
+ * \param[in] vector_ptr Pointer to vector.
+ * \param[in] vector_size Size of vector.
+ * \return Real (float) value of stadard deviation.
+ */
+float vector_standard_deviation_v2(float *vector_ptr, unsigned int vector_size)
+{
+   float sum = 0, tmp;
+   float mean = 0;
+
+   for (int i = 0; i < vector_size; i++){
+      mean += vector_ptr[i];
+   }
+//   printf("MEAN: %f ---------------------------\n", mean);
+   mean /= vector_size;
+
+   for (int i = 0; i < vector_size; i++){
+      tmp = vector_ptr[i] - mean;
+      sum += tmp * tmp;
+   }
+//   printf("\tSUM: %f ---------------------------\n", sum);
+
+//   return sqrt(sum / (vector_size));
+   return sqrt(sum / (vector_size-1));
+}
+
+
 
 /**
  * \brief Procedure computes entropy of one sketch row
@@ -404,48 +318,6 @@ void  transform_submatrix_unit_energy (real_2d_array *matrix_ptr,
 }
 
 // ***************
-float turbo_function(real_2d_array *principal_components,
-                     unsigned int normal_subspace_size,
-                     real_2d_array *data_matrix,
-                     uint32_t row_selector)
-{
-   uint16_t x,y;
-   float row_sum;
-   float tmp, sum = 0;
-   float *tmp_vector;
-   tmp_vector = new float [principal_components->rows()];
-
-   for (int i = 0; i < principal_components->rows(); i++){
-      for (int j = 0; j < principal_components->rows(); j++){
-         row_sum = 0;
-         for (int k = 0; k < normal_subspace_size; k++){
-            row_sum = (*principal_components)(j,k) * (*principal_components)(k,j);
-         }
-         tmp_vector[j] = 1 - row_sum;
-         for (int k = 0; k < j; k++){
-            for (int l = 0; l < normal_subspace_size; l++){
-               row_sum = (*principal_components)(k,l) * (*principal_components)(l,k);
-            }
-            tmp_vector[k] = 0 - row_sum;
-         }
-         for (int k = j+1; k < principal_components->rows(); k++){
-            for (int l = 0; l < normal_subspace_size; l++){
-               row_sum = (*principal_components)(k,l) * (*principal_components)(l,k);
-            }
-            tmp_vector[k] = 0 - row_sum;
-         }
-      }
-      tmp = 0;
-      for (int j = 0; j < data_matrix->cols(); j++){
-         tmp += tmp_vector[j] * (*data_matrix)(row_selector,j);
-      }
-      sum += tmp * tmp;
-   }
-
-   delete [] tmp_vector;
-
-   return sqrt(sum);
-}
 
 float multiply_and_norm (float **A_matrix_ptr,
                      unsigned int A_matrix_size,
@@ -822,27 +694,10 @@ int main(int argc, char **argv)
 
    static uint64_t packet_counts [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
 
-   real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
-    for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE);
-    }
-   real_2d_array principal_components;
-   principal_components.setlength(NUMBER_OF_FEATURES*SKETCH_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE);
-	real_1d_array eigenvalues;
-	eigenvalues.setlength(NUMBER_OF_FEATURES*SKETCH_SIZE);
-   ae_int_t info;
-
-  #ifdef NSS_BY_DELTA_TEST
-   float *data2pc_projection;
-   data2pc_projection = new float [WORKING_TIMEBIN_WINDOW_SIZE];
-   float norm, delta_threshold;
-   unsigned int wi;
-  #elif defined NSS_BY_PERCENTAGE
-   float variance_threshold, sum_variance;
-  #endif
+   real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION]; // >> float
 
    uint16_t normal_subspace_size;
-   #ifndef USE_TURBO_FUNCTION
+
    float ***lin_op_c_residual;
    lin_op_c_residual = new float **[NUMBER_OF_HASH_FUNCTION];
    for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
@@ -852,17 +707,7 @@ int main(int argc, char **argv)
          lin_op_c_residual[i][j] = new float [NUMBER_OF_FEATURES * SKETCH_SIZE];
       }
    }
-   #ifndef USE_JOINT_MATRIX_OP
-   float *mapped_data;
-   mapped_data = new float [NUMBER_OF_FEATURES * SKETCH_SIZE];
-   #endif
-   #endif
 
-   float phi [3];
-   float lambda, SPE, h0, delta_SPE;
-   uint8_t anomaly_detetected;
-
-  #ifdef IDENTIFICATION
    vector <void *> actual_flows;
 
    uint8_t **theta;
@@ -870,22 +715,13 @@ int main(int argc, char **argv)
    for (int i = 0; i < NUMBER_OF_FEATURES * SKETCH_SIZE; i++){
       theta[i] = new uint8_t[NUMBER_OF_FEATURES];
    }
-   //...
-  #endif
 
 
-   // ***** TRAP initialization *****
+
+      // ***** TRAP initialization *****
    // Let TRAP library parse command-line arguments and extract its parameters
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
-         return 0;
-      }
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n",
-              trap_last_error_msg);
-      return 1;
-   }
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   // ***** END OF TRAP initialization *****
 
 //   verbose = (trap_get_verbose_level() >= 0);
 /*
@@ -914,21 +750,9 @@ int main(int argc, char **argv)
       return 2;
    }
 */
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
-   if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      return 2;
-   }
 
-   // We don't need ifc_spec anymore, destroy it
-   trap_free_ifc_spec(ifc_spec);
-
-   // ***** END OF TRAP initialization *****
-
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
-
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    // ***** Create UniRec templates & allocate memory for output records *****
    // From ../../nfreader/nfdump_reader.c
@@ -937,14 +761,14 @@ int main(int argc, char **argv)
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
 //                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
-   ur_template_t *out_preliminary_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
+   ur_template_t *out_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
                                                 "DST_PORT,PROTOCOL,TIME_FIRST,"
                                                 "TIME_LAST,PACKETS,BYTES,"
                                                 "TCP_FLAGS");
 //                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
 
-   void *out_preliminary_rec = ur_create(out_preliminary_tmplt, 0);
+   void *out_rec = ur_create(out_preliminary_tmplt, 0);
 
    // ***** END OF Create UniRec templates & allocate memory for output records *****
 
@@ -956,14 +780,8 @@ int main(int argc, char **argv)
 
       // Receive data from any input interface, wait until data are available
       ret = trap_get_data(TRAP_MASK_ALL, &in_rec, &in_rec_size, TRAP_WAIT);
-      if (ret == TRAP_E_TERMINATED) {
-         break; // Module was terminated while waiting for data (e.g. by Ctrl-C)
-      } else if (ret != TRAP_E_OK) {
-         // Some error ocurred
-         fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret,
-                 trap_last_error_msg);
-         break;
-      }
+      // Handle possible errors
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
       if (in_rec_size < ur_rec_static_size(in_tmplt)) {
@@ -999,11 +817,6 @@ int main(int argc, char **argv)
          round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
         #endif
 
-         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
         #ifdef VERBOSE_MSG
          printf("... DONE.\n");
         #endif
@@ -1020,246 +833,12 @@ int main(int argc, char **argv)
 
          --need_more_timebins;
 
-        #ifdef VERBOSE_MSG
-         printf("Counting entropy & adding one matrices line...");
-        #endif
-         for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-            for (int j = 0; j < SKETCH_SIZE; j++){
-               data_matrices[i](round_timebin_counter, j) =
-                  compute_entropy(sip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter, j + SKETCH_SIZE) =
-                  compute_entropy(sp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter, j + (SKETCH_SIZE * 2)) =
-                  compute_entropy(dip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter,j + (SKETCH_SIZE * 3)) =
-                  compute_entropy(dp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
-            }
-         }
-        #ifdef VERBOSE_MSG
-         printf("... DONE.\n");
-        #endif
 
-        #ifdef OFFLINE_MODE
-         // save_data_matrix() - full / periodical
-        #else
          // *** Start detection (& identification) ***
          if (!need_more_timebins){
             anomaly_detetected = 0;
 
             need_more_timebins++;
-            // *** Detection part ***
-            for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-              #ifdef VERBOSE_MSG //verbose
-               printf ("Starting detection for hash function %i...\n", i);
-              #endif
-
-              #ifdef PREPROCESS_DATA
-              #ifdef VERBOSE_MSG
-               printf("\tPreprocessing data...");
-              #endif
-               preprocess_data(&data_matrices[i], round_timebin_counter);
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif
-              #endif
-
-              #ifdef VERBOSE_MSG
-               printf("\tNormalizing data matrix...");
-              #endif
-               // ** Matrix normalization **
-               transform_matrix_zero_mean(&data_matrices[i]);
-               transform_submatrix_unit_energy(&data_matrices[i], 0, SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], SKETCH_SIZE, 2 * SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], 2 * SKETCH_SIZE, 3 * SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], 3 * SKETCH_SIZE, 4 * SKETCH_SIZE);
-               // ** END OF Matrix normalization **
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif
-
-              #ifdef VERBOSE_MSG
-               printf("\tComputing PCA...");
-              #endif
-               // ** Computing of PCA **
-               pcabuildbasis(data_matrices[i], WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE,
-                              info, eigenvalues, principal_components);
-               cout << endl << "SIZEOF: " << sizeof(data_matrices[i])<<"     ----     ";
-               cout <<sizeof(data_matrices[0][0][0])*NUMBER_OF_HASH_FUNCTION*WORKING_TIMEBIN_WINDOW_SIZE*NUMBER_OF_FEATURES*SKETCH_SIZE<<endl;
-               stop=1;
-               break;
-               if(info != 1){
-                  //!!!TODO pca error
-               }
-               // ** END OF Computing of PCA **
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif
-               // ** Finding of normal subspace size **
-             #ifdef NORMAL_SUBSPACE_SIZE_FIXED
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by fixed value: ");
-              #endif
-               normal_subspace_size = NORMAL_SUBSPACE_SIZE_FIXED;
-             #elif defined NSS_BY_PERCENTAGE
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by percentage part of total variance: ");
-              #endif
-               sum_variance = 0;
-
-               for (int j = 0; j < eigenvalues.length(); j++){
-                  sum_variance += eigenvalues(j);
-               }
-               variance_threshold = sum_variance * NSS_BY_PERCENTAGE;
-
-               normal_subspace_size = eigenvalues.length();// data_matrices[i].cols() == eigenvalues.length() == NUMBER_OF_FEATURES*SKETCH_SIZE
-               while(sum_variance > variance_threshold){
-                  sum_variance -= eigenvalues(--normal_subspace_size);
-               }
-               normal_subspace_size++;
-             #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE_FIXED
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by %i * \"DELTA\" test: ", NSS_BY_DELTA_TEST);
-              #endif
-               normal_subspace_size = 0;
-               wi = 0;
-               while (!normal_subspace_size && (wi < NUMBER_OF_FEATURES*SKETCH_SIZE)){
-                  multiply_matrix_column_vector(&data_matrices[i], &principal_components, wi,
-                                                data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                  norm = norm_of_vector(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                  divide_vector_by_value(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE, norm);
-                 #if defined STD_DEV
-                  delta_threshold = STD_DEV;
-                 #elif defined STD_DEV_VERSION2
-                  delta_threshold = vector_standard_deviation_v2(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                 #else
-                  delta_threshold = vector_standard_deviation(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                 #endif
-
-                  delta_threshold *= NSS_BY_DELTA_TEST;
-                  for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
-//                     if (fabs(data2pc_projection[wi]) >= NSS_BY_DELTA_TEST * delta_threshold){
-                     if(data2pc_projection[wi] >= delta_threshold
-                      || data2pc_projection[wi] <= -delta_threshold){
-                        normal_subspace_size = wi;
-                     }
-                  }
-                  wi++;
-               }
-             #endif //Normal subspace size definition
-              #ifdef VERBOSE_MSG //verbose
-               printf ("%u (by count of principal components).\n",normal_subspace_size);
-              #endif
-               // ** END OF Finding of normal subspace size **
-
-              #ifdef VERBOSE_MSG
-               printf("\tComputing SPE...");
-              #endif
-              #ifdef USE_TURBO_FUNCTION
-//               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
-//               substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
-//               multiply_matrix_by_transposed_line(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE, &data_matrices[i],
-//                                                  round_timebin_counter, mapped_data);
-//               SPE = norm_of_vector(mapped_data, NUMBER_OF_FEATURES * SKETCH_SIZE);
-               SPE = turbo_function(&principal_components, normal_subspace_size, &data_matrices[i], round_timebin_counter);
-              #elif defined USE_JOINT_MATRIX_OP
-               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
-               substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
-               SPE = multiply_and_norm(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE,
-                                   &data_matrices[i], round_timebin_counter);
-              #else
-               // ** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) **
-               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
-               substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
-               multiply_matrix_by_transposed_line(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE, &data_matrices[i],
-                                                  round_timebin_counter, mapped_data);
-               SPE = norm_of_vector(mapped_data, NUMBER_OF_FEATURES * SKETCH_SIZE);
-               // ** END OF Computing of linear operator C-residual ***
-              #endif
-               SPE *= SPE;
-
-              #ifdef DEBUG
-               cout.precision(numeric_limits< double >::digits10);
-               cout << SPE << endl;
-              #endif
-
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif
-              #ifdef VERBOSE_MSG
-               printf("\tStarting detection by SPE-test for %u.timebin...\n", timebin_counter);
-              #endif
-               // ** Detecting anomalies by "SPE" test **
-               phi[0] = 0;
-               phi[1] = 0;
-               phi[2] = 0;
-
-               for (int j = normal_subspace_size; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
-                  lambda = eigenvalues(j);
-                  phi[0] += lambda;
-                  lambda *= lambda;
-                  phi[1] += lambda;
-                  lambda *= lambda;
-                  phi[2] += lambda;
-               }
-               h0 = 1.0 - ((2.0 * phi[0] * phi[2]) / (3.0 * phi[1] * phi[1]));
-               delta_SPE = phi[0] * pow((
-                     ((ALPHA_PERCENTILE_95 * sqrt(2.0 * phi[1] * h0 * h0)) / phi[0])
-                     + 1.0 + ((phi[1] * h0 * (h0 - 1.0)) / (phi[0] * phi[0])) ),(1.0/h0));
-
-               if (SPE > delta_SPE){
-                  anomaly_detetected++;
-              #ifdef VERBOSE_MSG
-                  printf("## !!! ## Anomaly in timebin %u - %i.hash functon !!!\n", timebin_counter, i);
-               } else {
-                  printf("## NO ## NO Anomaly in timebin %u - %i.hash functon.\n", timebin_counter, i);
-              #endif
-               }
-               // ** Detecting anomalies by "SPE" test **
-              #ifdef VERBOSE_MSG
-               printf("\t... detecting by SPE-test DONE.\n");
-              #endif
-            }
-            // *** END OF detection part ***
-           #ifdef VERBOSE_MSG
-            printf("...detection part DONE.\n");
-           #endif
-            // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
-           #ifdef VERBOSE_MSG
-            printf("Identification threshold is %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
-           #endif
-            if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
-               // Fill output record
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_IP,ur_get(in_tmplt, in_rec, UR_SRC_IP));
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_IP,ur_get(in_tmplt, in_rec, UR_SRC_IP));
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_SRC_PORT,0);
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_DST_PORT,0);
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_PROTOCOL,0);
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_PACKETS,0);
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_BYTES,0);
-//               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TCP_FLAGS,0);
-
-           #ifdef VERBOSE_MSG
-            printf("There is an anomaly in %u.timebin (%u - %u) ... fill preliminary record ...", timebin_counter,
-                   start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
-           #endif
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
-                      (uint64_t) (start_of_next_timebin - TIMEBIN_SIZE) << 32 );
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
-                      (uint64_t) start_of_next_timebin << 32 );
-              #ifdef VERBOSE_MSG
-               printf(" sendning ");
-              #endif
-               // Send record to interface 0
-               trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
-              #ifdef DEBUG_OUT
-               char dummy[1] = {0};
-               trap_send_data(0, dummy, 1, TRAP_WAIT);
-              #endif
-              #ifdef VERBOSE_MSG
-               printf("...DONE.\n\n");
-              #endif
-               // *** END OF sending preliminary warning ***
-           #ifdef IDENTIFICATION
                // *** Identification if an anomaly occured ***
                static float theta_residual[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
                static float tmp[NUMBER_OF_FEATURES][NUMBER_OF_FEATURES];
@@ -1395,12 +974,10 @@ int main(int argc, char **argv)
            #ifdef VERBOSE_MSG
             printf ("...identification DONE.\n");
            #endif
-           #endif
             }
             // *** END OF Merging results ***
          }
          // *** END OF detection (& identification) ***
-        #endif
          ++timebin_counter;
          start_of_next_timebin += TIMEBIN_SIZE;
          round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
@@ -1409,54 +986,19 @@ int main(int argc, char **argv)
          printf("\n\nStart of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
         #endif
 
-        #ifdef IDENTIFICATION
          if (!actual_flows.empty()){
-//            printf("\nVector size: %i\n", actual_flows.size());
+
             for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
                ur_free(*it);
             }
             actual_flows.clear();
          }
-        #endif
 
-         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
       }
       //   *** END OF One timebin completed ***
 
-      //   *** Flow reading & structure filling ***
-     #ifdef IDENTIFICATION
       // store flow from actual timebin
       actual_flows.push_back(ur_cpy_alloc(in_tmplt, in_rec));
-     #endif
-      // adding feature occurrence in all sketches
-      for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-         row_in_sketch = get_row_in_sketch(in_tmplt, in_rec, seeds[i]);
-
-         sip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         sp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-
-         packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
-      }
-      // END OF Adding feature occurrence in all sketches ***
-      //   *** END OF flow reading & structure filling ***
 
      //   *** END OF Timebin division ***
 
@@ -1465,16 +1007,6 @@ int main(int argc, char **argv)
    // ***** END OF Main processing loop *****
 
    // ***** Cleanup *****
-
-   // Send terminating signal to output interface
-//   char dummy[1] = {0};
-//   trap_send_data(0, dummy, 1, TRAP_WAIT);
-//   fclose(log);
-  #ifdef NSS_BY_DELTA_TEST
-   delete [] data2pc_projection;
-  #endif
-
-  #ifndef USE_TURBO_FUNCTION
    for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
 
       for (int j = 0; j < NUMBER_OF_FEATURES * SKETCH_SIZE; j++){
@@ -1484,11 +1016,7 @@ int main(int argc, char **argv)
       delete [] lin_op_c_residual[i];
    }
    delete [] lin_op_c_residual;
-  #ifndef USE_JOINT_MATRIX_OP
-   delete [] mapped_data;
-  #endif
-  #endif
-  #ifdef IDENTIFICATION
+
    for (vector<void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
       ur_free(*it);
    }
@@ -1498,9 +1026,9 @@ int main(int argc, char **argv)
       delete [] theta[i];
    }
    delete [] theta;
-  #endif
 
-   trap_finalize();
+   // Do all necessary cleanup before exiting
+   TRAP_DEFAULT_FINALIZATION();
 
    ur_free(out_preliminary_rec);
 
@@ -1510,4 +1038,4 @@ int main(int argc, char **argv)
 
    return 0;
 }
-// END OF PCA_sketch.c
+// END OF PCA_sketch_identificator.c

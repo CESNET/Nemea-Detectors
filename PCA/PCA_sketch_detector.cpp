@@ -147,19 +147,8 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 
-/*
- * Procedure for handling signals SIGTERM and SIGINT
- */
-void signal_handler (int signal)
-{
-   if (trap_get_verbose_level() > 0)
-      printf("Signal received\n");
-   if (signal == SIGTERM || signal == SIGINT) {
-      stop = 1; // breaks the main loop
-      trap_terminate(); // interrupt a possible waiting in recv/send functions
-   }
-}
-
+// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 /**
  * \brief Provedure computes standard deviation from vector (1st version).
@@ -626,30 +615,10 @@ int main(int argc, char **argv)
    float lambda, SPE, h0, delta_SPE;
    uint8_t anomaly_detetected;
 
-  #ifdef IDENTIFICATION
-   vector <void *> actual_flows;
-
-   uint8_t **theta;
-   theta = new uint8_t *[NUMBER_OF_FEATURES * SKETCH_SIZE];
-   for (int i = 0; i < NUMBER_OF_FEATURES * SKETCH_SIZE; i++){
-      theta[i] = new uint8_t[NUMBER_OF_FEATURES];
-   }
-   //...
-  #endif
-
-
    // ***** TRAP initialization *****
    // Let TRAP library parse command-line arguments and extract its parameters
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
-         return 0;
-      }
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n",
-              trap_last_error_msg);
-      return 1;
-   }
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   // ***** END OF TRAP initialization *****
 
 //   verbose = (trap_get_verbose_level() >= 0);
 /*
@@ -678,20 +647,9 @@ int main(int argc, char **argv)
       return 2;
    }
 */
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
-   if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      return 2;
-   }
 
-   // We don't need ifc_spec anymore, destroy it
-   trap_free_ifc_spec(ifc_spec);
-
-   // ***** END OF TRAP initialization *****
-
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
 
    // ***** Create UniRec templates & allocate memory for output records *****
@@ -720,14 +678,8 @@ int main(int argc, char **argv)
 
       // Receive data from any input interface, wait until data are available
       ret = trap_get_data(TRAP_MASK_ALL, &in_rec, &in_rec_size, TRAP_WAIT);
-      if (ret == TRAP_E_TERMINATED) {
-         break; // Module was terminated while waiting for data (e.g. by Ctrl-C)
-      } else if (ret != TRAP_E_OK) {
-         // Some error ocurred
-         fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret,
-                 trap_last_error_msg);
-         break;
-      }
+      // Handle possible errors
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
       if (in_rec_size < ur_rec_static_size(in_tmplt)) {
@@ -806,7 +758,7 @@ int main(int argc, char **argv)
         #ifdef OFFLINE_MODE
          // save_data_matrix() - full / periodical
         #else
-         // *** Start detection (& identification) ***
+         // *** Start detection ***
          if (!need_more_timebins){
             anomaly_detetected = 0;
 
@@ -847,10 +799,10 @@ int main(int argc, char **argv)
                // ** Computing of PCA **
                pcabuildbasis(data_matrices[i], WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE,
                               info, eigenvalues, principal_components);
-               cout << endl << "SIZEOF: " << sizeof(data_matrices[i])<<"     ----     ";
-               cout <<sizeof(data_matrices[0][0][0])*NUMBER_OF_HASH_FUNCTION*WORKING_TIMEBIN_WINDOW_SIZE*NUMBER_OF_FEATURES*SKETCH_SIZE<<endl;
-               stop=1;
-               break;
+//               cout << endl << "SIZEOF: " << sizeof(data_matrices[i])<<"     ----     ";
+//               cout <<sizeof(data_matrices[0][0][0])*NUMBER_OF_HASH_FUNCTION*WORKING_TIMEBIN_WINDOW_SIZE*NUMBER_OF_FEATURES*SKETCH_SIZE<<endl;
+//               stop=1;
+//               break;
                if(info != 1){
                   //!!!TODO pca error
                }
@@ -989,7 +941,7 @@ int main(int argc, char **argv)
            #endif
             // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
            #ifdef VERBOSE_MSG
-            printf("Identification threshold is %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
+            printf("True detection threshold is %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
            #endif
             if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
                // Fill output record
@@ -1001,7 +953,6 @@ int main(int argc, char **argv)
 //               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_PACKETS,0);
 //               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_BYTES,0);
 //               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TCP_FLAGS,0);
-
            #ifdef VERBOSE_MSG
             printf("There is an anomaly in %u.timebin (%u - %u) ... fill preliminary record ...", timebin_counter,
                    start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
@@ -1014,7 +965,9 @@ int main(int argc, char **argv)
                printf(" sendning ");
               #endif
                // Send record to interface 0
-               trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
+               ret = trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
+               // Handle possible errors
+               TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
               #ifdef DEBUG_OUT
                char dummy[1] = {0};
                trap_send_data(0, dummy, 1, TRAP_WAIT);
@@ -1023,147 +976,10 @@ int main(int argc, char **argv)
                printf("...DONE.\n\n");
               #endif
                // *** END OF sending preliminary warning ***
-           #ifdef IDENTIFICATION
-               // *** Identification if an anomaly occured ***
-               static float theta_residual[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
-               static float tmp[NUMBER_OF_FEATURES][NUMBER_OF_FEATURES];
-               static float tmp2[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES];
-               static float tmp4[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
-               static float tmp3[NUMBER_OF_FEATURES*SKETCH_SIZE][NUMBER_OF_FEATURES*SKETCH_SIZE];
-               static float h_vector[5][NUMBER_OF_FEATURES*SKETCH_SIZE];
-               uint8_t flip_index, stored_flip_index, switching_addition;
-               uint8_t anomalous_flows_hash_values [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
-               uint16_t arg_min, hit_ttl;
-               float min, tmp_norm;
-
-               memset(anomalous_flows_hash_values, 0, sizeof(anomalous_flows_hash_values[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
-               for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-                 #ifdef VERBOSE_MSG //verbose
-                  printf ("Starting identification for hash function %i ...\n", i);
-                 #endif
-                  switching_addition = 0;
-                  flip_index = 0;
-                  arg_min = 0;
-                  min = REALLY_BIG_REAL_NUMBER; // ugly :-/switching_addition = 0
-                 #ifdef VERBOSE_MSG //verbose
-                  printf ("\tComputing %i h-vectors & finding 1. arg-min: \n", NUMBER_OF_FEATURES*SKETCH_SIZE);
-                 #endif
-                  // computing h* vectors
-                  for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
-                     flip_index = 0;
-                     arg_min = 0;
-                     min = REALLY_BIG_REAL_NUMBER; // ugly :-/
-                     memset(theta, 0, sizeof(theta[0][0]) * NUMBER_OF_FEATURES*SKETCH_SIZE * NUMBER_OF_FEATURES);
-                     theta[(1 - 1) * SKETCH_SIZE + j][0] = 1;
-                     theta[(2 - 1) * SKETCH_SIZE + j][1] = 1;
-                     theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
-                     theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
-
-                     multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
-                     multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
-                     multiply_matrices(&theta, &tmp, &tmp2);
-                     multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
-                     multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
-                     substitute_matrices(&identity_matrix, &tmp4);
-                     multiply_matrix_by_transposed_line(&tmp4, &data_matrices[i], round_timebin_counter, &h_vector[flip_index]);
-                     // finding arg min
-                     multiply_matrix_by_vector(&lin_op_c_residual[i], &h_vector[flip_index], &h_vector[5]);
-                     tmp_norm = norm_of_vector(&h_vector[5]);
-                     if(tmp_norm < min){
-                        min = tmp_norm;
-                        arg_min = j;
-                        stored_flip_index = flip_index;
-                        flip_index = (++flip_index & 0x01) + switching_addition;
-                     }
-                  }
-                 #ifdef VERBOSE_MSG //verbose
-                  printf ("\t\tnew arg-min is: %i\n", arg_min);
-                 #endif
-                  ++anomalous_flows_hash_values[i][arg_min % NUMBER_OF_FEATURES];
-
-                  while(min >= NORM_AMOUNT_INDETIFICATION_THRESHOLD &&
-                        anomalous_flows_hash_values[i][arg_min] < IDENTIFICATION_TTL){
-                    #ifdef VERBOSE_MSG //verbose
-                     printf ("\tComputing %i h-vectors & finding next argmin:\n", NUMBER_OF_FEATURES*SKETCH_SIZE);
-                    #endif
-                     switching_addition = (switching_addition + 2) & 0x02;
-                     flip_index = switching_addition;
-                     arg_min = 0;
-                     min = REALLY_BIG_REAL_NUMBER; // ugly :-/
-
-                     for (int j = 0; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
-                        memset(theta, 0, sizeof(theta[0][0]) * NUMBER_OF_FEATURES*SKETCH_SIZE * 4);
-                        theta[(1 - 1) * SKETCH_SIZE + j][0] = 1;
-                        theta[(2 - 1) * SKETCH_SIZE + j][1] = 1;
-                        theta[(3 - 1) * SKETCH_SIZE + j][2] = 1;
-                        theta[(4 - 1) * SKETCH_SIZE + j][3] = 1;
-
-                        multiply_matrices(&lin_op_c_residual[i], &theta, &theta_residual);
-                        multiply_matrix_by_transposed_matrix(&theta_residual, &tmp);
-                        multiply_matrices(&theta, &tmp, &tmp2);
-                        multiply_matrix_by_transposed_matrix(&tmp2, &theta_residual, &tmp3);
-                        multiply_matrices(&tmp3, &lin_op_c_residual[i], &tmp4);
-                        substitute_matrices(&identity_matrix, &tmp4);
-                        multiply_matrix_by_vector(&tmp4, &h_vector[stored_flip_index], &h_vector[flip_index]);
-                        // finding arg min
-                        multiply_matrix_by_vector(&lin_op_c_residual[i], &h_vector[flip_index], &h_vector[5]);
-                        tmp_norm = norm_of_vector(&h_vector[5]);
-                        if(tmp_norm < min){
-                           min = tmp_norm;
-                           arg_min = j;
-                           stored_flip_index = flip_index;
-                           flip_index = (++flip_index & 0x01) + switching_addition;
-                        }
-                     }
-                    #ifdef VERBOSE_MSG //verbose
-                     printf ("\t\tnew arg-min is: %i\n", arg_min);
-                    #endif
-                     ++anomalous_flows_hash_values[i][arg_min % NUMBER_OF_FEATURES];
-                  }
-                 #ifdef VERBOSE_MSG //verbose
-                  printf ("\n\tAll flow's hash-values (arg-mins) for hash function %i were found\n", i);
-                 #endif
-               }
-                 #ifdef VERBOSE_MSG
-                  printf ("\tRe-hashing flows...\n");
-                 #endif
-                  for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
-                     int i = 0;
-//                     printf("Vector size: %i\n", actual_flows.size());
-                     while (i < NUMBER_OF_HASH_FUNCTION){
-//                       printf("CHECK: %i\n", i);
-                        row_in_sketch = get_row_in_sketch(in_tmplt, *it, seeds[i]);
-                        i++; //  TMP
-                        if (anomalous_flows_hash_values[i][row_in_sketch]){
-//                           i++;
-                           if (i == NUMBER_OF_HASH_FUNCTION){
-                             #ifdef VERBOSE_MSG
-//                              printf ("\t\tAnomalous flow found in timebin %u ... sending ...", timebin_counter);
-                             #endif
-                               trap_send_data(1, *it, ur_rec_static_size(in_tmplt), TRAP_WAIT);
-                             #ifdef VERBOSE_MSG
-//                              printf ("...DONE.\n", i);
-                             #endif
-                              ur_free(*it);
-//                              actual_flows.erase(it);
-                           }
-                        } else {
-                           ur_free(*it);
-//                           actual_flows.erase(it);
-                           i = NUMBER_OF_HASH_FUNCTION; // == break;
-                        }
-                     }
-                  }
-                  actual_flows.clear();
-            // *** END OF Identification if an anomaly occured ***
-           #ifdef VERBOSE_MSG
-            printf ("...identification DONE.\n");
-           #endif
-           #endif
             }
             // *** END OF Merging results ***
          }
-         // *** END OF detection (& identification) ***
+         // *** END OF detection ***
         #endif
          ++timebin_counter;
          start_of_next_timebin += TIMEBIN_SIZE;
@@ -1171,16 +987,6 @@ int main(int argc, char **argv)
 
         #ifdef VERBOSE_MSG //verbose
          printf("\n\nStart of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
-        #endif
-
-        #ifdef IDENTIFICATION
-         if (!actual_flows.empty()){
-//            printf("\nVector size: %i\n", actual_flows.size());
-            for (vector <void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
-               ur_free(*it);
-            }
-            actual_flows.clear();
-         }
         #endif
 
          memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
@@ -1192,10 +998,6 @@ int main(int argc, char **argv)
       //   *** END OF One timebin completed ***
 
       //   *** Flow reading & structure filling ***
-     #ifdef IDENTIFICATION
-      // store flow from actual timebin
-      actual_flows.push_back(ur_cpy_alloc(in_tmplt, in_rec));
-     #endif
       // adding feature occurrence in all sketches
       for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
          row_in_sketch = get_row_in_sketch(in_tmplt, in_rec, seeds[i]);
@@ -1230,15 +1032,10 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
 
-   // Send terminating signal to output interface
-//   char dummy[1] = {0};
-//   trap_send_data(0, dummy, 1, TRAP_WAIT);
-//   fclose(log);
   #ifdef NSS_BY_DELTA_TEST
    delete [] data2pc_projection;
   #endif
 
-  #ifndef USE_TURBO_FUNCTION
    for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
 
       for (int j = 0; j < NUMBER_OF_FEATURES * SKETCH_SIZE; j++){
@@ -1251,20 +1048,9 @@ int main(int argc, char **argv)
   #ifndef USE_JOINT_MATRIX_OP
    delete [] mapped_data;
   #endif
-  #endif
-  #ifdef IDENTIFICATION
-   for (vector<void *>::iterator it = actual_flows.begin(); it != actual_flows.end(); ++it){
-      ur_free(*it);
-   }
-   actual_flows.clear();
 
-   for (int i = 0; i < NUMBER_OF_FEATURES * SKETCH_SIZE; i++){
-      delete [] theta[i];
-   }
-   delete [] theta;
-  #endif
-
-   trap_finalize();
+   // Do all necessary cleanup before exiting
+   TRAP_DEFAULT_FINALIZATION();
 
    ur_free(out_preliminary_rec);
 
@@ -1274,4 +1060,4 @@ int main(int argc, char **argv)
 
    return 0;
 }
-// END OF PCA_sketch.c
+// END OF PCA_sketch_detector.c
