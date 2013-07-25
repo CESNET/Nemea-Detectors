@@ -7,8 +7,12 @@
 #ifndef _PCA_SKETCH_H_
 #define _PCA_SKETCH_H_
 
-#define PREPROCESS_DATA
+//#define OFFLINE_MODE
+
 //#define IDENTIFICATION
+
+#define PREPROCESS_DATA
+#define PREPROCESS_DATA_DEV_MULTIPLIER 3
 
 #define V4_BIT_LENGTH 32 // Number of bits of IPv4 address length
 #define V6_BIT_PART_LENGTH 64 // Number of bits of one array field of IPv6 address
@@ -19,14 +23,15 @@
 #define V6_HASH_KEY_MASK 0xFFFFFFFFFFFF0000 // Must correspond with V6_HASH_KEY_PART. If V6_HASH_KEY_PART > 64,
                                             // V6_HASH_KEY_MASK is for 64 - V6_HASH_KEY_PART
 
-#define SKETCH_SIZE 256 // (2^9) - For better performance it should be power
-                           // of 2 since the value is used for modulus
+#define SKETCH_SIZE 512 // For better performance it should be power of 2
+
 #define ADDRESS_SKETCH_WIDTH 4096 // (2^12) - For better performance it should
                                 // be power of 2 since the value is used for modulus
 #define PORT_SKETCH_WIDTH 4096 // (2^12) - For better performance it should
                                 // be power of 2 since the value is used for modulus
 
 #define NUMBER_OF_FEATURES 4
+#define DATA_MATRIX_WIDTH NUMBER_OF_FEATURES * SKETCH_SIZE
 
 #define NUMBER_OF_HASH_FUNCTION 4
 
@@ -40,11 +45,9 @@
 //#define STD_DEV 0.35355339 // 1/sqrt(WORKING_TIMEBIN_WINDOW_SIZE)
 #define STD_DEV_VERSION2
 
-#define PREPROCESS_DATA_DEV_MULTIPLIER 3
-
-//#define NORMAL_SUBSPACE_SIZE_FIXED 10
+#define NORMAL_SUBSPACE_SIZE_FIXED WORKING_TIMEBIN_WINDOW_SIZE-1
 //#define NSS_BY_PERCENTAGE 0.95
-#define NSS_BY_DELTA_TEST 3
+//#define NSS_BY_DELTA_TEST 3
 
 #define ALPHA_PERCENTILE_95 1.645
 //   #define ALPHA_PERCENTILE_99 2.326
