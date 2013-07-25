@@ -12,7 +12,7 @@ MODULES=blacklistfilter
 all: ${MODULES}
 
 doxygen:
-	doxygen spoofing.cpp
+	doxygen blacklistfilter.cpp
 
 
 clean:
