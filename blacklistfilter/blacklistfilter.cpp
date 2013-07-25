@@ -156,8 +156,19 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
 }
 
 /**
- *
  * Function for loading source files.
+ * Function goes through all files in given directory and loads their content
+ * (ip addresses/prefixes) to module's tables/vectors used for IP address
+ * classification. Pure addresses are then saved in one hash table (both V4 
+ * and V6), prefixes are put into separate vectors for according to their 
+ * IP version. Vectors are then sorted for the purpose of binary search.
+ * The function also checks whether the record in file is valid ip address 
+ * or if the file contains valid data. Invalid records/files are automatically 
+ * skipped.
+ *
+ * @param ip_bl Hash table for storing the addresses.
+ * @param source_dir Path to the directory with IP addresses.
+ * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
  */
 int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 {
@@ -171,9 +182,6 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
     
-//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v4_dedup (sort_by_ip_v4);
-//    map<ip_addr_t,ip_blist_t,bool(*)(const ip_addr_t&, const ip_addr_t&)> v6_dedup (sort_by_ip_v6);
-
     dp = opendir(source_dir.c_str());
 
     if (dp == NULL) { // directory cannot be openned
@@ -186,7 +194,7 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 #ifdef DEBUG
         cout << file->d_name << " " << (short) file->d_type << endl;
 #endif
-        if (string(file->d_name) == "." || string(file->d_name) == ".." || file->d_type != 0x8) {
+        if (file->d_name[0] == '.' || file->d_type != 0x8) {
             // we don't need references to direcotry itself and its parent
             continue;
         }
@@ -266,6 +274,21 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
     return ALL_OK;
 }
 
+/**
+ * Function for loading updates.
+ * Function goes through all files in given directory and loads their content
+ * (ip addresses/prefixes) for updating its classification tables. Records are 
+ * sorted to two update lists based on adding/removal operation. These list are 
+ * used for both V4 and V6 addresses and both for pure addresses and prefixes.
+ * The function also checks whether the record in file is valid ip address 
+ * or if the file contains valid data. Invalid records/files are automatically 
+ * skipped.
+ *
+ * @param update_list_a Vector with entries that will be added or updated.
+ * @param update_list_rm Vector with entries that will be removed.
+ * @param path Path to the directory with updates.
+ * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
+ */
 int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& path)
 {
     DIR* dp; // directory pointer
@@ -293,8 +316,9 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 #ifdef DEBUG
         cout << file->d_name << " " << (short) file->d_type << endl;
 #endif
-        if (string(file->d_name) == "." || string(file->d_name) == ".." || file->d_type != 0x8) {
-            // we don't need references to direcotry itself and its parent or anything else
+        if (file->d_name[0] == '.' || file->d_type != 0x8) {
+            // we don't need references to direcotry itself and its parent or hidden files
+            // and we also don't want to go recursively into another directories
             continue;
         }
 
@@ -426,38 +450,38 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 }
 
 /**
- * BLACKLIST COMPARATOR
+ * Function for checking IPv4 addresses.
+ * Function extracts both source and destination addresses from the UniRec record 
+ * and tries to match them to either an address or prefix. If the match is positive 
+ * the field in detection record is filled with the respective blacklist number. 
+ * This record is later sent to the modlue that for further analysis.
+ *
+ * @param ur_tmp Template of input UniRec record.
+ * @param ur_det Template of detection UniRec record.
+ * @param record Record being analyzed.
+ * @param detected Detection record used if any address matches the blacklist.
+ * @param ip_bl Hash table with addresses.
+ * @return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected, cc_hash_table_t& ip_bl)
+int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void *record, void *detected, cc_hash_table_t& ip_bl)
 {
-
-#ifdef DEBUG
-    char dst[INET6_ADDRSTRLEN];
-    char src[INET6_ADDRSTRLEN];
-    ip_to_str(&ur_get(ur_tmp, record, UR_SRC_IP), src);
-    ip_to_str(&ur_get(ur_tmp, record, UR_DST_IP), dst);
-    
-    cerr << src << " and " << dst << endl;
-#endif
-
     bool marked = false;
-    // index of the prefix the source ip fits in (return value of binary search)
+    // index of the prefix the source ip fits in (return value of binary/hash search)
     int search_result;
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-//    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
 
     if (search_result != NOT_FOUND) {
-        ur_set(ur_tmp, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
     if (search_result != NOT_FOUND) {
-        ur_set(ur_tmp, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
  
@@ -472,32 +496,33 @@ int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected
 }
 
 /**
- * BLACKLIST COMPARATOR
+ * Function for checking IPv6 addresses.
+ * Function extracts both source and destination addresses from the UniRec record 
+ * and tries to match them to either an address or prefix. If the match is positive 
+ * the field in detection record is filled with the respective blacklist number. 
+ * This record is later sent to the modlue that for further analysis.
+ *
+ * @param ur_tmp Template of input UniRec record.
+ * @param ur_det Template of detection UniRec record.
+ * @param record Record being analyzed.
+ * @param detected Detection record used if any address matches the blacklist.
+ * @param ip_bl Hash table with addresses.
+ * @return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected, cc_hash_table_t& ip_bl)
+int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void *record, void *detected, cc_hash_table_t& ip_bl)
 {
-
-#ifdef DEBUG
-    char dst[INET6_ADDRSTRLEN];
-    char src[INET6_ADDRSTRLEN];
-    ip_to_str(&ur_get(ur_tmp, record, UR_SRC_IP), src);
-    ip_to_str(&ur_get(ur_tmp, record, UR_DST_IP), dst);
-    
-    cerr << src << " and " << dst << endl;
-#endif
-
     bool marked = false;
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
+
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-//    char *ip_key = (char *) ur_get(ur_tmp, record, UR_SRC_IP).bytes;
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
 
     if (search_result != NOT_FOUND) {
-        ur_set(ur_tmp, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
@@ -506,7 +531,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
-        ur_set(ur_tmp, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
     }
  
@@ -517,7 +542,20 @@ int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, void *detected
 }
 
 
-///////////////
+/**
+ * Function for updating prefix lists (adding operation).
+ * Function performs binary search similar to matching operation but 
+ * instead of returning the index of the matching ip it either updates 
+ * the entry or returns the index where the new item should be inserted.
+ * This operation keeps the list sorted for binary search without sorting 
+ * the vectors explicitely.
+ *
+ * @param updated Item containing the update.
+ * @param v4mm Array with v4 masks used for prefix search.
+ * @param v6mm Array with v6 masks used for prefix search.
+ * @param black_list Blacklist to be updated.
+ * @return BL_ENTRY_UPDATED if only update operation was performed otherwise index for insertion.
+ */
 int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, black_list_t& black_list)
 {
     int begin, end, mid;
@@ -571,12 +609,22 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 }
 
 /**
- * Procedure for updating blacklists (add or update)
+ * Procedure for updating blacklists (add or update).
+ * Procedure performs update operations borth for prefixes and addresses.
+ *
+ * @param bl_hash Hash table with blacklisted addresses.
+ * @param bl_v4 Vector with blacklisted v4 prefixes.
+ * @param bl_v6 Vector with blacklisted v6 prefixes.
+ * @param add_upd Vector with updates (new items).
+ * @param m4 Array with v4 masks used for prefix search.
+ * @param m6 Array with v6 masks used for prefix search.
+ * @return 0 if everything goes otherwise REHASH_FAILURE or INSERT_FAILURE if update fails 
+ * (mainly with hash table).
  */ 
 int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6)
 {
     int insert_index; // position for item insertion
-    int ins_retval;
+    int ins_retval; // return value of insertion operation
 
     for (int i = 0; i < add_upd.size(); i++) { // go through updates
 
@@ -593,15 +641,15 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
                     ((ip_blist_t *)(bl_hash.table[insert_index].data))->pref_length = add_upd[i].pref_length;
                     ((ip_blist_t *)(bl_hash.table[insert_index].data))->in_blacklist = add_upd[i].in_blacklist;
                 }
-            } else {
+            } else { // prefix --> use binary search method
                 insert_index = ip_binary_update(&(add_upd[i]), m4, m6, bl_v4);
-                if (insert_index == BL_ENTRY_UPDATED) {
+                if (insert_index == BL_ENTRY_UPDATED) { // item was already in table
                     continue;
-                } else {
+                } else { // item is new --> add it
                     bl_v4.insert(bl_v4.begin() + insert_index, add_upd[i]);
                 }
             }
-        } else {
+        } else { // same for v6
             if (add_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
                 insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes);
 
@@ -628,8 +676,16 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
 }
 
 /**
- * Procedure for updating entries in blacklists (remove)
- */
+ * Procedure for updating blacklists (remove).
+ * Procedure performs update operations borth for prefixes and addresses.
+ *
+ * @param bl_hash Hash table with blacklisted addresses.
+ * @param bl_v4 Vector with blacklisted v4 prefixes.
+ * @param bl_v6 Vector with blacklisted v6 prefixes.
+ * @param rm_upd Vector with updates (removed items).
+ * @param m4 Array with v4 masks used for prefix search.
+ * @param m6 Array with v6 masks used for prefix search.
+ */ 
 void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6)
 {
     int remove_index; // position of deleted item
@@ -638,18 +694,18 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
         if (ip_is4(&(rm_upd[i].ip))) {
             if (rm_upd[i].pref_length == PREFIX_V4_DEFAULT) { // ip only
                 remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes);
-                if (remove_index != NOT_FOUND) {
+                if (remove_index != NOT_FOUND) { // remove from table
                     ht_remove_by_index(&bl_hash, remove_index);
                 }
             } else {
                 remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v4);
-                if (remove_index == IP_NOT_FOUND) {
+                if (remove_index == IP_NOT_FOUND) { // nothing to remove --> move on
                     continue;
-                } else {
+                } else { // remove from vector
                     bl_v4.erase(bl_v4.begin() + remove_index);
                 }
             }
-        } else {
+        } else { // same for v6
             if (rm_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
                 remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes);
                 if (remove_index != NOT_FOUND) {
@@ -667,34 +723,6 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
     }
 }
 
-/*
-void ht_update_add(black_list_t& add_upd, cc_hash_table_t& ht)
-{
-    int insert_index; // position for item insertion
-
-    for (int i = 0; i < add_upd.size(); i++) { // go through updates
-        insert_index = ht_get_index(&ht, (char *) add_upd[i].ip.bytes);
-        if (insert_index == NOT_FOUND) { // item is not in table --> insert
-            ht_insert(&ht, (char *) add_upd[i].ip.bytes, &add_upd[i]);
-        } else { // item is in the table --> overwrite
-           ((ip_blist_t *)(ht.table[insert_index].data))->pref_length = add_upd[i].pref_length;
-           ((ip_blist_t *)(ht.table[insert_index].data))->in_blacklist = add_upd[i].in_blacklist;
-        }
-    }
-}
-
-void ht_update_remove(black_list_t& rm_upd, cc_hash_table_t& ht)
-{
-    int remove_index; // position of deleted item
-
-    for (int i = 0; i < rm_upd.size(); i++) { // go through updates
-        remove_index = ht_get_index(&ht, (char *) rm_upd[i].ip.bytes);
-        if (remove_index != NOT_FOUND) {
-            ht_remove_by_index(&ht, remove_index);
-        }
-    }
-}
-*/
 /*
  * MAIN FUNCTION
  */
@@ -751,6 +779,7 @@ int main (int argc, char** argv)
         return retval;
     }
 
+    // is directory with sources specified ? (should be in control script)
     if (argc != 2) {
         cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
         return EXIT_FAILURE;
@@ -774,8 +803,10 @@ int main (int argc, char** argv)
 
     string dir = string(argv[1]);
 
+    // load ip addresses from sources
     retval = load_ip(hash_blacklist, dir);
     
+    // something went wrong during loading operation -- terminate with error
     if (retval == BLIST_FILE_ERROR) {
         ur_free_template(templ);
         ur_free_template(tmpl_det);
@@ -784,8 +815,10 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    unsigned int conn_try = 10;
     char ip_tab[INET6_ADDRSTRLEN];
 
+    // create detection record
     detection = ur_create(tmpl_det,0);
     if (detection == NULL) {
         cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
@@ -796,10 +829,16 @@ int main (int argc, char** argv)
     while (!stop) {
                
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, 2000000);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;
+            } else if (retval == TRAP_E_TIMEOUT) {
+                conn_try--;
+                if (!conn_try) {
+                    break;
+                }
+                continue;
             } else { // recieve error
                 cerr << "ERROR: Unable to get data. Return value ";
                 cerr << dec << retval;
@@ -820,17 +859,19 @@ int main (int argc, char** argv)
             }
         }
         
-        retval = v4_blacklist_check(templ, data, detection, hash_blacklist);
+        retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
         // try to match the ip addresses to blacklist
-        // if (ip_is4(&(ur_get(templ, data, UR_SRC_IP) {
+        if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
         //      retval = v4_blacklist_check(templ, data, black_list, v4_masks);
-        // } else {
+            retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
+        } else {
         //      retval = v6_blacklist_check(templ, data, black_list, v6_masks);
-        // }
+            retval = v6_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
+        }
         
         if (retval == BLACKLISTED) {
 #ifdef DEBUG
-            trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_WAIT);
+            trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
             bl_count++;
 #endif
         }
@@ -887,7 +928,7 @@ int main (int argc, char** argv)
     }
 
 
-    trap_send_data(0, data, 1, TRAP_WAIT);
+    trap_send_data(0, data, 1, TRAP_HALFWAIT);
 
 #ifdef DEBUG
     cout << count << " flows went through." << endl;
