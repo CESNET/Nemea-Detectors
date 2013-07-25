@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS=-O2
 CXXFLAGS=-O2
 LDFLAGS=
-LDLIBS=-ltrap -lcommlbr -lrt
+LDLIBS=-ltrap
 
 SUBDIRS=nfreader flowcounter transitfilter 
 #traffic_repeater traffic_merger

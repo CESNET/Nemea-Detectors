@@ -14,7 +14,7 @@ ALGLIBFILES=$(ALOBJPATH)alglibinternal.o $(ALOBJPATH)alglibmisc.o $(ALOBJPATH)ap
 $(ALOBJPATH)%.o ::  $(ALSRCPATH)%.cpp $(ALSRCPATH)%.h
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	
-LDLIBS=../../unirec/unirec.o $(ALGLIBFILES) -ltrap -lcommlbr -lrt -lstdc++
+LDLIBS=../../unirec/unirec.o $(ALGLIBFILES) -ltrap -lstdc++
 
 MODULES=PCA_sketch PCA_test_receiver
 #MODULES=PCA_sketch_test

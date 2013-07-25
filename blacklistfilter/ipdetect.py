@@ -40,11 +40,12 @@
 
 import getpass
 import os
+import signal
 import sys
 import subprocess
 
-import funcs
-perror = funcs.perror
+from funcs import perror
+from funcs import read_config
 
 program_prefix = sys.argv[0]
 main_program = os.getcwd() + '/blacklistfilter'
@@ -56,7 +57,7 @@ if len(sys.argv) != 2:
    exit(1)
 
 if sys.argv[1] == 'start':
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -76,13 +77,14 @@ if sys.argv[1] == 'start':
    if tmp.returncode != None:
       perror("Couldn\'t start main program.")
       pid_file.close()
+      os.remove(pid_name)
       exit(1)
 
    pid_file.write(str(tmp.pid))
    pid_file.close()
 
 elif sys.argv[1] == 'stop':
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -106,10 +108,11 @@ elif sys.argv[1] == 'stop':
       perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(['-c', 'kill ' + pid], shell = True)
+      os.kill(int(pid), signal.SIGTERM)
+      os.remove(pid_name)
 
 elif sys.argv[1] == 'install':
-   config = funcs.read_config()
+   config = read_config()
 
    ref = config['refresh_time']
    cron_path = config['cron_loc']
@@ -162,7 +165,7 @@ elif sys.argv[1] == 'install':
 elif sys.argv[1] == 'download':
    subprocess.call(['python get_lists.py'], shell = True)
 
-   config = funcs.read_config()
+   config = read_config()
 
    pid_name = config['pid_loc']
    try:
@@ -186,7 +189,7 @@ elif sys.argv[1] == 'download':
       perror("Main program is not running. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      subprocess.Popen(['kill', '-USR1 ' + pid], shell = True)
+      os.kill(int(pid), signal.SIGUSR1)
 
 else:
    perror("Bad arguments supplied.\n" + usage)

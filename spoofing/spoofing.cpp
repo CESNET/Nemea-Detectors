@@ -59,7 +59,6 @@ extern "C" {
 }
 #endif
 #include "../../unirec/unirec.h"
-#include "../ipaddr.h"
 #include "spoofing.h"
 #include <libtrap/trap.h>
 
