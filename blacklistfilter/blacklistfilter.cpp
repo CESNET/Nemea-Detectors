@@ -397,7 +397,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
  * @param searched IP address that we are checking.
  * @param v4mm Map of IPv4 masks.
  * @param v6mm Map of IPv6 masks.
- * @param prefix_list List of prefixes to be compared with.
+ * @param black_list List of prefixes to be compared with.
  * @return IP_NOT_FOUND if the ip address doesn't fit any prefix. Index of the prefix otherwise.
  */
 int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, black_list_t& black_list)
