@@ -38,11 +38,13 @@
  *
 """
 
-import getpass
 import os
-import signal
 import sys
 import subprocess
+
+from getpass import getuser
+from signal import SIGTERM
+from signal import SIGUSR1
 
 from funcs import perror
 from funcs import read_config
@@ -57,6 +59,8 @@ if len(sys.argv) != 2:
    exit(1)
 
 if sys.argv[1] == 'start':
+   subprocess.call(['python get_lists.py'], shell = True)
+
    config = read_config()
 
    pid_name = config['pid_loc']
@@ -67,7 +71,7 @@ if sys.argv[1] == 'start':
       exit(1)
 
    tmp = subprocess.Popen(
-   [main_program, '-i', 'tb;localhost,7000;', os.getcwd() + '/test_src/'],
+   [main_program, '-i', 'tb;localhost,7000;', os.getcwd() + '/sources/update/'],
    stdout = subprocess.PIPE,
    stderr = subprocess.PIPE,
    stdin = subprocess.PIPE
@@ -75,7 +79,7 @@ if sys.argv[1] == 'start':
 
    tmp.poll()
    if tmp.returncode != None:
-      perror("Couldn\'t start main program.")
+      perror("Couldn\'t start IPBlackList Detector.")
       pid_file.close()
       os.remove(pid_name)
       exit(1)
@@ -97,7 +101,7 @@ elif sys.argv[1] == 'stop':
    pid_file.close()
 
    if not pid:
-      perror("Main program is not running. No PID in PID file.")
+      perror("Couldn\'t stop IPBlackList Detector. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -105,10 +109,10 @@ elif sys.argv[1] == 'stop':
    output = tmp.communicate()
 
    if not output[0]:
-      perror("Main program is not running. Couldn\'t find process specified in PID file.")
+      perror("Couldn\'t stop IPBlackList Detector. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      os.kill(int(pid), signal.SIGTERM)
+      os.kill(int(pid), SIGTERM)
       os.remove(pid_name)
 
 elif sys.argv[1] == 'install':
@@ -116,7 +120,7 @@ elif sys.argv[1] == 'install':
 
    ref = config['refresh_time']
    cron_path = config['cron_loc']
-   user = getpass.getuser()
+   user = getuser()
 
    if int(ref) == 60:
       command = '0 */1 * * * '
@@ -128,7 +132,7 @@ elif sys.argv[1] == 'install':
       perror("Wrong update time specified in the config file.")
       exit(1)
 
-   command += user + ' ' + sys.executable + os.getcwd() + '/' + program_prefix + ' download\n\n'
+   command += user + ' ' + sys.executable + ' ' + os.getcwd() + '/' + program_prefix + ' download\n\n'
 
    try:
       cron_file = open(cron_path, 'r')
@@ -178,7 +182,7 @@ elif sys.argv[1] == 'download':
    pid_file.close()
 
    if not pid:
-      perror("Main program is not running. No PID in PID file.")
+      perror("Couldn't send signal to IPBlackList Detector. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -186,10 +190,10 @@ elif sys.argv[1] == 'download':
    output = tmp.communicate()
 
    if not output[0]:
-      perror("Main program is not running. Couldn\'t find process specified in PID file.")
+      perror("Couldn't send signal to IPBlackList Detector. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
-      os.kill(int(pid), signal.SIGUSR1)
+      os.kill(int(pid), SIGUSR1)
 
 else:
    perror("Bad arguments supplied.\n" + usage)
