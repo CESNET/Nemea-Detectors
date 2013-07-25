@@ -44,6 +44,7 @@
 
 #include <vector>
 #include "../../unirec/unirec.h"
+#include "../../common/cuckoo_hash/cuckoo_hash.h"
 
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
@@ -78,11 +79,25 @@ extern "C" {
  */
 #define IP_NOT_FOUND -1
 
+/**
+ * Default prefix length for ip address without prefix specification (IPv4)
+ */
 #define PREFIX_V4_DEFAULT 32
+
+/**
+ * Default prefix length for ip address without prefix specification (IPv6)
+ */
 #define PREFIX_V6_DEFAULT 128
 
-#define BL_ENTRY_UPDATED 1
+/**
+ * Constant returned by update function for prefixes when an existing item was 
+ * updated.
+ */
+#define BL_ENTRY_UPDATED -1
 
+/**
+ * Inital size for the hash table of addresses.
+ */
 #define BL_HASH_SIZE 100000
 
 // structure definitions
@@ -99,6 +114,8 @@ typedef struct {
 } ip_blist_t;
 
 /**
+ * @typedef std::vector<ip_blist_t> black_list_t;
+ * Vector of blacklisted prefixes.
  */
 typedef std::vector<ip_blist_t> black_list_t;
 
@@ -132,6 +149,15 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
  */ 
 //int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm);
 //int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv6_mask_map_t& v6mm);
+
+/*
+ * Functions/procedures for updating blacklists.
+ */
+int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
+void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
+
+
+
 
 #ifdef __cplusplus
 }

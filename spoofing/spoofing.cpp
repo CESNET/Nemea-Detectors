@@ -996,7 +996,7 @@ int main (int argc, char** argv)
     while (!stop) {
                 
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_HALFWAIT);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;

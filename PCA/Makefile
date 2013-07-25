@@ -16,8 +16,7 @@ $(ALOBJPATH)%.o ::  $(ALSRCPATH)%.cpp $(ALSRCPATH)%.h
 	
 LDLIBS=../../unirec/unirec.o $(ALGLIBFILES) -ltrap -lstdc++
 
-MODULES=PCA_sketch PCA_test_receiver
-#MODULES=PCA_sketch_test
+MODULES=PCA_sketch_detector #PCA_sketch_identificator
 
 # Uses default rules
 all: $(ALGLIBFILES) ${MODULES}
