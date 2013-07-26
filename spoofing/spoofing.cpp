@@ -848,8 +848,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,DIR_BIT_FIELD");
-    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+//    ur_template_t *templ = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD");
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
 
     // lists of bogon prefixes
     pref_list_t bogon_list_v4; 
