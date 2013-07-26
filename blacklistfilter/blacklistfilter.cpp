@@ -733,9 +733,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
-//    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,SRC_BLACKLIST,DST_BLACKLIST");
+//    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
     ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
                                                   "PROTOCOL,TIME_FIRST,TIME_LAST,"
                                                   "PACKETS,BYTES,TCP_FLAGS,"
@@ -825,12 +824,15 @@ int main (int argc, char** argv)
         cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
         stop = 1;
     }
-
+#ifdef DEBUG
+    ofstream out;
+    out.open("./detect", ofstream::out);
+#endif
     // ***** Main processing loop *****
     while (!stop) {
                
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, 2000000);
+        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) { // trap is terminated
                 break;
@@ -883,7 +885,7 @@ int main (int argc, char** argv)
         if (update) {
         //  update black_list
 #ifdef DEBUG
-            cout << "Updating black list ..." << endl;
+            out << "Updating black list ..." << endl;
 #endif
             string upd_path = dir;
             // Update procedure.
@@ -894,17 +896,17 @@ int main (int argc, char** argv)
                 continue;
             }
 #ifdef DEBUG
-            cout << "Updates loaded. Performing update operations..." << endl;
+            out << "Updates loaded. Performing update operations (" << add_update.size() << " additions/updates and " << rm_update.size() << " removals) ..." << endl;
 #endif
             if (!rm_update.empty()) {
 #ifdef DEBUG
-            cout << "Removing invalid entries..." << endl;
+            out << "Removing invalid entries..." << endl;
 #endif
                 update_remove(hash_blacklist, v4_list, v6_list, rm_update, v4_masks, v6_masks);
             }
             if (!add_update.empty()) {
 #ifdef DEBUG
-            cout << "Adding new entries and updating persistent entries... " << endl;
+            out << "Adding new entries and updating persistent entries... " << endl;
 #endif
                 if (update_add(hash_blacklist, v4_list, v6_list, add_update, v4_masks, v6_masks)) {
                     cerr << "ERROR: Unable to update due the insufficent memory. Unable to continue." << endl;
@@ -914,13 +916,13 @@ int main (int argc, char** argv)
             }
 
 #ifdef DEBUG
-            cout << "Cleaning update lists ...  " << endl;
+            out << "Cleaning update lists ...  " << endl;
 #endif
 
             add_update.clear();
             rm_update.clear();
 #ifdef DEBUG
-            cout << "Blacklist succesfully updated." << endl;
+            out << "Blacklist succesfully updated." << endl;
 #endif
             update = 0;
             continue;
@@ -932,8 +934,9 @@ int main (int argc, char** argv)
     trap_send_data(0, data, 1, TRAP_HALFWAIT);
 
 #ifdef DEBUG
-    cout << count << " flows went through." << endl;
-    cout << bl_count << " were marked." << endl;
+    out << count << " flows went through." << endl;
+    out << bl_count << " were marked." << endl;
+    out.close;
 #endif
     // clean up before termination
     if (detection != NULL) {
