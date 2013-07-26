@@ -733,9 +733,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
-//    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,SRC_BLACKLIST,DST_BLACKLIST");
+//    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
     ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
                                                   "PROTOCOL,TIME_FIRST,TIME_LAST,"
                                                   "PACKETS,BYTES,TCP_FLAGS,"
