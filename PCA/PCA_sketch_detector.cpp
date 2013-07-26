@@ -690,16 +690,18 @@ int main(int argc, char **argv)
 
    // ***** Create UniRec templates & allocate memory for output records *****
    // From ../../nfreader/nfdump_reader.c
-   ur_template_t *in_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
-                                                "DST_PORT,PROTOCOL,TIME_FIRST,"
-                                                "TIME_LAST,PACKETS,BYTES,"
-                                                "TCP_FLAGS");
-//                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
-   ur_template_t *out_preliminary_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
-                                                "DST_PORT,PROTOCOL,TIME_FIRST,"
-                                                "TIME_LAST,PACKETS,BYTES,"
-                                                "TCP_FLAGS");
-//                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+   ur_template_t *in_tmplt = ur_create_template("<BASIC_FLOW>");
+//   ur_template_t *in_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
+//                                                "DST_PORT,PROTOCOL,TIME_FIRST,"
+//                                                "TIME_LAST,PACKETS,BYTES,"
+//                                                "TCP_FLAGS");
+////                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+   ur_template_t *out_preliminary_tmplt = ur_create_template("TIME_FIRST,TIME_LAST");
+//   ur_template_t *out_preliminary_tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,"
+//                                                "DST_PORT,PROTOCOL,TIME_FIRST,"
+//                                                "TIME_LAST,PACKETS,BYTES,"
+//                                                "TCP_FLAGS");
+////                                                "TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
 
    void *out_preliminary_rec = ur_create(out_preliminary_tmplt, 0);
