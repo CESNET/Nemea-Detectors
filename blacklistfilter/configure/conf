@@ -1,0 +1,7 @@
+# refresh_time -- 1..60 minutes range to update blacklists
+# cron_loc -- full path to existing crontab
+# pid_loc -- full/relative path to where pid file will be located
+
+refresh_time 60
+cron_loc /etc/crontab
+pid_loc .pid_file
