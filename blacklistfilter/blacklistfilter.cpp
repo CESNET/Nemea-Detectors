@@ -733,8 +733,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
-//    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
+//    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
 //    ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,SRC_BLACKLIST,DST_BLACKLIST");
     ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
                                                   "PROTOCOL,TIME_FIRST,TIME_LAST,"
@@ -755,6 +755,7 @@ int main (int argc, char** argv)
     black_list_t add_update;
     black_list_t rm_update;
 
+    // mask array (for prefixes)
     ipv4_mask_map_t v4_masks;
     ipv6_mask_map_t v6_masks;
 
@@ -762,7 +763,6 @@ int main (int argc, char** argv)
     cc_hash_table_t hash_blacklist;
 
     void *detection = NULL;
-    // Initialize TRAP library (create and init all interfaces)
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
         if (retval == TRAP_E_HELP) {
@@ -772,7 +772,8 @@ int main (int argc, char** argv)
         cerr << "ERROR: Cannot parse input parameters: " << trap_last_error_msg << endl;
         return retval;
     }
-     
+
+    // Initialize TRAP library (create and init all interfaces)     
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
