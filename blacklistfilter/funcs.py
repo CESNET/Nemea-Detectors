@@ -58,7 +58,7 @@ def create_directory(dir_path):
          return False
    return True
 
-def read_config(conf_name = './configure/.conf', delimiter = ' ', comment = '#'):
+def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
    try:
       conf_file = open(conf_name, 'r')
    except IOError:

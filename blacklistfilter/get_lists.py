@@ -40,16 +40,15 @@
 
 import os
 import subprocess
-import sys
 
 from collections import namedtuple
 from shutil import copy
 from socket import getaddrinfo
 
-from funcs import report
-from funcs import perror
 from funcs import create_directory
+from funcs import perror
 from funcs import read_config
+from funcs import report
 
 source = namedtuple('source', 'file_name address')
 cwd = os.getcwd()
@@ -75,7 +74,7 @@ def convert_tmp_file(tmp_path, file_name, order):
    domains = False
 
 # Overwrite values, if config exists
-   current_config = cwd + '/configure/.conf.' + file_name
+   current_config = cwd + '/configure/conf.' + file_name
    if os.path.exists(current_config):
       config = read_config(conf_name = current_config)
       cols = config.get('columns', cols)
