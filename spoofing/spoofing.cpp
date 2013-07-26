@@ -1059,7 +1059,7 @@ int main (int argc, char** argv)
             ++bogons;
 #endif
             //for future use
-            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
+            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK; // reset return value
             continue;
         }
@@ -1078,7 +1078,7 @@ int main (int argc, char** argv)
             ++syms;
 #endif
             //for future use
-            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
+            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
         }
@@ -1099,7 +1099,7 @@ int main (int argc, char** argv)
             ++nflows;
 #endif
             //for future use
-            trap_send_data(1, data, ur_rec_static_size(templ), TRAP_WAIT);
+            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
         }
@@ -1114,7 +1114,7 @@ int main (int argc, char** argv)
     cout << "Caught by using too many new flows: " << nflows << endl;
 #endif
 
-    trap_send_data(0, data, 1, TRAP_WAIT);
+    trap_send_data(0, data, 1, TRAP_HALFWAIT);
 
     // clean up before termination
     destroy_filters(v4_flows);
