@@ -7,7 +7,11 @@
 #ifndef _PCA_SKETCH_H_
 #define _PCA_SKETCH_H_
 
-//#define OFFLINE_MODE
+#define OFFLINE_MODE
+#define OUTPUT_FOLDER "dm_rows/"
+
+// *! Macro for verbose message */ //edited from trap_internal.h
+//#define VERBOSE_MSG(level,format,args...) if(verbose>=level){snprintf(err_msg,4095,format,##args); verbose_msg(level,err_msg);}
 
 #define PREPROCESS_DATA
 #define PREPROCESS_DATA_DEV_MULTIPLIER 3
@@ -35,7 +39,7 @@
 
 #define SEED_DEFAULT 0
 
-#define TIMEBIN_SIZE 30 // Size of single timebin in seconds
+#define TIMEBIN_SIZE 60 // Size of single timebin in seconds
 
 #define WORKING_TIMEBIN_WINDOW_SIZE 8 // For better performance it should
                                 // be power of 2 since the value is used for modulus
