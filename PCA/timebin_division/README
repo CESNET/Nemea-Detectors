@@ -1,0 +1,94 @@
+################################################################################
+Modul "timebin_division.c"
+###
+
+Modul načítá toky a rozděluje je do časových oken. Modul je schopen toky
+rozdělovat ve dvou módech:
+
+	1. Původní verze rozdělování inicializuje počátek prvního časového okna podle
+	prvního přijatého toku. Dále pak první tok, který přesahuje aktuální hodnotu
+	počátku časového okna, inkrementovanou o velikost časového okna, označuje
+	konec aktuálního časového okna, to je zpracováno a následující toky jsou již
+	zařazovány do nového časového okna.
+	
+	2. Nová verze inicializuje počátek prvního časového okna stejným způsobem.
+	Ukončení jednoho okna však neznamená povel k jeho zpracování, ale pouze ho
+	"odsune" na pozici předchozího časového okna a nově příchozí toky jsou
+	dále rozdělovány podle příslušnosti do aktuálního nebo předchozího okna.
+	Teprve až s příchodem dalšího časového okna je předchozí okno zpracováno (a
+	aktuální opět "odsunuto" na pozici předchozího).
+	
+Mód je určen pomocí makra "NEW_WAY" v "timebin_division.c" (ř. 49). Pokud je
+toto makro definováno, je použit nový způsob rozdělování, pokud ne, jsou okna
+rozdělována původním způsobem.
+
+Další možnosti nastavení modulu jsou následující (vše v "timebin_division.c":
+
+TIMESTAMP_BUFFER_SIZE Velikost pole pro ukládání časových značek z jednoho
+			časového okna.
+			
+TIMEBIN_SIZE 60 Velikost jednovo časového okna v sekundách.
+
+WRITE_TO_FILE Pokud je definováno, budou časová okna ukládána do souborů:
+			   tb-old.xxxxx Pro původní verzi - xxxxx je čas počátku časového okna
+			   tb-new.xxxxx Pro novou verzi - xxxxx je čas počátku časového okna
+			   
+STATUS_MSG Pokud je definováno, vypisuje průběžně na stdout informace o
+			zpracovávaném souboru (jen jednoduchá zpráva).
+			
+################################################################################
+skript "checker.sh"
+###
+
+Skript je spouštěn se třemi parametry:
+	1. udává příponu souboru, který má být zpracován.
+	2. udává velikost časového okna se kterým bylo provedeno rozřazení souborů.
+	3. určuje mód rozdělování - "1" pro původní verzi / "2" pro novou verzi.
+	
+Příklad spuštění:
+./checker.sh 1371734963 60 2
+	Vyhodnotí soubor "tb-new.1371734963", který byl vytvořen rozdělováním do
+	časových oken o velikosti 60s novou verzí.
+	
+################################################################################
+skript "check_all.sh"
+###
+
+Skript je spouštěn se dvěma parametry:
+	1. udává příponu PRVNÍHO souboru ze sady souborů z jednoho testování (z
+	jednoho spuštění "timebin_division").
+	2. udává velikost časového okna se kterým bylo provedeno rozřazení souborů.
+	
+Skript postupně vyhodnotí všechny soubory pro starou i novou verzi. Tento skript
+předpokládá, že byl test proveden nad 5 minutovým souborem.
+
+Příklad spuštění:
+./check_all.sh 1371734963 60
+   Vyhodnotí soubory: "tb-new.1371734963"
+                      "tb-old.1371734963"
+                      "tb-new.1371735023"
+                      "tb-old.1371735023"
+                      "tb-new.1371735083"
+                      "tb-old.1371735083"
+                      "tb-new.1371735143"
+                      "tb-old.1371735143"
+                      "tb-new.1371735203"
+                      "tb-old.1371735203"
+   které byly vytvořeny rozdělováním do časových oken o velikosti 60s novou i
+   starou verzí.
+
+################################################################################
+Příklad kompletního testu:
+
+1.
+	make - s #define NEW_WAY v "timebin_division.c"
+	./nfdump_reader -i "t;66443,1" /data/aconet-test.201306201530
+	./timebin_division -i "t;localhost,46464"
+2.
+	zakomentovat #define NEW_WAY v "timebin_division.c"
+	make
+	./nfdump_reader -i "t;66443,1" /data/aconet-test.201306201530
+	./timebin_division -i "t;localhost,46464"
+3.
+	./check_all.sh 1371734963 60
+################################################################################

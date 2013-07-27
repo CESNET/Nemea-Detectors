@@ -44,6 +44,8 @@
 #define WORKING_TIMEBIN_WINDOW_SIZE 8 // For better performance it should
                                 // be power of 2 since the value is used for modulus
 
+#define USE_JOINT_MATRIX_OP
+
 //#define STD_DEV 0.35355339 // 1/sqrt(WORKING_TIMEBIN_WINDOW_SIZE)
 #define STD_DEV_VERSION2
 

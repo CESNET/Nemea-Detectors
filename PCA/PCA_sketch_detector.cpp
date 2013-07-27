@@ -58,7 +58,7 @@
 using namespace std;
 using namespace alglib;
 
-#define USE_JOINT_MATRIX_OP
+//#define NEW_TIMEBIN_DIVISION
 #define VERBOSE_MSG
 #define FLOW_STATS
 //#define DEBUG
@@ -558,7 +558,8 @@ int main(int argc, char **argv)
    trap_ifc_spec_t ifc_spec;
 
   #ifdef FLOW_STATS
-   uint32_t flow_ok = 0, flow_under = 0, flow_over = 0;
+   uint32_t flow_ok = 0, flow_under = 0, flow_bad = 0, flow_over = 0, flow_dont_care = 0;
+   uint16_t dont_care_about_first = 1, actual = 0;
    uint32_t under_measure = 0;
   #endif//FLOW_STATS
 
@@ -566,8 +567,9 @@ int main(int argc, char **argv)
 
    uint8_t timebin_init_flag = 1;
    uint32_t start_of_actual_flow;
-   uint32_t timebin_counter; // counted from zero
-   uint32_t round_timebin_counter; // counted from zero
+   uint32_t timebin_counter;// counted from 1 (even if it is initialized to 0) !
+   uint32_t round_timebin_counter;// counted from 0 !
+   uint32_t start_of_actual_timebin;
    uint32_t start_of_next_timebin;
 
       //   void (*ptrHashFunc [NUMBER_OF_HASH_FUNCTION])(type1 *, type2, ...);
@@ -579,12 +581,16 @@ int main(int argc, char **argv)
 
    uint32_t row_in_sketch;
 
-   static uint32_t sip_sketches[NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][ADDRESS_SKETCH_WIDTH];
-   static uint32_t dip_sketches[NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
-   static uint32_t sp_sketches[NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
-   static uint32_t dp_sketches[NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
+   uint16_t flip_index;
+   uint16_t index_addition;// adding into actual timebin sketches
+   uint16_t inverse_index_addition;// adding into previous timebin sketches
+   // "2" is for two "actual" timebins:
+   static uint32_t sip_sketches[2*NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][ADDRESS_SKETCH_WIDTH];
+   static uint32_t dip_sketches[2*NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
+   static uint32_t sp_sketches[2*NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
+   static uint32_t dp_sketches[2*NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE][PORT_SKETCH_WIDTH];
 
-   static uint64_t packet_counts [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
+   static uint64_t packet_counts [2*NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE];
 
    real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
     for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
@@ -594,6 +600,7 @@ int main(int argc, char **argv)
  #ifdef OFFLINE_MODE
    ostringstream filename;
    ofstream out_file;
+   ofstream outs[2];
  #else//OFFLINE_MODE
    int need_more_timebins = WORKING_TIMEBIN_WINDOW_SIZE;
 
@@ -736,28 +743,18 @@ int main(int argc, char **argv)
 
      // *** Timebin division (sampling) based on TIMEBIN_SIZE ***
       start_of_actual_flow = (ur_get(in_tmplt, in_rec, UR_TIME_FIRST)) >> 32;
-     #ifdef FLOW_STATS
-      if (start_of_actual_flow <= start_of_next_timebin){
-         if(start_of_actual_flow >= (start_of_next_timebin-TIMEBIN_SIZE)){
-            flow_ok++;
-         } else {
-            flow_under++;
-            under_measure += start_of_next_timebin - start_of_actual_flow;
-         }
-      } else {
-         flow_over++;
-      }
-     #endif//FLOW_STATS
 
       if (timebin_init_flag){ // initialization of counters with first flow
+         printf("Start: %u\n", start_of_actual_flow);
         #ifdef VERBOSE_MSG
          printf("Starting first initialization...");
         #endif//VERBOSE_MSG
          timebin_init_flag = 0;
-         start_of_next_timebin = start_of_actual_flow + TIMEBIN_SIZE;
-         timebin_counter = 0; // "human-like timebin" = timebin_counter + 1
-         round_timebin_counter = timebin_counter;
-        #ifndef OFFLINE_MODE
+         start_of_actual_timebin = start_of_actual_flow;
+         start_of_next_timebin = start_of_actual_timebin + TIMEBIN_SIZE;
+         timebin_counter = 0;
+         round_timebin_counter = WORKING_TIMEBIN_WINDOW_SIZE;
+        #ifndef OFFLINE_MODE//NOT DEFINED !
          for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
             // init_data_matrix_from_file(&data_matrices[i], file_path);
          }
@@ -765,338 +762,88 @@ int main(int argc, char **argv)
          round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
         #endif//OFFLINE_MODE
 
-         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
+         index_addition = 0;
+         inverse_index_addition = 0;
+         flip_index = 0;
+         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
+         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
+         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
+         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
+         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
         #ifdef VERBOSE_MSG
          printf("... DONE.\n");
         #endif//VERBOSE_MSG
         #ifdef VERBOSE_MSG
          printf("Start of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
         #endif//VERBOSE_MSG
+        outs[0].open("crap");
+        out_file.open("crap");
       }
 
-      // *** One timebin completed ***
-      if (start_of_actual_flow > start_of_next_timebin){// end of actual timebin, start of new one
-        #ifdef VERBOSE_MSG
-         printf("--- one timebin received.\n");
-        #endif//VERBOSE_MSG
+     #ifdef NEW_TIMEBIN_DIVISION
+      if (start_of_actual_flow > start_of_next_timebin){
+//            process(start_of_actual_timebin);
 
-        #ifndef OFFLINE_MODE
-         --need_more_timebins;
-        #endif//OFFLINE_MODE
+         outs[inverse_index_addition].close();
+        #ifdef FLOW_STATS
+//         dont_care_about_first = 0;
+         actual = (actual + 1 ) & 0x0001;
+        #endif
+         //timebin_counter not incremented yet ! (that is right)
+         round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
+         ++timebin_counter;
 
-        #ifdef VERBOSE_MSG
-         printf("Counting entropy & adding one matrices line...");
-        #endif//VERBOSE_MSG
-         for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-            for (int j = 0; j < SKETCH_SIZE; j++){
-               data_matrices[i](round_timebin_counter, j) =
-                  compute_entropy(sip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter, j + SKETCH_SIZE) =
-                  compute_entropy(sp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter, j + (SKETCH_SIZE * 2)) =
-                  compute_entropy(dip_sketches[i][j], ADDRESS_SKETCH_WIDTH, packet_counts[i][j]);
-               data_matrices[i](round_timebin_counter,j + (SKETCH_SIZE * 3)) =
-                  compute_entropy(dp_sketches[i][j], PORT_SKETCH_WIDTH, packet_counts[i][j]);
-            }
-         }
-        #ifdef VERBOSE_MSG
-         printf("... DONE.\n");
-        #endif//VERBOSE_MSG
+         inverse_index_addition = index_addition;
+         index_addition = (index_addition + 1) & 0x0001;
+         flip_index = index_addition;
 
-        #ifdef OFFLINE_MODE
-         for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+         start_of_actual_timebin = start_of_next_timebin;
+         start_of_next_timebin += TIMEBIN_SIZE;
+
+         filename.str("");
+         filename.clear();
+         filename<<"tb."<<start_of_actual_timebin;
+         if(dont_care_about_first){
+            dont_care_about_first = 0;
+            outs[1].open(filename.str().c_str());
             filename.str("");
             filename.clear();
-            filename<<OUTPUT_FOLDER<<"pca_dm_row_HF"<<i<<"."<<timebin_counter;
-            out_file.open(filename.str().c_str());
-            if (!out_file.is_open()){
-               fprintf(stderr, "ERROR while opening output file <%s>.\n", filename.str().c_str());
-            }
-            for (int j = 0; j < data_matrices[i].cols(); j++){
-               out_file << data_matrices[i][timebin_counter][j];
-            }
-            out_file.close();
+            filename<<"tb."<<start_of_actual_timebin-TIMEBIN_SIZE;
+            outs[0].open(filename.str().c_str());
+         } else{
+            outs[index_addition].open(filename.str().c_str());
          }
-         // save_data_matrix() - full / periodical
-        #else//OFFLINE_MOED
-         // *** Start detection ***
-         if (!need_more_timebins){
-            anomaly_detetected = 0;
-
-            need_more_timebins++;
-            // *** Detection part ***
-            for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-              #ifdef VERBOSE_MSG //verbose
-               printf ("Starting detection for hash function %i...\n", i);
-              #endif//VERBOSE_MSG
-
-              #ifdef PREPROCESS_DATA
-              #ifdef VERBOSE_MSG
-               printf("\tPreprocessing data...");
-              #endif//VERBOSE_MSG
-               preprocess_data(&data_matrices[i], round_timebin_counter);
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif//VERBOSE_MSG
-              #endif//PREPROCESS_DATA
-
-              #ifdef VERBOSE_MSG
-               printf("\tNormalizing data matrix...");
-              #endif//VERBOSE_MSG
-               // ** Matrix normalization **
-               transform_matrix_zero_mean(&data_matrices[i]);
-               transform_submatrix_unit_energy(&data_matrices[i], 0, SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], SKETCH_SIZE, 2 * SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], 2 * SKETCH_SIZE, 3 * SKETCH_SIZE);
-               transform_submatrix_unit_energy(&data_matrices[i], 3 * SKETCH_SIZE, 4 * SKETCH_SIZE);
-               // ** END OF Matrix normalization **
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif//VERBOSE_MSG
-
-              #ifdef VERBOSE_MSG
-               printf("\tComputing PCA...");
-              #endif//VERBOSE_MSG
-               // ** Computing of PCA **
-               pcabuildbasis(data_matrices[i], WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE,
-                              info, eigenvalues, principal_components);
-//               cout << endl << "SIZEOF: " << sizeof(data_matrices[i])<<"     ----     ";
-//               cout <<sizeof(data_matrices[0][0][0])*NUMBER_OF_HASH_FUNCTION*WORKING_TIMEBIN_WINDOW_SIZE*NUMBER_OF_FEATURES*SKETCH_SIZE<<endl;
-//               stop=1;
-//               break;
-               if(info != 1){
-                  //!!!TODO pca error
-               }
-               // ** END OF Computing of PCA **
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif//VERBOSE_MSG
-               // ** Finding of normal subspace size **
-             #ifdef NORMAL_SUBSPACE_SIZE_FIXED
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by fixed value: ");
-              #endif//VERBOSE_MSG
-               normal_subspace_size = NORMAL_SUBSPACE_SIZE_FIXED;
-             #elif defined NSS_BY_PERCENTAGE
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by percentage part of total variance: ");
-              #endif//VERBOSE_MSG
-               sum_variance = 0;
-
-               for (int j = 0; j < eigenvalues.length(); j++){
-                  sum_variance += eigenvalues(j);
-               }
-               variance_threshold = sum_variance * NSS_BY_PERCENTAGE;
-
-               normal_subspace_size = eigenvalues.length();// data_matrices[i].cols() == eigenvalues.length() == NUMBER_OF_FEATURES*SKETCH_SIZE
-               while(sum_variance > variance_threshold){
-                  sum_variance -= eigenvalues(--normal_subspace_size);
-               }
-               normal_subspace_size++;
-             #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE_FIXED
-              #ifdef VERBOSE_MSG
-               printf("\tNormal subspace size by %i * \"DELTA\" test: ", NSS_BY_DELTA_TEST);
-              #endif//VERBOSE_MSG
-               normal_subspace_size = 0;
-               wi = 0;
-               while (!normal_subspace_size && (wi < NUMBER_OF_FEATURES*SKETCH_SIZE)){
-                  multiply_matrix_column_vector(&data_matrices[i], &principal_components, wi,
-                                                data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                  norm = norm_of_vector(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                  divide_vector_by_value(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE, norm);
-                 #if defined STD_DEV
-                  delta_threshold = STD_DEV;
-                 #elif defined STD_DEV_VERSION2
-                  delta_threshold = vector_standard_deviation_v2(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                 #else//STD_DEV selection
-                  delta_threshold = vector_standard_deviation(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                 #endif//STD_DEV selection
-
-                  delta_threshold *= NSS_BY_DELTA_TEST;
-                  for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
-//                     if (fabs(data2pc_projection[wi]) >= NSS_BY_DELTA_TEST * delta_threshold){
-                     if(data2pc_projection[wi] >= delta_threshold
-                      || data2pc_projection[wi] <= -delta_threshold){
-                        normal_subspace_size = wi;
-                     }
-                  }
-                  wi++;
-               }
-             #endif//NSS definition
-              #ifdef VERBOSE_MSG //verbose
-               printf ("%u (by count of principal components).\n",normal_subspace_size);
-              #endif//VERBOSE_MSG
-               // ** END OF Finding of normal subspace size **
-
-              #ifdef VERBOSE_MSG
-               printf("\tComputing SPE...");
-              #endif//VERBOSE_MSG
-              #ifdef USE_JOINT_MATRIX_OP
-               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
-               substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
-               SPE = multiply_and_norm(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE,
-                                   &data_matrices[i], round_timebin_counter);
-              #else//USE_JOINT_MATRIX_OP
-               // ** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) **
-               multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
-               substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
-               multiply_matrix_by_transposed_line(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE, &data_matrices[i],
-                                                  round_timebin_counter, mapped_data);
-               SPE = norm_of_vector(mapped_data, NUMBER_OF_FEATURES * SKETCH_SIZE);
-               // ** END OF Computing of linear operator C-residual ***
-              #endif//USE_JOINT_MATRIX_OP
-               SPE *= SPE;
-
-              #ifdef DEBUG
-               cout.precision(numeric_limits< double >::digits10);
-               cout << SPE << endl;
-              #endif//DEBUG
-
-              #ifdef VERBOSE_MSG
-               printf("... DONE.\n");
-              #endif//VERBOSE_MSG
-              #ifdef VERBOSE_MSG
-               printf("\tStarting detection by SPE-test for %u.timebin...\n", timebin_counter);
-              #endif//VERBOSE_MSG
-               // ** Detecting anomalies by "SPE" test **
-               phi[0] = 0;
-               phi[1] = 0;
-               phi[2] = 0;
-
-               for (int j = normal_subspace_size; j < NUMBER_OF_FEATURES*SKETCH_SIZE; j++){
-                  lambda = eigenvalues(j);
-                  phi[0] += lambda;
-                  lambda *= lambda;
-                  phi[1] += lambda;
-                  lambda *= lambda;
-                  phi[2] += lambda;
-               }
-               h0 = 1.0 - ((2.0 * phi[0] * phi[2]) / (3.0 * phi[1] * phi[1]));
-               delta_SPE = phi[0] * pow((
-                     ((ALPHA_PERCENTILE_95 * sqrt(2.0 * phi[1] * h0 * h0)) / phi[0])
-                     + 1.0 + ((phi[1] * h0 * (h0 - 1.0)) / (phi[0] * phi[0])) ),(1.0/h0));
-
-               if (SPE > delta_SPE){
-                  anomaly_detetected++;
-              #ifdef VERBOSE_MSG
-                  printf("## !!! ## Anomaly in timebin %u - %i.hash functon !!!\n", timebin_counter, i);
-               } else {
-                  printf("## NO ## NO Anomaly in timebin %u - %i.hash functon.\n", timebin_counter, i);
-              #endif//VERBOSE_MSG
-               }
-               // ** Detecting anomalies by "SPE" test **
-              #ifdef VERBOSE_MSG
-               printf("\t... detecting by SPE-test DONE.\n");
-              #endif//VERBOSE_MSG
-            }
-            // *** END OF detection part ***
-           #ifdef VERBOSE_MSG
-            printf("...detection part DONE.\n");
-           #endif//VERBOSE_MSG
-            // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
-           #ifdef VERBOSE_MSG
-            printf("True detection threshold is %i\n", NUMBER_OF_TRUE_DETECTION_THRESHOLD);
-           #endif//VERBOSE_MSG
-            if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
-               // Fill output record
-           #ifdef VERBOSE_MSG
-            printf("There is an anomaly in %u.timebin (%u - %u) ... fill preliminary record ...", timebin_counter,
-                   start_of_next_timebin - TIMEBIN_SIZE, start_of_next_timebin);
-           #endif//VERBOSE_MSG
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
-                      (uint64_t) (start_of_next_timebin - TIMEBIN_SIZE) << 32 );
-               ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
-                      (uint64_t) start_of_next_timebin << 32 );
-              #ifdef VERBOSE_MSG
-               printf(" sendning ");
-              #endif//VERBOSE_MSG
-               // Send record to interface 0
-               ret = trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
-               // Handle possible errors
-               TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
-              #ifdef DEBUG_OUT
-               char dummy[1] = {0};
-               trap_send_data(0, dummy, 1, TRAP_WAIT);
-              #endif//DEBUG_OUT
-              #ifdef VERBOSE_MSG
-               printf("...DONE.\n\n");
-              #endif//VERBOSE_MSG
-               // *** END OF sending preliminary warning ***
-            }
-            // *** END OF Merging results ***
-         }
-         // *** END OF detection ***
-        #endif//OFLINE_MODE
+         printf("Previous: %u\nActual: %u\n",inverse_index_addition,index_addition);
+      } else if (start_of_actual_flow <= (start_of_next_timebin - TIMEBIN_SIZE)){
+         //actual flow belongs to previous timebin (... - start_of_actual_timebin)
+         flip_index = inverse_index_addition;
+      } else {
+         //actual flow belongs to actual timebin (start_of_actual_timebin - start_of_next_timebin)
+         flip_index = index_addition;
+      }
+      outs[flip_index]<<start_of_actual_flow<<"\n";
+     #else
+                // *** One timebin completed ***
+      if (start_of_actual_flow > start_of_next_timebin){// end of actual timebin, start of new one
+         out_file.close();
+         filename.str("");
+         filename.clear();
+         filename<<"tb2."<<start_of_next_timebin;
+         out_file.open(filename.str().c_str());
 
          ++timebin_counter;
          start_of_next_timebin += TIMEBIN_SIZE;
          round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
-
-        #ifdef OFFLINE_MODE
-         if (timebin_counter >= WORKING_TIMEBIN_WINDOW_SIZE){
-           #ifdef VERBOSE_MSG //verbose
-            printf("\n\nData matrix is complete: \n"
-                   "\t%u Hash functions (number of matrices)\n"
-                   "\t%u Timebins (rows of one matrix)\n"
-                   "\t%u Sketch size (*%u (number of features) = columns of one matrix)\n\n",
-                   NUMBER_OF_HASH_FUNCTION, timebin_counter, SKETCH_SIZE, NUMBER_OF_FEATURES);
-           #endif//VERBOSE_MSG
-            stop = 1;
-            break;
-         }
-        #endif//OFFLINE_MODE
-
-        #ifdef VERBOSE_MSG //verbose
-         printf("\n\nStart of %u. timebin in %u----------------",timebin_counter,start_of_next_timebin);
-        #endif//VERBOSE_MSG
-
-         memset(sip_sketches, 0, sizeof(sip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(dip_sketches, 0, sizeof(dip_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * ADDRESS_SKETCH_WIDTH);
-         memset(sp_sketches, 0, sizeof(sp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
-         memset(packet_counts, 0, sizeof(packet_counts[0][0]) * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
       }
       //   *** END OF One timebin completed ***
+      out_file<<start_of_actual_flow<<"\n";
 
-      //   *** Flow reading & structure filling ***
-      // adding feature occurrence in all sketches
-      for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-         row_in_sketch = get_row_in_sketch(in_tmplt, in_rec, seeds[i]);
-
-         sip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_IP),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dip_sketches[i][row_in_sketch]
-                     [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_IP),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % ADDRESS_SKETCH_WIDTH]
-                     += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         sp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_SRC_PORT),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_SRC_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-         dp_sketches[i][row_in_sketch]
-                    [SuperFastHash((char *)ur_get_ptr(in_tmplt, in_rec, UR_DST_PORT),
-                                    sizeof(ur_get(in_tmplt, in_rec, UR_DST_IP)), SEED_DEFAULT) % PORT_SKETCH_WIDTH]
-                    += ur_get(in_tmplt, in_rec, UR_PACKETS);
-
-         packet_counts[i][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
-      }
-      // END OF Adding feature occurrence in all sketches ***
-      //   *** END OF flow reading & structure filling ***
-
-     //   *** END OF Timebin division ***
-
+     #endif
    // ***** END OF Process the data *****
    }
    // ***** END OF Main processing loop *****
-
+   outs[inverse_index_addition].close();
    // ***** Cleanup *****
-
   #ifdef NSS_BY_DELTA_TEST
    delete [] data2pc_projection;
   #endif//NSS_BY_DELTA_TEST
@@ -1117,18 +864,18 @@ int main(int argc, char **argv)
   #endif//USE_JOINT_MATRIX_OP
 
   #ifdef FLOW_STATS
-   // corrections
-   flow_ok += (timebin_counter + 1);
-   flow_over -= (timebin_counter + 1);
    printf("\n\n####################################################\n"
           " FLOW STATISTICS:\n"
           "----------------------------------------------------\n"
+          "\tFlow from first flow (dont care - hard to count):%u\n"
           "\tFlow OK:%u\n"
           "\tFlow under:%u - under measure:%u\n"
           "\tFlow over::%u\n"
+          "\tFlow bad::%u\n"
           "\tFlow total::%u\n"
           "####################################################\n\n",
-          flow_ok, flow_under, (under_measure/flow_under), flow_over, (flow_ok+flow_under+flow_over));
+          flow_dont_care, flow_ok, flow_under, (under_measure/flow_under),
+          flow_over, flow_bad, (flow_dont_care+flow_ok+flow_under+flow_over+flow_bad));
   #endif//FLOW_STATS
 
    // Do all necessary cleanup before exiting
