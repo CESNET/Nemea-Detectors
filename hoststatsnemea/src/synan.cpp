@@ -5,7 +5,12 @@
 
 #include "synan.h"
 #include "lexan.h"
-#include "hoststats.h"
+
+#ifdef STREAM_VERSION
+#include "stream_version/hoststats.h"
+#else
+#include "timeslot_version/hoststats.h"
+#endif
 
 #define DECIMAL_BASE 10
 

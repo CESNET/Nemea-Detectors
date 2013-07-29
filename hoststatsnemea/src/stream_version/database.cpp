@@ -7,8 +7,8 @@
 #include <sys/stat.h>
 #include <algorithm>
 
-#include "aux_func.h"
-#include "config.h"
+#include "../aux_func.h"
+#include "../config.h"
 #include "database.h"
 
 using namespace std;
@@ -18,6 +18,7 @@ const char *struct_spec = "address,16"
    ";in_syn_cnt,4;out_syn_cnt,4;in_ack_cnt,4;out_ack_cnt,4;in_fin_cnt,4;out_fin_cnt,4"
    ";in_rst_cnt,4;out_rst_cnt,4;in_psh_cnt,4;out_psh_cnt,4;in_urg_cnt,4;out_urg_cnt,4"
    ";in_uniqueips,4;out_uniqueips,4;in_linkbitfield,8;out_linkbitfield,8"
+   ";last_record_timestamp,4;first_record_timestamp,4"
    "\n";
 
 

@@ -18,14 +18,14 @@
 #include <string>
 #include <sstream>
 #include "hoststats.h"
-#include "aux_func.h"
+#include "../aux_func.h"
 #include "processdata.h"
-#include "config.h"
+#include "../config.h"
 #include "requesthandlers.h"
 #include "profile.h"
 //#include "sshdetection.h"
 
-#include "BloomFilter.hpp"
+#include "../BloomFilter.hpp"
 //TRAP
 extern "C" {
    #include <libtrap/trap.h>
@@ -56,6 +56,7 @@ int log_upto = LOG_ERR; // Log up to level
 static int terminated = 0;
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
+extern pthread_mutex_t detector_start;
 
 ////////////////////////////
 // Module global variables
@@ -282,11 +283,6 @@ int main(int argc, char *argv[])
    // Default configuration may be overwritten by arguments
    arguments(argc, argv);
 
-   signal(SIGTERM, terminate_daemon);
-   signal(SIGINT, terminate_daemon);
-   /* reload configuration signal: */
-   signal(SIGHUP, terminate_daemon);
-
    /* Set logmask if used */
    string logmask = config->getValue("log-upto-level");
    if (!logmask.empty()) {
@@ -321,7 +317,8 @@ int main(int argc, char *argv[])
             delete profiles[i--];
          return 1;
       }
-      profiles.back()->bf = new bloom_filter(bp);
+      profiles.back()->bf_active = new bloom_filter(bp);
+      profiles.back()->bf_learn = new bloom_filter(bp);
    }
 
    // ***** Initialization done, start server *****
@@ -397,27 +394,41 @@ int main(int argc, char *argv[])
    }
    trap_free_ifc_spec(ifc_spec);
 
-   // Initialize mutex
-   stat_map_mutex_t mutex;
+   signal(SIGTERM, terminate_daemon);
+   signal(SIGINT, terminate_daemon);
+   /* reload configuration signal: */
+   signal(SIGHUP, terminate_daemon);
 
-   // Create threads for get data from TRAP
-   pthread_t data_reader_thread, data_process_thread;
+   // Create threads for data from TRAP
+   thread_share_t share;
+
    if (!terminated) {
-      rc = pthread_create(&data_reader_thread, NULL, &data_reader_trap, (void *) &mutex);
+      rc = pthread_create(&share.data_reader_thread, NULL, &data_reader_trap, (void *) &share);
       if (rc) {
          trap_terminate();
          terminated = 1;
       }
 
-      rc = pthread_create(&data_process_thread, NULL, &data_process_trap, (void *) &mutex);
+      pthread_mutex_lock(&detector_start);
+      rc = pthread_create(&share.data_process_thread, NULL, &data_process_trap, (void *) &share);
       if (rc) {
          trap_terminate();
          terminated = 1;
       }
    }
 
-
    // ***** Server *****
+   // Block signal SIGALRM
+   sigset_t signal_mask;
+   sigemptyset(&signal_mask);
+   sigaddset(&signal_mask, SIGALRM);
+
+   rc = pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
+   if (rc != 0) {
+      trap_terminate();
+      terminated = 1;
+   }
+
    // Create services for requests from frontend
    maxfd = 0;
    FD_ZERO(&allset);
@@ -465,12 +476,13 @@ int main(int argc, char *argv[])
    }
 
    //Wait until end of TRAP threads
-   pthread_join(data_process_thread, NULL);
-   pthread_join(data_reader_thread, NULL);
+   pthread_join(share.data_process_thread, NULL);
+   pthread_join(share.data_reader_thread, NULL);
 
    // Delete profiles
    for (int i = 0; i < profiles.size(); i++) {
-      delete profiles[i]->bf;
+      delete profiles[i]->bf_active;
+      delete profiles[i]->bf_learn;
       delete profiles[i];
    }
    

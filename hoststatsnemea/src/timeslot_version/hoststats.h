@@ -7,8 +7,8 @@
 #include <vector>
 #include <pthread.h>
 
-#include "../../../unirec/ipaddr_cpp.h"
-#include "../../../unirec/ipaddr.h"
+#include "../../../../unirec/ipaddr_cpp.h"
+#include "../../../../unirec/ipaddr.h"
 
 /////////////////////////////////////////////////////////////////
 // Global struct and type definitions

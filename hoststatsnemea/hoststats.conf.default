@@ -30,3 +30,12 @@ detection-log     = /data/hoststats/log/
 # Verbosity level, see syslog.h(0p) for the list of priorities
 log-upto-level    = LOG_INFO
 #log-upto-level    = LOG_DEBUG
+
+##########################
+# FOR STREAM VERSION ONLY:
+# TODO: write more info...
+# Active and inactive timeouts are in seconds.
+timeout-active         = 300
+timeout-inactive       = 30
+detectors-starts-pause = 10
+

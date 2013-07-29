@@ -3,8 +3,8 @@
 
 #include <string>
 #include "hoststats.h"
-#include "BloomFilter.hpp"
-#include "../../../unirec/unirec.h"
+#include "../BloomFilter.hpp"
+#include "../../../../unirec/unirec.h"
 
 /*
 void load_flows(std::vector<std::string> source_filenames,
@@ -21,9 +21,9 @@ void process_data(const std::string& timestamp);
 
 void swap_all_stat_maps(const uint32_t timeslot);
 
-void *data_reader_trap(void *mutex_map);
+void *data_reader_trap(void *mutex_map); //for thread
 
-void *data_process_trap(void *mutex_map);
+void *data_process_trap(void *mutex_map);	//for thread
 
 void new_trap_data(const void *record);
 

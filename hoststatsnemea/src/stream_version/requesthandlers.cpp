@@ -8,14 +8,14 @@
 #include <algorithm>
 #include <arpa/inet.h>
 
-#include "requesthandlers.h"
 #include "hoststats.h"
-#include "aux_func.h"
+#include "requesthandlers.h"
+#include "../aux_func.h"
 #include "profile.h"
-#include "synan.h"
-#include "config.h"
+#include "../synan.h"
+#include "../config.h"
 
-#include "../../../unirec/ipaddr_cpp.h"
+#include "../../../../unirec/ipaddr_cpp.h"
 
 using namespace std;
 
@@ -62,6 +62,8 @@ field_info_t get_field_info(const string &field_name)
    FIELD(out_urg_cnt);
    FIELD(in_uniqueips);
    FIELD(out_uniqueips);
+   FIELD(last_record_timestamp);
+   FIELD(first_record_timestamp);
    #undef FIELD
    return field_info_t(0, 0);
 }

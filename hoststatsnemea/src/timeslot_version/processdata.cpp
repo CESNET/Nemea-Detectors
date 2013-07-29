@@ -11,17 +11,15 @@
 
 #include "hoststats.h"
 #include "processdata.h"
-#include "aux_func.h" // various simple conversion functions
-//#include "nfreader.h" // nf_file_t, master_record_t, nf_open(), nf_next_record(), nf_close()
-#include "config.h"
+#include "../aux_func.h" // various simple conversion functions
+#include "../config.h"
 #include "profile.h"
 #include "database.h"
-#include "wardenreport.h"
-#include "eventhandler.h"
-#include "BloomFilter.hpp"
-#include "detectionrules.h"
+#include "../wardenreport.h"
+#include "../eventhandler.h"
+#include "../BloomFilter.hpp"
+#include "../detectionrules.h"
 
-//#include "../../../unirec/ipaddr.h"
 extern "C" {
    #include <libtrap/trap.h>
 }

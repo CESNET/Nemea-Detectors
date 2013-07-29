@@ -1,6 +1,14 @@
 #include "detectionrules.h"
 #include "eventhandler.h"
-#include "profile.h"
+
+#ifdef STREAM_VERSION
+#include "stream_version/profile.h"
+extern uint32_t active_timeout;
+extern uint32_t inactive_timeout;
+extern uint32_t hs_time; 
+#else
+#include "timeslot_version/profile.h"
+#endif
 
 using namespace std;
 
@@ -8,18 +16,32 @@ using namespace std;
 
 ////////////////////////////////////
 // Generic rules for all traffic
-void check_rules(const Profile* profile)
+void check_rules(Profile* profile)
 {
    const string &timeslot = profile->current_timeslot;
-   const stat_map_t &stat_map = *(profile->stat_map_to_check);
+   stat_map_t &stat_map = *(profile->stat_map_to_check);
    
    log(LOG_DEBUG, "check_rules()");
-   
-   for (stat_map_citer it = stat_map.begin(); it != stat_map.end(); ++it)
+
+#ifdef STREAM_VERSION
+   for (stat_map_iter it = stat_map.begin(); it != stat_map.end(); ) {
+
+      pthread_mutex_lock(&profile->mtx);
+      if (!(it->second.first_record_timestamp + active_timeout < hs_time) &&
+          !(it->second.last_record_timestamp + inactive_timeout < hs_time))
+      {
+         ++it;
+         pthread_mutex_unlock(&profile->mtx);
+         continue;
+      }
+#else
+   for (stat_map_iter it = stat_map.begin(); it != stat_map.end(); it++)
    {
+#endif
+
       const hosts_key_t &addr = it->first;
       const hosts_record_t &rec = it->second;
-      
+
       // horizontal SYN scan (scanning address)
       if (rec.out_syn_cnt > 200 &&
           rec.out_syn_cnt > 20*rec.out_ack_cnt && // most of outgoing flows are SYN-only (no ACKs)
@@ -64,6 +86,11 @@ void check_rules(const Profile* profile)
                      rec.out_flows, rec.out_packets, rec.in_flows, rec.in_packets, rec.out_uniqueips);
          reportEvent(evt);
       }
+
+   #ifdef STREAM_VERSION
+      stat_map.erase(it++);
+      pthread_mutex_unlock(&profile->mtx);
+   #endif
    }
 }
 
@@ -86,14 +113,29 @@ void check_rules(const Profile* profile)
 #define BRUTEFORCE_DATA_MIN_PACKET_RATIO 10
 #define BRUTEFORCE_DATA_MAX_PACKET_RATIO 25
 
-void check_rules_ssh(const Profile* profile)
+void check_rules_ssh(Profile* profile)
 {
    const string &timeslot = profile->current_timeslot;
-   const stat_map_t &stat_map = *(profile->stat_map_to_check);
+   stat_map_t &stat_map = *(profile->stat_map_to_check);
    
    log(LOG_DEBUG, "check_rules_ssh()");
    
-   for (stat_map_citer it=stat_map.begin(); it!=stat_map.end(); ++it) {
+#ifdef STREAM_VERSION
+   for (stat_map_iter it = stat_map.begin(); it != stat_map.end(); ) {
+      // TODO: make a function/definition from this code
+
+      pthread_mutex_lock(&profile->mtx);
+      if (!(it->second.first_record_timestamp + active_timeout < hs_time) &&
+          !(it->second.last_record_timestamp + inactive_timeout < hs_time))
+      {
+         ++it;
+         pthread_mutex_unlock(&profile->mtx);
+         continue;
+      }
+#else
+   for (stat_map_iter it = stat_map.begin(); it != stat_map.end(); it++)
+   {
+#endif
       const hosts_key_t &addr = it->first;
       const hosts_record_t &rec = it->second;
       
@@ -177,7 +219,11 @@ void check_rules_ssh(const Profile* profile)
          //evt.setNote("");
          reportEvent(evt);
       } 
-      
+#ifdef STREAM_VERSION
+      stat_map.erase(it++);
+      pthread_mutex_unlock(&profile->mtx);
+#endif
+
    }
    
 }

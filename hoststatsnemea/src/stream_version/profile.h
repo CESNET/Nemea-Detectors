@@ -1,11 +1,12 @@
 #ifndef _PROFILE_H_
 #define _PROFILE_H_
 
-#include "hoststats.h"
-#include "database.h"
 #include <string>
 #include <vector>
-#include "BloomFilter.hpp"
+#include "../BloomFilter.hpp"
+
+#include "hoststats.h"
+#include "database.h"
 
 class Profile {
    flow_filter_func_ptr flow_filter_func;
@@ -14,9 +15,10 @@ public:
    std::string desc;
    Database database;
    std::string current_timeslot;
-   stat_map_t stat_map_1, stat_map_2;
-   stat_map_t *stat_map_to_load, *stat_map_to_check;
-   bloom_filter *bf;
+   stat_map_t stat_map;
+   stat_map_t *stat_map_to_check;
+   bloom_filter *bf_active, *bf_learn;
+   pthread_mutex_t mtx;
    
    // Constructor
    Profile(flow_filter_func_ptr flow_filter_func, const std::string &name, const std::string &desc = "");
@@ -36,9 +38,11 @@ public:
    // Release all stats loaded in memory
    int release();
 
-   // Swap pointers to maps (for store and check)
    // @timeslot - timeslot of currently loaded flows 
-   void swap_stat_maps(const std::string &timeslot);
+   void change_timeslot(const std::string &new_timeslot);
+
+   // Clear active BloomFilter and swap pointers
+   void swap_bf();
 };
 
 // Global vector of profiles available
