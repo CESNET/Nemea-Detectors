@@ -516,6 +516,10 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
             && (((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
             src[v4_numeric].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+        } else if (src.count(v4_numeric) 
+                   && (((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) >= rw_time)) {
+            src[v4_numeric].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         } else {
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
@@ -590,6 +594,11 @@ int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t
             && ((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL)
                  - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) < rw_time) {
             src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+        } else if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
+                   && ((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL)
+                   - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) >= rw_time) {
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
         } else {
             sym_src_t src_rec;
