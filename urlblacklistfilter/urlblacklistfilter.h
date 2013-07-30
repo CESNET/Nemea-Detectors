@@ -80,15 +80,23 @@ extern "C" {
  */
 #define URL_CLEAR 0
 
+/**
+ * Structure of item used in update operations.
+ */
 typedef struct {
-    uint32_t url_hash;
-    uint8_t bl;
+    /*@{*/
+    uint32_t url_hash; /**< Hash of the loaded URL */
+    uint8_t bl; /**< Source blacklist of the URL */
+    /*@}*/
 } upd_item_t;
 
 /*
  * Function for loading source files.
  */
-int load_url(cc_hash_table_t& blacklist, std::string& path);
+
+int load_url(cc_hash_table_t& blacklist, const char* path);
+
+//int load_url(cc_hash_table_t& blacklist, std::string& path);
 
 /*
  * Function for checking records.

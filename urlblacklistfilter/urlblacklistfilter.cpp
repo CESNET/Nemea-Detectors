@@ -1,6 +1,6 @@
 /**
- * \file ipblacklistfilter.cpp
- * \brief Main module for IPBlackLIstDetector.
+ * \file urlblacklistfilter.cpp
+ * \brief Main module for URLBlackLIstDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
  */
@@ -62,6 +62,7 @@ extern "C" {
 #include "../../unirec/unirec.h"
 #include "urlblacklistfilter.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../common/super_fast_hash/super_fast_hash.h"
 
 #define DEBUG 1
 
@@ -70,14 +71,13 @@ using namespace std;
 trap_module_info_t module_info = {
     "IP blacklist detection module", // Module name
     // Module description
-    "Module recieves the UniRec record and checks if the stored source address\n"
-    "or destination address isn't present in any blacklist that are available.\n"
-    "If any of the addresses is blacklisted the record is changed by adding \n"
-    "a number of the list which blacklisted the address. UniRec with this \n"
-    "flag is then sent to the next module.\n"
+    "Module recieves the UniRec record and checks if the URL in record isn't\n"
+    "present in any blacklist that are available. If so the module creates\n"
+    "a detection report (UniRec) with blacklist where the URL was found.\n"
+    "The report is the send to further processing.\n"
     "Interfaces:\n"
-    "   Inputs: 1 (unirec record)\n"
-    "   Outputs: 1 (unirec record)\n", 
+    "   Inputs: 1 (UniRec record)\n"
+    "   Outputs: 1 (UniRec record)\n", 
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -99,18 +99,18 @@ void signal_handler(int signal)
     }
 }
 
-
 /**
  * Function for loading source files.
- *
  * Function gets path to the directory with source files and use these to fill the 
  * given blacklist with URLs. Since URL can have variable length its hashed first 
  * and this hash used in blacklist for all operations.
  *
+ * @param blacklist Blacklist table to be filled.
+ * @param path Path to the directory with sources.
+ * @return BLIST_LOAD_ERROR if directory cannot be accessed, ALL_OK otherwise.
  */
-int load_url(cc_hash_table_t& blacklist, string& path)
+int load_url(cc_hash_table_t& blacklist, const char* path)
 {
-
     DIR* dp;
     struct dirent *file;
 
@@ -120,7 +120,7 @@ int load_url(cc_hash_table_t& blacklist, string& path)
     uint32_t hashed_url;
     uint8_t bl;
 
-    dp = opendir(path.c_str());
+    dp = opendir(path);
 
     if (dp == NULL) { // directory cannot be openned
         cerr << "ERROR: Cannot open directory " << path << ". Directory doesn't exist";
@@ -145,8 +145,8 @@ int load_url(cc_hash_table_t& blacklist, string& path)
         while (!in.eof()) {
             getline(in, line);
 
-            /*TODO: hash the url*/
-            // hashed_url = sfhash(...)
+            // hash the url
+            hashed_url = SuperFastHash(line.c_str(), line.length());
 
             bl = strtoul(file->d_name, NULL, 0);
             if (bl == 0x0) {
@@ -156,7 +156,7 @@ int load_url(cc_hash_table_t& blacklist, string& path)
             }
 
             // insert to table
-            ht_insert(&blacklist, (char *)  &hashed_url, &bl);
+            ht_insert(&blacklist, (char *) &hashed_url, &bl);
         }
         in.close();
     }
@@ -165,22 +165,18 @@ int load_url(cc_hash_table_t& blacklist, string& path)
     return ALL_OK;
 }
 
-/*
+/**
  * Function for loading updates.
- * Function goes through all files in given directory and loads their content
- * (ip addresses/prefixes) for updating its classification tables. Records are 
- * sorted to two update lists based on adding/removal operation. These list are 
- * used for both V4 and V6 addresses and both for pure addresses and prefixes.
- * The function also checks whether the record in file is valid ip address 
- * or if the file contains valid data. Invalid records/files are automatically 
- * skipped.
+ * Function gets path to the directory with update files and loads the into 
+ * the vectors used for update operation. Loaded entries are sorted depending 
+ * on whterher they are removed from blacklist or added to blacklist.
  *
- * @param update_list_a Vector with entries that will be added or updated.
- * @param update_list_rm Vector with entries that will be removed.
+ * @param add_upd Vector with entries that will be added or updated.
+ * @param rm_upd Vector with entries that will be removed.
  * @param path Path to the directory with updates.
- * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
+ * @return ALL_OK if everything goes well, BLIST_LOAD_ERROR if directory cannot be accessed.
  */
-int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, string& path)
+int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const char* path)
 {
     DIR* dp;
     struct dirent *file;
@@ -192,7 +188,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, string&
     upd_item_t upd;
     bool add_rem = false;
 
-    dp = opendir(path.c_str());
+    dp = opendir(path);
 
     if (dp == NULL) { // directory cannot be openned
         cerr << "ERROR: Cannot open directory " << path << ". Directory doesn't exist";
@@ -222,15 +218,17 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, string&
                 continue;
             }
 
-            /*TODO: hash the url*/
-            // upd.url_hash = sfhash(...)
+            // hash the URL
+            upd.url_hash = SuperFastHash(line.c_str(), line.length());
 
+            // fill blacklist number
             upd.bl = strtoul(file->d_name, NULL, 0);
             if (upd.bl == 0x0) {
                 cerr << "WARNING: Cannot determine source blacklist. Will be skipped." << endl;
                 in.close();
                 break;
             }
+            // add/update or remove ?
             if (add_rem) {
                 rm_upd.push_back(upd);
             } else {
@@ -244,29 +242,67 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, string&
     return ALL_OK;
 }
 
+/**
+ * Function for checking the URL.
+ * Function gets the UniRec record with URL to check and tries to find it 
+ * in the given blacklist. If the function succeedes then the appropriate 
+ * field in detection record is filled with the number of blacklist asociated 
+ * with the URL. If the URL is clean nothing is done.
+ *
+ * @param blacklist Blacklist used for checking.
+ * @param in Template of input UniRec (record).
+ * @param out Template of output UniRec (detect).
+ * @param record Record with URL for checking.
+ * @param detect Record for reporting detection of blacklisted URL.
+ * @return BLACKLISTED if the address is found in table, URL_CLEAR otherwise.
+ */
 int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect)
 {
+    // get pointer to URL
     char* url = ur_get_dyn(in, record, UR_URL);
 
     uint8_t* bl = NULL;
-/*    uint32_t hash_url = sfhash(...); */
-//    bl = ht_get(&blacklist, hash_url);
 
-    if (bl = NULL) {
-        // mark url
+    // hash the recieved URL
+    uint32_t hash_url = SuperFastHash(url, ur_get_dyn_size(in, record, UR_URL));
+
+    // try to find the URL in table.
+    bl = (uint8_t *) ht_get(&blacklist, (char *) &hash_url);
+
+    if (bl != NULL) {
+        // we found this URL in blacklist -- fill the detection record
+        // ur_set(out, detect, /* UR_URL_BLACKLIST */);
         return BLACKLISTED;
     }
+
+    // URL was not found
     return URL_CLEAR;
 }
 
-void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
+/**
+ * Function for updating the blacklist (remove).
+ * Function removes all items specified in the vector of updates from 
+ * the table since these items are no longer valid.
+ *
+ * @param blacklist Blacklist to be updated.
+ * @param rm Vector with items to remove.
+ */
+static void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
 {
     for (int i = 0; i < rm.size(); i++) {
         ht_remove_by_key(&blacklist, (char *) &rm[i].url_hash);
     }
 }
 
-void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
+/**
+ * Function for updating the blacklist (add/update).
+ * Function adds the items specified in the vector of updates to 
+ * the table. If the item already exists it writes the new data.
+ *
+ * @param blacklist Blacklist to be updated.
+ * @param add Vector with items to add or update.
+ */
+static void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
 {
     int bl_index;
     for (int i = 0; i < add.size(); i++) {
@@ -302,9 +338,11 @@ int main (int argc, char** argv)
         ur_free_template(det);
         return EXIT_FAILURE;
     }
-
+    
+    // initialize TRAP interface (nothing special is needed so we can use the macro
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
+    // check if the directory with URLs is specified
     if (argc != 2) {
         cerr << "ERROR: Directory with sources not specified. Unable to continue." << endl;
         ht_destroy(&blacklist);
@@ -315,7 +353,8 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    string source = string(argv[1]);
+    // load source files
+    const char* source = argv[1];
     retval = load_url(blacklist, source);
 
     if (retval = BLIST_LOAD_ERROR) {
@@ -335,6 +374,7 @@ int main (int argc, char** argv)
     const void *data;
     uint16_t data_size;
 
+    // update vectors
     vector<upd_item_t> add_update;
     vector<upd_item_t> rm_update;
     
