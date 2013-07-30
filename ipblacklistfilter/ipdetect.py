@@ -50,7 +50,7 @@ from funcs import perror
 from funcs import read_config
 
 program_prefix = sys.argv[0]
-main_program = os.getcwd() + '/blacklistfilter'
+main_program = os.getcwd() + '/ipblacklistfilter'
 
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
 
