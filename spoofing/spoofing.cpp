@@ -60,7 +60,6 @@ extern "C" {
 #endif
 #include "../../unirec/unirec.h"
 #include "spoofing.h"
-#include <libtrap/trap.h>
 
 #define DEBUG 1
 
@@ -86,7 +85,7 @@ trap_module_info_t module_info = {
     "   -s <sec>         Time before updating records for symetric routing \n"
     "                    filter. Default value is 45 seconds.\n"
     "   -t <num>         Threshold for reporting spoofed addresses from new \n"
-    "                    filter. Default value is 1000 flows.\n",
+    "                    filter. Default value is 100 000 000 flows.\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -513,13 +512,17 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
         v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_DST_IP))) & 0x00FFFFFF;
 
         if (src.count(v4_numeric)
-            && (((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL) - src[v4_numeric].timestamp) < rw_time)) {
+            && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - src[v4_numeric].timestamp) < rw_time)) {
             src[v4_numeric].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        } else if (src.count(v4_numeric) 
+                   && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - src[v4_numeric].timestamp) >= rw_time)) {
+            src[v4_numeric].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
         } else {
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
             src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
         }
 
@@ -587,14 +590,19 @@ int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t
         // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000ULL;
 
         if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
-            && ((ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL)
+            && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32)
                  - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) < rw_time) {
             src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        } else if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
+                   && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32)
+                   - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) >= rw_time) {
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
         } else {
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
             src.insert(pair<uint64_t, sym_src_t>(ur_get(ur_tmp, record, UR_DST_IP).ui64[0], src_rec));
         }
 
@@ -700,8 +708,8 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
     if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
-        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
-        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
     }
 
     char ip_key[INET6_ADDRSTRLEN];
@@ -787,8 +795,8 @@ int check_new_flows_v6(ur_template_t *ur_tmp, const void *record, unsigned thres
     if (td > 0 && td > BF_SWAP_TIME) {
         swap_filters();
         clear_filters(filter[bf_learning]);
-        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST);
-        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST);
+        filter[bf_active].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        filter[bf_learning].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
     }
 
     char ip_key[INET6_ADDRSTRLEN];
@@ -1031,11 +1039,11 @@ int main (int argc, char** argv)
         // initialize the timestamp of bloom filters
         if (v4_flows[bf_active].timestamp == 0x0 
             && v4_flows[bf_learning].timestamp == 0x0) {
-            v4_flows[bf_active].timestamp = v4_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            v4_flows[bf_active].timestamp = v4_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) >> 32;
         }
         if (v6_flows[bf_active].timestamp == 0x0 
             && v6_flows[bf_learning].timestamp == 0x0) {
-            v6_flows[bf_active].timestamp = v6_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) & 0xFFFFFFFF00000000ULL;
+            v6_flows[bf_active].timestamp = v6_flows[bf_learning].timestamp = ur_get(templ, data, UR_TIME_FIRST) >> 32;
         }
         
 
