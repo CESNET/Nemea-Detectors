@@ -45,11 +45,13 @@
 #ifndef URLBLACKLISTFILTER_H
 #define URLBLACKLISTFILTER_H
 
+#include <string>
+#include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <string>
 #include "../../unirec/unirec.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
 
@@ -77,6 +79,11 @@ extern "C" {
  * Constant retuned by checking function if URL is clear.
  */
 #define URL_CLEAR 0
+
+typedef struct {
+    uint32_t url_hash;
+    uint8_t bl;
+} upd_item_t;
 
 /*
  * Function for loading source files.

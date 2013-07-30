@@ -102,18 +102,11 @@ void signal_handler(int signal)
 
 /**
  * Function for loading source files.
- * Function goes through all files in given directory and loads their content
- * (ip addresses/prefixes) to module's tables/vectors used for IP address
- * classification. Pure addresses are then saved in one hash table (both V4 
- * and V6), prefixes are put into separate vectors for according to their 
- * IP version. Vectors are then sorted for the purpose of binary search.
- * The function also checks whether the record in file is valid ip address 
- * or if the file contains valid data. Invalid records/files are automatically 
- * skipped.
  *
- * @param ip_bl Hash table for storing the addresses.
- * @param source_dir Path to the directory with IP addresses.
- * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
+ * Function gets path to the directory with source files and use these to fill the 
+ * given blacklist with URLs. Since URL can have variable length its hashed first 
+ * and this hash used in blacklist for all operations.
+ *
  */
 int load_url(cc_hash_table_t& blacklist, string& path)
 {
@@ -187,8 +180,67 @@ int load_url(cc_hash_table_t& blacklist, string& path)
  * @param path Path to the directory with updates.
  * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
  */
-int load_update()
+int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, string& path)
 {
+    DIR* dp;
+    struct dirent *file;
+
+    ifstream in;
+
+    string line;
+
+    upd_item_t upd;
+    bool add_rem = false;
+
+    dp = opendir(path.c_str());
+
+    if (dp == NULL) { // directory cannot be openned
+        cerr << "ERROR: Cannot open directory " << path << ". Directory doesn't exist";
+        cerr << " or you don't have proper permissions. Unable to continue." << endl;
+        return BLIST_LOAD_ERROR;
+    }
+
+    while (file = readdir(dp)) {
+
+        if (file->d_name[0] == '.' || file->d_type == 0x4) {
+            // exclude hidden files, directory references and recursive directories
+            continue;
+        }
+
+        in.open(file->d_name, ifstream::in);
+
+        if (!in.is_open()) {
+            cerr << "WARNING: File " << file->d_name << " cannot be opened. Will be skipped." << endl;
+            continue;
+        }
+
+        while (!in.eof()) {
+            getline(in, line);
+
+            if (line == "#remove") {
+                add_rem = true;
+                continue;
+            }
+
+            /*TODO: hash the url*/
+            // upd.url_hash = sfhash(...)
+
+            upd.bl = strtoul(file->d_name, NULL, 0);
+            if (upd.bl == 0x0) {
+                cerr << "WARNING: Cannot determine source blacklist. Will be skipped." << endl;
+                in.close();
+                break;
+            }
+            if (add_rem) {
+                rm_upd.push_back(upd);
+            } else {
+                add_upd.push_back(upd);
+            }
+        }
+        in.close();
+    }
+
+    closedir(dp);
     return ALL_OK;
 }
 
@@ -205,6 +257,25 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
         return BLACKLISTED;
     }
     return URL_CLEAR;
+}
+
+void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
+{
+    for (int i = 0; i < rm.size(); i++) {
+        ht_remove_by_key(&blacklist, (char *) &rm[i].url_hash);
+    }
+}
+
+void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
+{
+    int bl_index;
+    for (int i = 0; i < add.size(); i++) {
+        if ((bl_index = ht_get_index(&blacklist, (char *) &add[i].url_hash)) >= 0) {
+            *((uint8_t *) blacklist.table[bl_index].data) = add[i].bl;
+        } else {
+            ht_insert(&blacklist, (char *) &add[i].url_hash, &add[i].bl);
+        }
+    }
 }
 
 /*
@@ -263,6 +334,9 @@ int main (int argc, char** argv)
 
     const void *data;
     uint16_t data_size;
+
+    vector<upd_item_t> add_update;
+    vector<upd_item_t> rm_update;
     
     // ***** Main processing loop *****
     while (!stop) {
@@ -293,7 +367,24 @@ int main (int argc, char** argv)
 
         // should update?
         if (update) {
-            // update blacklists
+            retval = load_update(add_update, rm_update, source);
+
+            if (retval = BLIST_LOAD_ERROR) {
+                cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
+                update = 0;
+                continue;
+            }
+            
+            if (!rm_update.empty()) {
+                update_remove(blacklist, rm_update);
+            }
+            if (!add_update.empty()) {
+                update_add(blacklist, add_update);
+            }
+
+            rm_update.clear();
+            add_update.clear();
+            update = 0;       
         }
 
     }
