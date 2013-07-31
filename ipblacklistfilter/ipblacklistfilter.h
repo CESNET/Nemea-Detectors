@@ -1,5 +1,5 @@
 /**
- * \file blacklistfilter.h 
+ * \file ipblacklistfilter.h 
  * \brief IP blacklist detector for Nemea -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013

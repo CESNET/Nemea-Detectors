@@ -1,5 +1,5 @@
 /**
- * \file blacklistfilter.cpp
+ * \file ipblacklistfilter.cpp
  * \brief Main module for IPBlackLIstDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
@@ -62,7 +62,7 @@ extern "C" {
 }
 #endif
 #include "../../unirec/unirec.h"
-#include "blacklistfilter.h"
+#include "ipblacklistfilter.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
 
 #define DEBUG 1
@@ -194,7 +194,7 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
 #ifdef DEBUG
         cout << file->d_name << " " << (short) file->d_type << endl;
 #endif
-        if (file->d_name[0] == '.' || file->d_type != 0x8) {
+        if (file->d_name[0] == '.' || file->d_type == 0x4) {
             // we don't need references to direcotry itself and its parent
             continue;
         }
@@ -316,7 +316,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 #ifdef DEBUG
         cout << file->d_name << " " << (short) file->d_type << endl;
 #endif
-        if (file->d_name[0] == '.' || file->d_type != 0x8) {
+        if (file->d_name[0] == '.' || file->d_type == 0x4) {
             // we don't need references to direcotry itself and its parent or hidden files
             // and we also don't want to go recursively into another directories
             continue;
@@ -735,15 +735,7 @@ int main (int argc, char** argv)
 
 //    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
-                                                  "PROTOCOL,TIME_FIRST,TIME_LAST,"
-                                                  "PACKETS,BYTES,TCP_FLAGS,"
-                                                  "LINK_BIT_FIELD,ASTUTE_5T," 
-                                                  "ASTUTE_IP,ASTUTE_SRCIP,ASTUTE_DSTIP,"
-                                                  "ASTUTE_SRCPORT,ASTUTE_DSTPORT,"
-                                                  "EVENT_TYPE,SCALE,"
-                                                  "SRC_BLACKLIST,DST_BLACKLIST"
-                                                );
+    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
 
 
     // for use with prefixes (not implemented now)
@@ -779,20 +771,24 @@ int main (int argc, char** argv)
         return retval;
     }
 
+    // free interface specification structure
+    trap_free_ifc_spec(ifc_spec);
+
     // is directory with sources specified ? (should be in control script)
     if (argc != 2) {
         cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        trap_finalize();
         return EXIT_FAILURE;
     }
-    // free interface specification structure
-    trap_free_ifc_spec(ifc_spec);
 
     // set signal handling for termination
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
-    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), 16);
+    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), sizeof(ip_addr_t), REHASH_ENABLE);
 
     const void *data;
     uint16_t data_size;
@@ -936,7 +932,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
     out << count << " flows went through." << endl;
     out << bl_count << " were marked." << endl;
-    out.close;
+    out.close();
 #endif
     // clean up before termination
     if (detection != NULL) {
