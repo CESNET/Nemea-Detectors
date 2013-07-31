@@ -735,15 +735,7 @@ int main (int argc, char** argv)
 
 //    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,"
-                                                  "PROTOCOL,TIME_FIRST,TIME_LAST,"
-                                                  "PACKETS,BYTES,TCP_FLAGS,"
-                                                  "LINK_BIT_FIELD,ASTUTE_5T," 
-                                                  "ASTUTE_IP,ASTUTE_SRCIP,ASTUTE_DSTIP,"
-                                                  "ASTUTE_SRCPORT,ASTUTE_DSTPORT,"
-                                                  "EVENT_TYPE,SCALE,"
-                                                  "SRC_BLACKLIST,DST_BLACKLIST"
-                                                );
+    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
 
 
     // for use with prefixes (not implemented now)
@@ -796,7 +788,7 @@ int main (int argc, char** argv)
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
-    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), 16);
+    ht_init(&hash_blacklist, BL_HASH_SIZE, sizeof(ip_blist_t), sizeof(ip_addr_t), REHASH_ENABLE);
 
     const void *data;
     uint16_t data_size;

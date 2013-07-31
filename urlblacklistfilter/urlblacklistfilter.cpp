@@ -142,6 +142,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
             continue;
         }
 
+        // load file line by line
         while (!in.eof()) {
             getline(in, line);
 
@@ -210,6 +211,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
             continue;
         }
 
+        // load file line by line
         while (!in.eof()) {
             getline(in, line);
 
@@ -324,7 +326,7 @@ int main (int argc, char** argv)
 
     cc_hash_table_t blacklist;
 
-    ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), sizeof(uint32_t));
+    ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), sizeof(uint32_t), REHASH_ENABLE);
 
     ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,URL");
     ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>");
