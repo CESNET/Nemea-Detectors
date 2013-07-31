@@ -42,9 +42,9 @@
  */
 
 #include <vector>
-#include <map>
 #include "../../unirec/unirec.h"
 #include "BloomFilter.hpp"
+#include "../../common/cuckoo_hash/cuckoo_hash.h"
 
 #ifndef SPOOFING_H
 #define SPOOFING_H
@@ -94,6 +94,16 @@ extern "C" {
  */
 #define BF_SWAP_TIME 300
 
+/**
+ * Size of IPv4 symetric routing filter.
+ */
+#define V4_SYM_SIZE 2000000
+
+/**
+ * Size of IPv6symetric routing filter.
+ */
+#define V6_SYM_SIZE 1000000
+
 // structure definitions
 
 /**
@@ -123,18 +133,6 @@ typedef struct {
  * Vector used as a container of all prefixes.
  */
 typedef std::vector<ip_prefix_t> pref_list_t;
-
-/**
- * @typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
- * Map of links associated to source ip addresses (IPv4).
- */
-typedef std::map<unsigned, sym_src_t> v4_sym_sources_t;
-
-/**
- * @typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
- * Map of links associated to source ip addresses (IPv6).
- */
-typedef std::map<uint64_t, sym_src_t> v6_sym_sources_t;
 
 /**
  * Structure for new flow counter with bloom filter and counter
@@ -207,8 +205,8 @@ int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
  * using the same link for the communication then it considered legit.
  * Otherwise it is flagged as possible spoofing.
  */
-int check_symetry_v4(ur_template_t* ur_tmp, const void *record, v4_sym_sources_t& src, unsigned rw_time);
-int check_symetry_v6(ur_template_t* ur_tmp, const void *record, v6_sym_sources_t& src, unsigned rw_time);
+int check_symetry_v4(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& src, unsigned rw_time, ipv4_mask_map_t& m4);
+int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& src, unsigned rw_time, ipv6_mask_map_t& m6);
 
 /*
  * Functions for recording new incomming data flows.

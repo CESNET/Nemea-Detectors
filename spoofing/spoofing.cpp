@@ -60,8 +60,9 @@ extern "C" {
 #endif
 #include "../../unirec/unirec.h"
 #include "spoofing.h"
+#include "../../common/cuckoo_hash/cuckoo_hash.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 
 using namespace std;
@@ -113,7 +114,7 @@ inline void swap_filters()
  * @param length Length of the vector with prefixes. Filters are on the same indexes as their respective prefixes.
  * @param filters Set of Bloom filters to be created.
  */
-void create_nflow_filters(int length, flow_filter_t* filters)
+int create_nflow_filters(int length, flow_filter_t* filters)
 {
     for (int i = 0; i < length; i++) {
         bloom_parameters bp;
@@ -127,6 +128,9 @@ void create_nflow_filters(int length, flow_filter_t* filters)
         fca.sources = new bloom_filter(bp);
         fcl.sources = new bloom_filter(bp);
 
+        if (fca.sources == NULL || fcl.sources == NULL) {
+            return -1; 
+        }
         fca.count = fcl.count = 0;
        
         filters[bf_active].flows.push_back(fca);
@@ -134,6 +138,7 @@ void create_nflow_filters(int length, flow_filter_t* filters)
     }
     filters[bf_active].timestamp = 0x0;
     filters[bf_learning].timestamp = 0x0;
+    return 0;
 }
 
 /**
@@ -490,12 +495,13 @@ int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
  *
  * @param ur_tmp Template used for UniRec record.
  * @param record Record (UniRec format) that is being analyzed.
- * @param src Map with link masks associated to their respective sources.
+ * @param src Hash table with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
+ * @param m4 Array with IPv4 masks.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
-int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t& src, unsigned rw_time)
+int check_symetry_v4(ur_template_t *ur_tmp, const void *record, cc_hash_table_t& src, unsigned rw_time, ipv4_mask_map_t& m4)
 {
 
 #ifdef DEBUG
@@ -504,40 +510,43 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
     ip_to_str(&(ur_get(ur_tmp, record, UR_SRC_IP)), debug_ip_src);
     ip_to_str(&(ur_get(ur_tmp, record, UR_DST_IP)), debug_ip_dst);
 #endif
-    unsigned v4_numeric;
+
+    sym_src_t* route = NULL;
+    ip_addr_t ip;
 
     // check incomming/outgoing traffic
     if (ur_get(ur_tmp, record, UR_DIR_BIT_FIELD) == 0x0) {// outgoing trafic
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_DST_IP))) & 0x00FFFFFF;
-
-        if (src.count(v4_numeric)
-            && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - src[v4_numeric].timestamp) < rw_time)) {
-            src[v4_numeric].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-        } else if (src.count(v4_numeric) 
-                   && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - src[v4_numeric].timestamp) >= rw_time)) {
-            src[v4_numeric].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[v4_numeric].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        ip = ur_get(ur_tmp, record, UR_DST_IP);
+        ip.ui32[2] &= m4[24];
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        if (route != NULL && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) < rw_time)) {
+            route->link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            route->timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        } else if (route != NULL
+                   && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) >= rw_time)) {
+            route->link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            route->timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
         } else {
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-            src.insert(pair<int, sym_src_t>(v4_numeric, src_rec));
+            ht_insert(&src, (char *) ip.bytes, &src_rec);
         }
 
     } else { // incomming traffic --> check for validity
         // mask with 24-bit long prefix
-        v4_numeric = ip_get_v4_as_int(&(ur_get(ur_tmp, record, UR_SRC_IP))) & 0x00FFFFFF;
-
-        if (src.count(v4_numeric)) {
-            int valid = (src[v4_numeric].link) & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+        ip = ur_get(ur_tmp, record, UR_DST_IP);
+        ip.ui32[2] &= m4[24];
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        if (route != NULL) {
+            int valid = (route->link) & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
                 cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
                 cout << "Flow goes through " << (long long) ur_get(ur_tmp, record, UR_LINK_BIT_FIELD); 
-                cout << " while stored is " << (long long) src[v4_numeric].link  << endl;
+                cout << " while stored is " << (long long) route->link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;
@@ -568,13 +577,13 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, v4_sym_sources_t
  *
  * @param ur_tmp Template used for UniRec record.
  * @param record Record (UniRec format) that is being analyzed.
- * @param src Map with link masks associated to their respective sources.
+ * @param src Hash table with link masks associated to their respective sources.
  * @param rw_time Time before updating (rewriting) the link record in the map.
+ * @param m6 Array with IPv6 masks.
  * @return SPOOF_NEGATIVE if the route is symetric otherwise SPOOF_POSITIVE.
  */
 
-
-int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t& src, unsigned rw_time)
+int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t& src, unsigned rw_time, ipv6_mask_map_t& m6)
 {
 
 #ifdef DEBUG
@@ -584,40 +593,47 @@ int check_symetry_v6(ur_template_t *ur_tmp, const void *record, v6_sym_sources_t
     ip_to_str(&(ur_get(ur_tmp, record, UR_DST_IP)), debug_ip_dst);
 #endif
 
+    sym_src_t* route;
+    ip_addr_t ip;
+
     // check incomming/outgoing traffic
     if (ur_get(ur_tmp, record, UR_DIR_BIT_FIELD) == 0x0) {// outgoing traffic
+        ip = ur_get(ur_tmp, record, UR_DST_IP);
         // for future use with /48 prefix length
-        // record->dst_addr.ui64[0] &= 0xFFFFFFFFFFFF0000ULL;
+        // ip.ui64[0] &= m6[48][0];
+        ip.ui64[1] &= 0x0;
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
 
-        if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
-            && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32)
-                 - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) < rw_time) {
-            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-        } else if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])
-                   && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32)
-                   - src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp) >= rw_time) {
-            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
-            src[ur_get(ur_tmp, record, UR_DST_IP).ui64[0]].timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        if (route != NULL
+            && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) < rw_time) {
+            route->link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            route->timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+        } else if (route != NULL
+                   && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) >= rw_time) {
+            route->link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+            route->timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
         } else {
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-            src.insert(pair<uint64_t, sym_src_t>(ur_get(ur_tmp, record, UR_DST_IP).ui64[0], src_rec));
+            ht_insert(&src, (char *) ip.bytes, &src_rec);
         }
 
     } else { // incomming traffic --> check for validity
+        ip = ur_get(ur_tmp, record, UR_SRC_IP);
         // for future use with /48 prefix length
-        //record->src_addr.ui64[0] &= 0xFFFFFFFFFFFF0000ULL;
+        // ip.ui64[0] &= m6[48][0];
+        ip.ui64[1] &= 0x0;
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
 
-        if (src.count(ur_get(ur_tmp, record, UR_SRC_IP).ui64[0])) {
-            int valid = src[ur_get(ur_tmp, record, UR_SRC_IP).ui64[0]].link & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
+        if (route != NULL) {
+            int valid = route->link & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
                 //no valid link found => possible spoofing
 #ifdef  DEBUG
                 cout << debug_ip_src << " ---> " << debug_ip_dst << endl;
                 cout << "Flow goes through " << (long long) ur_get(ur_tmp, record, UR_LINK_BIT_FIELD); 
-                cout << " while stored is " << (long long) src[ur_get(ur_tmp, record, UR_SRC_IP).ui64[0]].link  << endl;
+                cout << " while stored is " << (long long) route->link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
                 return SPOOF_POSITIVE;
@@ -868,8 +884,8 @@ int main (int argc, char** argv)
     ipv4_mask_map_t v4_masks; // all possible IPv4 masks
     ipv6_mask_map_t v6_masks; // all possible IPv6 masks
 
-    v4_sym_sources_t v4_route_sym; // map of sources for symetric routes (IPv4)
-    v6_sym_sources_t v6_route_sym; // map of sources for symetric routes (IPv6)
+    cc_hash_table_t v4_route_sym; // map of sources for symetric routes (IPv4)
+    cc_hash_table_t v6_route_sym; // map of sources for symetric routes (IPv6)
 
     flow_filter_t v4_flows[2]; // Bloom filter structures for new flow filter (IPv4)
     flow_filter_t v6_flows[2]; // Bloom filter structures for new flow filter (IPv6)
@@ -935,6 +951,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
     if (!c_flag) {
         cout << "No other file with prefixes has been specified." << endl;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -971,6 +988,18 @@ int main (int argc, char** argv)
     create_v4_mask_map(v4_masks);    
     create_v6_mask_map(v6_masks);
 
+    if (ht_init(&v4_route_sym, V4_SYM_SIZE, sizeof(ip_addr_t), sizeof(sym_src_t), REHASH_DISABLE)) {
+        cerr << "ERROR: Symetric routing filters couldn't be initialized. Unable to continue." << endl;
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    if (ht_init(&v6_route_sym, V6_SYM_SIZE, sizeof(ip_addr_t), sizeof(sym_src_t), REHASH_DISABLE)) {
+        cerr << "ERROR: Symetric routing filters couldn't be initialized. Unable to continue." << endl;
+        ht_destroy(&v4_route_sym);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+
 #ifdef DEBUG
     unsigned v4 = 0;
     unsigned v6 = 0;
@@ -982,17 +1011,29 @@ int main (int argc, char** argv)
 
     // we don't have list of bogon prefixes loaded (usually first run)
     retval = load_pref(bogon_list_v4, bogon_list_v6, bog_filename.c_str());
-
-    if (c_flag)
-        retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
+    retval = load_pref(spec_list_v4, spec_list_v6, cnet_filename.c_str());
 
     if (retval == PREFIX_FILE_ERROR) {
         return retval;
     }
 
     // create Bloom filters
-    create_nflow_filters(spec_list_v4.size(), v4_flows);
-    create_nflow_filters(spec_list_v6.size(), v6_flows);
+    if (create_nflow_filters(spec_list_v4.size(), v4_flows)) {
+        cerr << "ERROR: Unable to create bloom filters. Unable to continue." << endl;
+        ht_destroy(&v4_route_sym);
+        ht_destroy(&v6_route_sym);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+
+    if (create_nflow_filters(spec_list_v6.size(), v6_flows)) {
+        cerr << "ERROR: Unable to create bloom filters. Unable to continue." << endl;
+        destroy_filters(v4_flows);
+        ht_destroy(&v4_route_sym);
+        ht_destroy(&v6_route_sym);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
 
 #ifdef DEBUG
     cout << "Bloom filters created. " << endl;
@@ -1050,14 +1091,14 @@ int main (int argc, char** argv)
         // ***** 1. bogon and specific prefix filter *****
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = v4_bogon_filter(templ, data, bogon_list_v4, v4_masks);
-            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
-                retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
-            }
+//            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
+//                retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
+//            }
         } else {
             retval = v6_bogon_filter(templ, data, bogon_list_v6, v6_masks);
-            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
-                retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
-            }
+//            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
+//                retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
+//            }
         }
        
         // we caught a spoofed address by bogon prefix
@@ -1074,9 +1115,9 @@ int main (int argc, char** argv)
 
         // ***** 2. symetric routing filter *****
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
-            retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time);
+            retval = check_symetry_v4(templ, data, v4_route_sym, sym_rw_time, v4_masks);
         } else {
-            retval = check_symetry_v6(templ, data, v6_route_sym, sym_rw_time);
+            retval = check_symetry_v6(templ, data, v6_route_sym, sym_rw_time, v6_masks);
         }
         
         // we caught a spoofed address by not keeping to symteric routing
@@ -1127,6 +1168,8 @@ int main (int argc, char** argv)
     // clean up before termination
     destroy_filters(v4_flows);
     destroy_filters(v6_flows);
+    ht_destroy(&v4_route_sym);
+    ht_destroy(&v6_route_sym);
     ur_free_template(templ);
     trap_finalize();
 
