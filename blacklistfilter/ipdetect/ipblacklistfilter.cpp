@@ -61,9 +61,9 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../../unirec/unirec.h"
+#include "../../../unirec/unirec.h"
 #include "ipblacklistfilter.h"
-#include "../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
 #define DEBUG 1
 

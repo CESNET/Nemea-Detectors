@@ -43,8 +43,8 @@
  */
 
 #include <vector>
-#include "../../unirec/unirec.h"
-#include "../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../../unirec/unirec.h"
+#include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H

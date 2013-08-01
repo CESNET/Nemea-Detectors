@@ -48,9 +48,11 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <clocale>
 #include <stdint.h>
 #include <signal.h>
 #include <dirent.h>
+#include <idna.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,10 +61,10 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../../unirec/unirec.h"
+#include "../../../unirec/unirec.h"
 #include "urlblacklistfilter.h"
-#include "../../common/cuckoo_hash/cuckoo_hash.h"
-#include "../../common/super_fast_hash/super_fast_hash.h"
+#include "../../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../../common/super_fast_hash/super_fast_hash.h"
 
 #define DEBUG 1
 
@@ -117,6 +119,8 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
     ifstream in;
 
     string line;
+    char *url_norm;
+    int ret;
     uint32_t hashed_url;
     uint8_t bl;
 
@@ -146,8 +150,16 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
         while (!in.eof()) {
             getline(in, line);
 
+            ret = idna_to_ascii_lz(line.c_str(), &url_norm, 0);
+            if (ret != IDNA_SUCCESS) {
+#ifdef DEBUG
+                cerr << "Unable to normalize URL. Will skip." << endl;
+#endif
+                continue;
+            }
+
             // hash the url
-            hashed_url = SuperFastHash(line.c_str(), line.length());
+            hashed_url = SuperFastHash(url_norm, strlen(url_norm));
 
             bl = strtoul(file->d_name, NULL, 0);
             if (bl == 0x0) {
@@ -185,6 +197,8 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
     ifstream in;
 
     string line;
+    char *url_norm;
+    int ret;
 
     upd_item_t upd;
     bool add_rem = false;
@@ -219,10 +233,19 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
                 add_rem = true;
                 continue;
             }
-
+            
+            // normalize the URL
+            ret = idna_to_ascii_lz(line.c_str(), &url_norm, 0);
+            if (ret != IDNA_SUCCESS) {
+#ifdef DEBUG
+                cerr << "Unable to normalize URL. Will skip." << endl;
+#endif
+                continue;
+            }
+            
             // hash the URL
-            upd.url_hash = SuperFastHash(line.c_str(), line.length());
-
+            upd.url_hash = SuperFastHash(url_norm, strlen(url_norm));
+            delete url_norm;
             // fill blacklist number
             upd.bl = strtoul(file->d_name, NULL, 0);
             if (upd.bl == 0x0) {
@@ -357,6 +380,7 @@ int main (int argc, char** argv)
 
     // load source files
     const char* source = argv[1];
+    setlocale(LC_ALL, "");
     retval = load_url(blacklist, source);
 
     if (retval = BLIST_LOAD_ERROR) {

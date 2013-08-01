@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS=-O2 -std=c99
 CXXFLAGS=-std=c++98 -O2 -g
 LDFLAGS=
-LDLIBS= ../../unirec/unirec.o ../../common/cuckoo_hash/libcuckoo_hash.a -ltrap
+LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash/libcuckoo_hash.a -ltrap
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
