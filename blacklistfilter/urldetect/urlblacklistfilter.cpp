@@ -285,7 +285,6 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
 {
     // get pointer to URL
     char* url = ur_get_dyn(in, record, UR_URL);
-
     uint8_t* bl = NULL;
 
     // hash the recieved URL
