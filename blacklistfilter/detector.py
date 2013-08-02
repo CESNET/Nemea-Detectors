@@ -46,16 +46,29 @@ from getpass import getuser
 from signal import SIGTERM
 from signal import SIGUSR1
 
-from funcs import perror
+from funcs import error
 from funcs import read_config
 
 program_prefix = sys.argv[0]
-main_program = os.getcwd() + '/ipblacklistfilter'
+ip_detector = os.getcwd() + '/ipdetect/ipblacklistfilter'
+url_detector = os.getcwd() + '/urldetect/urlblacklistfilter'
 
-usage = "Usage: \n\t" + program_prefix + " start|stop|install|download"
+usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url"
 
-if len(sys.argv) != 2:
-   perror("Bad argument count supplied.\n" + usage)
+if len(sys.argv) != 3:
+   error("Bad argument count supplied.\n" + usage)
+   exit(1)
+
+if sys.argv[2] == 'ip':
+   main_program = ip_detector
+   detector_name = "IP-Blacklist"
+
+elif sys.argv[2] == 'url':
+   main_program = url_detector
+   detector_name = "URL-Blacklist"
+
+else:
+   error("Bad arguments supplied.\n" + usage)
    exit(1)
 
 if sys.argv[1] == 'start':
@@ -67,7 +80,7 @@ if sys.argv[1] == 'start':
    try:
       pid_file = open(pid_name, 'w')
    except IOError:
-      perror("Unable to open \'" + pid_name + "\' file for writing.")
+      error("Unable to open \'" + pid_name + "\' file for writing.")
       exit(1)
 
    tmp = subprocess.Popen(
@@ -79,7 +92,7 @@ if sys.argv[1] == 'start':
 
    tmp.poll()
    if tmp.returncode != None:
-      perror("Couldn\'t start IPBlackList Detector.")
+      error("Couldn\'t start " + detector_name + " Detector.")
       pid_file.close()
       os.remove(pid_name)
       exit(1)
@@ -94,14 +107,14 @@ elif sys.argv[1] == 'stop':
    try:
       pid_file = open(pid_name, 'r')
    except IOError:
-      perror("Unable to open \'" + pid_name + "\' file for reading.")
+      error("Unable to open \'" + pid_name + "\' file for reading.")
       exit(1)
 
    pid = pid_file.readline().rstrip()
    pid_file.close()
 
    if not pid:
-      perror("Couldn\'t stop IPBlackList Detector. No PID in PID file.")
+      error("Couldn\'t stop " + detector_name + " Detector. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -109,7 +122,7 @@ elif sys.argv[1] == 'stop':
    output = tmp.communicate()
 
    if not output[0]:
-      perror("Couldn\'t stop IPBlackList Detector. Couldn\'t find process specified in PID file.")
+      error("Couldn\'t stop " + detector_name + " Detector. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
       os.kill(int(pid), SIGTERM)
@@ -129,15 +142,15 @@ elif sys.argv[1] == 'install':
       command = '*/' + ref + ' * * * * '
 
    else:
-      perror("Wrong update time specified in the config file.")
+      error("Wrong update time specified in the config file.")
       exit(1)
 
-   command += user + ' ' + sys.executable + ' ' + os.getcwd() + '/' + program_prefix + ' download\n\n'
+   command += user + ' ' + sys.executable + ' ' + os.getcwd() + '/' + program_prefix + ' download ' + sys.argv[2] + '\n\n'
 
    try:
       cron_file = open(cron_path, 'r')
    except IOError:
-      perror("Unable to open \'" + cron_path + "\' file for reading.")
+      error("Unable to open \'" + cron_path + "\' file for reading.")
       exit(1)
 
    cron_line = cron_file.readline()
@@ -160,7 +173,7 @@ elif sys.argv[1] == 'install':
    try:
       cron_file = open(cron_path, 'w')
    except IOError:
-      perror("Unable to open \'" + cron_path + "\' file for writing.")
+      error("Unable to open \'" + cron_path + "\' file for writing.")
       exit(1)
 
    cron_file.write(whole_cron + command)
@@ -175,14 +188,14 @@ elif sys.argv[1] == 'download':
    try:
       pid_file = open(pid_name, 'r')
    except IOError:
-      perror("Unable to open \'" + pid_name + "\' file for reading.")
+      error("Unable to open \'" + pid_name + "\' file for reading.")
       exit(1)
 
    pid = pid_file.readline().rstrip()
    pid_file.close()
 
    if not pid:
-      perror("Couldn't send signal to IPBlackList Detector. No PID in PID file.")
+      error("Couldn't send signal to " + detector_name + " Detector. No PID in PID file.")
       exit(1)
 
    command = 'ps -e | grep ' + pid
@@ -190,13 +203,13 @@ elif sys.argv[1] == 'download':
    output = tmp.communicate()
 
    if not output[0]:
-      perror("Couldn't send signal to IPBlackList Detector. Couldn\'t find process specified in PID file.")
+      error("Couldn't send signal to " + detector_name + " Detector. Couldn\'t find process specified in PID file.")
       exit(1)
    else:
       os.kill(int(pid), SIGUSR1)
 
 else:
-   perror("Bad arguments supplied.\n" + usage)
+   error("Bad arguments supplied.\n" + usage)
    exit(1)
 
 exit(0)

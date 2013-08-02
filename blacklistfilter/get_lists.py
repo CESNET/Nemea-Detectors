@@ -39,16 +39,19 @@
 """
 
 import os
+import re
 import subprocess
 
 from collections import namedtuple
 from shutil import copy
-from socket import getaddrinfo
+from socket import inet_pton
 
 from funcs import create_directory
-from funcs import perror
+from funcs import error
+from funcs import open_file
 from funcs import read_config
 from funcs import report
+from funcs import write_dict_keys
 
 source = namedtuple('source', 'file_name address')
 cwd = os.getcwd()
@@ -72,6 +75,9 @@ def convert_tmp_file(tmp_path, file_name, order):
    addr_col = 0
    prefixes = False
    domains = False
+   mixed = False
+   warden = False
+   warden_type = None
 
 # Overwrite values, if config exists
    current_config = cwd + '/configure/conf.' + file_name
@@ -82,26 +88,30 @@ def convert_tmp_file(tmp_path, file_name, order):
       addr_col = config.get('addr_col', addr_col)
       prefixes = config.get('prefixes', prefixes)
       domains = config.get('domains', domains)
+      mixed = config.get('mixed', mixed)
+      warden = config.get('warden', warden)
+      warden_type = config.get('warden_type', warden_type)
 
-# TODO: Remove these constrains after implementation
-   if prefixes or domains:
-      report("Unsupported address format. Skipping.")
+   if warden == True and warden_type == None:
+      error()
+
+# TODO: Remove this constrain after implementation
+   if prefixes:
+      report(file_name + " has an unsupported address format. Skipping.")
       return False
 
 # Open tmp file
-   try:
-      tmp_file = open(tmp_path, 'r')
-   except IOError:
-      perror("Unable to open " + tmp_path + " for reading")
+   if not open_file(tmp_path, 'r'):
       os.remove(tmp_path)
       return False
 
 # Save needed contents of tmp as dictionary keys
-   new = {}
+   ips = {}
+   urls = {}
    tmp_line = tmp_file.readline()
    line = 1
    while tmp_line:
-      if tmp_line == "\n":
+      if tmp_line == '\n':
          tmp_line = tmp_file.readline()
          line += 1
          continue
@@ -126,23 +136,39 @@ def convert_tmp_file(tmp_path, file_name, order):
          line += 1
          continue
 
-      # tuple indexes
-      canonname = 4
-      address = 0
+      addr = tmp_line[addr_col]
+      report("Received address: "+ addr)
 
-      report("Resolving: " + tmp_line[addr_col])
-      try:
-         info = getaddrinfo(tmp_line[addr_col], None)
-      except:
-         report("Unable to resolve: " + tmp_line[addr_col])
-         tmp_line = tmp_file.readline()
-         line += 1
-         continue
+      report("Checking address for an URL.")
+      match = re.match(r'^(?:http)s?://(?:www\.)?'
+         r'(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)'
+         r'(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)'
+         r'(?:/?|[/?]\S+)$', addr, re.IGNORECASE)
 
-      for i in range(0, len(info)):
-         addr = info[i][canonname][address]
-         report("Resolved as: " + addr)
-         new[addr] = None
+      if match:
+         report("Saving valid URL.")
+         urls[addr] = None
+
+      else:
+         report("Checking address for an IP.")
+
+         if ':' in addr:
+            report("Assuming IPv6 address.")
+            family = AF_INET6
+         else:
+            report("Assuming IPv4 address.")
+            family = AF_INET
+
+         try:
+            inet_pton(family, addr)
+         except:
+            report("Invalid address: " + addr + ". Skipping.")
+            tmp_line = tmp_file.readline()
+            line += 1
+            continue
+
+         report("Saving valid IP.")
+         ips[addr] = None
 
       tmp_line = tmp_file.readline()
       line += 1
@@ -151,25 +177,11 @@ def convert_tmp_file(tmp_path, file_name, order):
 
 # Save dictionary keys into a file
    new_path = cwd + '/sources/.' + order
+   ips_path = new_path + '.ips'
+   urls_path = new_path + '.urls'
 
-   if os.path.exists(new_path):
-      os.remove(new_path)
-
-   try:
-      new_file = open(new_path, 'w')
-   except IOError:
-      perror("Unable to open " + new_path + " for writing")
-      os.remove(tmp_path)
-      return False
-
-   out = ""
-   for k in new.iterkeys():
-      out += k + '\n'
-
-   new_file.write(out)
-   new_file.close()
-
-   return new_path
+   write_dict_keys(ips, ips_path)
+   write_dict_keys(urls, urls_path)
 
 def create_update_file(updates_path, order):
    if not create_directory(updates_path):
@@ -179,7 +191,7 @@ def create_update_file(updates_path, order):
    try:
       update_file = open(update_path, 'w')
    except IOError:
-      perror("Unable to open " + update_path + " for writing")
+      error("Unable to open " + update_path + " for writing")
       return False
 
    return (update_path, update_file)
@@ -188,12 +200,12 @@ def read_sources(source_path):
    try:
       source_file = open(source_path, 'r')
    except IOError:
-      perror("No " + source_path + " file available for reading.")
+      error("No " + source_path + " file available for reading.")
       return False
 
    source_line = source_file.readline()
    if not source_line:
-      perror("No sources specified in the " + source_path + " file.")
+      error("No sources specified in the " + source_path + " file.")
       source_file.close()
       return False
 
@@ -213,101 +225,101 @@ def read_sources(source_path):
    source_file.close()
 
    if not len(sources):
-      perror("No sources specified correctly in the sources file.")   
+      error("No sources specified correctly in the sources file.")   
       return False
 
    return sources
 
 """-------------- Main program ---------------"""
+def get_lists():
+   updates_path = cwd + '/sources/update/'
+   sources_path = cwd + '/sources/'
+   source_path = cwd + '/configure/sources.txt'
 
-updates_path = cwd + '/sources/update/'
-sources_path = cwd + '/sources/'
-source_path = cwd + '/configure/sources.txt'
+   sources = read_sources(source_path)
 
-sources = read_sources(source_path)
+   if not sources:
+      exit(1)
 
-if not sources:
-   exit(1)
+   if not create_directory(sources_path):
+      exit(1)
 
-if not create_directory(sources_path):
-   exit(1)
+   for i in range(0, len(sources)):
+      order = sources[i].file_name.split(".")[1]
+      address = sources[i].address
+      file_name = sources[i].file_name
+      file_path = sources_path + file_name
+      tmp_name = "." + file_name
+      tmp_path = sources_path + tmp_name
+      old_path = sources_path + order
 
-for i in range(0, len(sources)):
-   order = sources[i].file_name.split(".")[1]
-   address = sources[i].address
-   file_name = sources[i].file_name
-   file_path = sources_path + file_name
-   tmp_name = "." + file_name
-   tmp_path = sources_path + tmp_name
-   old_path = sources_path + order
+      report("Downloading " + file_name)
+      command = "wget -O " + tmp_path + " " + address
+      os.system(command)
 
-   report("Downloading " + file_name)
-   command = "wget -O " + tmp_path + " " + address
-   os.system(command)
-
-   if not os.path.exists(tmp_path):
-      report("Downloading " + file_name + " has FAILED, skipping.")
-      continue
-
-   if os.path.exists(file_path):
-      report("Downloaded " + file_name + " as " + tmp_name)
-
-      if os.path.getmtime(tmp_path) <= os.path.getmtime(file_path):
-         report(file_name + " is up-to-date, removing temporary file and update file.")
-         update_path = updates_path + order
-         if os.path.exists(update_path):
-            os.remove(update_path)
-         os.remove(tmp_path)
+      if not os.path.exists(tmp_path):
+         report("Downloading " + file_name + " has FAILED, skipping.")
          continue
 
-      report("Downloaded file is newer.")
-      new_path = convert_tmp_file(tmp_path, file_name, order)
-      if not new_path:
-         os.remove(tmp_path)
-         continue
+      if os.path.exists(file_path):
+         report("Downloaded " + file_name + " as " + tmp_name)
 
-#Determine changes between old and new version
-      if os.path.exists(old_path):
-         add = diff(old_path, new_path)
-         rem = diff(old_path, new_path, add = False)
-
-         update_file = create_update_file(updates_path, order)
-         update_path = update_file[0]
-         update_file = update_file[1]
-
-         if not update_file:
+         if os.path.getmtime(tmp_path) <= os.path.getmtime(file_path):
+            report(file_name + " is up-to-date, removing temporary file and update file.")
+            update_path = updates_path + order
+            if os.path.exists(update_path):
+               os.remove(update_path)
             os.remove(tmp_path)
+            continue
+
+         report("Downloaded file is newer.")
+         new_path = convert_tmp_file(tmp_path, file_name, order)
+         if not new_path:
+            os.remove(tmp_path)
+            continue
+
+   #Determine changes between old and new version
+         if os.path.exists(old_path):
+            add = diff(old_path, new_path)
+            rem = diff(old_path, new_path, add = False)
+
+            update_file = create_update_file(updates_path, order)
+            update_path = update_file[0]
+            update_file = update_file[1]
+
+            if not update_file:
+               os.remove(tmp_path)
+               exit(1)
+
+            if add or rem:
+               update_file.write(add + "# remove\n" + rem)
+            update_file.close()
+
+            if not add and not rem:
+               os.remove(update_path)
+            os.remove(old_path)
+
+         os.rename(new_path, old_path)
+         os.remove(file_path)
+         os.rename(tmp_path, file_path)
+
+      else:
+         report("Downloaded " + file_name + " for the first time")
+
+         new_path = convert_tmp_file(tmp_path, file_name, order)
+         if not new_path:
+            os.remove(tmp_path)
+            continue
+
+         if os.path.exists(old_path):
+            os.remove(old_path)
+
+         os.rename(new_path, old_path)
+
+         if not create_directory(updates_path):
             exit(1)
 
-         if add or rem:
-            update_file.write(add + "# remove\n" + rem)
-         update_file.close()
+         copy(old_path, updates_path + order)
 
-         if not add and not rem:
-            os.remove(update_path)
-         os.remove(old_path)
-
-      os.rename(new_path, old_path)
-      os.remove(file_path)
-      os.rename(tmp_path, file_path)
-
-   else:
-      report("Downloaded " + file_name + " for the first time")
-
-      new_path = convert_tmp_file(tmp_path, file_name, order)
-      if not new_path:
-         os.remove(tmp_path)
-         continue
-
-      if os.path.exists(old_path):
-         os.remove(old_path)
-
-      os.rename(new_path, old_path)
-
-      if not create_directory(updates_path):
-         exit(1)
-
-      copy(old_path, updates_path + order)
-
-      os.rename(tmp_path, file_path)
+         os.rename(tmp_path, file_path)
 

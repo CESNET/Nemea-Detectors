@@ -45,7 +45,7 @@ def report(rep_str):
    program_prefix = sys.argv[0]
    print program_prefix + ": " + rep_str
 
-def perror(err_str):
+def error(err_str):
    program_prefix = sys.argv[0]
    sys.stderr.write(program_prefix + ": " + err_str + '\n')
 
@@ -57,6 +57,33 @@ def create_directory(dir_path):
          perror("Failed to create " + dir_path + " directory.")
          return False
    return True
+
+def open_file(file_path, flag='r'):
+   if flag == 'r':
+      operation = "reading"
+   elif flag == 'w':
+      operation = "writing"
+   elif flag == 'a':
+      operation = "appending"
+   elif flag == 'r+':
+      operation = "reading and appending"
+   elif flag == 'rb':
+      operation = "binary reading"
+   elif flag = 'wb':
+      operation = "binary writing"
+   elif flag = 'ab':
+      operation = "binary appending"
+   elif flag = 'r+b':
+      operation = "binary reading and appending"
+   else:
+      raise TypeError("Wrong flag(" + flag + ") specified")
+
+   try:
+      opened_file = open(file_path, flag)
+   except IOError:
+      error("Unable to open " + file_path + " for " + operation + ".")
+
+   return opened_file
 
 def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
    try:
@@ -89,3 +116,19 @@ def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
 
    conf_file.close()
    return config
+
+def write_dict_keys(dictionary, destination, delimiter='\n'):
+   out = ""
+   for key in dictionary.iterkeys():
+      out += key + delimiter
+
+   if destination == 'stderr':
+      sys.stderr.write(out)
+   elif destination == 'stdout':
+      sys.stdout.write(out)
+   else:
+      if not dest_file = open_file(destination, 'w'):
+         return False
+      dest_file.write(out)
+      dest_file.close()
+   return True
