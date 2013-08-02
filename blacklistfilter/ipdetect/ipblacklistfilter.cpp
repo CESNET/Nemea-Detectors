@@ -209,6 +209,10 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
         while (!(input.eof())) {
             getline(input, line);
 
+            if (!line.length()) {
+                continue;
+            }
+
             // trim all whitespaces
             line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 

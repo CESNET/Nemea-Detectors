@@ -42,8 +42,7 @@
  *
  */
 
-
-#include <string>
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <fstream>
@@ -61,10 +60,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../../../unirec/unirec.h"
+
 #include "urlblacklistfilter.h"
-#include "../../../common/cuckoo_hash/cuckoo_hash.h"
-#include "../../../common/super_fast_hash/super_fast_hash.h"
 
 #define DEBUG 1
 
@@ -139,7 +136,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
             continue;
         }
 
-        in.open(file->d_name, ifstream::in);
+        in.open(string(string(path) + file->d_name).c_str(), ifstream::in);
 
         if (!in.is_open()) {
             cerr << "WARNING: File " << file->d_name << " cannot be opened. Will be skipped." << endl;
@@ -149,6 +146,15 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
         // load file line by line
         while (!in.eof()) {
             getline(in, line);
+#ifdef DEBUG
+            cout << line << endl;
+#endif
+
+            if (!line.length()) {
+                continue;
+            }
+
+            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
             ret = idna_to_ascii_lz(line.c_str(), &url_norm, 0);
             if (ret != IDNA_SUCCESS) {
@@ -158,18 +164,17 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
                 continue;
             }
 
-            // hash the url
-            hashed_url = SuperFastHash(url_norm, strlen(url_norm));
-
             bl = strtoul(file->d_name, NULL, 0);
             if (bl == 0x0) {
                 cerr << "WARNING: Cannot determine source blacklist. Will be skipped." << endl;
                 in.close();
                 break;
             }
-
+#ifdef DEBUG
+            cout << url_norm << endl;
+#endif
             // insert to table
-            ht_insert(&blacklist, (char *) &hashed_url, &bl);
+            ht_insert(&blacklist, url_norm, &bl, strlen(url_norm));
         }
         in.close();
     }
@@ -218,7 +223,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
             continue;
         }
 
-        in.open(file->d_name, ifstream::in);
+        in.open(string(string(path) + file->d_name).c_str(), ifstream::in);
 
         if (!in.is_open()) {
             cerr << "WARNING: File " << file->d_name << " cannot be opened. Will be skipped." << endl;
@@ -229,23 +234,33 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
         while (!in.eof()) {
             getline(in, line);
 
+            // don't add the remaining empty line
+            if (!line.length()) {
+                continue;
+            }
+
+            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+#ifdef DEBUG
+            cout << line << endl;
+#endif
+
             if (line == "#remove") {
                 add_rem = true;
                 continue;
             }
-            
+
             // normalize the URL
             ret = idna_to_ascii_lz(line.c_str(), &url_norm, 0);
             if (ret != IDNA_SUCCESS) {
+
 #ifdef DEBUG
                 cerr << "Unable to normalize URL. Will skip." << endl;
 #endif
                 continue;
             }
-            
-            // hash the URL
-            upd.url_hash = SuperFastHash(url_norm, strlen(url_norm));
-            delete url_norm;
+
+            upd.url = url_norm; 
             // fill blacklist number
             upd.bl = strtoul(file->d_name, NULL, 0);
             if (upd.bl == 0x0) {
@@ -253,7 +268,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
                 in.close();
                 break;
             }
-            // add/update or remove ?
+            // put loaded update to apropriate vector (add/update or remove)
             if (add_rem) {
                 rm_upd.push_back(upd);
             } else {
@@ -262,7 +277,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
         }
         in.close();
     }
-
+    
     closedir(dp);
     return ALL_OK;
 }
@@ -287,15 +302,12 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
     char* url = ur_get_dyn(in, record, UR_URL);
     uint8_t* bl = NULL;
 
-    // hash the recieved URL
-    uint32_t hash_url = SuperFastHash(url, ur_get_dyn_size(in, record, UR_URL));
-
     // try to find the URL in table.
-    bl = (uint8_t *) ht_get(&blacklist, (char *) &hash_url);
+    bl = (uint8_t *) ht_get(&blacklist, url, ur_get_dyn_size(in, record, UR_URL));
 
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
-        // ur_set(out, detect, /* UR_URL_BLACKLIST */);
+        // ur_set(out, detect, /* UR_URL_BLACKLIST */, *bl);
         return BLACKLISTED;
     }
 
@@ -314,7 +326,7 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
 static void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
 {
     for (int i = 0; i < rm.size(); i++) {
-        ht_remove_by_key(&blacklist, (char *) &rm[i].url_hash);
+        ht_remove_by_key(&blacklist, rm[i].url, strlen(rm[i].url));
     }
 }
 
@@ -330,10 +342,10 @@ static void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
 {
     int bl_index;
     for (int i = 0; i < add.size(); i++) {
-        if ((bl_index = ht_get_index(&blacklist, (char *) &add[i].url_hash)) >= 0) {
+        if ((bl_index = ht_get_index(&blacklist, add[i].url, strlen(add[i].url))) >= 0) {
             *((uint8_t *) blacklist.table[bl_index].data) = add[i].bl;
         } else {
-            ht_insert(&blacklist, (char *) &add[i].url_hash, &add[i].bl);
+            ht_insert(&blacklist, add[i].url, &add[i].bl, strlen(add[i].url));
         }
     }
 }
@@ -348,12 +360,12 @@ int main (int argc, char** argv)
 
     cc_hash_table_t blacklist;
 
-    ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), sizeof(uint32_t), REHASH_ENABLE);
+    ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), 0, REHASH_ENABLE);
 
     ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,URL");
     ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>");
 
-    // zero dynamic size for now may change in future if URL will be passed.
+    // zero dynamic size for now, may change in future if URL will be passed.
     void *detection = ur_create(det, 0);
 
     if (detection == NULL) {
@@ -382,7 +394,7 @@ int main (int argc, char** argv)
     setlocale(LC_ALL, "");
     retval = load_url(blacklist, source);
 
-    if (retval = BLIST_LOAD_ERROR) {
+    if (retval == BLIST_LOAD_ERROR) {
         ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
@@ -402,7 +414,26 @@ int main (int argc, char** argv)
     // update vectors
     vector<upd_item_t> add_update;
     vector<upd_item_t> rm_update;
-    
+
+    if (ht_is_empty(&blacklist)) {
+        cerr << "No addresses were loaded. Continuing makes no sense." << endl;
+        ur_free_template(templ);
+        ur_free_template(det);
+        ur_free(detection);
+        ht_destroy(&blacklist);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+   
+#ifdef DEBUG
+    // for debug only (show contents of the blacklist table)
+    for (int i = 0; i < blacklist.table_size; i++) {
+        if (blacklist.table[i].key != NULL) {
+            cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
+        }
+    }
+#endif
+ 
     // ***** Main processing loop *****
     while (!stop) {
                
@@ -434,11 +465,15 @@ int main (int argc, char** argv)
         if (update) {
             retval = load_update(add_update, rm_update, source);
 
-            if (retval = BLIST_LOAD_ERROR) {
+            if (retval == BLIST_LOAD_ERROR) {
                 cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
                 update = 0;
                 continue;
             }
+
+#ifdef DEBUG
+            cout << "Updating blacklist filter (" << add_update.size() << " additions/ " << rm_update.size() << " removals)." << endl;
+#endif
             
             if (!rm_update.empty()) {
                 update_remove(blacklist, rm_update);
@@ -458,7 +493,6 @@ int main (int argc, char** argv)
     trap_send_data(0, data, 1, TRAP_HALFWAIT);
 
     // clean up before termination
-
     ur_free_template(templ);
     ur_free_template(det);
     ur_free(detection);
