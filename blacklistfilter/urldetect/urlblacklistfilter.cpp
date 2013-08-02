@@ -432,6 +432,10 @@ int main (int argc, char** argv)
             cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
         }
     }
+
+    // count marked addresses
+    unsigned int marked = 0;
+    unsigned int recieved = 0;
 #endif
  
     // ***** Main processing loop *****
@@ -453,12 +457,19 @@ int main (int argc, char** argv)
             }
         }
 
+#ifdef DEBUG
+        ++recieved;
+#endif
+
         // check for blacklist match
         retval = check_blacklist(blacklist, templ, det, data, detection);
 
         // is blacklisted? send report
         if (retval == BLACKLISTED) {
-            trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
+#ifdef DEBUG
+            ++marked;
+#endif
+            //trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
         }
 
         // should update?
@@ -498,6 +509,10 @@ int main (int argc, char** argv)
     ur_free(detection);
     ht_destroy(&blacklist);
     trap_finalize();
+
+#ifdef DEBUG
+    cout << marked << "/" << recieved << " were marked by blacklist." << endl;
+#endif
 
     return EXIT_SUCCESS;
 }
