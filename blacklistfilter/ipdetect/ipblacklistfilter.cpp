@@ -61,9 +61,9 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../../unirec/unirec.h"
+#include "../../../unirec/unirec.h"
 #include "ipblacklistfilter.h"
-#include "../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
 #define DEBUG 1
 
@@ -255,8 +255,8 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
             }
 
             if (bl_entry.pref_length == 32 || bl_entry.pref_length == 128) {
-                if (ht_get_index(&ip_bl, (char *) key.bytes) == NOT_FOUND) {
-                    ht_insert(&ip_bl, (char *) key.bytes, &bl_entry);
+                if (ht_get_index(&ip_bl, (char *) key.bytes, ip_bl.key_length) == NOT_FOUND) {
+                    ht_insert(&ip_bl, (char *) key.bytes, &bl_entry, ip_bl.key_length);
                 }
             }               
             // else
@@ -469,7 +469,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     // index of the prefix the source ip fits in (return value of binary/hash search)
     int search_result;
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-    search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
+    search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
@@ -479,7 +479,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
-    search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
+    search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
@@ -516,7 +516,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     int search_result;
 
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-    search_result = ht_get_index(&ip_bl,(char *) ip.bytes);
+    search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
@@ -526,7 +526,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
-    search_result = ht_get_index(&ip_bl, (char *) ip.bytes);
+    search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
@@ -630,10 +630,10 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
 
         if (ip_is4(&(add_upd[i].ip))) {
             if (add_upd[i].pref_length == PREFIX_V4_DEFAULT) { // ip only
-                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes);
+                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes, bl_hash.key_length);
 
                 if (insert_index == NOT_FOUND) { // item is not in table --> insert
-                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i]);
+                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i], bl_hash.key_length);
                     if (ins_retval != 0) {
                         return ins_retval;
                     }
@@ -651,10 +651,10 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
             }
         } else { // same for v6
             if (add_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
-                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes);
+                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes, bl_hash.key_length);
 
                 if (insert_index == NOT_FOUND) { // item is not in table --> insert
-                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i]);
+                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i], bl_hash.key_length);
                     if (ins_retval != 0) {
                         return ins_retval;
                     }
@@ -693,7 +693,7 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
     for (int i = 0; i < rm_upd.size(); i++) { // go through updates   
         if (ip_is4(&(rm_upd[i].ip))) {
             if (rm_upd[i].pref_length == PREFIX_V4_DEFAULT) { // ip only
-                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes);
+                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes, bl_hash.key_length);
                 if (remove_index != NOT_FOUND) { // remove from table
                     ht_remove_by_index(&bl_hash, remove_index);
                 }
@@ -707,7 +707,7 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
             }
         } else { // same for v6
             if (rm_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
-                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes);
+                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes, bl_hash.key_length);
                 if (remove_index != NOT_FOUND) {
                     ht_remove_by_index(&bl_hash, remove_index);
                 }
