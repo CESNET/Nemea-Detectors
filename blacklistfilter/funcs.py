@@ -76,7 +76,7 @@ def open_file(file_path, flag='r'):
    elif flag = 'r+b':
       operation = "binary reading and appending"
    else:
-      raise TypeError("Wrong flag(" + flag + ") specified")
+      raise TypeError("Wrong flag(" + flag + ") specified.")
 
    try:
       opened_file = open(file_path, flag)
@@ -117,10 +117,17 @@ def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
    conf_file.close()
    return config
 
-def write_dict_keys(dictionary, destination, delimiter='\n'):
+def get_dictionary_data(dictionary, destination, item, delimiter='\n'):
    out = ""
-   for key in dictionary.iterkeys():
-      out += key + delimiter
+
+   if item == 'keys':
+      for key in dictionary.iterkeys():
+         out += key + delimiter
+   elif item == 'values':
+      for value in dictionary.itervalues():
+         out += value + delimiter
+   else:
+      raise NameError("Wrong item name(" + item + ") specified."))
 
    if destination == 'stderr':
       sys.stderr.write(out)

@@ -51,7 +51,7 @@ from funcs import error
 from funcs import open_file
 from funcs import read_config
 from funcs import report
-from funcs import write_dict_keys
+from funcs import write_dictionary_data
 
 source = namedtuple('source', 'file_name address')
 cwd = os.getcwd()
@@ -66,43 +66,11 @@ def diff(old, new, add = True, rem = False):
 
    return grep.stdout.read()
 
-def convert_tmp_file(tmp_path, file_name, order):
+def convert_tmp_file(tmp_path, order):
    order = str(order)
-
-# Default values for reading from the tmp file
-   cols = 1
-   delimiter = None
-   addr_col = 0
-   prefixes = False
-   domains = False
-   mixed = False
-   warden = False
-   warden_type = None
-
-# Overwrite values, if config exists
-   current_config = cwd + '/configure/conf.' + file_name
-   if os.path.exists(current_config):
-      config = read_config(conf_name = current_config)
-      cols = config.get('columns', cols)
-      delimiter = config.get('delimiter', delimiter)
-      addr_col = config.get('addr_col', addr_col)
-      prefixes = config.get('prefixes', prefixes)
-      domains = config.get('domains', domains)
-      mixed = config.get('mixed', mixed)
-      warden = config.get('warden', warden)
-      warden_type = config.get('warden_type', warden_type)
-
-   if warden == True and warden_type == None:
-      error()
-
-# TODO: Remove this constrain after implementation
-   if prefixes:
-      report(file_name + " has an unsupported address format. Skipping.")
-      return False
 
 # Open tmp file
    if not open_file(tmp_path, 'r'):
-      os.remove(tmp_path)
       return False
 
 # Save needed contents of tmp as dictionary keys
@@ -148,7 +116,6 @@ def convert_tmp_file(tmp_path, file_name, order):
       if match:
          report("Saving valid URL.")
          urls[addr] = None
-
       else:
          report("Checking address for an IP.")
 
@@ -180,27 +147,32 @@ def convert_tmp_file(tmp_path, file_name, order):
    ips_path = new_path + '.ips'
    urls_path = new_path + '.urls'
 
-   write_dict_keys(ips, ips_path)
-   write_dict_keys(urls, urls_path)
+   ret = False
+   if ips:
+      write_dict_data(ips, ips_path, 'keys')
+      ret = 'ips'
+
+   if urls:
+      write_dict_data(urls, urls_path, 'keys')
+      if ret == 'ips':
+         ret = 'both'
+      else:
+         ret = 'urls'
+
+   return ret
 
 def create_update_file(updates_path, order):
    if not create_directory(updates_path):
       return False
 
    update_path = updates_path + order
-   try:
-      update_file = open(update_path, 'w')
-   except IOError:
-      error("Unable to open " + update_path + " for writing")
+   if not update_file = open_file(update_path, 'w'):
       return False
 
    return (update_path, update_file)
 
 def read_sources(source_path):
-   try:
-      source_file = open(source_path, 'r')
-   except IOError:
-      error("No " + source_path + " file available for reading.")
+   if not source_file = open_file(source_path, 'r')
       return False
 
    source_line = source_file.readline()
@@ -230,19 +202,25 @@ def read_sources(source_path):
 
    return sources
 
-"""-------------- Main program ---------------"""
 def get_lists():
    updates_path = cwd + '/sources/update/'
+   updates_url_path = cwd + '/urldetect/update/'
+   updates_ips_path = cwd + '/ipdetect/update/'
    sources_path = cwd + '/sources/'
    source_path = cwd + '/configure/sources.txt'
 
    sources = read_sources(source_path)
 
    if not sources:
-      exit(1)
+      return False
 
    if not create_directory(sources_path):
-      exit(1)
+      return False
+
+# TODO: Remove this constraint after implementation
+   if prefixes:
+      report(file_name + " has an unsupported address format. Skipping.")
+      return False
 
    for i in range(0, len(sources)):
       order = sources[i].file_name.split(".")[1]
@@ -253,8 +231,28 @@ def get_lists():
       tmp_path = sources_path + tmp_name
       old_path = sources_path + order
 
+# Get variables from config, assing implicit ones, if it doesn't exist
+      current_config = cwd + '/configure/conf.' + file_name
+      if os.path.exists(current_config):
+         config = read_config(conf_name = current_config)
+      cols = config.get('columns', 1)
+      delimiter = config.get('delimiter', None)
+      addr_col = config.get('addr_col', 0)
+      prefixes = config.get('prefixes', False)
+      domains = config.get('domains', False)
+      mixed = config.get('mixed', False)
+      warden = config.get('warden', False)
+      warden_type = config.get('warden_type', None)
+
+      if warden == True:
+         if warden_type == None:
+            error("Warden request type is not specified in a file " + current_config + ". Skipping.")
+            continue
+         command = "perl hostrecvwarden.pl"
+      else:
+         command = "wget -O " + tmp_path + " " + address
+
       report("Downloading " + file_name)
-      command = "wget -O " + tmp_path + " " + address
       os.system(command)
 
       if not os.path.exists(tmp_path):
@@ -273,7 +271,7 @@ def get_lists():
             continue
 
          report("Downloaded file is newer.")
-         new_path = convert_tmp_file(tmp_path, file_name, order)
+         new_path = convert_tmp_file(tmp_path, order)
          if not new_path:
             os.remove(tmp_path)
             continue
@@ -322,4 +320,3 @@ def get_lists():
          copy(old_path, updates_path + order)
 
          os.rename(tmp_path, file_path)
-
