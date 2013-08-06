@@ -18,11 +18,13 @@
 #include <string>
 #include <sstream>
 #include "hoststats.h"
+#include "profile.h"
 #include "../aux_func.h"
 #include "processdata.h"
 #include "../config.h"
 #include "requesthandlers.h"
-#include "profile.h"
+#include "../detectionrules.h"
+#include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 //#include "sshdetection.h"
 
 #include "../BloomFilter.hpp"
@@ -100,13 +102,13 @@ trap_module_info_t module_info = {
       "    -p NUMBER      Port number\n"
       "    -f             Stay in foreground (program runs in background by default)\n"
       "\n"
-      "Note: All parameters are taken from hoststats.conf bydefault.\n"
+      "Note: All parameters are taken from hoststats.conf by default.\n"
       "\n" 
       "TRAP Interfaces:\n"
       "   Inputs: 1\n"
-      "   Outputs: 1\n",
+      "   Outputs: 0\n",
    1, // Number of input TRAP interfaces
-   1, // Number of output TRAP interfaces
+   0, // Number of output TRAP interfaces
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -253,7 +255,7 @@ int main(int argc, char *argv[])
    }
 
    // UniRec template
-   tmpl_in = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+   tmpl_in = ur_create_template("<COLLECTOR_FLOW>");
    tmpl_out = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL");
    if (tmpl_in == NULL || tmpl_out == NULL) {
       log(LOG_ERR, "Error when creating UniRec template.\n");
@@ -316,10 +318,31 @@ int main(int argc, char *argv[])
          while (i >= 0)
             delete profiles[i--];
          return 1;
+      } else {
+         profiles.back()->bf_active = new bloom_filter(bp);
+         profiles.back()->bf_learn = new bloom_filter(bp);
       }
-      profiles.back()->bf_active = new bloom_filter(bp);
-      profiles.back()->bf_learn = new bloom_filter(bp);
    }
+
+   // TODO: read this from configuration file
+   // For each profile init hash table
+   for (int i = 0; i < profiles.size(); i++) {
+      unsigned int size;
+      if (profiles[i]->name == "all") size = 1000000;
+      else if (profiles[i]->name == "ssh") size = 1000000;
+      else if (profiles[i]->name == "dns") size = 300000;
+      else if (profiles[i]->name == "telnet") size = 1000;
+      else size = 10000;
+
+      ht_init(profiles[i]->stat_table_to_check, size, sizeof(hosts_record_t), sizeof(hosts_key_t));
+   }
+
+   // TODO: read this from configuration
+   for (int i = 0; i < profiles.size(); i++) {
+      if (profiles[i]->name == "all") 
+         profiles[i]->detectors.push_back(make_pair("rules-generic", &check_rules));
+   }
+
 
    // ***** Initialization done, start server *****
 
@@ -475,7 +498,7 @@ int main(int argc, char *argv[])
       close(listenfd[i]);
    }
 
-   //Wait until end of TRAP threads
+   // Wait until end of TRAP threads
    pthread_join(share.data_process_thread, NULL);
    pthread_join(share.data_reader_thread, NULL);
 
@@ -483,10 +506,14 @@ int main(int argc, char *argv[])
    for (int i = 0; i < profiles.size(); i++) {
       delete profiles[i]->bf_active;
       delete profiles[i]->bf_learn;
+      ht_destroy(profiles[i]->stat_table_to_check);
       delete profiles[i];
    }
    
-   //Necessary cleanup before exiting
+   // Delete configuration
+   config->freeConfiguration();
+
+   // Necessary cleanup before exiting
    trap_finalize();
 
    pthread_exit(NULL);
