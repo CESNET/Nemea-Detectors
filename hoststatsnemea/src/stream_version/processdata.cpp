@@ -10,16 +10,13 @@
 #include <assert.h>
 #include <unistd.h>
 
-#include "hoststats.h"
 #include "processdata.h"
 #include "../aux_func.h" // various simple conversion functions
-#include "../config.h"
-#include "profile.h"
 #include "database.h"
 #include "../wardenreport.h"
 #include "../eventhandler.h"
-#include "../BloomFilter.hpp"
 #include "../detectionrules.h"
+#include "../../../../common/cuckoo_hash_v2/hashes.h"
 
 extern "C" {
    #include <libtrap/trap.h>
@@ -35,6 +32,7 @@ using namespace std;
 #define D_INACTIVE_TIMEOUT 30    // default value (in seconds)
 #define D_DET_START_PAUSE  10    // default time between starts of detector (in seconds)
 
+//TODO: implement this
 const uint64_t MEMORY_LIMIT = 2LL*1024LL*1024LL*1024LL; // Maximum number of bytes consumed by host-stats (2GB)
 const uint64_t MAX_NUM_OF_HOSTS = MEMORY_LIMIT / sizeof(hosts_record_t);
 
@@ -43,6 +41,7 @@ const uint64_t MAX_NUM_OF_HOSTS = MEMORY_LIMIT / sizeof(hosts_record_t);
 extern ur_template_t *tmpl_in;
 extern ur_template_t *tmpl_out;
 
+//TODO: move to thread share
 uint32_t active_timeout        = D_ACTIVE_TIMEOUT;
 uint32_t inactive_timeout      = D_INACTIVE_TIMEOUT;
 static uint32_t det_start_time = D_DET_START_PAUSE; // time between the starts of detector
@@ -85,7 +84,7 @@ void alarm_handler(int signal)
 
 /**
  * UpdateStatsRecord()
- * Update records in the stat_map by data form a given flow.
+ * Update records in the stat_table by data form a given flow.
  *
  * Find two host records acoording to source and destination address of the
  * flow and update these records
@@ -95,20 +94,17 @@ void alarm_handler(int signal)
  * @param flow_time Time for info about add/upload flow record
  * @param bf Bloom filter used to approximate uniqueips statistic
  */
-void UpdateStatsRecord(stat_map_t &stat_map, const flow_key_t &flow_key, 
-                       const flow_record_t &flow_rec,
-                       bloom_filter *bf_active, bloom_filter *bf_learn) {
+void UpdateStatsRecord(Profile *profile_ptr, const flow_key_t &flow_key,
+                       const flow_record_t &flow_rec) {
    // find/add record in bloom filter
    ip_addr_t bkey[2] = {flow_key.sad, flow_key.dad};
    bool present = false;
-   present = bf_active->containsinsert((const unsigned char *) bkey, 32);
-   bf_learn->insert((const unsigned char *) bkey, 32);
-   
-   hosts_key_t src_host_key = flow_key.sad;
-   hosts_key_t dst_host_key = flow_key.dad;
+   present = profile_ptr->bf_active->containsinsert((const unsigned char *) bkey, 32);
+   profile_ptr->bf_learn->insert((const unsigned char *) bkey, 32);
 
-   hosts_record_t& src_host_rec = stat_map[src_host_key];
-   hosts_record_t& dst_host_rec = stat_map[dst_host_key];
+   hosts_record_t& src_host_rec = get_record(profile_ptr, flow_key.sad);
+   hosts_record_t& dst_host_rec = get_record(profile_ptr, flow_key.dad);
+
 
    // source --------------------------------------------------------
    if (!src_host_rec.in_flows && !src_host_rec.out_flows)
@@ -208,14 +204,17 @@ void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change, const uint32_
       return;
    }
 
-   // Finished timeslot
-   time_t temp = next_ts_start - SIZEOFTIMESLOT;
-   struct tm *timeinfo = localtime(&temp);
+   time_t temp;
+   struct tm *timeinfo;
    char buff[13]; //12 signs + '/0'
+
+   // Name of finished timeslot
+   temp = next_ts_start - SIZEOFTIMESLOT;
+   timeinfo = localtime(&temp);
    strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo);
    last_timeslot = string(buff);
 
-   // Store to new timeslot
+   // Name of new timeslot
    temp = next_ts_start;
    timeinfo = localtime(&temp);
    strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo);
@@ -228,6 +227,48 @@ void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change, const uint32_
 
    log (LOG_INFO, "Storing data to new timeslot: %d", next_ts_start);
    next_ts_start += SIZEOFTIMESLOT;
+}
+
+// TODO: add comment
+void check_profile(Profile *profile, thread_share_t *share, 
+   void (*function)(const hosts_key_t&, const hosts_record_t&, const string&)) 
+{
+   stat_table_t *ptr = profile->stat_table_to_check;
+
+   for (unsigned int i = 0; i < ptr->table_size; ++i) 
+   {
+      // Get record and check timestamps
+      const hosts_record_t &rec = *(hosts_record_t*)ptr->data[i];
+      if (rec.first_record_timestamp + active_timeout > hs_time &&
+         rec.last_record_timestamp + inactive_timeout > hs_time)
+            continue;
+
+      // Get key and check validity of record
+      const hosts_key_t &key = *(hosts_key_t*)ptr->keys[i];
+      if (ht_is_valid(ptr, (char*)key.bytes, i) == 0)
+         continue;
+
+      // Call the event detector
+      function(key, rec, profile->current_timeslot);
+
+      // Add the item to remove to vector
+      remove_item_t item;
+      item.key = key;
+      item.profile_ptr = (void*) profile;
+
+      pthread_mutex_lock(&share->remove_mutex);
+      std::vector<remove_item_t>::iterator it = find (share->remove_vector.begin(),
+         share->remove_vector.end(), item);
+      if (it == share->remove_vector.end())
+         share->remove_vector.push_back(item);
+      pthread_mutex_unlock(&share->remove_mutex);
+
+      if (share->remove_vector.size() >= 100) {
+         share->remove_ready = true;
+         sched_yield();
+         continue;
+      }
+   }
 }
 
 /////////////////////////////////////////////////////////////
@@ -294,7 +335,6 @@ void *data_reader_trap(void *share_struct)
 
          // Setup alarm for the activation of time counter (hs_time)  
          alarm(1);
-         cout << "aktivuji alarm" << endl;
 
          next_bf_change = flow_time + active_timeout/2;
          last_change = flow_time;
@@ -306,22 +346,29 @@ void *data_reader_trap(void *share_struct)
          check_time(next_timeslot_start, next_bf_change, flow_time);
       }
 
-      // Store new data
+      // Store new flow data to profiles
       new_trap_data(data);
+
+      // Remove already processed items
+      if (share->remove_ready) {
+         pthread_mutex_lock(&share->remove_mutex);
+
+         while(!share->remove_vector.empty()) {
+            remove_item_t &item = share->remove_vector.back();   
+            ht_remove_by_key(((Profile*)item.profile_ptr)->stat_table_to_check, 
+               (char*) item.key.bytes);
+            share->remove_vector.pop_back();
+         }
+         share->remove_ready = false;
+         pthread_mutex_unlock(&share->remove_mutex);
+      }
    }
 
    // TRAP TERMINATED, exiting... 
    log(LOG_INFO, "Reading from trap terminated.");
 
-   // Wait until end of current processing
+   // Wait until the end of the current processing and run it again (to end)
    pthread_mutex_lock(&share->det_processing);
-
-   // TODO: mapy bude mazat až končící kontrolní vlákno, protože i při skončení
-   //       čtení se bude kontrolovat obsah dat...
-   // Clear all profiles stat map for loading
-   for (int i = 0; i < profiles.size(); i++) {
-      (*profiles[i]->stat_map_to_check).clear();
-   }
    pthread_mutex_unlock(&share->det_processing);
    pthread_mutex_unlock(&detector_start);
 
@@ -334,56 +381,51 @@ void *data_reader_trap(void *share_struct)
 void *data_process_trap(void *share_struct)
 {  
    thread_share_t *share = (thread_share_t*) (share_struct);
-
-   // TODO: check configuration on every start of detector
-   // Check configuration
    Configuration *conf = Configuration::getInstance();
-   conf->lock();
-   active_timeout = atoi(conf->getValue("timeout-active").c_str());
-   inactive_timeout = atoi(conf->getValue("timeout-inactive").c_str());
-   det_start_time = atoi(conf->getValue("detectors-starts-pause").c_str());
-   bool rules_generic = (conf->getValue("rules-generic") == "1");
-   bool rules_ssh = (conf->getValue("rules-ssh") == "1");
-   conf->unlock();
 
-   if (det_start_time <= 0)   det_start_time   = D_DET_START_PAUSE;
-   if (active_timeout <= 0)   active_timeout   = D_ACTIVE_TIMEOUT;
-   if (inactive_timeout <= 0) inactive_timeout = D_INACTIVE_TIMEOUT;
-   
    /* alarm signal*/
    signal(SIGALRM, alarm_handler);
 
    while (!threads_terminated) {
-      // Wait until swap of stat maps
+      // Wait on start
       pthread_mutex_lock(&detector_start);
+
+      // Check configuration
+      conf->lock();
+      active_timeout =   atoi(conf->getValue("timeout-active").c_str());
+      inactive_timeout = atoi(conf->getValue("timeout-inactive").c_str());
+      det_start_time =   atoi(conf->getValue("detectors-starts-pause").c_str());
+      conf->unlock();
+
+      if (det_start_time <= 0)   det_start_time   = D_DET_START_PAUSE;
+      if (active_timeout <= 0)   active_timeout   = D_ACTIVE_TIMEOUT;
+      if (inactive_timeout <= 0) inactive_timeout = D_INACTIVE_TIMEOUT;
 
       pthread_mutex_lock(&share->det_processing);
       processing_data = true;
 
       // TODO: run processing of each profile in separate thread
+      // Run detectors over each profile
       for (int i = 0; i < profiles.size(); i++) {
-         // Skip empty profiles
-         if ((*profiles[i]->stat_map_to_check).empty()) {
-            continue;
+         for (detectors_citer it = profiles[i]->detectors.begin();
+            it != profiles[i]->detectors.end(); ++it) {
+            conf->lock();
+            if (conf->getValue(it->first) == "1") {
+               conf->unlock();
+               check_profile(profiles[i], share, it->second);
+            }
+            else {
+               conf->unlock();
+            }
          }
-
-         //log(LOG_DEBUG, "Profile \"%s\": Storing ...", profiles[i]->name.c_str());
-         //profiles[i]->store(); //WARNING: before uncomment, check timeslot string
-         //log(LOG_DEBUG, "Profile \"%s\": Stats stored, running detectors ...", profiles[i]->name.c_str());
-
-         // run all detectors associated with this profile
-         if (rules_generic && profiles[i]->name == "all")
-            check_rules(profiles[i]);
-         if (rules_ssh && profiles[i]->name == "ssh")
-            check_rules_ssh(profiles[i]);
-
-         //log(LOG_DEBUG, "Profile \"%s\": Detectors done", profiles[i]->name.c_str());
       }
 
       // Processing of timeslot complete - allow to swap stat maps
       processing_data = false;
       pthread_mutex_unlock(&share->det_processing);
    }
+
+   // TRAP TERMINATED, exiting... 
 
    log(LOG_INFO, "Profiles processing complete.");
    pthread_exit(NULL);

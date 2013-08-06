@@ -9,6 +9,7 @@
 
 #include "../../../../unirec/ipaddr_cpp.h"
 #include "../../../../unirec/ipaddr.h"
+#include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 
 /////////////////////////////////////////////////////////////////
 // Global struct and type definitions
@@ -100,7 +101,7 @@ typedef ip_addr_t hosts_key_t;
 struct class_comp {
    bool operator() (const ip_addr_t& first, const ip_addr_t& second) const
    {
-         return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
+      return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
    }
 };
 
@@ -109,28 +110,51 @@ typedef std::map<hosts_key_t, hosts_record_t, class_comp> stat_map_t;
 typedef stat_map_t::iterator stat_map_iter;
 typedef stat_map_t::const_iterator stat_map_citer;
 
+// hash table
+typedef cc_hash_table_t stat_table_t;
+
+
 // Function for flow filtering (used by profiles)
 typedef bool (*flow_filter_func_ptr)(const flow_key_t&, const flow_record_t&);
 
-// Thread structure for shared 
-typedef struct thread_share{
+// The identification of item to remove from stat_table
+typedef struct remove_item_s {
+   hosts_key_t key;
+   void *profile_ptr;
+
+   bool operator== (const remove_item_s& second) const
+   {
+      return (profile_ptr == second.profile_ptr) &&
+         (memcmp(&key, &second.key, sizeof(hosts_key_t)) == 0);   
+   }
+} remove_item_t;
+
+// Shared structure for TRAP reader and process threads
+typedef struct thread_share_s {
+   pthread_t data_reader_thread;
+   pthread_t data_process_thread;
    pthread_mutex_t det_processing;
-   pthread_t data_reader_thread, data_process_thread; 
+   pthread_mutex_t remove_mutex;                // to protect remove_vector
+   std::vector<remove_item_t> remove_vector;    // items to remove from stat_map
+   bool remove_ready;                           // info about remove_vector 
 
-   thread_share() { // Constructor init all mutexes
+   thread_share_s() { // Constructor
       pthread_mutex_init(&det_processing, NULL);
+      pthread_mutex_init(&remove_mutex, NULL);
+      remove_vector.reserve(256);
+      remove_ready = false;
    }
 
-   ~thread_share() { // Destructor
+   ~thread_share_s() { // Destructor
       pthread_mutex_destroy(&det_processing);
+      pthread_mutex_destroy(&remove_mutex);
    }
-
 } thread_share_t;
 
 ////////////////////////////////////
 // Declaration of global variables
 
-extern stat_map_t stat_map; // Main host statictics
+//extern stat_map_t stat_map; // Main host statictics
 
 // Status information
 extern bool processing_data;

@@ -3,12 +3,12 @@ CC=gcc
 #CXXFLAGS=-pthread -g
 CXXFLAGS=-pthread -O2
 LDFLAGS=-pthread -O2
-LDLIBS= -ltrap ../../unirec/unirec.o
+LDLIBS= -ltrap -L/usr/local/lib64/ ../../unirec/unirec.o ../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
 
 STREAM= obj/stream_version
 TIMESLOT= obj/timeslot_version
 
-all: obj hoststatserv_stream hoststatserv
+all: cuckoo_hash obj hoststatserv_stream hoststatserv
 
 hoststatserv: $(TIMESLOT)/main/hoststatserv.o $(TIMESLOT)/main/processdata.o $(TIMESLOT)/main/requesthandlers.o $(TIMESLOT)/eventhandler.o $(TIMESLOT)/config.o $(TIMESLOT)/main/profile.o $(TIMESLOT)/main/database.o $(TIMESLOT)/lexan.o $(TIMESLOT)/synan.o $(TIMESLOT)/detectionrules.o #$(TIMESLOT)/sshdetection.o
 	$(CXX) $(LDFLAGS) $^ -o $@ $(LDLIBS)
@@ -18,6 +18,9 @@ hoststatserv_stream: $(STREAM)/main/hoststatserv.o $(STREAM)/main/processdata.o 
 
 obj:
 	mkdir -p obj/timeslot_version/main obj/stream_version/main
+
+cuckoo_hash:
+	$(MAKE) -C ../../common/cuckoo_hash_v2/
 
 $(TIMESLOT)/%.o: src/%.cpp src/*.h
 	$(CXX) -c $(CXXFLAGS) -o $@ $<
