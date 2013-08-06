@@ -41,24 +41,26 @@
 import os
 import sys
 
-def report(rep_str):
+def report( rep_str ):
    program_prefix = sys.argv[0]
    print program_prefix + ": " + rep_str
 
-def error(err_str):
+def error( err_str ):
    program_prefix = sys.argv[0]
-   sys.stderr.write(program_prefix + ": " + err_str + '\n')
+   sys.stderr.write( program_prefix + ": " + err_str + '\n' )
 
-def create_directory(dir_path):
-   if not os.path.exists(dir_path):
+def create_directory( dir_path ):
+   if not os.path.exists( dir_path ):
       try:
-         os.mkdir(dir_path)
+         os.mkdir( dir_path )
       except OSError:
-         perror("Failed to create " + dir_path + " directory.")
+         error( "Failed to create " + dir_path + " directory." )
          return False
+   else:
+      report("Directory already exists.")
    return True
 
-def open_file(file_path, flag='r'):
+def open_file( file_path, flag = 'r' ):
    if flag == 'r':
       operation = "reading"
    elif flag == 'w':
@@ -69,46 +71,40 @@ def open_file(file_path, flag='r'):
       operation = "reading and appending"
    elif flag == 'rb':
       operation = "binary reading"
-   elif flag = 'wb':
+   elif flag == 'wb':
       operation = "binary writing"
-   elif flag = 'ab':
+   elif flag == 'ab':
       operation = "binary appending"
-   elif flag = 'r+b':
+   elif flag == 'r+b':
       operation = "binary reading and appending"
    else:
-      raise TypeError("Wrong flag(" + flag + ") specified.")
+      raise TypeError( "Wrong flag(\'" + flag + "\') specified." )
 
    try:
-      opened_file = open(file_path, flag)
+      opened_file = open( file_path, flag )
    except IOError:
-      error("Unable to open " + file_path + " for " + operation + ".")
+      error( "Unable to open " + file_path + " for " + operation + "." )
+      return False
 
    return opened_file
 
-def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
-   try:
-      conf_file = open(conf_name, 'r')
-   except IOError:
-      report("Failed to open \'" + conf_name + "\' file for reading.")
-      exit(1)
+def read_config( conf_name = './configure/conf', delimiter = ' ', comment = '#' ):
+   config = {}
+   conf_file = open_file( conf_name, 'r' ):
+   if not conf_file:
+      return config
 
    conf_line = conf_file.readline()
-   if not conf_line:
-      report("No values specified in the \'" + conf_name + "\' file.")
-      conf_file.close()
-      exit(1)
-
-   config = {}
    while conf_line:
       if conf_line[0] == comment or conf_line == '\n':
          conf_line = conf_file.readline()
          continue
 
-      conf_line = conf_line.rstrip().split(delimiter)
-      if len(conf_line) != 2:
-         report("Wrong configuration file format.")
+      conf_line = conf_line.rstrip().split( delimiter )
+      if len( conf_line ) != 2:
+         report( "Wrong configuration file format." )
          conf_file.close()
-         exit(1)
+         exit( 1 )
       conf_key = conf_line[0]
       conf_val = conf_line[1]
       config[conf_key] = conf_val
@@ -117,7 +113,7 @@ def read_config(conf_name = './configure/conf', delimiter = ' ', comment = '#'):
    conf_file.close()
    return config
 
-def get_dictionary_data(dictionary, destination, item, delimiter='\n'):
+def write_dict_data( dictionary, destination, item, delimiter = '\n' ):
    out = ""
 
    if item == 'keys':
@@ -127,15 +123,16 @@ def get_dictionary_data(dictionary, destination, item, delimiter='\n'):
       for value in dictionary.itervalues():
          out += value + delimiter
    else:
-      raise NameError("Wrong item name(" + item + ") specified."))
+      raise NameError( "Wrong item name(\'" + item + "\') specified." )
 
    if destination == 'stderr':
-      sys.stderr.write(out)
+      sys.stderr.write( out )
    elif destination == 'stdout':
-      sys.stdout.write(out)
+      sys.stdout.write( out )
    else:
-      if not dest_file = open_file(destination, 'w'):
+      dest_file = open_file( destination, 'w' )
+      if not dest_file:
          return False
-      dest_file.write(out)
+      dest_file.write( out )
       dest_file.close()
    return True
