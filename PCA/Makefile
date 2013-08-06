@@ -13,13 +13,22 @@ ALGLIBFILES=$(ALOBJPATH)alglibinternal.o $(ALOBJPATH)alglibmisc.o $(ALOBJPATH)ap
 
 $(ALOBJPATH)%.o ::  $(ALSRCPATH)%.cpp $(ALSRCPATH)%.h
 	$(CXX) -c $(CXXFLAGS) $< -o $@
-	
-LDLIBS=../../unirec/unirec.o $(ALGLIBFILES) -ltrap -lstdc++
 
-MODULES=PCA_sketch_detector #PCA_sketch_identificator
+LDLIBS=../../unirec/unirec.o -ltrap -lstdc++ $(ALGLIBFILES)
+
+MODULES=PCA_sketch_detector PCA_test_receiver
 
 # Uses default rules
 all: $(ALGLIBFILES) ${MODULES}
+
+PCA_sketch_detector.o: PCA_sketch_detector.cpp PCA_sketch.h
+	$(CXX) $(CXXFLAGS) -c -o PCA_sketch_detector.o PCA_sketch_detector.cpp
+
+PCA_test_receiver.o: PCA_test_receiver.cpp PCA_sketch.h
+	$(CXX) $(CXXFLAGS) -c -o PCA_test_receiver.o PCA_test_receiver.cpp
+
+#PCA_test_receiver:
+#	$(CXX) $(LDFAGS) ../../unirec/unirec.o -ltrap -lstdc++ -o PCA_test_receiver.cpp
 
 clean:
 	rm -f *.o ${MODULES}
