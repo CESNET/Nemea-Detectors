@@ -9,7 +9,16 @@
 #include "timeslot_version/profile.h"
 #endif
 
-void check_rules(Profile *profile);
-void check_rules_ssh(Profile* profile);
+#ifndef STREAM_VERSION
+void check_rules(const Profile* profile);
+#endif
+
+void check_rules(const hosts_key_t &addr, const hosts_record_t &rec, const std::string &timeslot);
+
+#ifndef STREAM_VERSION
+void check_rules_ssh(const Profile* profile);
+#endif
+
+void check_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec, const std::string &timeslot);
 
 #endif

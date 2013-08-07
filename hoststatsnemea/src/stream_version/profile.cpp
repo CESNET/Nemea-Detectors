@@ -12,13 +12,11 @@ vector<Profile*> profiles;
 Profile::Profile(flow_filter_func_ptr flow_filter_func, const std::string &name, const std::string &desc)
  : flow_filter_func(flow_filter_func), name(name), desc(desc), database(name)
 { 
-   stat_map_to_check = &stat_map;
-   pthread_mutex_init(&mtx, NULL);
+   stat_table_to_check = &stat_table;
 }
 
 Profile::~Profile()
 { 
-   pthread_mutex_destroy(&mtx);
 }
 
 int Profile::reload_config()
@@ -32,16 +30,14 @@ int Profile::new_data(const flow_key_t &flow_key, const flow_record_t &flow_reco
       return 1;
    }
 
-   pthread_mutex_lock(&mtx);
-   UpdateStatsRecord(*stat_map_to_check, flow_key, flow_record, bf_active, bf_learn);
-   pthread_mutex_unlock(&mtx);
+   UpdateStatsRecord(this, flow_key, flow_record);
    return 0;
 }
-
+/*
 int Profile::store() const
 {
-   if (!(*stat_map_to_check).empty()) {
-      database.store(current_timeslot, (*stat_map_to_check));
+   if (!(*stat_table_to_check).empty()) {
+      database.store(current_timeslot, (*stat_table_to_check));
       return 0;
    }
    else {
@@ -49,11 +45,11 @@ int Profile::store() const
    }
    
 }
-
+*/
 int Profile::release()
 {
    current_timeslot = "";
-   (*stat_map_to_check).clear();
+   ht_clear(stat_table_to_check);
 }
 
 void Profile::change_timeslot(const std::string &new_timeslot)

@@ -3,10 +3,16 @@
 
 #include <string>
 #include <vector>
-#include "../BloomFilter.hpp"
 
+#include "../BloomFilter.hpp"
 #include "hoststats.h"
 #include "database.h"
+#include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
+
+typedef std::vector<std::pair<std::string, void (*)(const hosts_key_t&, 
+      const hosts_record_t&, const std::string&)> > detectors_t;
+typedef detectors_t::const_iterator detectors_citer;
+
 
 class Profile {
    flow_filter_func_ptr flow_filter_func;
@@ -15,10 +21,10 @@ public:
    std::string desc;
    Database database;
    std::string current_timeslot;
-   stat_map_t stat_map;
-   stat_map_t *stat_map_to_check;
+   stat_table_t stat_table;
+   stat_table_t *stat_table_to_check;
    bloom_filter *bf_active, *bf_learn;
-   pthread_mutex_t mtx;
+   detectors_t detectors;
    
    // Constructor
    Profile(flow_filter_func_ptr flow_filter_func, const std::string &name, const std::string &desc = "");
@@ -29,12 +35,12 @@ public:
    // Do what is needed after configuration is reloaded
    int reload_config();
    
-   // Store new data to map (stat_map_to_load)
+   // Store new data to map (stat_talbe_to_check)
    int new_data(const flow_key_t &flow_key, const flow_record_t &flow_record);
    
-   // Store currently loaded stats into database
+/*   // Store currently loaded stats into database
    int store() const;
-   
+*/ 
    // Release all stats loaded in memory
    int release();
 

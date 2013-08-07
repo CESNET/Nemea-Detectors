@@ -52,8 +52,8 @@
 extern "C" {
 #endif
 
-#include "../../unirec/unirec.h"
-#include "../../common/cuckoo_hash/cuckoo_hash.h"
+#include "../../../unirec/unirec.h"
+#include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
 /**
  * Constant returned if everything is ok.
@@ -85,18 +85,17 @@ extern "C" {
  */
 typedef struct {
     /*@{*/
-    uint32_t url_hash; /**< Hash of the loaded URL */
+    char* url; /**< URL to update */
     uint8_t bl; /**< Source blacklist of the URL */
     /*@}*/
 } upd_item_t;
 
 /*
- * Function for loading source files.
+ * Function for loading source files and updates.
  */
 
 int load_url(cc_hash_table_t& blacklist, const char* path);
-
-//int load_url(cc_hash_table_t& blacklist, std::string& path);
+int load_update(std::vector<upd_item_t>& add_upd, std::vector<upd_item_t>& rm_upd, const char* path);
 
 /*
  * Function for checking records.
