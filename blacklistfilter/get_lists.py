@@ -234,98 +234,98 @@ def save_conv_diffs( old_conv_path, new_conv_path, out_path ):
    out_file.close()
 
 def get_lists( parameter = 'update' ):
-sources = read_sources( source_path )
+   sources = read_sources( source_path )
 
-if not sources:
-   return False
+   if not sources:
+      return False
 
-if not create_directory( sources_path ):
-   return False
+   if not create_directory( sources_path ):
+      return False
 
-for i in range( 0, len( sources ) ):
-   order = sources[i].file_name.split( '.' )[1]
-   address = sources[i].address
-   old_raw_name = sources[i].file_name
-   old_raw_path = sources_path + old_raw_name
-   new_raw_name = '.' + old_raw_name
-   new_raw_path = sources_path + new_raw_name
-   old_ips_path = sources_path + order + '.ips'
-   old_urls_path = sources_path + order + '.urls'
+   for i in range( 0, len( sources ) ):
+      order = sources[i].file_name.split( '.' )[1]
+      address = sources[i].address
+      old_raw_name = sources[i].file_name
+      old_raw_path = sources_path + old_raw_name
+      new_raw_name = '.' + old_raw_name
+      new_raw_path = sources_path + new_raw_name
+      old_ips_path = sources_path + order + '.ips'
+      old_urls_path = sources_path + order + '.urls'
 
-   # Get variables from config or assign implicit values
-   current_config = cwd + '/configure/conf.' + old_raw_name
-   config = {}
-   if os.path.exists ( current_config ):
-      config = read_config( conf_name = current_config )
-   cols = config.get( 'columns', cols )
-   delimiter = config.get( 'delimiter', delimiter )
-   addr_col = config.get( 'addr_col', addr_col )
-   warden = config.get( 'warden', warden )
-   warden_type = config.get( 'warden_type', warden_type )
+      # Get variables from config or assign implicit values
+      current_config = cwd + '/configure/conf.' + old_raw_name
+      config = {}
+      if os.path.exists ( current_config ):
+         config = read_config( conf_name = current_config )
+      cols = config.get( 'columns', cols )
+      delimiter = config.get( 'delimiter', delimiter )
+      addr_col = config.get( 'addr_col', addr_col )
+      warden = config.get( 'warden', warden )
+      warden_type = config.get( 'warden_type', warden_type )
 
-   if warden:
-      if not warden_type:
-         error( "Warden request type is not specified in a file " + current_config + ". Skipping." )
-         continue
-      command = "perl hostrecvwarden.pl"
-      cols = 13
-      addr_col = 7
-      delimiter = ','
-   else:
-      command = "wget -O " + new_raw_path + " " + address
+      if warden:
+         if not warden_type:
+            error( "Warden request type is not specified in a file " + current_config + ". Skipping." )
+            continue
+         command = "perl hostrecvwarden.pl"
+         cols = 13
+         addr_col = 7
+         delimiter = ','
+      else:
+         command = "wget -O " + new_raw_path + " " + address
 
-   if os.path.exists( new_raw_path ):
-      os.remove( new_raw_path )
-
-   report( "Obtaining " + old_raw_name + "." )
-   if not warden:
-      os.system( command )
-
-   if not os.path.exists( new_raw_path ):
-      error( "Obtaining " + old_raw_name + " has FAILED, skipping." )
-      continue
-
-# Update existing blacklist
-   if os.path.exists( old_raw_path ) and parameter == 'update':
-      report( "Obtained " + old_raw_name + " as " + new_raw_name + "." )
-
-      if os.path.getmtime( new_raw_path ) <= os.path.getmtime( old_raw_path ):
-         report( old_raw_name + " is up-to-date, removing raw file and update file." )
-         if os.path.exists( updates_ips_path + order ):
-            os.remove( updates_ips_path )
-         if os.path.exists( updates_urls_path + order ):
-            os.remove( updates_urls_path )
-         os.remove( new_raw_path )
-         continue
-
-      report( "Obtained file is newer." )
-      converted = convert_raw_file( new_raw_path, sources_path, order )
-      if not converted:
+      if os.path.exists( new_raw_path ):
          os.remove( new_raw_path )
 
-      mode = converted.mode
-      if mode == None:
-         report( "No conversion could\'ve been done with the \'" + old_raw_name + "\' file.")
+      report( "Obtaining " + old_raw_name + "." )
+      if not warden:
+         os.system( command )
 
-      if mode == 'ips' or mode == 'both':
-         if create_directory( updates_ips_path ):
-            if os.path.exists( old_ips_path ):
-               save_conv_diffs( old_ips_path, converted.ip_file, updates_ips_path + order )
-
-      if mode == 'urls' or mode == 'both':
-         if create_directory( updates_url_path ):
-            if os.path.exists( old_urls_path ):
-               save_conv_diffs( old_urls_path, converted.url_file, updates_urls_path + order )
-
-# Save new blacklist
-   else:
-      report( "Obtained " + old_raw_name + " for the first time." )
-      converted = convert_raw_file( new_raw_path, sources_path, order )
-      if not converted:
-         os.remove ( new_raw_path )
+      if not os.path.exists( new_raw_path ):
+         error( "Obtaining " + old_raw_name + " has FAILED, skipping." )
          continue
 
-      mode = converted.mode
+   # Update existing blacklist
+      if os.path.exists( old_raw_path ) and parameter == 'update':
+         report( "Obtained " + old_raw_name + " as " + new_raw_name + "." )
+
+         if os.path.getmtime( new_raw_path ) <= os.path.getmtime( old_raw_path ):
+            report( old_raw_name + " is up-to-date, removing raw file and update file." )
+            if os.path.exists( updates_ips_path + order ):
+               os.remove( updates_ips_path )
+            if os.path.exists( updates_urls_path + order ):
+               os.remove( updates_urls_path )
+            os.remove( new_raw_path )
+            continue
+
+         report( "Obtained file is newer." )
+         converted = convert_raw_file( new_raw_path, sources_path, order )
+         if not converted:
+            os.remove( new_raw_path )
+
+         mode = converted.mode
+         if mode == None:
+            report( "No conversion could\'ve been done with the \'" + old_raw_name + "\' file.")
+
+         if mode == 'ips' or mode == 'both':
+            if create_directory( updates_ips_path ):
+               if os.path.exists( old_ips_path ):
+                  save_conv_diffs( old_ips_path, converted.ip_file, updates_ips_path + order )
+
+         if mode == 'urls' or mode == 'both':
+            if create_directory( updates_url_path ):
+               if os.path.exists( old_urls_path ):
+                  save_conv_diffs( old_urls_path, converted.url_file, updates_urls_path + order )
+
+   # Save new blacklist
+      else:
+         report( "Obtained " + old_raw_name + " for the first time." )
+         converted = convert_raw_file( new_raw_path, sources_path, order )
+         if not converted:
+            os.remove ( new_raw_path )
+            continue
+
+         mode = converted.mode
       if mode == 'ips' or mode == 'both':
          if create_directory( updates_ips_path ):
             replace_old_version( updates_ips_path + order, converted.ip_file )
