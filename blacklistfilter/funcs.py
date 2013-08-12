@@ -57,7 +57,7 @@ def create_directory( dir_path ):
          error( "Failed to create " + dir_path + " directory." )
          return False
    else:
-      report("Directory already exists.")
+      report("Directory "+ dir_path +" already exists.")
    return True
 
 def open_file( file_path, flag = 'r' ):
@@ -90,7 +90,7 @@ def open_file( file_path, flag = 'r' ):
 
 def read_config( conf_name = './configure/conf', delimiter = ' ', comment = '#' ):
    config = {}
-   conf_file = open_file( conf_name, 'r' ):
+   conf_file = open_file( conf_name, 'r' )
    if not conf_file:
       return config
 

@@ -68,7 +68,9 @@ def is_running(pid):
 program_prefix = sys.argv[0]
 cwd = os.getcwd()
 ip_detector = cwd + '/ipdetect/ipblacklistfilter'
+ip_sources = cwd + '/ipdetect/update/'
 url_detector = cwd + '/urldetect/urlblacklistfilter'
+url_sources = cwd + '/urldetect/update/'
 
 usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url"
 
@@ -81,9 +83,11 @@ filter_type = sys.argv[2]
 
 if filter_type == 'ip':
    main_program = ip_detector
+   sources = ip_sources
    detector_name = "IP-Blacklist"
 elif filter_type == 'url':
    main_program = url_detector
+   sources = url_sources
    detector_name = "URL-Blacklist"
 else:
    error( "Bad arguments supplied.\n" + usage )
@@ -109,7 +113,7 @@ if call_method == 'start':
       exit( 1 )
 
    tmp = subprocess.Popen(
-      [main_program, '-i', 'tb;localhost,7000;', cwd + '/sources/update/'],
+      [main_program, '-i', 'tb;localhost,7000;', sources],
       stdout = subprocess.PIPE,
       stderr = subprocess.PIPE,
       stdin = subprocess.PIPE

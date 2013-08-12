@@ -43,6 +43,8 @@ import re
 import subprocess
 
 from collections import namedtuple
+from socket import AF_INET
+from socket import AF_INET6
 from shutil import copy
 from socket import inet_pton
 
@@ -54,16 +56,24 @@ from funcs import report
 from funcs import write_dict_data
 
 source = namedtuple( 'source', 'file_name address' )
+convertor = namedtuple( 'convertor', 'mode ip_file url_file' )
+
 cwd = os.getcwd()
 
-def diff( old, new, add = True, rem = False ):
-   if add:
-      command = 'grep -vhFxf ' + old + ' ' + new
-   else:
-      command = 'grep -vhFxf ' + new + ' ' + old
+updates_urls_path = cwd + '/urldetect/update/'
+updates_ips_path = cwd + '/ipdetect/update/'
+sources_path = cwd + '/sources/'
+source_path = cwd + '/configure/sources.txt'
 
+cols = 1
+delimiter = ' '
+addr_col = 1
+warden = False
+warden_type = None
+
+def diff( old, new ):
+   command = 'grep -vhFxf ' + old + ' ' + new
    grep = subprocess.Popen( ['-c', command], stdout = subprocess.PIPE, shell = True )
-
    return grep.stdout.read()
 
 def check_line( line ):
@@ -72,11 +82,11 @@ def check_line( line ):
       return False
    return True
 
-def check_cols( line, expected_len ):
-   tmp_line = tmp_line.split( delimiter )
-   line_len = len( tmp_line )
+def check_cols( line, expected_len, file_path ):
+   line = line.split( delimiter )
+   line_len = len( line )
    if line_len != expected_len:
-      report( "Number of columns in a file " + tmp_path + " on a line " + str( line ) + " doesn\'t match. "
+      report( "Number of columns in a file " + file_path + " on a line " + str( line ) + " doesn\'t match. "
       "Expected: " + str( expected_len ) + ", read: " + str( line_len ) + ". Skipping." )
       return False
    return True
@@ -84,16 +94,16 @@ def check_cols( line, expected_len ):
 def check_url( address ):
    report( "Checking address for an URL." )
    return re.match(
-      r'^(?:http)s?://(?:www\.)?'
+      r'^((?:http)s?://)?(?:www\.)?'
       r'(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)'
       r'(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)'
-      r'(?:/?|[/?])$', addr, re.IGNORECASE
+      r'(?:/?|[/?])$', address, re.IGNORECASE
    )
 
 def check_ip( address ):
    report( "Checking address for an IP." )
 
-   if ':' in addr:
+   if ':' in address:
       report( "Assuming IPv6 address." )
       family = AF_INET6
    else:
@@ -101,84 +111,75 @@ def check_ip( address ):
       family = AF_INET
 
    try:
-      inet_pton( family, addr )
+      inet_pton( family, address )
    except:
-      report( "Invalid address: " + addr + "." )
+      report( "Invalid address: " + address + "." )
       return False
    return True
 
-def save_addr_into_dict( tmp_path ):
-   tmp_file = open_file( tmp_path, 'r' )
-   if not tmp_file:
+def save_addr_into_dict( addr_path ):
+   addr_file = open_file( addr_path, 'r' )
+   if not addr_file:
       return False
 
    ips = {}
    urls = {}
    line = 1
-   tmp_line = tmp_file.readline()
-   while tmp_line:
-      if not check_line( tmp_line ) or not check_cols( tmp_line, cols ):
-         tmp_line = tmp_file.readline()
+   addr_line = addr_file.readline()
+   while addr_line:
+      if not check_line( addr_line ) or not check_cols( addr_line, cols, addr_path ):
+         addr_line = addr_file.readline()
          line += 1
          continue
 
-      addr = tmp_line[addr_col].lstrip().rstrip()
+      addr_line = addr_line.split( delimiter )
+      addr = addr_line[addr_col-1].lstrip().rstrip()
       report( "Received address: "+ addr )
 
-      if check_url( addr ):
-         report( "Saving valid URL." )
-         urls[addr] = None
-      elif check_ip( addr ):
+      if check_ip( addr ):
          report( "Saving valid IP." )
          ips[addr] = None
+      elif check_url( addr ):
+         report( "Saving valid URL." )
+         urls[addr] = None
 
-      tmp_line = tmp_file.readline()
+      addr_line = addr_file.readline()
       line += 1
 
-   tmp_file.close()
-
+   addr_file.close()
    return ips, urls
 
-def convert_tmp_file( tmp_path, order ):
+def convert_raw_file( raw_path, conv_path, order ):
    order = str( order )
 
-   dicts = save_addr_into_dict( tmp_path )
+   dicts = save_addr_into_dict( raw_path )
    if not dicts:
       return False
 
    ips = dicts[0]
    urls = dicts[1]
 
-   new_path = cwd + '/sources/.' + order
-   ips_path = new_path + '.ips'
-   urls_path = new_path + '.urls'
+   new_conv_path = conv_path + '.' + order
+   ips_path = new_conv_path + '.ip'
+   urls_path = new_conv_path + '.url'
 
-   ret = None
+   mode = None
    if ips:
       write_dict_data( ips, ips_path, 'keys' )
-      ret = 'ips'
+      mode = 'ips'
 
    if urls:
       write_dict_data( urls, urls_path, 'keys' )
-      if ret:
-         ret = 'both'
+      if mode:
+         mode = 'both'
       else:
-         ret = 'urls'
+         mode = 'urls'
 
-   return ret
-
-def create_update_file( updates_path, order ):
-   if not create_directory( updates_path ):
-      return False
-
-   update_path = updates_path + order
-   if not update_file = open_file( update_path, 'w' ):
-      return False
-
-   return ( update_path, update_file )
+   return convertor( mode, ips_path, urls_path )
 
 def read_sources( source_path ):
-   if not source_file = open_file( source_path, 'r' )
+   source_file = open_file( source_path, 'r' )
+   if not source_file:
       return False
 
    source_line = source_file.readline()
@@ -189,10 +190,10 @@ def read_sources( source_path ):
 
    sources = []
    while source_line:
-      if source_line == "\n" or source_line.lstrip()[0] == "#":
+      if source_line == "\n" or source_line.lstrip()[0] == '#':
          source_line = source_file.readline()
          continue
-      source_line = source_line.rstrip().split( " " )
+      source_line = source_line.rstrip().split( ' ' )
       if len( source_line ) != 2:
          report( "Wrong source format, skipping." )
          source_line = source_file.readline()
@@ -203,121 +204,139 @@ def read_sources( source_path ):
    source_file.close()
 
    if not len( sources ):
-      error( "No sources specified correctly in the sources file." )   
+      error( "No sources were specified correctly in the " + source_path + " file." )   
       return False
 
    return sources
 
+def replace_old_version( old_file_path, new_file_path ):
+   if not os.path.exists( new_file_path ):
+      raise NameError( "File \'" + new_file_path + "\' doesn\'t exist." )
+      return False
+   if os.path.exists( old_file_path ):
+      os.remove( old_file_path )
+   os.rename( new_file_path, old_file_path )
+
+def save_conv_diffs( old_conv_path, new_conv_path, out_path ):
+   if not os.path.exists( old_conv_path ) or not os.path.exists( new_conv_path ):
+      raise NameError( "One of converted files doesn\'t exist." )
+      return False
+   add = diff( old_conv_path, new_conv_path )
+   rem = diff( new_conv_path, old_conv_path )
+
+   if not add and not rem:
+      return False
+
+   out_file = open_file( out_path, 'w' )
+   if not update_file:
+      return False
+   out_file.write( add + '# remove\n' + rem )
+   out_file.close()
+
 def get_lists( parameter = 'update' ):
-   updates_path = cwd + '/sources/update/'
-   updates_url_path = cwd + '/urldetect/update/'
-   updates_ips_path = cwd + '/ipdetect/update/'
-   sources_path = cwd + '/sources/'
-   source_path = cwd + '/configure/sources.txt'
+sources = read_sources( source_path )
 
-   sources = read_sources( source_path )
+if not sources:
+   return False
 
-   if not sources:
-      return False
+if not create_directory( sources_path ):
+   return False
 
-   if not create_directory( sources_path ):
-      return False
+for i in range( 0, len( sources ) ):
+   order = sources[i].file_name.split( '.' )[1]
+   address = sources[i].address
+   old_raw_name = sources[i].file_name
+   old_raw_path = sources_path + old_raw_name
+   new_raw_name = '.' + old_raw_name
+   new_raw_path = sources_path + new_raw_name
+   old_ips_path = sources_path + order + '.ips'
+   old_urls_path = sources_path + order + '.urls'
 
-   for i in range( 0, len( sources ) ):
-      order = sources[i].file_name.split( "." )[1]
-      address = sources[i].address
-      file_name = sources[i].file_name
-      file_path = sources_path + file_name
-      tmp_name = "." + file_name
-      tmp_path = sources_path + tmp_name
-      old_path = sources_path + order
+   # Get variables from config or assign implicit values
+   current_config = cwd + '/configure/conf.' + old_raw_name
+   config = {}
+   if os.path.exists ( current_config ):
+      config = read_config( conf_name = current_config )
+   cols = config.get( 'columns', cols )
+   delimiter = config.get( 'delimiter', delimiter )
+   addr_col = config.get( 'addr_col', addr_col )
+   warden = config.get( 'warden', warden )
+   warden_type = config.get( 'warden_type', warden_type )
 
-# Get variables from config, assign implicit ones, if it doesn't exist
-      current_config = cwd + '/configure/conf.' + file_name
-      if os.path.exists ( current_config ):
-         config = read_config( conf_name = current_config )
-      cols = config.get( 'columns', 1 )
-      delimiter = config.get( 'delimiter', None )
-      addr_col = config.get( 'addr_col', 0 )
-      warden = config.get( 'warden', False )
-      warden_type = config.get( 'warden_type', None )
+   if warden:
+      if not warden_type:
+         error( "Warden request type is not specified in a file " + current_config + ". Skipping." )
+         continue
+      command = "perl hostrecvwarden.pl"
+      cols = 13
+      addr_col = 7
+      delimiter = ','
+   else:
+      command = "wget -O " + new_raw_path + " " + address
 
-      if warden == True:
-         if warden_type == None:
-            error( "Warden request type is not specified in a file " + current_config + ". Skipping." )
-            continue
-         command = "perl hostrecvwarden.pl"
-      else:
-         command = "wget -O " + tmp_path + " " + address
+   if os.path.exists( new_raw_path ):
+      os.remove( new_raw_path )
 
-      report( "Downloading " + file_name )
+   report( "Obtaining " + old_raw_name + "." )
+   if not warden:
       os.system( command )
 
-      if not os.path.exists( tmp_path ):
-         report( "Downloading " + file_name + " has FAILED, skipping." )
+   if not os.path.exists( new_raw_path ):
+      error( "Obtaining " + old_raw_name + " has FAILED, skipping." )
+      continue
+
+# Update existing blacklist
+   if os.path.exists( old_raw_path ) and parameter == 'update':
+      report( "Obtained " + old_raw_name + " as " + new_raw_name + "." )
+
+      if os.path.getmtime( new_raw_path ) <= os.path.getmtime( old_raw_path ):
+         report( old_raw_name + " is up-to-date, removing raw file and update file." )
+         if os.path.exists( updates_ips_path + order ):
+            os.remove( updates_ips_path )
+         if os.path.exists( updates_urls_path + order ):
+            os.remove( updates_urls_path )
+         os.remove( new_raw_path )
          continue
 
-      if os.path.exists( file_path ) and :
-         report( "Downloaded " + file_name + " as " + tmp_name )
+      report( "Obtained file is newer." )
+      converted = convert_raw_file( new_raw_path, sources_path, order )
+      if not converted:
+         os.remove( new_raw_path )
 
-         if os.path.getmtime( tmp_path ) <= os.path.getmtime( file_path ):
-            report( file_name + " is up-to-date, removing temporary file and update file." )
-            update_path = updates_path + order
-            if os.path.exists( update_path ):
-               os.remove( update_path )
-            os.remove( tmp_path )
-            continue
+      mode = converted.mode
+      if mode == None:
+         report( "No conversion could\'ve been done with the \'" + old_raw_name + "\' file.")
 
-         report( "Downloaded file is newer." )
-         new_path = convert_tmp_file( tmp_path, order )
-         if not new_path:
-            os.remove( tmp_path )
-            continue
+      if mode == 'ips' or mode == 'both':
+         if create_directory( updates_ips_path ):
+            if os.path.exists( old_ips_path ):
+               save_conv_diffs( old_ips_path, converted.ip_file, updates_ips_path + order )
 
-#Determine changes between old and new version
-         if os.path.exists( old_path ):
-            add = diff( old_path, new_path )
-            rem = diff( old_path, new_path, 'add' )
+      if mode == 'urls' or mode == 'both':
+         if create_directory( updates_url_path ):
+            if os.path.exists( old_urls_path ):
+               save_conv_diffs( old_urls_path, converted.url_file, updates_urls_path + order )
 
-            update_file = create_update_file( updates_path, order )
-            update_path = update_file[0]
-            update_file = update_file[1]
+# Save new blacklist
+   else:
+      report( "Obtained " + old_raw_name + " for the first time." )
+      converted = convert_raw_file( new_raw_path, sources_path, order )
+      if not converted:
+         os.remove ( new_raw_path )
+         continue
 
-            if not update_file:
-               os.remove( tmp_path )
-               exit( 1 )
+      mode = converted.mode
+      if mode == 'ips' or mode == 'both':
+         if create_directory( updates_ips_path ):
+            replace_old_version( updates_ips_path + order, converted.ip_file )
+         else:
+            os.remove( new_raw_path )
+            os.remove( converted.ip_file )
+      if mode == 'urls' or mode == 'both':
+         if create_directory( updates_urls_path ):
+            replace_old_version( updates_urls_path + order, converted.url_file )
+         else:
+            os.remove( new_raw_path )
+            os.remove( converted.url_file )
 
-            if add or rem:
-               update_file.write( add + "# remove\n" + rem )
-            update_file.close()
-
-            if not add and not rem:
-               os.remove( update_path )
-            os.remove( old_path )
-
-         os.rename( new_path, old_path )
-         os.remove( file_path )
-         os.rename( tmp_path, file_path )
-
-      else:
-         report( "Downloaded " + file_name + " for the first time" )
-
-         new_path = convert_tmp_file( tmp_path, file_name, order )
-         if not new_path:
-            os.remove( tmp_path )
-            continue
-
-         if os.path.exists( old_path ):
-            os.remove( old_path )
-
-         os.rename( new_path, old_path )
-
-         if not create_directory( updates_path ):
-            exit( 1 )
-
-         copy( old_path, updates_path + order )
-
-         os.rename( tmp_path, file_path )
-
-get_lists()
-exit ( 0 )
+   replace_old_version( old_raw_path, new_raw_path )
