@@ -91,10 +91,13 @@ typedef struct {
 } upd_item_t;
 
 /*
- * Function for loading source files and updates.
+ * Function for loading source files.
  */
-
 int load_url(cc_hash_table_t& blacklist, const char* path);
+
+/*
+ * Function for loading update files.
+ */
 int load_update(std::vector<upd_item_t>& add_upd, std::vector<upd_item_t>& rm_upd, const char* path);
 
 /*

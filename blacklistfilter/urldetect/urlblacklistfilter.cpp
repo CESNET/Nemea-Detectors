@@ -118,7 +118,6 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
     string line;
     char *url_norm;
     int ret;
-    uint32_t hashed_url;
     uint8_t bl;
 
     dp = opendir(path);
@@ -151,6 +150,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
             cout << line << endl;
 #endif
 
+            // don't add the remaining empty line
             if (!line.length()) {
                 continue;
             }
@@ -176,6 +176,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
 #endif
             // insert to table
             ht_insert(&blacklist, url_norm, &bl, strlen(url_norm));
+            free(url_norm);
         }
         in.close();
     }
@@ -278,6 +279,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
             }
         }
         in.close();
+        free(url_norm);
     }
     
     closedir(dp);
@@ -362,7 +364,10 @@ static void show_blacklist(cc_hash_table_t& blacklist) {
 
     for (int i = 0; i < blacklist.table_size; i++) {
         if (blacklist.table[i].key != NULL) {
-            cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
+            for (int k = 0; k < blacklist.table[i].key_length; k++) {
+                cout << blacklist.table[i].key[k];
+            }
+            cout << " | " << blacklist.table[i].key_length << " | "  << (short) *((uint8_t *) blacklist.table[i].data) << endl;
         }
     }
 }
@@ -396,7 +401,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
     
-    // initialize TRAP interface (nothing special is needed so we can use the macro
+    // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
     // check if the directory with URLs is specified
@@ -414,6 +419,7 @@ int main (int argc, char** argv)
     const char* source = argv[1];
 
     // set locale so we can use URL normalization library
+    // !!! NOT PRESENT ON NEMEA COLLECTOR !!!
     setlocale(LC_ALL, "");
     
     retval = load_url(blacklist, source);
