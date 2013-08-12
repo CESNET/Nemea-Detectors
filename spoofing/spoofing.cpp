@@ -62,7 +62,7 @@ extern "C" {
 #include "spoofing.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
 
-//#define DEBUG 1
+#define DEBUG 1
 
 
 using namespace std;
@@ -519,7 +519,7 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, cc_hash_table_t&
         // mask with 24-bit long prefix
         ip = ur_get(ur_tmp, record, UR_DST_IP);
         ip.ui32[2] &= m4[24];
-        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes, src.key_length);
         if (route != NULL && (((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) < rw_time)) {
             route->link |= ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             route->timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
@@ -531,14 +531,14 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, cc_hash_table_t&
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-            ht_insert(&src, (char *) ip.bytes, &src_rec);
+            ht_insert(&src, (char *) ip.bytes, &src_rec, src.key_length);
         }
 
     } else { // incomming traffic --> check for validity
         // mask with 24-bit long prefix
         ip = ur_get(ur_tmp, record, UR_DST_IP);
         ip.ui32[2] &= m4[24];
-        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes, src.key_length);
         if (route != NULL) {
             int valid = (route->link) & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             if (valid == 0x0) {
@@ -602,7 +602,7 @@ int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t&
         // for future use with /48 prefix length
         // ip.ui64[0] &= m6[48][0];
         ip.ui64[1] &= 0x0;
-        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes, src.key_length);
 
         if (route != NULL
             && ((ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32) - route->timestamp) < rw_time) {
@@ -616,7 +616,7 @@ int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t&
             sym_src_t src_rec;
             src_rec.link = ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
             src_rec.timestamp = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-            ht_insert(&src, (char *) ip.bytes, &src_rec);
+            ht_insert(&src, (char *) ip.bytes, &src_rec, src.key_length);
         }
 
     } else { // incomming traffic --> check for validity
@@ -624,7 +624,7 @@ int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t&
         // for future use with /48 prefix length
         // ip.ui64[0] &= m6[48][0];
         ip.ui64[1] &= 0x0;
-        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes);
+        route = (sym_src_t *) ht_get(&src, (char *) ip.bytes, src.key_length);
 
         if (route != NULL) {
             int valid = route->link & ur_get(ur_tmp, record, UR_LINK_BIT_FIELD);
@@ -872,7 +872,6 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-//    ur_template_t *templ = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD");
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
 
     // lists of bogon prefixes
@@ -948,12 +947,11 @@ int main (int argc, char** argv)
         cerr << "ERROR: Bogon file not specified. Unable to continue." << endl;
         return EXIT_FAILURE;
     }
-#ifdef DEBUG
+
     if (!c_flag) {
-        cout << "No other file with prefixes has been specified." << endl;
+        cout << "No other file with prefixes has been specified. New flow filter will not work." << endl;
         return EXIT_FAILURE;
     }
-#endif
 
 #ifdef DEBUG
     if (sym_rw_time == 0) {

@@ -257,6 +257,11 @@ def get_lists( parameter = 'update' ):
       config = {}
       if os.path.exists ( current_config ):
          config = read_config( conf_name = current_config )
+      global cols
+      global delimiter
+      global addr_col
+      global warden
+      global warden_type
       cols = config.get( 'columns', cols )
       delimiter = config.get( 'delimiter', delimiter )
       addr_col = config.get( 'addr_col', addr_col )
@@ -339,4 +344,4 @@ def get_lists( parameter = 'update' ):
             os.remove( new_raw_path )
             os.remove( converted.url_file )
 
-   replace_old_version( old_raw_path, new_raw_path )
+      replace_old_version( old_raw_path, new_raw_path )

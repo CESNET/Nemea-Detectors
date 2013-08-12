@@ -132,7 +132,8 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
     while (file = readdir(dp)) {
 
         if (file->d_name[0] == '.' || file->d_type == 0x4) {
-            // exclude hidden files, directory references and recursive directories
+            // exclude hidden files, directory references
+            // and stay don't go recursively through directories
             continue;
         }
 
@@ -219,7 +220,8 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
     while (file = readdir(dp)) {
 
         if (file->d_name[0] == '.' || file->d_type == 0x4) {
-            // exclude hidden files, directory references and recursive directories
+            // exclude hidden files, directory references
+            // and stay don't go recursively through directories
             continue;
         }
 
@@ -345,10 +347,26 @@ static void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
         if ((bl_index = ht_get_index(&blacklist, add[i].url, strlen(add[i].url))) >= 0) {
             *((uint8_t *) blacklist.table[bl_index].data) = add[i].bl;
         } else {
-            ht_insert(&blacklist, add[i].url, &add[i].bl, strlen(add[i].url));
+            if (ht_insert(&blacklist, add[i].url, &add[i].bl, strlen(add[i].url))) {
+#ifdef DEBUG
+                cerr << "Failure during adding new items. Update interrupted." << endl;
+#endif
+                return;
+            }
         }
     }
 }
+
+#ifdef DEBUG
+static void show_blacklist(cc_hash_table_t& blacklist) {
+
+    for (int i = 0; i < blacklist.table_size; i++) {
+        if (blacklist.table[i].key != NULL) {
+            cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
+        }
+    }
+}
+#endif
 
 /*
  * MAIN FUNCTION
@@ -360,10 +378,13 @@ int main (int argc, char** argv)
 
     cc_hash_table_t blacklist;
 
-    ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), 0, REHASH_ENABLE);
+    if (ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), 0, REHASH_ENABLE)) {
+        cerr << "Unable to initialize blacklist table. Unable to continue." << endl;
+        return EXIT_FAILURE;
+    }
 
     ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,URL");
-    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>");
+    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>"); // will be extended with URL_BLACKLIST
 
     // zero dynamic size for now, may change in future if URL will be passed.
     void *detection = ur_create(det, 0);
@@ -391,7 +412,10 @@ int main (int argc, char** argv)
 
     // load source files
     const char* source = argv[1];
+
+    // set locale so we can use URL normalization library
     setlocale(LC_ALL, "");
+    
     retval = load_url(blacklist, source);
 
     if (retval == BLIST_LOAD_ERROR) {
@@ -427,12 +451,7 @@ int main (int argc, char** argv)
    
 #ifdef DEBUG
     // for debug only (show contents of the blacklist table)
-    for (int i = 0; i < blacklist.table_size; i++) {
-        if (blacklist.table[i].key != NULL) {
-            cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
-        }
-    }
-
+    show_blacklist(blacklist);
     // count marked addresses
     unsigned int marked = 0;
     unsigned int recieved = 0;
@@ -483,7 +502,7 @@ int main (int argc, char** argv)
             }
 
 #ifdef DEBUG
-            cout << "Updating blacklist filter (" << add_update.size() << " additions/ " << rm_update.size() << " removals)." << endl;
+            cout << "Updating blacklist filter (" << add_update.size() << " additions / " << rm_update.size() << " removals)." << endl;
 #endif
             
             if (!rm_update.empty()) {
@@ -492,6 +511,11 @@ int main (int argc, char** argv)
             if (!add_update.empty()) {
                 update_add(blacklist, add_update);
             }
+
+#ifdef DEBUG
+            // for debug only -- show content of the new blacklist
+            show_blacklist(blacklist);
+#endif
 
             rm_update.clear();
             add_update.clear();

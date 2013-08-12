@@ -48,7 +48,7 @@ from signal import SIGUSR1
 
 from funcs import error
 from funcs import read_config
-
+from funcs import open_file
 from get_lists import get_lists
 
 def get_pid(pid_name):
