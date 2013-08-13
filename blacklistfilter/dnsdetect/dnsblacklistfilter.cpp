@@ -312,7 +312,7 @@ static void update_add(cc_hash_table_t* blacklist, vector<upd_item_t>& add)
 }
 
 /*
- * DNS part 
+ * DNS part -- thread cheking DNS items in recieved records
  */
 void *check_dns(void *args)
 {
@@ -330,6 +330,9 @@ void *check_dns(void *args)
     vector<upd_item_t> rm_upd;
 
     while (!stop) {
+#ifdef DEBUG
+        cout << "DNS: Waiting for data ..." << endl;
+#endif
         retval = trap_get_data(0x1, &record, &record_size, TRAP_WAIT);
         if (retval == TRAP_E_TERMINATED) {
             retval = EXIT_SUCCESS;
@@ -338,7 +341,9 @@ void *check_dns(void *args)
             cerr << "ERROR: DNS thread cannot recieve data. Unable to continue." << endl;
             break;
         }
-
+#ifdef DEBUG
+        cout << "DNS: Checking data ..." << endl;
+#endif
         if (record_size /* minus the size of domain name */ != ur_rec_static_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
@@ -351,21 +356,39 @@ void *check_dns(void *args)
                 break;
             }
         }
-/*
- * check the blacklist for domanin name
- */
 
+#ifdef DEBUG
+        cout << "DNS: Checking obtained domain name ..." << endl;
+#endif
+        // check blacklist for recieved domain name
         //is_dns = ht_get_index(params->dns_table, ur_get_dyn(params->input, record, DNS/URL), ur_get_dyn_size(params->input, record, DNS/URL));
         if (is_dns != NULL) {
+
+#ifdef DEBUG
+            cout << "DNS: Match found. Sending report ..." << endl;
+#endif            
             /* ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns); */
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
-            /* update table */
+#ifdef DEBUG
+            cout << "DNS: Updating IP table for IP thread ...." << endl;
+#endif
+            /* update IP table */
+/*            if (ht_get_v2(params->ip_table, ur_get(params->input, UR_SRC_IP)) == NULL) {
+                ht_insert_v2(params->ip_table, ur_get(params->input, UR_SRC_IP), is_dns);
+            }*/
+            if (ht_get_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes) == NULL) {
+                ht_insert_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes, is_dns);
+            }
         } else {
             // drop the record
         }
 
+        // recieved update signal?
         if (update) {
+#ifdef DEBUG
+            cout << "DNS: Updating DNS table ..." << endl;
+#endif
             update = 0;
             retval = load_update(add_upd, rm_upd, params->upd_path);
 
@@ -379,7 +402,7 @@ void *check_dns(void *args)
     }
 
 #ifdef DEBUG
-    cout << "DNS thread terminating" << endl;
+    cout << "DNS: Terminating ..." << endl;
 #endif
 
     if (retval) {
@@ -389,19 +412,7 @@ void *check_dns(void *args)
 }
 
 /*
- * check the blacklist for domanin name
- * if present
- *      update the IP table
- *      mark the record and send to output interface
- * else
- *      drop the record
- */
-/*
- * repeat until not stopped by signal
- */
-
-/*
- * IP part
+ * IP part -- thread checking ip addresses in record
  */
 void* check_ip(void *args)
 {
@@ -418,15 +429,20 @@ void* check_ip(void *args)
     uint16_t record_size;
 
     while (!stop) {
+#ifdef DEBUG
+        cout << "IP: Waiting for data ..." << endl;
+#endif
         retval = trap_get_data(0x2, &record, &record_size, TRAP_WAIT);
         if (retval == TRAP_E_TERMINATED) {
             retval = EXIT_SUCCESS;
             break;
         } else {
-            cerr << "ERROR: DNS thread cannot recieve data. Unable to continue." << endl;
+            cerr << "ERROR: IP thread cannot recieve data. Unable to continue." << endl;
             break;
         }
-
+#ifdef DEBUG
+        cout << "IP: Checking data ..." << endl;
+#endif
         if (record_size != ur_rec_static_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
@@ -443,6 +459,10 @@ void* check_ip(void *args)
         ip = ur_get(params->input, record, UR_SRC_IP);    
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
 
+#ifdef DEBUG
+        cout << "IP: Checking obtained IP addresses ..." << endl;
+#endif
+
         if (bl != NULL) {
             ur_set(params->output, params->detection, UR_SRC_BLACKLIST, *(uint8_t*) bl);
             marked = true;
@@ -457,11 +477,14 @@ void* check_ip(void *args)
         }
 
         if (marked) {
+#ifdef DEBUG
+            cout << "IP: Match found. Sending report ..." << endl;
+#endif            
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
         }
     }
 #ifdef DEBUG
-    cout << "IP thread terminating" << endl;
+    cout << "IP: Terminating ..." << endl;
 #endif
 
     if (retval != EXIT_SUCCESS) {
@@ -469,20 +492,6 @@ void* check_ip(void *args)
     }
     return NULL;
 }
-
-/*
- * load UniRec record
- * check both source and destination address
- * if present
- *      mark the record
- *      send to output interface
- * else
- *      drop the record
- */
-
-/*
- * repeat until not stopped by signal
- */
 
 /*
  * MAIN FUNCTION
@@ -526,21 +535,43 @@ int main (int argc, char** argv)
     ip_thread_params.detection = ur_create(ip_thread_params.output, 0);
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
-
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
         if (retval == TRAP_E_HELP) {
             trap_print_help(&module_info);
+            ur_free(ip_thread_params.detection);
+            ur_free(dns_thread_params.detection);
+            ur_free_template(ip_thread_params.input);
+            ur_free_template(dns_thread_params.input);
+            ur_free_template(ip_thread_params.output);
+            ur_free_template(dns_thread_params.output);
+            ht_destroy_v2(ip_thread_params.ip_table);
+            ht_destroy(dns_thread_params.dns_table);
             return EXIT_SUCCESS;
         }
         cerr << "ERROR: Cannot parse input parameters: " << trap_last_error_msg << endl;
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
         return retval;
     }
-
     // Initialize TRAP library (create and init all interfaces)     
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
         return retval;
     }
 
@@ -549,17 +580,44 @@ int main (int argc, char** argv)
 
     if (argc != 2) {
         cerr << "ERROR: Directory with DNS sources not specified. Unable to continue." << endl;
+        //trap_finalize();
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
         return EXIT_FAILURE;
     }
 
     retval = load_dns(dns_thread_params.dns_table, (const char *) argv[1]);
     if (retval) {
         cerr << "ERROR: DNS table cannot be loaded. Unable to continue." << endl;
+        //trap_finalize();
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
         return EXIT_FAILURE;
     }
 
     if (ht_is_empty(dns_thread_params.dns_table)) {
         cerr << "ERROR: DNS table is empty. Continuing makes no sense." << endl;
+        //trap_finalize();
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
         return EXIT_FAILURE;
     }
 
@@ -578,12 +636,32 @@ int main (int argc, char** argv)
     retval = pthread_create(&threads[0], &th_attr, check_dns, (void *) &dns_thread_params);
     if (retval) {
         cerr << "ERROR: Cannot create DNS checking thread. Terminating ..." << endl;
+        trap_finalize();
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
+        return EXIT_FAILURE;
     }
 
     retval = pthread_create(&threads[1], &th_attr, check_ip, (void *) &ip_thread_params);
     if (retval) {
         cerr << "ERROR: Cannot create IP checking thread. Terminating ..." << endl;
         pthread_cancel(threads[0]);
+        //trap_finalize();
+        ur_free(ip_thread_params.detection);
+        ur_free(dns_thread_params.detection);
+        ur_free_template(ip_thread_params.input);
+        ur_free_template(dns_thread_params.input);
+        ur_free_template(ip_thread_params.output);
+        ur_free_template(dns_thread_params.output);
+        ht_destroy_v2(ip_thread_params.ip_table);
+        ht_destroy(dns_thread_params.dns_table);
+        return EXIT_FAILURE;
     }
 
     void *thr_exit_state;
@@ -594,10 +672,30 @@ int main (int argc, char** argv)
         retval = pthread_join(threads[i], &thr_exit_state);
         if (retval) {
             cerr << "ERROR: Problem when joining threads. Terminating ..." << endl;
+            pthread_cancel(threads[0]);
+            pthread_cancel(threads[1]);
+            //trap_finalize();
+            ur_free(ip_thread_params.detection);
+            ur_free(dns_thread_params.detection);
+            ur_free_template(ip_thread_params.input);
+            ur_free_template(dns_thread_params.input);
+            ur_free_template(ip_thread_params.output);
+            ur_free_template(dns_thread_params.output);
+            ht_destroy_v2(ip_thread_params.ip_table);
+            ht_destroy(dns_thread_params.dns_table);
             exit(EXIT_FAILURE);
         }
         if (thr_exit_state != NULL) {
             cerr << "ERROR: Thread returned FAILURE value. Terminating ..." << endl;
+            //trap_finalize();
+            ur_free(ip_thread_params.detection);
+            ur_free(dns_thread_params.detection);
+            ur_free_template(ip_thread_params.input);
+            ur_free_template(dns_thread_params.input);
+            ur_free_template(ip_thread_params.output);
+            ur_free_template(dns_thread_params.output);
+            ht_destroy_v2(ip_thread_params.ip_table);
+            ht_destroy(dns_thread_params.dns_table);
             exit(EXIT_FAILURE);
         }
     }
