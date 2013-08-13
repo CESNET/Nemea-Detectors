@@ -68,7 +68,7 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP blacklist detection module", // Module name
+    "URL blacklist detection module", // Module name
     // Module description
     "Module recieves the UniRec record and checks if the URL in record isn't\n"
     "present in any blacklist that are available. If so the module creates\n"
@@ -470,14 +470,14 @@ int main (int argc, char** argv)
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
-        // check the data size 
-        if (data_size != ur_rec_static_size(templ)) {
+        // check the data size -- we can only check static part since URL is dynamic
+        if ((data_size - ur_get_dyn_size(templ, data, UR_URL)) != ur_rec_static_size(templ) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
                 cerr << "Expected: " << ur_rec_static_size(templ) << " ";
-                cerr << "Recieved: " << data_size << endl;
+                cerr << "Recieved: " << data_size - ur_get_dyn_size(templ, data, UR_URL) << " in static part." << endl;
                 break;
             }
         }
