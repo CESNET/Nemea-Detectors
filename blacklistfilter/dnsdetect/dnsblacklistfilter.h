@@ -1,6 +1,6 @@
 /**
- * \file urlblacklistfilter.h
- * \brief URL blacklist detector for Nemea -- header file
+ * \file dnsblacklistfilter.h
+ * \brief Main module for DNSBlackListDetector -- header file.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
  */
@@ -42,71 +42,47 @@
  *
  */
 
-#ifndef URLBLACKLISTFILTER_H
-#define URLBLACKLISTFILTER_H
-
-#include <string>
-#include <vector>
+#ifndef DNSBLACKLISTFILTER_H
+#define DNSBLACKLISTFILTER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "../../../unirec/unirec.h"
+#include "../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 #include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
-/**
- * Constant returned if everything is ok.
- */
-#define ALL_OK 0
+#define DNS_TABLE_SIZE 1000000
+#define IP_TABLE_SIZE 1000000
+#define THR_COUNT 2
 
-/**
- * Initial size of the blacklist.
- */
-#define BLACKLIST_DEF_SIZE 50000
-
-/**
- * Consatnt returned by loading function if directory cannot be accessed
- */
-#define BLIST_LOAD_ERROR -1
-
-/**
- * Constant retuned by checking function if URL is prsent on blacklist.
- */
-#define BLACKLISTED 1
-
-/**
- * Constant retuned by checking function if URL is clear.
- */
-#define URL_CLEAR 0
-
-/**
- * Structure of item used in update operations.
- */
 typedef struct {
     /*@{*/
-    char* url; /**< URL to update */
+    char* dns; /**< URL to update */
     uint8_t bl; /**< Source blacklist of the URL */
     /*@}*/
 } upd_item_t;
 
-/*
- * Function for loading source files.
- */
-int load_url(cc_hash_table_t& blacklist, const char* path);
 
-/*
- * Function for loading update files.
- */
-int load_update(std::vector<upd_item_t>& add_upd, std::vector<upd_item_t>& rm_upd, const char* path);
+typedef struct {
+	ur_template_t *input;
+	ur_template_t *output;
+	void *detection;
+	const char* upd_path;
+	cc_hash_table_t *dns_table;
+	cc_hash_table_v2_t *ip_table;
+} dns_params_t;
 
-/*
- * Function for checking records.
- */
-int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
+typedef struct {
+	ur_template_t *input;
+	ur_template_t *output;
+	void *detection;
+	cc_hash_table_v2_t *ip_table;
+} ip_params_t;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* URLBLACKLISTFILTER_H */
+#endif /* DNSBLACKLISTFILTER_H */

@@ -68,7 +68,7 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP blacklist detection module", // Module name
+    "URL blacklist detection module", // Module name
     // Module description
     "Module recieves the UniRec record and checks if the URL in record isn't\n"
     "present in any blacklist that are available. If so the module creates\n"
@@ -118,7 +118,6 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
     string line;
     char *url_norm;
     int ret;
-    uint32_t hashed_url;
     uint8_t bl;
 
     dp = opendir(path);
@@ -151,6 +150,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
             cout << line << endl;
 #endif
 
+            // don't add the remaining empty line
             if (!line.length()) {
                 continue;
             }
@@ -176,6 +176,7 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
 #endif
             // insert to table
             ht_insert(&blacklist, url_norm, &bl, strlen(url_norm));
+            free(url_norm);
         }
         in.close();
     }
@@ -278,6 +279,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
             }
         }
         in.close();
+        free(url_norm);
     }
     
     closedir(dp);
@@ -362,7 +364,10 @@ static void show_blacklist(cc_hash_table_t& blacklist) {
 
     for (int i = 0; i < blacklist.table_size; i++) {
         if (blacklist.table[i].key != NULL) {
-            cout << blacklist.table[i].key << " | " << blacklist.table[i].key_length << " | "  << *((short *) blacklist.table[i].data) << endl;
+            for (int k = 0; k < blacklist.table[i].key_length; k++) {
+                cout << blacklist.table[i].key[k];
+            }
+            cout << " | " << blacklist.table[i].key_length << " | "  << (short) *((uint8_t *) blacklist.table[i].data) << endl;
         }
     }
 }
@@ -396,7 +401,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
     
-    // initialize TRAP interface (nothing special is needed so we can use the macro
+    // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
     // check if the directory with URLs is specified
@@ -414,6 +419,7 @@ int main (int argc, char** argv)
     const char* source = argv[1];
 
     // set locale so we can use URL normalization library
+    // !!! NOT PRESENT ON NEMEA COLLECTOR !!!
     setlocale(LC_ALL, "");
     
     retval = load_url(blacklist, source);
@@ -464,14 +470,14 @@ int main (int argc, char** argv)
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
-        // check the data size 
-        if (data_size != ur_rec_static_size(templ)) {
+        // check the data size -- we can only check static part since URL is dynamic
+        if ((data_size - ur_get_dyn_size(templ, data, UR_URL)) != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
                 cerr << "Expected: " << ur_rec_static_size(templ) << " ";
-                cerr << "Recieved: " << data_size << endl;
+                cerr << "Recieved: " << data_size - ur_get_dyn_size(templ, data, UR_URL) << " in static part." << endl;
                 break;
             }
         }

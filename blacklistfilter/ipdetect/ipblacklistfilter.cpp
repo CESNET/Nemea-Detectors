@@ -191,9 +191,6 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
     }
 
     while (file = readdir(dp)) { // iterate over files
-#ifdef DEBUG
-        cout << file->d_name << " " << (short) file->d_type << endl;
-#endif
         if (file->d_name[0] == '.' || file->d_type == 0x4) {
             // we don't need references to direcotry itself and its parent
             continue;
@@ -317,9 +314,6 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 
     // go over every file with updates (one for each source)
     while (file = readdir(dp)) {
-#ifdef DEBUG
-        cout << file->d_name << " " << (short) file->d_type << endl;
-#endif
         if (file->d_name[0] == '.' || file->d_type == 0x4) {
             // we don't need references to direcotry itself and its parent or hidden files
             // and we also don't want to go recursively into another directories

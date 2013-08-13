@@ -1,18 +1,18 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -std=c99
-CXXFLAGS=-std=c++98 -O2
+CXXFLAGS=-std=c++98 -g
 LDFLAGS=
-LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash/libcuckoo_hash.a -ltrap -lidn
+LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a ../../../common/cuckoo_hash/libcuckoo_hash.a -lpthread -ltrap -lidn
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
 # of a new module here (when no rule is found, make uses default one)
-MODULES=urlblacklistfilter
+MODULES=dnsblacklistfilter
 all: ${MODULES}
 
 doxygen:
-	doxygen urlblacklistfilter.cpp
+	doxygen dnsblacklistfilter.cpp
 
 
 clean:
