@@ -613,7 +613,8 @@ int main (int argc, char** argv)
     // check if the source folder for DNS thread was specified
     if (argc != 2) {
         cerr << "ERROR: Directory with DNS sources not specified. Unable to continue." << endl;
-        //trap_finalize();
+        trap_terminate();
+        trap_finalize();
         ur_free(ip_thread_params.detection);
         ur_free(dns_thread_params.detection);
         ur_free_template(ip_thread_params.input);
