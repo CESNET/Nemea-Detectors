@@ -332,8 +332,8 @@ static void update_add(cc_hash_table_t* blacklist, vector<upd_item_t>& add)
  */
 void *check_dns(void *args)
 {
-    dns_params_t* params;
-    params = (dns_params_t *) args;
+    // get parameters for thread
+    dns_params_t* params = (dns_params_t *) args;
 
     int retval = 0;
 
@@ -387,7 +387,7 @@ void *check_dns(void *args)
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
 #ifdef DEBUG
-            cout << "DNS: Updating IP table for IP thread ...." << endl;
+            cout << "DNS: Updating IP table for IP thread ..." << endl;
 #endif
             /* update IP table */
 /*            if (ht_get_v2(params->ip_table, ur_get(params->input, UR_SRC_IP)) == NULL) {
@@ -426,7 +426,8 @@ void *check_dns(void *args)
     }
     return NULL;
 }
-/*
+
+/**
  * Function for checking IP addresses for blacklisted entries.
  * Function recieves UniRec and checks if both source and destination addresses 
  * are in blacklist. If the address is found in blacklist the detection
@@ -439,9 +440,8 @@ void *check_dns(void *args)
  */
 void* check_ip(void *args)
 {
-
-    ip_params_t* params;
-    params = (ip_params_t*) args; // get paramters for thread
+    // get paramters for thread
+    ip_params_t* params = (ip_params_t*) args;
     bool marked = false;
 
     void *bl = NULL;
@@ -613,7 +613,7 @@ int main (int argc, char** argv)
     // check if the source folder for DNS thread was specified
     if (argc != 2) {
         cerr << "ERROR: Directory with DNS sources not specified. Unable to continue." << endl;
-        //trap_finalize();
+        trap_finalize();
         ur_free(ip_thread_params.detection);
         ur_free(dns_thread_params.detection);
         ur_free_template(ip_thread_params.input);

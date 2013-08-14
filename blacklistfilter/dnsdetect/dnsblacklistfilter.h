@@ -53,8 +53,19 @@ extern "C" {
 #include "../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 #include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
+/**
+ * Size of the table with DNS blacklist
+ */
 #define DNS_TABLE_SIZE 1000000
+
+/**
+ * Size of the table with IP blacklist
+ */
 #define IP_TABLE_SIZE 1000000
+
+/**
+ * Number of working threads.
+ */
 #define THR_COUNT 2
 
 /**
@@ -72,7 +83,7 @@ typedef struct {
  */
 typedef struct {
     /*@{*/
-    ur_template_t *input; /**< Template of input record. */
+    ur_template_t *input; /**< Template of input record */
     ur_template_t *output; /**< Template of detection record */
     void *detection; /**< Detection record (will dynamically change) */
     const char* upd_path; /**< Path to blacklists source folder */
@@ -86,7 +97,7 @@ typedef struct {
  */
 typedef struct {
     /*@{*/
-    ur_template_t *input; /**< Template of input record. */
+    ur_template_t *input; /**< Template of input record */
     ur_template_t *output; /**< Template of detection record */
     void *detection; /**< Detection record (will dynamically change) */
     cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
