@@ -57,6 +57,9 @@ extern "C" {
 #define IP_TABLE_SIZE 1000000
 #define THR_COUNT 2
 
+/**
+ * Structure of item with update for DNS table.
+ */
 typedef struct {
     /*@{*/
     char* dns; /**< URL to update */
@@ -64,21 +67,30 @@ typedef struct {
     /*@}*/
 } upd_item_t;
 
-
+/**
+ * Parameter structure for DNS checking thread.
+ */
 typedef struct {
-	ur_template_t *input;
-	ur_template_t *output;
-	void *detection;
-	const char* upd_path;
-	cc_hash_table_t *dns_table;
-	cc_hash_table_v2_t *ip_table;
+    /*@{*/
+    ur_template_t *input; /**< Template of input record. */
+    ur_template_t *output; /**< Template of detection record */
+    void *detection; /**< Detection record (will dynamically change) */
+    const char* upd_path; /**< Path to blacklists source folder */
+    cc_hash_table_t *dns_table; /**< Table with blacklisted domain names */
+    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
+    /*@}*/
 } dns_params_t;
 
+/**
+ * Parameter structure for IP checking thread.
+ */
 typedef struct {
-	ur_template_t *input;
-	ur_template_t *output;
-	void *detection;
-	cc_hash_table_v2_t *ip_table;
+    /*@{*/
+    ur_template_t *input; /**< Template of input record. */
+    ur_template_t *output; /**< Template of detection record */
+    void *detection; /**< Detection record (will dynamically change) */
+    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
+    /*@}*/
 } ip_params_t;
 
 #ifdef __cplusplus

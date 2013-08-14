@@ -92,7 +92,15 @@ void signal_handler(int signal)
     }
 }
 
-// URL Loader
+/**
+ * Function for loading domain names for startup.
+ * Function goes through all files listed in "path" folders and load the domain 
+ * names to the table for use in cheking thread.
+ *
+ * @param blacklist Table for storing loaded domain names.
+ * @param path Path to the folder with source files.
+ * @return -1 if folder in "path" cannot be used, 0 otherwise.
+ */
 int load_dns(cc_hash_table_t* blacklist, const char* path)
 {
     DIR* dp;
@@ -172,14 +180,14 @@ int load_dns(cc_hash_table_t* blacklist, const char* path)
 
 /**
  * Function for loading updates.
- * Function gets path to the directory with update files and loads the into 
+ * Function gets path to the directory with update files and loads them the into 
  * the vectors used for update operation. Loaded entries are sorted depending 
  * on whterher they are removed from blacklist or added to blacklist.
  *
  * @param add_upd Vector with entries that will be added or updated.
  * @param rm_upd Vector with entries that will be removed.
  * @param path Path to the directory with updates.
- * @return ALL_OK if everything goes well, BLIST_LOAD_ERROR if directory cannot be accessed.
+ * @return 0 if everything goes well, -1 if directory cannot be accessed.
  */
 int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const char* path)
 {
@@ -311,8 +319,16 @@ static void update_add(cc_hash_table_t* blacklist, vector<upd_item_t>& add)
     }
 }
 
-/*
- * DNS part -- thread cheking DNS items in recieved records
+/**
+ * Function for checking incomming DNS queries for blacklisted domain names.
+ * Function recieves UniRec with DNS query and checks if the requested domain 
+ * name is in blacklist. If the domain name is found in blacklist the detection 
+ * record is filled and sent with the number of source blacklist. Function also 
+ * updates the IP table with the ip address associated with the domain name.
+ * NOTE: The function is executed by a thread.
+ *
+ * @param args Arguments for the executing thread.
+ * @return NULL if everything is ok, numeric value otherwise.
  */
 void *check_dns(void *args)
 {
@@ -410,15 +426,22 @@ void *check_dns(void *args)
     }
     return NULL;
 }
-
 /*
- * IP part -- thread checking ip addresses in record
+ * Function for checking IP addresses for blacklisted entries.
+ * Function recieves UniRec and checks if both source and destination addresses 
+ * are in blacklist. If the address is found in blacklist the detection
+ * record is filled and sent with the number of source blacklist. Addresses for 
+ * its blacklist are obtained from the DNS thread.
+ * NOTE: The function is executed by a thread.
+ *
+ * @param args Arguments for the executing thread.
+ * @return NULL if everything is ok, numeric value otherwise.
  */
 void* check_ip(void *args)
 {
 
     ip_params_t* params;
-    params = (ip_params_t*) args;
+    params = (ip_params_t*) args; // get paramters for thread
     bool marked = false;
 
     void *bl = NULL;
@@ -432,6 +455,7 @@ void* check_ip(void *args)
 #ifdef DEBUG
         cout << "IP: Waiting for data ..." << endl;
 #endif
+        // recieve data
         retval = trap_get_data(0x2, &record, &record_size, TRAP_WAIT);
         if (retval == TRAP_E_TERMINATED) {
             retval = EXIT_SUCCESS;
@@ -443,6 +467,7 @@ void* check_ip(void *args)
 #ifdef DEBUG
         cout << "IP: Checking data ..." << endl;
 #endif
+        // check the recieved data size
         if (record_size != ur_rec_static_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
@@ -457,6 +482,8 @@ void* check_ip(void *args)
         }
         
         ip = ur_get(params->input, record, UR_SRC_IP);    
+
+        // try to match the blacklist for src IP
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
 
 #ifdef DEBUG
@@ -469,6 +496,8 @@ void* check_ip(void *args)
         }
 
         ip = ur_get(params->output, record, UR_DST_IP);
+
+        // try to match the blacklist for dst IP
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
 
         if (bl != NULL) {
@@ -535,6 +564,8 @@ int main (int argc, char** argv)
     ip_thread_params.detection = ur_create(ip_thread_params.output, 0);
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
+
+    // intialize TRAP interfaces
     retval = trap_parse_params(&argc, argv, &ifc_spec);
     if (retval != TRAP_E_OK) {
         if (retval == TRAP_E_HELP) {
@@ -560,6 +591,7 @@ int main (int argc, char** argv)
         ht_destroy(dns_thread_params.dns_table);
         return retval;
     }
+    
     // Initialize TRAP library (create and init all interfaces)     
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
@@ -578,6 +610,7 @@ int main (int argc, char** argv)
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
+    // check if the source folder for DNS thread was specified
     if (argc != 2) {
         cerr << "ERROR: Directory with DNS sources not specified. Unable to continue." << endl;
         //trap_finalize();
@@ -592,6 +625,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // load domain names from blacklist folder
     retval = load_dns(dns_thread_params.dns_table, (const char *) argv[1]);
     if (retval) {
         cerr << "ERROR: DNS table cannot be loaded. Unable to continue." << endl;
@@ -607,6 +641,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // did we load anything?
     if (ht_is_empty(dns_thread_params.dns_table)) {
         cerr << "ERROR: DNS table is empty. Continuing makes no sense." << endl;
         //trap_finalize();
@@ -633,6 +668,7 @@ int main (int argc, char** argv)
     pthread_attr_init(&th_attr);
     pthread_attr_setdetachstate(&th_attr, PTHREAD_CREATE_JOINABLE);
 
+    // start the DNS thread (preferably first so the IP table can be slightly in advance)
     retval = pthread_create(&threads[0], &th_attr, check_dns, (void *) &dns_thread_params);
     if (retval) {
         cerr << "ERROR: Cannot create DNS checking thread. Terminating ..." << endl;
@@ -648,6 +684,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // start the IP thread
     retval = pthread_create(&threads[1], &th_attr, check_ip, (void *) &ip_thread_params);
     if (retval) {
         cerr << "ERROR: Cannot create IP checking thread. Terminating ..." << endl;
@@ -668,8 +705,12 @@ int main (int argc, char** argv)
 #ifdef DEBUG
         cout << "MAIN: Waiting for processing threads ..." << endl;
 #endif
+
+    // Main thread should wait for termination of both working threads
     for (int i = 0; i < THR_COUNT; i++) {
         retval = pthread_join(threads[i], &thr_exit_state);
+        
+        // thread couldn't be joined (something very wrong happened)
         if (retval) {
             cerr << "ERROR: Problem when joining threads. Terminating ..." << endl;
             pthread_cancel(threads[0]);
@@ -685,6 +726,8 @@ int main (int argc, char** argv)
             ht_destroy(dns_thread_params.dns_table);
             exit(EXIT_FAILURE);
         }
+
+        // Termination of any of the thread was not successful -- terminate
         if (thr_exit_state != NULL) {
             cerr << "ERROR: Thread returned FAILURE value. Terminating ..." << endl;
             //trap_finalize();
@@ -699,10 +742,13 @@ int main (int argc, char** argv)
             exit(EXIT_FAILURE);
         }
     }
+
+    // threads were successfully terminated -- cleanup and shut down
+
 #ifdef DEBUG
     cout << "Cleaning up..." << endl;
 #endif
-    //trap_finalize();
+    // trap_finalize();
 #ifdef DEBUG
     cout << "TRAP Offline" << endl;
 #endif
