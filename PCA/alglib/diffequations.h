@@ -253,12 +253,14 @@ void odesolverresults(odesolverstate* state,
      /* Real    */ ae_matrix* ytbl,
      odesolverreport* rep,
      ae_state *_state);
-ae_bool _odesolverstate_init(odesolverstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _odesolverstate_init_copy(odesolverstate* dst, odesolverstate* src, ae_state *_state, ae_bool make_automatic);
-void _odesolverstate_clear(odesolverstate* p);
-ae_bool _odesolverreport_init(odesolverreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _odesolverreport_init_copy(odesolverreport* dst, odesolverreport* src, ae_state *_state, ae_bool make_automatic);
-void _odesolverreport_clear(odesolverreport* p);
+ae_bool _odesolverstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _odesolverstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _odesolverstate_clear(void* _p);
+void _odesolverstate_destroy(void* _p);
+ae_bool _odesolverreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _odesolverreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _odesolverreport_clear(void* _p);
+void _odesolverreport_destroy(void* _p);
 
 }
 #endif

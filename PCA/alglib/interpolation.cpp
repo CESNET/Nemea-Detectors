@@ -131,10 +131,6 @@ double idwcalc(const idwinterpolant &z, const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -206,10 +202,6 @@ void idwbuildmodifiedshepard(const real_2d_array &xy, const ae_int_t n, const ae
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -252,10 +244,6 @@ void idwbuildmodifiedshepardr(const real_2d_array &xy, const ae_int_t n, const a
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -335,10 +323,6 @@ void idwbuildnoisy(const real_2d_array &xy, const ae_int_t n, const ae_int_t nx,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -438,10 +422,6 @@ double barycentriccalc(const barycentricinterpolant &b, const double t)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -480,10 +460,6 @@ void barycentricdiff1(const barycentricinterpolant &b, const double t, double &f
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -521,10 +497,6 @@ void barycentricdiff2(const barycentricinterpolant &b, const double t, double &f
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -553,10 +525,6 @@ void barycentriclintransx(const barycentricinterpolant &b, const double ca, cons
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -588,10 +556,6 @@ void barycentriclintransy(const barycentricinterpolant &b, const double ca, cons
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -622,10 +586,6 @@ void barycentricunpack(const barycentricinterpolant &b, ae_int_t &n, real_1d_arr
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -659,10 +619,6 @@ void barycentricbuildxyw(const real_1d_array &x, const real_1d_array &y, const r
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -707,10 +663,6 @@ void barycentricbuildfloaterhormann(const real_1d_array &x, const real_1d_array 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -751,10 +703,6 @@ void polynomialbar2cheb(const barycentricinterpolant &p, const double a, const d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -790,10 +738,6 @@ void polynomialcheb2bar(const real_1d_array &t, const ae_int_t n, const double a
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -834,10 +778,6 @@ void polynomialcheb2bar(const real_1d_array &t, const double a, const double b, 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -894,10 +834,6 @@ void polynomialbar2pow(const barycentricinterpolant &p, const double c, const do
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -961,10 +897,6 @@ void polynomialbar2pow(const barycentricinterpolant &p, real_1d_array &a)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1016,10 +948,6 @@ void polynomialpow2bar(const real_1d_array &a, const ae_int_t n, const double c,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1081,10 +1009,6 @@ void polynomialpow2bar(const real_1d_array &a, barycentricinterpolant &p)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1117,10 +1041,6 @@ void polynomialbuild(const real_1d_array &x, const real_1d_array &y, const ae_in
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1160,10 +1080,6 @@ void polynomialbuild(const real_1d_array &x, const real_1d_array &y, barycentric
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1198,10 +1114,6 @@ void polynomialbuildeqdist(const double a, const double b, const real_1d_array &
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1242,10 +1154,6 @@ void polynomialbuildeqdist(const double a, const double b, const real_1d_array &
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1281,10 +1189,6 @@ void polynomialbuildcheb1(const double a, const double b, const real_1d_array &y
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1326,10 +1230,6 @@ void polynomialbuildcheb1(const double a, const double b, const real_1d_array &y
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1365,10 +1265,6 @@ void polynomialbuildcheb2(const double a, const double b, const real_1d_array &y
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1410,10 +1306,6 @@ void polynomialbuildcheb2(const double a, const double b, const real_1d_array &y
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1453,10 +1345,6 @@ double polynomialcalceqdist(const double a, const double b, const real_1d_array 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1502,10 +1390,6 @@ double polynomialcalceqdist(const double a, const double b, const real_1d_array 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1547,10 +1431,6 @@ double polynomialcalccheb1(const double a, const double b, const real_1d_array &
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1598,10 +1478,6 @@ double polynomialcalccheb1(const double a, const double b, const real_1d_array &
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1643,10 +1519,6 @@ double polynomialcalccheb2(const double a, const double b, const real_1d_array &
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1693,10 +1565,6 @@ double polynomialcalccheb2(const double a, const double b, const real_1d_array &
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1803,10 +1671,6 @@ void spline1dbuildlinear(const real_1d_array &x, const real_1d_array &y, const a
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1850,10 +1714,6 @@ void spline1dbuildlinear(const real_1d_array &x, const real_1d_array &y, spline1
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1923,10 +1783,6 @@ void spline1dbuildcubic(const real_1d_array &x, const real_1d_array &y, const ae
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2010,10 +1866,6 @@ void spline1dbuildcubic(const real_1d_array &x, const real_1d_array &y, spline1d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2090,10 +1942,6 @@ void spline1dgriddiffcubic(const real_1d_array &x, const real_1d_array &y, const
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2185,10 +2033,6 @@ void spline1dgriddiffcubic(const real_1d_array &x, const real_1d_array &y, real_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2266,10 +2110,6 @@ void spline1dgriddiff2cubic(const real_1d_array &x, const real_1d_array &y, cons
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2362,10 +2202,6 @@ void spline1dgriddiff2cubic(const real_1d_array &x, const real_1d_array &y, real
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2447,10 +2283,6 @@ void spline1dconvcubic(const real_1d_array &x, const real_1d_array &y, const ae_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2549,10 +2381,6 @@ void spline1dconvcubic(const real_1d_array &x, const real_1d_array &y, const rea
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2635,10 +2463,6 @@ void spline1dconvdiffcubic(const real_1d_array &x, const real_1d_array &y, const
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2738,10 +2562,6 @@ void spline1dconvdiffcubic(const real_1d_array &x, const real_1d_array &y, const
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2826,10 +2646,6 @@ void spline1dconvdiff2cubic(const real_1d_array &x, const real_1d_array &y, cons
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2931,10 +2747,6 @@ void spline1dconvdiff2cubic(const real_1d_array &x, const real_1d_array &y, cons
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2990,10 +2802,6 @@ void spline1dbuildcatmullrom(const real_1d_array &x, const real_1d_array &y, con
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -3060,10 +2868,6 @@ void spline1dbuildcatmullrom(const real_1d_array &x, const real_1d_array &y, spl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3103,10 +2907,6 @@ void spline1dbuildhermite(const real_1d_array &x, const real_1d_array &y, const 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -3153,10 +2953,6 @@ void spline1dbuildhermite(const real_1d_array &x, const real_1d_array &y, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3166,7 +2962,7 @@ INPUT PARAMETERS:
     X           -   spline nodes, array[0..N-1]
     Y           -   function values, array[0..N-1]
     N           -   points count (optional):
-                    * N>=5
+                    * N>=2
                     * if given, only first N points are used to build spline
                     * if not given, automatically detected from X/Y sizes
                       (len(X) must be equal to len(Y))
@@ -3196,10 +2992,6 @@ void spline1dbuildakima(const real_1d_array &x, const real_1d_array &y, const ae
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3209,7 +3001,7 @@ INPUT PARAMETERS:
     X           -   spline nodes, array[0..N-1]
     Y           -   function values, array[0..N-1]
     N           -   points count (optional):
-                    * N>=5
+                    * N>=2
                     * if given, only first N points are used to build spline
                     * if not given, automatically detected from X/Y sizes
                       (len(X) must be equal to len(Y))
@@ -3244,10 +3036,6 @@ void spline1dbuildakima(const real_1d_array &x, const real_1d_array &y, spline1d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3276,10 +3064,6 @@ double spline1dcalc(const spline1dinterpolant &c, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -3312,10 +3096,6 @@ void spline1ddiff(const spline1dinterpolant &c, const double x, double &s, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3325,7 +3105,7 @@ INPUT PARAMETERS:
     C   -   spline interpolant.
     X   -   point
 
-Result:
+OUTPUT PARAMETERS:
     Tbl -   coefficients table, unpacked format, array[0..N-2, 0..5].
             For I = 0...N-2:
                 Tbl[I,0] = X[i]
@@ -3337,6 +3117,11 @@ Result:
             On [x[i], x[i+1]] spline is equals to:
                 S(x) = C0 + C1*t + C2*t^2 + C3*t^3
                 t = x-x[i]
+
+NOTE:
+    You  can rebuild spline with  Spline1DBuildHermite()  function,  which
+    accepts as inputs function values and derivatives at nodes, which  are
+    easy to calculate when you have coefficients.
 
   -- ALGLIB PROJECT --
      Copyright 29.06.2007 by Bochkanov Sergey
@@ -3354,10 +3139,6 @@ void spline1dunpack(const spline1dinterpolant &c, ae_int_t &n, real_2d_array &tb
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -3387,10 +3168,6 @@ void spline1dlintransx(const spline1dinterpolant &c, const double a, const doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3418,10 +3195,6 @@ void spline1dlintransy(const spline1dinterpolant &c, const double a, const doubl
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -3452,9 +3225,82 @@ double spline1dintegrate(const spline1dinterpolant &c, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This function builds monotone cubic Hermite interpolant. This interpolant
+is monotonic in [x(0),x(n-1)] and is constant outside of this interval.
+
+In  case  y[]  form  non-monotonic  sequence,  interpolant  is  piecewise
+monotonic.  Say, for x=(0,1,2,3,4)  and  y=(0,1,2,1,0)  interpolant  will
+monotonically grow at [0..2] and monotonically decrease at [2..4].
+
+INPUT PARAMETERS:
+    X           -   spline nodes, array[0..N-1]. Subroutine automatically
+                    sorts points, so caller may pass unsorted array.
+    Y           -   function values, array[0..N-1]
+    N           -   the number of points(N>=2).
+
+OUTPUT PARAMETERS:
+    C           -   spline interpolant.
+
+ -- ALGLIB PROJECT --
+     Copyright 21.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline1dbuildmonotone(const real_1d_array &x, const real_1d_array &y, const ae_int_t n, spline1dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::spline1dbuildmonotone(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), n, const_cast<alglib_impl::spline1dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This function builds monotone cubic Hermite interpolant. This interpolant
+is monotonic in [x(0),x(n-1)] and is constant outside of this interval.
+
+In  case  y[]  form  non-monotonic  sequence,  interpolant  is  piecewise
+monotonic.  Say, for x=(0,1,2,3,4)  and  y=(0,1,2,1,0)  interpolant  will
+monotonically grow at [0..2] and monotonically decrease at [2..4].
+
+INPUT PARAMETERS:
+    X           -   spline nodes, array[0..N-1]. Subroutine automatically
+                    sorts points, so caller may pass unsorted array.
+    Y           -   function values, array[0..N-1]
+    N           -   the number of points(N>=2).
+
+OUTPUT PARAMETERS:
+    C           -   spline interpolant.
+
+ -- ALGLIB PROJECT --
+     Copyright 21.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline1dbuildmonotone(const real_1d_array &x, const real_1d_array &y, spline1dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    if( (x.length()!=y.length()))
+        throw ap_error("Error while calling 'spline1dbuildmonotone': looks like one of arguments has wrong size");
+    n = x.length();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline1dbuildmonotone(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), n, const_cast<alglib_impl::spline1dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -3678,9 +3524,20 @@ spline1dfitreport::~spline1dfitreport()
 
 
 /*************************************************************************
-Least squares fitting report:
+Least squares fitting report. This structure contains informational fields
+which are set by fitting functions provided by this unit.
+
+Different functions initialize different sets of  fields,  so  you  should
+read documentation on specific function you used in order  to  know  which
+fields are initialized.
+
     TaskRCond       reciprocal of task's condition number
     IterationsCount number of internal iterations
+
+    VarIdx          if user-supplied gradient contains errors  which  were
+                    detected by nonlinear fitter, this  field  is  set  to
+                    index  of  the  first  component  of gradient which is
+                    suspected to be spoiled by bugs.
 
     RMSError        RMS error
     AvgError        average error
@@ -3688,6 +3545,15 @@ Least squares fitting report:
     MaxError        maximum error
 
     WRMSError       weighted RMS error
+
+    CovPar          covariance matrix for parameters, filled by some solvers
+    ErrPar          vector of errors in parameters, filled by some solvers
+    ErrCurve        vector of fit errors -  variability  of  the  best-fit
+                    curve, filled by some solvers.
+    Noise           vector of per-point noise estimates, filled by
+                    some solvers.
+    R2              coefficient of determination (non-weighted, non-adjusted),
+                    filled by some solvers.
 *************************************************************************/
 _lsfitreport_owner::_lsfitreport_owner()
 {
@@ -3732,11 +3598,11 @@ alglib_impl::lsfitreport* _lsfitreport_owner::c_ptr() const
 {
     return const_cast<alglib_impl::lsfitreport*>(p_struct);
 }
-lsfitreport::lsfitreport() : _lsfitreport_owner() ,taskrcond(p_struct->taskrcond),iterationscount(p_struct->iterationscount),rmserror(p_struct->rmserror),avgerror(p_struct->avgerror),avgrelerror(p_struct->avgrelerror),maxerror(p_struct->maxerror),wrmserror(p_struct->wrmserror)
+lsfitreport::lsfitreport() : _lsfitreport_owner() ,taskrcond(p_struct->taskrcond),iterationscount(p_struct->iterationscount),varidx(p_struct->varidx),rmserror(p_struct->rmserror),avgerror(p_struct->avgerror),avgrelerror(p_struct->avgrelerror),maxerror(p_struct->maxerror),wrmserror(p_struct->wrmserror),covpar(&p_struct->covpar),errpar(&p_struct->errpar),errcurve(&p_struct->errcurve),noise(&p_struct->noise),r2(p_struct->r2)
 {
 }
 
-lsfitreport::lsfitreport(const lsfitreport &rhs):_lsfitreport_owner(rhs) ,taskrcond(p_struct->taskrcond),iterationscount(p_struct->iterationscount),rmserror(p_struct->rmserror),avgerror(p_struct->avgerror),avgrelerror(p_struct->avgrelerror),maxerror(p_struct->maxerror),wrmserror(p_struct->wrmserror)
+lsfitreport::lsfitreport(const lsfitreport &rhs):_lsfitreport_owner(rhs) ,taskrcond(p_struct->taskrcond),iterationscount(p_struct->iterationscount),varidx(p_struct->varidx),rmserror(p_struct->rmserror),avgerror(p_struct->avgerror),avgrelerror(p_struct->avgrelerror),maxerror(p_struct->maxerror),wrmserror(p_struct->wrmserror),covpar(&p_struct->covpar),errpar(&p_struct->errpar),errcurve(&p_struct->errcurve),noise(&p_struct->noise),r2(p_struct->r2)
 {
 }
 
@@ -3877,10 +3743,6 @@ void polynomialfit(const real_1d_array &x, const real_1d_array &y, const ae_int_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -3942,10 +3804,6 @@ void polynomialfit(const real_1d_array &x, const real_1d_array &y, const ae_int_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4041,10 +3899,6 @@ void polynomialfitwc(const real_1d_array &x, const real_1d_array &y, const real_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4150,10 +4004,6 @@ void polynomialfitwc(const real_1d_array &x, const real_1d_array &y, const real_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -4254,10 +4104,6 @@ void barycentricfitfloaterhormannwc(const real_1d_array &x, const real_1d_array 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -4309,10 +4155,6 @@ void barycentricfitfloaterhormann(const real_1d_array &x, const real_1d_array &y
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -4363,10 +4205,6 @@ void spline1dfitpenalized(const real_1d_array &x, const real_1d_array &y, const 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4423,10 +4261,6 @@ void spline1dfitpenalized(const real_1d_array &x, const real_1d_array &y, const 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4509,10 +4343,6 @@ void spline1dfitpenalizedw(const real_1d_array &x, const real_1d_array &y, const
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4600,10 +4430,6 @@ void spline1dfitpenalizedw(const real_1d_array &x, const real_1d_array &y, const
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4719,10 +4545,6 @@ void spline1dfitcubicwc(const real_1d_array &x, const real_1d_array &y, const re
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -4848,10 +4670,6 @@ void spline1dfitcubicwc(const real_1d_array &x, const real_1d_array &y, const re
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -4971,10 +4789,6 @@ void spline1dfithermitewc(const real_1d_array &x, const real_1d_array &y, const 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5105,10 +4919,6 @@ void spline1dfithermitewc(const real_1d_array &x, const real_1d_array &y, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5134,10 +4944,6 @@ void spline1dfitcubic(const real_1d_array &x, const real_1d_array &y, const ae_i
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5170,10 +4976,6 @@ void spline1dfitcubic(const real_1d_array &x, const real_1d_array &y, const ae_i
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5200,10 +5002,6 @@ void spline1dfithermite(const real_1d_array &x, const real_1d_array &y, const ae
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5237,10 +5035,6 @@ void spline1dfithermite(const real_1d_array &x, const real_1d_array &y, const ae
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5249,6 +5043,12 @@ Weighted linear least squares fitting.
 QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5270,11 +5070,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -5293,10 +5131,6 @@ void lsfitlinearw(const real_1d_array &y, const real_1d_array &w, const real_2d_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5305,6 +5139,12 @@ Weighted linear least squares fitting.
 QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5326,11 +5166,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -5356,10 +5234,6 @@ void lsfitlinearw(const real_1d_array &y, const real_1d_array &w, const real_2d_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5369,6 +5243,12 @@ This  is  variation  of LSFitLinearW(), which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then LSFitLinearW()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5397,6 +5277,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -5405,6 +5287,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -5423,10 +5346,6 @@ void lsfitlinearwc(const real_1d_array &y, const real_1d_array &w, const real_2d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5436,6 +5355,12 @@ This  is  variation  of LSFitLinearW(), which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then LSFitLinearW()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5464,6 +5389,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -5472,6 +5399,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -5501,10 +5469,6 @@ void lsfitlinearwc(const real_1d_array &y, const real_1d_array &w, const real_2d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5513,6 +5477,12 @@ Linear least squares fitting.
 QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5529,11 +5499,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -5552,10 +5560,6 @@ void lsfitlinear(const real_1d_array &y, const real_2d_array &fmatrix, const ae_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5564,6 +5568,12 @@ Linear least squares fitting.
 QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5580,11 +5590,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -5610,10 +5658,6 @@ void lsfitlinear(const real_1d_array &y, const real_2d_array &fmatrix, ae_int_t 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5623,6 +5667,12 @@ This  is  variation  of LSFitLinear(),  which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then  LSFitLinear()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5647,6 +5697,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -5655,6 +5707,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -5673,10 +5766,6 @@ void lsfitlinearc(const real_1d_array &y, const real_2d_array &fmatrix, const re
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5686,6 +5775,12 @@ This  is  variation  of LSFitLinear(),  which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then  LSFitLinear()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -5710,6 +5805,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -5718,6 +5815,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -5746,10 +5884,6 @@ void lsfitlinearc(const real_1d_array &y, const real_2d_array &fmatrix, const re
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5804,10 +5938,6 @@ void lsfitcreatewf(const real_2d_array &x, const real_1d_array &y, const real_1d
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5872,10 +6002,6 @@ void lsfitcreatewf(const real_2d_array &x, const real_1d_array &y, const real_1d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -5928,10 +6054,6 @@ void lsfitcreatef(const real_2d_array &x, const real_1d_array &y, const real_1d_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -5995,10 +6117,6 @@ void lsfitcreatef(const real_2d_array &x, const real_1d_array &y, const real_1d_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6059,10 +6177,6 @@ void lsfitcreatewfg(const real_2d_array &x, const real_1d_array &y, const real_1
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6134,10 +6248,6 @@ void lsfitcreatewfg(const real_2d_array &x, const real_1d_array &y, const real_1
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6191,10 +6301,6 @@ void lsfitcreatefg(const real_2d_array &x, const real_1d_array &y, const real_1d
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6259,10 +6365,6 @@ void lsfitcreatefg(const real_2d_array &x, const real_1d_array &y, const real_1d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6309,10 +6411,6 @@ void lsfitcreatewfgh(const real_2d_array &x, const real_1d_array &y, const real_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6370,10 +6468,6 @@ void lsfitcreatewfgh(const real_2d_array &x, const real_1d_array &y, const real_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6420,10 +6514,6 @@ void lsfitcreatefgh(const real_2d_array &x, const real_1d_array &y, const real_1
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6481,10 +6571,6 @@ void lsfitcreatefgh(const real_2d_array &x, const real_1d_array &y, const real_1
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6530,10 +6616,6 @@ void lsfitsetcond(const lsfitstate &state, const double epsf, const double epsx,
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6571,10 +6653,6 @@ void lsfitsetstpmax(const lsfitstate &state, const double stpmax)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6604,10 +6682,6 @@ void lsfitsetxrep(const lsfitstate &state, const bool needxrep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6651,10 +6725,6 @@ void lsfitsetscale(const lsfitstate &state, const real_1d_array &s)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6700,10 +6770,6 @@ void lsfitsetbc(const lsfitstate &state, const real_1d_array &bndl, const real_1
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -6724,10 +6790,6 @@ bool lsfititeration(const lsfitstate &state)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6763,10 +6825,6 @@ void lsfitfit(lsfitstate &state,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6810,10 +6868,6 @@ void lsfitfit(lsfitstate &state,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -6866,10 +6920,6 @@ void lsfitfit(lsfitstate &state,
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 
@@ -6883,7 +6933,9 @@ INPUT PARAMETERS:
     State   -   algorithm state
 
 OUTPUT PARAMETERS:
-    Info    -   completetion code:
+    Info    -   completion code:
+                    * -7    gradient verification failed.
+                            See LSFitSetGradientCheck() for more information.
                     *  1    relative function improvement is no more than
                             EpsF.
                     *  2    relative step is no more than EpsX.
@@ -6892,8 +6944,9 @@ OUTPUT PARAMETERS:
                     *  7    stopping conditions are too stringent,
                             further improvement is impossible
     C       -   array[0..K-1], solution
-    Rep     -   optimization report. Following fields are set:
-                * Rep.TerminationType completetion code:
+    Rep     -   optimization report. On success following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -6901,6 +6954,46 @@ OUTPUT PARAMETERS:
                                     NON-WEIGHTED ERRORS ARE CALCULATED
                 * WRMSError         weighted rms error on the (X,Y).
 
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(J*CovPar*J')),
+                    where J is Jacobian matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -6919,9 +7012,72 @@ void lsfitresults(const lsfitstate &state, ae_int_t &info, real_1d_array &c, lsf
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before fitting begins
+* LSFitFit() is called
+* prior to actual fitting, for  each  point  in  data  set  X_i  and  each
+  component  of  parameters  being  fited C_j algorithm performs following
+  steps:
+  * two trial steps are made to C_j-TestStep*S[j] and C_j+TestStep*S[j],
+    where C_j is j-th parameter and S[j] is a scale of j-th parameter
+  * if needed, steps are bounded with respect to constraints on C[]
+  * F(X_i|C) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification needs N*K (points count * parameters count)  gradient
+        evaluations. It is very costly and you should use it only for  low
+        dimensional  problems,  when  you  want  to  be  sure  that you've
+        correctly calculated analytic derivatives. You should not  use  it
+        in the production code  (unless  you  want  to  check  derivatives
+        provided by some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with LSFitSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+NOTE 4: this function works only for optimizers created with LSFitCreateWFG()
+        or LSFitCreateFG() constructors.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 15.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void lsfitsetgradientcheck(const lsfitstate &state, const double teststep)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::lsfitsetgradientcheck(const_cast<alglib_impl::lsfitstate*>(state.c_ptr()), teststep, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -7110,10 +7266,6 @@ void pspline2build(const real_2d_array &xy, const ae_int_t n, const ae_int_t st,
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7139,10 +7291,6 @@ void pspline3build(const real_2d_array &xy, const ae_int_t n, const ae_int_t st,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7194,10 +7342,6 @@ void pspline2buildperiodic(const real_2d_array &xy, const ae_int_t n, const ae_i
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7224,10 +7368,6 @@ void pspline3buildperiodic(const real_2d_array &xy, const ae_int_t n, const ae_i
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7270,10 +7410,6 @@ void pspline2parametervalues(const pspline2interpolant &p, ae_int_t &n, real_1d_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7297,10 +7433,6 @@ void pspline3parametervalues(const pspline3interpolant &p, ae_int_t &n, real_1d_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7338,10 +7470,6 @@ void pspline2calc(const pspline2interpolant &p, const double t, double &x, doubl
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7381,10 +7509,6 @@ void pspline3calc(const pspline3interpolant &p, const double t, double &x, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7423,10 +7547,6 @@ void pspline2tangent(const pspline2interpolant &p, const double t, double &x, do
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7468,10 +7588,6 @@ void pspline3tangent(const pspline3interpolant &p, const double t, double &x, do
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7509,10 +7625,6 @@ void pspline2diff(const pspline2interpolant &p, const double t, double &x, doubl
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7554,10 +7666,6 @@ void pspline3diff(const pspline3interpolant &p, const double t, double &x, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7597,10 +7705,6 @@ void pspline2diff2(const pspline2interpolant &p, const double t, double &x, doub
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7645,10 +7749,6 @@ void pspline3diff2(const pspline3interpolant &p, const double t, double &x, doub
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7682,10 +7782,6 @@ double pspline2arclength(const pspline2interpolant &p, const double a, const dou
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -7718,10 +7814,6 @@ double pspline3arclength(const pspline3interpolant &p, const double a, const dou
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -7911,10 +8003,6 @@ void rbfserialize(rbfmodel &obj, std::string &s_out)
     {
         throw ap_error(state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 /*************************************************************************
 This function unserializes data structure from string.
@@ -7937,10 +8025,6 @@ void rbfunserialize(std::string &s_in, rbfmodel &obj)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8007,10 +8091,6 @@ void rbfcreate(const ae_int_t nx, const ae_int_t ny, rbfmodel &s)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8052,10 +8132,6 @@ void rbfsetpoints(const rbfmodel &s, const real_2d_array &xy, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8102,10 +8178,6 @@ void rbfsetpoints(const rbfmodel &s, const real_2d_array &xy)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8175,10 +8247,6 @@ void rbfsetalgoqnn(const rbfmodel &s, const double q, const double z)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8254,10 +8322,6 @@ void rbfsetalgoqnn(const rbfmodel &s)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8364,10 +8428,6 @@ void rbfsetalgomultilayer(const rbfmodel &s, const double rbase, const ae_int_t 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8479,10 +8539,6 @@ void rbfsetalgomultilayer(const rbfmodel &s, const double rbase, const ae_int_t 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8513,10 +8569,6 @@ void rbfsetlinterm(const rbfmodel &s)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8549,10 +8601,6 @@ void rbfsetconstterm(const rbfmodel &s)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8583,10 +8631,6 @@ void rbfsetzeroterm(const rbfmodel &s)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8638,10 +8682,6 @@ void rbfbuildmodel(const rbfmodel &s, rbfreport &rep)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8686,10 +8726,6 @@ double rbfcalc2(const rbfmodel &s, const double x0, const double x1)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8730,10 +8766,6 @@ double rbfcalc3(const rbfmodel &s, const double x0, const double x1, const doubl
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8776,10 +8808,6 @@ void rbfcalc(const rbfmodel &s, const real_1d_array &x, real_1d_array &y)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8815,10 +8843,6 @@ void rbfcalcbuf(const rbfmodel &s, const real_1d_array &x, real_1d_array &y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8860,10 +8884,6 @@ void rbfgridcalc2(const rbfmodel &s, const real_1d_array &x0, const ae_int_t n0,
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -8904,10 +8924,6 @@ void rbfunpack(const rbfmodel &s, ae_int_t &nx, ae_int_t &ny, real_2d_array &xwr
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -8978,76 +8994,6 @@ spline2dinterpolant::~spline2dinterpolant()
 }
 
 /*************************************************************************
-This subroutine builds bilinear spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbilinear(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c)
-{
-    alglib_impl::ae_state _alglib_env_state;
-    alglib_impl::ae_state_init(&_alglib_env_state);
-    try
-    {
-        alglib_impl::spline2dbuildbilinear(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), const_cast<alglib_impl::ae_matrix*>(f.c_ptr()), m, n, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
-        alglib_impl::ae_state_clear(&_alglib_env_state);
-        return;
-    }
-    catch(alglib_impl::ae_error_type)
-    {
-        throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
-    }
-}
-
-/*************************************************************************
-This subroutine builds bicubic spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbicubic(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c)
-{
-    alglib_impl::ae_state _alglib_env_state;
-    alglib_impl::ae_state_init(&_alglib_env_state);
-    try
-    {
-        alglib_impl::spline2dbuildbicubic(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), const_cast<alglib_impl::ae_matrix*>(f.c_ptr()), m, n, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
-        alglib_impl::ae_state_clear(&_alglib_env_state);
-        return;
-    }
-    catch(alglib_impl::ae_error_type)
-    {
-        throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
-    }
-}
-
-/*************************************************************************
 This subroutine calculates the value of the bilinear or bicubic spline  at
 the given point X.
 
@@ -9075,10 +9021,6 @@ double spline2dcalc(const spline2dinterpolant &c, const double x, const double y
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -9113,62 +9055,6 @@ void spline2ddiff(const spline2dinterpolant &c, const double x, const double y, 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
-}
-
-/*************************************************************************
-This subroutine unpacks two-dimensional spline into the coefficients table
-
-Input parameters:
-    C   -   spline interpolant.
-
-Result:
-    M, N-   grid size (x-axis and y-axis)
-    Tbl -   coefficients table, unpacked format,
-            [0..(N-1)*(M-1)-1, 0..19].
-            For I = 0...M-2, J=0..N-2:
-                K =  I*(N-1)+J
-                Tbl[K,0] = X[j]
-                Tbl[K,1] = X[j+1]
-                Tbl[K,2] = Y[i]
-                Tbl[K,3] = Y[i+1]
-                Tbl[K,4] = C00
-                Tbl[K,5] = C01
-                Tbl[K,6] = C02
-                Tbl[K,7] = C03
-                Tbl[K,8] = C10
-                Tbl[K,9] = C11
-                ...
-                Tbl[K,19] = C33
-            On each grid square spline is equals to:
-                S(x) = SUM(c[i,j]*(x^i)*(y^j), i=0..3, j=0..3)
-                t = x-x[j]
-                u = y-y[i]
-
-  -- ALGLIB PROJECT --
-     Copyright 29.06.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dunpack(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, real_2d_array &tbl)
-{
-    alglib_impl::ae_state _alglib_env_state;
-    alglib_impl::ae_state_init(&_alglib_env_state);
-    try
-    {
-        alglib_impl::spline2dunpack(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &m, &n, const_cast<alglib_impl::ae_matrix*>(tbl.c_ptr()), &_alglib_env_state);
-        alglib_impl::ae_state_clear(&_alglib_env_state);
-        return;
-    }
-    catch(alglib_impl::ae_error_type)
-    {
-        throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -9197,10 +9083,6 @@ void spline2dlintransxy(const spline2dinterpolant &c, const double ax, const dou
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -9231,9 +9113,33 @@ void spline2dlintransf(const spline2dinterpolant &c, const double a, const doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This subroutine makes the copy of the spline model.
+
+Input parameters:
+    C   -   spline interpolant
+
+Output parameters:
+    CC  -   spline copy
+
+  -- ALGLIB PROJECT --
+     Copyright 29.06.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcopy(const spline2dinterpolant &c, spline2dinterpolant &cc)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::spline2dcopy(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), const_cast<alglib_impl::spline2dinterpolant*>(cc.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -9270,10 +9176,6 @@ void spline2dresamplebicubic(const real_2d_array &a, const ae_int_t oldheight, c
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -9309,9 +9211,664 @@ void spline2dresamplebilinear(const real_2d_array &a, const ae_int_t oldheight, 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This subroutine builds bilinear vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinearv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &f, const ae_int_t d, spline2dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::spline2dbuildbilinearv(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), n, const_cast<alglib_impl::ae_vector*>(y.c_ptr()), m, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), d, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine builds bicubic vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubicv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &f, const ae_int_t d, spline2dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dbuildbicubicv(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), n, const_cast<alglib_impl::ae_vector*>(y.c_ptr()), m, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), d, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcvbuf(const spline2dinterpolant &c, const double x, const double y, real_1d_array &f)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dcalcvbuf(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), x, y, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcv(const spline2dinterpolant &c, const double x, const double y, real_1d_array &f)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dcalcv(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), x, y, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine unpacks two-dimensional spline into the coefficients table
+
+Input parameters:
+    C   -   spline interpolant.
+
+Result:
+    M, N-   grid size (x-axis and y-axis)
+    D   -   number of components
+    Tbl -   coefficients table, unpacked format,
+            D - components: [0..(N-1)*(M-1)*D-1, 0..19].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index):
+                K :=  T + I*D + J*D*(N-1)
+
+                K-th row stores decomposition for T-th component of the
+                vector-valued function
+
+                Tbl[K,0] = X[i]
+                Tbl[K,1] = X[i+1]
+                Tbl[K,2] = Y[j]
+                Tbl[K,3] = Y[j+1]
+                Tbl[K,4] = C00
+                Tbl[K,5] = C01
+                Tbl[K,6] = C02
+                Tbl[K,7] = C03
+                Tbl[K,8] = C10
+                Tbl[K,9] = C11
+                ...
+                Tbl[K,19] = C33
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j]*(t^i)*(u^j), i=0..3, j=0..3)
+                t = x-x[j]
+                u = y-y[i]
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpackv(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, ae_int_t &d, real_2d_array &tbl)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dunpackv(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &m, &n, &d, const_cast<alglib_impl::ae_matrix*>(tbl.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBilinearV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinear(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dbuildbilinear(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), const_cast<alglib_impl::ae_matrix*>(f.c_ptr()), m, n, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBicubicV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubic(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dbuildbicubic(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), const_cast<alglib_impl::ae_vector*>(y.c_ptr()), const_cast<alglib_impl::ae_matrix*>(f.c_ptr()), m, n, const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DUnpackV(),  which is more flexible
+and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 29.06.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpack(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, real_2d_array &tbl)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline2dunpack(const_cast<alglib_impl::spline2dinterpolant*>(c.c_ptr()), &m, &n, const_cast<alglib_impl::ae_matrix*>(tbl.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+3-dimensional spline inteprolant
+*************************************************************************/
+_spline3dinterpolant_owner::_spline3dinterpolant_owner()
+{
+    p_struct = (alglib_impl::spline3dinterpolant*)alglib_impl::ae_malloc(sizeof(alglib_impl::spline3dinterpolant), NULL);
+    if( p_struct==NULL )
+        throw ap_error("ALGLIB: malloc error");
+    if( !alglib_impl::_spline3dinterpolant_init(p_struct, NULL, ae_false) )
+        throw ap_error("ALGLIB: malloc error");
+}
+
+_spline3dinterpolant_owner::_spline3dinterpolant_owner(const _spline3dinterpolant_owner &rhs)
+{
+    p_struct = (alglib_impl::spline3dinterpolant*)alglib_impl::ae_malloc(sizeof(alglib_impl::spline3dinterpolant), NULL);
+    if( p_struct==NULL )
+        throw ap_error("ALGLIB: malloc error");
+    if( !alglib_impl::_spline3dinterpolant_init_copy(p_struct, const_cast<alglib_impl::spline3dinterpolant*>(rhs.p_struct), NULL, ae_false) )
+        throw ap_error("ALGLIB: malloc error");
+}
+
+_spline3dinterpolant_owner& _spline3dinterpolant_owner::operator=(const _spline3dinterpolant_owner &rhs)
+{
+    if( this==&rhs )
+        return *this;
+    alglib_impl::_spline3dinterpolant_clear(p_struct);
+    if( !alglib_impl::_spline3dinterpolant_init_copy(p_struct, const_cast<alglib_impl::spline3dinterpolant*>(rhs.p_struct), NULL, ae_false) )
+        throw ap_error("ALGLIB: malloc error");
+    return *this;
+}
+
+_spline3dinterpolant_owner::~_spline3dinterpolant_owner()
+{
+    alglib_impl::_spline3dinterpolant_clear(p_struct);
+    ae_free(p_struct);
+}
+
+alglib_impl::spline3dinterpolant* _spline3dinterpolant_owner::c_ptr()
+{
+    return p_struct;
+}
+
+alglib_impl::spline3dinterpolant* _spline3dinterpolant_owner::c_ptr() const
+{
+    return const_cast<alglib_impl::spline3dinterpolant*>(p_struct);
+}
+spline3dinterpolant::spline3dinterpolant() : _spline3dinterpolant_owner() 
+{
+}
+
+spline3dinterpolant::spline3dinterpolant(const spline3dinterpolant &rhs):_spline3dinterpolant_owner(rhs) 
+{
+}
+
+spline3dinterpolant& spline3dinterpolant::operator=(const spline3dinterpolant &rhs)
+{
+    if( this==&rhs )
+        return *this;
+    _spline3dinterpolant_owner::operator=(rhs);
+    return *this;
+}
+
+spline3dinterpolant::~spline3dinterpolant()
+{
+}
+
+/*************************************************************************
+This subroutine calculates the value of the trilinear or tricubic spline at
+the given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   coefficients table.
+            Built by BuildBilinearSpline or BuildBicubicSpline.
+    X, Y,
+    Z   -   point
+
+Result:
+    S(x,y,z)
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+double spline3dcalc(const spline3dinterpolant &c, const double x, const double y, const double z)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        double result = alglib_impl::spline3dcalc(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), x, y, z, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return *(reinterpret_cast<double*>(&result));
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline argument.
+
+INPUT PARAMETERS:
+    C       -   spline interpolant
+    AX, BX  -   transformation coefficients: x = A*u + B
+    AY, BY  -   transformation coefficients: y = A*v + B
+    AZ, BZ  -   transformation coefficients: z = A*w + B
+
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransxyz(const spline3dinterpolant &c, const double ax, const double bx, const double ay, const double by, const double az, const double bz)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dlintransxyz(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), ax, bx, ay, by, az, bz, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline.
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    A, B-   transformation coefficients: S2(x,y) = A*S(x,y,z) + B
+
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransf(const spline3dinterpolant &c, const double a, const double b)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dlintransf(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), a, b, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+Trilinear spline resampling
+
+INPUT PARAMETERS:
+    A           -   array[0..OldXCount*OldYCount*OldZCount-1], function
+                    values at the old grid, :
+                        A[0]        x=0,y=0,z=0
+                        A[1]        x=1,y=0,z=0
+                        A[..]       ...
+                        A[..]       x=oldxcount-1,y=0,z=0
+                        A[..]       x=0,y=1,z=0
+                        A[..]       ...
+                        ...
+    OldZCount   -   old Z-count, OldZCount>1
+    OldYCount   -   old Y-count, OldYCount>1
+    OldXCount   -   old X-count, OldXCount>1
+    NewZCount   -   new Z-count, NewZCount>1
+    NewYCount   -   new Y-count, NewYCount>1
+    NewXCount   -   new X-count, NewXCount>1
+
+OUTPUT PARAMETERS:
+    B           -   array[0..NewXCount*NewYCount*NewZCount-1], function
+                    values at the new grid:
+                        B[0]        x=0,y=0,z=0
+                        B[1]        x=1,y=0,z=0
+                        B[..]       ...
+                        B[..]       x=newxcount-1,y=0,z=0
+                        B[..]       x=0,y=1,z=0
+                        B[..]       ...
+                        ...
+
+  -- ALGLIB routine --
+     26.04.2012
+     Copyright by Bochkanov Sergey
+*************************************************************************/
+void spline3dresampletrilinear(const real_1d_array &a, const ae_int_t oldzcount, const ae_int_t oldycount, const ae_int_t oldxcount, const ae_int_t newzcount, const ae_int_t newycount, const ae_int_t newxcount, real_1d_array &b)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dresampletrilinear(const_cast<alglib_impl::ae_vector*>(a.c_ptr()), oldzcount, oldycount, oldxcount, newzcount, newycount, newxcount, const_cast<alglib_impl::ae_vector*>(b.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine builds trilinear vector-valued spline.
+
+INPUT PARAMETERS:
+    X   -   spline abscissas,  array[0..N-1]
+    Y   -   spline ordinates,  array[0..M-1]
+    Z   -   spline applicates, array[0..L-1]
+    F   -   function values, array[0..M*N*L*D-1]:
+            * first D elements store D values at (X[0],Y[0],Z[0])
+            * next D elements store D values at (X[1],Y[0],Z[0])
+            * next D elements store D values at (X[2],Y[0],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[1],Z[0])
+            * next D elements store D values at (X[1],Y[1],Z[0])
+            * next D elements store D values at (X[2],Y[1],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[0],Z[1])
+            * next D elements store D values at (X[1],Y[0],Z[1])
+            * next D elements store D values at (X[2],Y[0],Z[1])
+            * ...
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(N*(M*K+J)+I)...D*(N*(M*K+J)+I)+D-1].
+    M,N,
+    L   -   grid size, M>=2, N>=2, L>=2
+    D   -   vector dimension, D>=1
+
+OUTPUT PARAMETERS:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dbuildtrilinearv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &z, const ae_int_t l, const real_1d_array &f, const ae_int_t d, spline3dinterpolant &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dbuildtrilinearv(const_cast<alglib_impl::ae_vector*>(x.c_ptr()), n, const_cast<alglib_impl::ae_vector*>(y.c_ptr()), m, const_cast<alglib_impl::ae_vector*>(z.c_ptr()), l, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), d, const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcvbuf(const spline3dinterpolant &c, const double x, const double y, const double z, real_1d_array &f)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dcalcvbuf(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), x, y, z, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine calculates trilinear or tricubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcv(const spline3dinterpolant &c, const double x, const double y, const double z, real_1d_array &f)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dcalcv(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), x, y, z, const_cast<alglib_impl::ae_vector*>(f.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This subroutine unpacks tri-dimensional spline into the coefficients table
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+
+Result:
+    N   -   grid size (X)
+    M   -   grid size (Y)
+    L   -   grid size (Z)
+    D   -   number of components
+    SType-  spline type. Currently, only one spline type is supported:
+            trilinear spline, as indicated by SType=1.
+    Tbl -   spline coefficients: [0..(N-1)*(M-1)*(L-1)*D-1, 0..13].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index), K=0..L-2 (z index):
+                Q := T + I*D + J*D*(N-1) + K*D*(N-1)*(M-1),
+
+                Q-th row stores decomposition for T-th component of the
+                vector-valued function
+
+                Tbl[Q,0] = X[i]
+                Tbl[Q,1] = X[i+1]
+                Tbl[Q,2] = Y[j]
+                Tbl[Q,3] = Y[j+1]
+                Tbl[Q,4] = Z[k]
+                Tbl[Q,5] = Z[k+1]
+
+                Tbl[Q,6] = C000
+                Tbl[Q,7] = C100
+                Tbl[Q,8] = C010
+                Tbl[Q,9] = C110
+                Tbl[Q,10]= C001
+                Tbl[Q,11]= C101
+                Tbl[Q,12]= C011
+                Tbl[Q,13]= C111
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j,k]*(x^i)*(y^j)*(z^k), i=0..1, j=0..1, k=0..1)
+                t = x-x[j]
+                u = y-y[i]
+                v = z-z[k]
+
+            NOTE: format of Tbl is given for SType=1. Future versions of
+                  ALGLIB can use different formats for different values of
+                  SType.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dunpackv(const spline3dinterpolant &c, ae_int_t &n, ae_int_t &m, ae_int_t &l, ae_int_t &d, ae_int_t &stype, real_2d_array &tbl)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::spline3dunpackv(const_cast<alglib_impl::spline3dinterpolant*>(c.c_ptr()), &n, &m, &l, &d, &stype, const_cast<alglib_impl::ae_matrix*>(tbl.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 }
@@ -9415,7 +9972,6 @@ static double spline1d_rescaleval(double a0,
      ae_state *_state);
 
 
-static ae_int_t lsfit_rfsmax = 10;
 static void lsfit_spline1dfitinternal(ae_int_t st,
      /* Real    */ ae_vector* x,
      /* Real    */ ae_vector* y,
@@ -9472,6 +10028,19 @@ static void lsfit_barycentricfitwcfixedd(/* Real    */ ae_vector* x,
      barycentricinterpolant* b,
      barycentricfitreport* rep,
      ae_state *_state);
+static void lsfit_clearreport(lsfitreport* rep, ae_state *_state);
+static void lsfit_estimateerrors(/* Real    */ ae_matrix* f1,
+     /* Real    */ ae_vector* f0,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_vector* w,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* s,
+     ae_int_t n,
+     ae_int_t k,
+     lsfitreport* rep,
+     /* Real    */ ae_matrix* z,
+     ae_int_t zkind,
+     ae_state *_state);
 
 
 static void pspline_pspline2par(/* Real    */ ae_matrix* xy,
@@ -9492,13 +10061,7 @@ static double rbf_rbffarradius = 6;
 static double rbf_rbfnearradius = 2.1;
 static double rbf_rbfmlradius = 3;
 static ae_int_t rbf_rbffirstversion = 0;
-static void rbf_rbfgridregular(rbfmodel* s, double h, ae_state *_state);
 static void rbf_rbfgridpoints(rbfmodel* s, ae_state *_state);
-static void rbf_rbfgridspecial(rbfmodel* s,
-     /* Real    */ ae_matrix* cxy,
-     ae_int_t nc,
-     ae_state *_state);
-static void rbf_rbfradfixed(rbfmodel* s, double r, ae_state *_state);
 static void rbf_rbfradnn(rbfmodel* s,
      double q,
      double z,
@@ -9562,6 +10125,17 @@ static void spline2d_bicubiccalcderivatives(/* Real    */ ae_matrix* a,
      ae_state *_state);
 
 
+static void spline3d_spline3ddiff(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     double* f,
+     double* fx,
+     double* fy,
+     double* fxy,
+     ae_state *_state);
+
+
 
 
 
@@ -9583,7 +10157,6 @@ double idwcalc(idwinterpolant* z,
      /* Real    */ ae_vector* x,
      ae_state *_state)
 {
-    ae_int_t nx;
     ae_int_t i;
     ae_int_t k;
     double r;
@@ -9612,7 +10185,6 @@ double idwcalc(idwinterpolant* z,
         /*
          * NQ/NW-based model
          */
-        nx = z->nx;
         k = kdtreequeryknn(&z->tree, x, z->nw, ae_true, _state);
         kdtreequeryresultsdistances(&z->tree, &z->rbuf, _state);
         kdtreequeryresultstags(&z->tree, &z->tbuf, _state);
@@ -9623,7 +10195,6 @@ double idwcalc(idwinterpolant* z,
         /*
          * R-based model
          */
-        nx = z->nx;
         k = kdtreequeryrnn(&z->tree, x, z->r, ae_true, _state);
         kdtreequeryresultsdistances(&z->tree, &z->rbuf, _state);
         kdtreequeryresultstags(&z->tree, &z->tbuf, _state);
@@ -10700,8 +11271,10 @@ static void idwint_idwinternalsolver(/* Real    */ ae_vector* y,
 }
 
 
-ae_bool _idwinterpolant_init(idwinterpolant* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _idwinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    idwinterpolant *p = (idwinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     if( !_kdtree_init(&p->tree, _state, make_automatic) )
         return ae_false;
     if( !ae_matrix_init(&p->q, 0, 0, DT_REAL, _state, make_automatic) )
@@ -10718,8 +11291,10 @@ ae_bool _idwinterpolant_init(idwinterpolant* p, ae_state *_state, ae_bool make_a
 }
 
 
-ae_bool _idwinterpolant_init_copy(idwinterpolant* dst, idwinterpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _idwinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    idwinterpolant *dst = (idwinterpolant*)_dst;
+    idwinterpolant *src = (idwinterpolant*)_src;
     dst->n = src->n;
     dst->nx = src->nx;
     dst->d = src->d;
@@ -10745,14 +11320,29 @@ ae_bool _idwinterpolant_init_copy(idwinterpolant* dst, idwinterpolant* src, ae_s
 }
 
 
-void _idwinterpolant_clear(idwinterpolant* p)
+void _idwinterpolant_clear(void* _p)
 {
+    idwinterpolant *p = (idwinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     _kdtree_clear(&p->tree);
     ae_matrix_clear(&p->q);
     ae_vector_clear(&p->xbuf);
     ae_vector_clear(&p->tbuf);
     ae_vector_clear(&p->rbuf);
     ae_matrix_clear(&p->xybuf);
+}
+
+
+void _idwinterpolant_destroy(void* _p)
+{
+    idwinterpolant *p = (idwinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    _kdtree_destroy(&p->tree);
+    ae_matrix_destroy(&p->q);
+    ae_vector_destroy(&p->xbuf);
+    ae_vector_destroy(&p->tbuf);
+    ae_vector_destroy(&p->rbuf);
+    ae_matrix_destroy(&p->xybuf);
 }
 
 
@@ -11571,8 +12161,10 @@ static void ratint_barycentricnormalize(barycentricinterpolant* b,
 }
 
 
-ae_bool _barycentricinterpolant_init(barycentricinterpolant* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _barycentricinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    barycentricinterpolant *p = (barycentricinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->y, 0, DT_REAL, _state, make_automatic) )
@@ -11583,8 +12175,10 @@ ae_bool _barycentricinterpolant_init(barycentricinterpolant* p, ae_state *_state
 }
 
 
-ae_bool _barycentricinterpolant_init_copy(barycentricinterpolant* dst, barycentricinterpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _barycentricinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    barycentricinterpolant *dst = (barycentricinterpolant*)_dst;
+    barycentricinterpolant *src = (barycentricinterpolant*)_src;
     dst->n = src->n;
     dst->sy = src->sy;
     if( !ae_vector_init_copy(&dst->x, &src->x, _state, make_automatic) )
@@ -11597,11 +12191,23 @@ ae_bool _barycentricinterpolant_init_copy(barycentricinterpolant* dst, barycentr
 }
 
 
-void _barycentricinterpolant_clear(barycentricinterpolant* p)
+void _barycentricinterpolant_clear(void* _p)
 {
+    barycentricinterpolant *p = (barycentricinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->y);
     ae_vector_clear(&p->w);
+}
+
+
+void _barycentricinterpolant_destroy(void* _p)
+{
+    barycentricinterpolant *p = (barycentricinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->y);
+    ae_vector_destroy(&p->w);
 }
 
 
@@ -13407,8 +14013,6 @@ void spline1dgriddiff2cubic(/* Real    */ ae_vector* x,
     double delta;
     double delta2;
     double delta3;
-    double s0;
-    double s1;
     double s2;
     double s3;
 
@@ -13490,8 +14094,6 @@ void spline1dgriddiff2cubic(/* Real    */ ae_vector* x,
         delta = x->ptr.p_double[i+1]-x->ptr.p_double[i];
         delta2 = ae_sqr(delta, _state);
         delta3 = delta*delta2;
-        s0 = y->ptr.p_double[i];
-        s1 = d1->ptr.p_double[i];
         s2 = (3*(y->ptr.p_double[i+1]-y->ptr.p_double[i])-2*d1->ptr.p_double[i]*delta-d1->ptr.p_double[i+1]*delta)/delta2;
         s3 = (2*(y->ptr.p_double[i]-y->ptr.p_double[i+1])+d1->ptr.p_double[i]*delta+d1->ptr.p_double[i+1]*delta)/delta3;
         d2->ptr.p_double[i] = 2*s2;
@@ -14373,7 +14975,7 @@ INPUT PARAMETERS:
     X           -   spline nodes, array[0..N-1]
     Y           -   function values, array[0..N-1]
     N           -   points count (optional):
-                    * N>=5
+                    * N>=2
                     * if given, only first N points are used to build spline
                     * if not given, automatically detected from X/Y sizes
                       (len(X) must be equal to len(Y))
@@ -14413,7 +15015,7 @@ void spline1dbuildakima(/* Real    */ ae_vector* x,
     ae_vector_init(&w, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&diff, 0, DT_REAL, _state, ae_true);
 
-    ae_assert(n>=5, "Spline1DBuildAkima: N<5!", _state);
+    ae_assert(n>=2, "Spline1DBuildAkima: N<2!", _state);
     ae_assert(x->cnt>=n, "Spline1DBuildAkima: Length(X)<N!", _state);
     ae_assert(y->cnt>=n, "Spline1DBuildAkima: Length(Y)<N!", _state);
     
@@ -14424,6 +15026,16 @@ void spline1dbuildakima(/* Real    */ ae_vector* x,
     ae_assert(isfinitevector(y, n, _state), "Spline1DBuildAkima: Y contains infinite or NAN values!", _state);
     spline1d_heapsortpoints(x, y, n, _state);
     ae_assert(aredistinct(x, n, _state), "Spline1DBuildAkima: at least two consequent points are too close!", _state);
+    
+    /*
+     * Handle special cases: N=2, N=3, N=4
+     */
+    if( n<=4 )
+    {
+        spline1dbuildcubic(x, y, n, 0, 0.0, 0, 0.0, c, _state);
+        ae_frame_leave(_state);
+        return;
+    }
     
     /*
      * Prepare W (weights), Diff (divided differences)
@@ -14658,7 +15270,7 @@ INPUT PARAMETERS:
     C   -   spline interpolant.
     X   -   point
 
-Result:
+OUTPUT PARAMETERS:
     Tbl -   coefficients table, unpacked format, array[0..N-2, 0..5].
             For I = 0...N-2:
                 Tbl[I,0] = X[i]
@@ -14670,6 +15282,11 @@ Result:
             On [x[i], x[i+1]] spline is equals to:
                 S(x) = C0 + C1*t + C2*t^2 + C3*t^3
                 t = x-x[i]
+                
+NOTE:
+    You  can rebuild spline with  Spline1DBuildHermite()  function,  which
+    accepts as inputs function values and derivatives at nodes, which  are
+    easy to calculate when you have coefficients.
 
   -- ALGLIB PROJECT --
      Copyright 29.06.2007 by Bochkanov Sergey
@@ -16589,6 +17206,185 @@ ae_int_t bisectmethod(double pa,
 
 
 /*************************************************************************
+This function builds monotone cubic Hermite interpolant. This interpolant
+is monotonic in [x(0),x(n-1)] and is constant outside of this interval.
+
+In  case  y[]  form  non-monotonic  sequence,  interpolant  is  piecewise
+monotonic.  Say, for x=(0,1,2,3,4)  and  y=(0,1,2,1,0)  interpolant  will
+monotonically grow at [0..2] and monotonically decrease at [2..4].
+
+INPUT PARAMETERS:
+    X           -   spline nodes, array[0..N-1]. Subroutine automatically
+                    sorts points, so caller may pass unsorted array.
+    Y           -   function values, array[0..N-1]
+    N           -   the number of points(N>=2).
+
+OUTPUT PARAMETERS:
+    C           -   spline interpolant.
+
+ -- ALGLIB PROJECT --
+     Copyright 21.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline1dbuildmonotone(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     ae_int_t n,
+     spline1dinterpolant* c,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_vector _x;
+    ae_vector _y;
+    ae_vector d;
+    ae_vector ex;
+    ae_vector ey;
+    ae_vector p;
+    double delta;
+    double alpha;
+    double beta;
+    ae_int_t tmpn;
+    ae_int_t sn;
+    double ca;
+    double cb;
+    double epsilon;
+    ae_int_t i;
+    ae_int_t j;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_vector_init_copy(&_x, x, _state, ae_true);
+    x = &_x;
+    ae_vector_init_copy(&_y, y, _state, ae_true);
+    y = &_y;
+    _spline1dinterpolant_clear(c);
+    ae_vector_init(&d, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&ex, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&ey, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&p, 0, DT_INT, _state, ae_true);
+
+    
+    /*
+     * Check lengths of arguments
+     */
+    ae_assert(n>=2, "Spline1DBuildMonotone: N<2", _state);
+    ae_assert(x->cnt>=n, "Spline1DBuildMonotone: Length(X)<N", _state);
+    ae_assert(y->cnt>=n, "Spline1DBuildMonotone: Length(Y)<N", _state);
+    
+    /*
+     * Check and sort points
+     */
+    ae_assert(isfinitevector(x, n, _state), "Spline1DBuildMonotone: X contains infinite or NAN values", _state);
+    ae_assert(isfinitevector(y, n, _state), "Spline1DBuildMonotone: Y contains infinite or NAN values", _state);
+    spline1d_heapsortppoints(x, y, &p, n, _state);
+    ae_assert(aredistinct(x, n, _state), "Spline1DBuildMonotone: at least two consequent points are too close", _state);
+    epsilon = ae_machineepsilon;
+    n = n+2;
+    ae_vector_set_length(&d, n, _state);
+    ae_vector_set_length(&ex, n, _state);
+    ae_vector_set_length(&ey, n, _state);
+    ex.ptr.p_double[0] = x->ptr.p_double[0]-ae_fabs(x->ptr.p_double[1]-x->ptr.p_double[0], _state);
+    ex.ptr.p_double[n-1] = x->ptr.p_double[n-3]+ae_fabs(x->ptr.p_double[n-3]-x->ptr.p_double[n-4], _state);
+    ey.ptr.p_double[0] = y->ptr.p_double[0];
+    ey.ptr.p_double[n-1] = y->ptr.p_double[n-3];
+    for(i=1; i<=n-2; i++)
+    {
+        ex.ptr.p_double[i] = x->ptr.p_double[i-1];
+        ey.ptr.p_double[i] = y->ptr.p_double[i-1];
+    }
+    
+    /*
+     * Init sign of the function for first segment
+     */
+    i = 0;
+    ca = 0;
+    do
+    {
+        ca = ey.ptr.p_double[i+1]-ey.ptr.p_double[i];
+        i = i+1;
+    }
+    while(!(ae_fp_neq(ca,0)||i>n-2));
+    if( ae_fp_neq(ca,0) )
+    {
+        ca = ca/ae_fabs(ca, _state);
+    }
+    i = 0;
+    while(i<n-1)
+    {
+        
+        /*
+         * Partition of the segment [X0;Xn]
+         */
+        tmpn = 1;
+        for(j=i; j<=n-2; j++)
+        {
+            cb = ey.ptr.p_double[j+1]-ey.ptr.p_double[j];
+            if( ae_fp_greater_eq(ca*cb,0) )
+            {
+                tmpn = tmpn+1;
+            }
+            else
+            {
+                ca = cb/ae_fabs(cb, _state);
+                break;
+            }
+        }
+        sn = i+tmpn;
+        ae_assert(tmpn>=2, "Spline1DBuildMonotone: internal error", _state);
+        
+        /*
+         * Calculate derivatives for current segment
+         */
+        d.ptr.p_double[i] = 0;
+        d.ptr.p_double[sn-1] = 0;
+        for(j=i+1; j<=sn-2; j++)
+        {
+            d.ptr.p_double[j] = ((ey.ptr.p_double[j]-ey.ptr.p_double[j-1])/(ex.ptr.p_double[j]-ex.ptr.p_double[j-1])+(ey.ptr.p_double[j+1]-ey.ptr.p_double[j])/(ex.ptr.p_double[j+1]-ex.ptr.p_double[j]))/2;
+        }
+        for(j=i; j<=sn-2; j++)
+        {
+            delta = (ey.ptr.p_double[j+1]-ey.ptr.p_double[j])/(ex.ptr.p_double[j+1]-ex.ptr.p_double[j]);
+            if( ae_fp_less_eq(ae_fabs(delta, _state),epsilon) )
+            {
+                d.ptr.p_double[j] = 0;
+                d.ptr.p_double[j+1] = 0;
+            }
+            else
+            {
+                alpha = d.ptr.p_double[j]/delta;
+                beta = d.ptr.p_double[j+1]/delta;
+                if( ae_fp_neq(alpha,0) )
+                {
+                    cb = alpha*ae_sqrt(1+ae_sqr(beta/alpha, _state), _state);
+                }
+                else
+                {
+                    if( ae_fp_neq(beta,0) )
+                    {
+                        cb = beta;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                if( ae_fp_greater(cb,3) )
+                {
+                    d.ptr.p_double[j] = 3*alpha*delta/cb;
+                    d.ptr.p_double[j+1] = 3*beta*delta/cb;
+                }
+            }
+        }
+        
+        /*
+         * Transition to next segment
+         */
+        i = sn-1;
+    }
+    spline1dbuildhermite(&ex, &ey, &d, n, c, _state);
+    c->continuity = 2;
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
 Internal version of Spline1DGridDiffCubic.
 
 Accepts pre-ordered X/Y, temporary arrays (which may be  preallocated,  if
@@ -17091,8 +17887,10 @@ static double spline1d_rescaleval(double a0,
 }
 
 
-ae_bool _spline1dinterpolant_init(spline1dinterpolant* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _spline1dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    spline1dinterpolant *p = (spline1dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->c, 0, DT_REAL, _state, make_automatic) )
@@ -17101,8 +17899,10 @@ ae_bool _spline1dinterpolant_init(spline1dinterpolant* p, ae_state *_state, ae_b
 }
 
 
-ae_bool _spline1dinterpolant_init_copy(spline1dinterpolant* dst, spline1dinterpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _spline1dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    spline1dinterpolant *dst = (spline1dinterpolant*)_dst;
+    spline1dinterpolant *src = (spline1dinterpolant*)_src;
     dst->periodic = src->periodic;
     dst->n = src->n;
     dst->k = src->k;
@@ -17115,10 +17915,21 @@ ae_bool _spline1dinterpolant_init_copy(spline1dinterpolant* dst, spline1dinterpo
 }
 
 
-void _spline1dinterpolant_clear(spline1dinterpolant* p)
+void _spline1dinterpolant_clear(void* _p)
 {
+    spline1dinterpolant *p = (spline1dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->c);
+}
+
+
+void _spline1dinterpolant_destroy(void* _p)
+{
+    spline1dinterpolant *p = (spline1dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->c);
 }
 
 
@@ -18591,6 +19402,12 @@ QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
 
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
+
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
     W       -   array[0..N-1]  Weights  corresponding to function  values.
@@ -18611,12 +19428,50 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
-
+                
+ERRORS IN PARAMETERS                
+                
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+            
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
+                                    
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
 *************************************************************************/
@@ -18656,6 +19511,12 @@ that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then LSFitLinearW()
 is called.
 
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
+
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
     W       -   array[0..N-1]  Weights  corresponding to function  values.
@@ -18683,6 +19544,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -18691,6 +19554,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+                
+ERRORS IN PARAMETERS                
+                
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+            
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -18847,6 +19751,12 @@ QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
 
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
+
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
     FMatrix -   a table of basis functions values, array[0..N-1, 0..M-1].
@@ -18862,11 +19772,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+                
+ERRORS IN PARAMETERS                
+                
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+            
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -18915,6 +19863,12 @@ that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then  LSFitLinear()
 is called.
 
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
+
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
     FMatrix -   a table of basis functions values, array[0..N-1, 0..M-1].
@@ -18938,6 +19892,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -18946,6 +19902,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+                
+ERRORS IN PARAMETERS                
+                
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+            
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -19062,6 +20059,8 @@ void lsfitcreatewf(/* Real    */ ae_matrix* x,
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateWF: X contains infinite or NaN values!", _state);
     ae_assert(ae_isfinite(diffstep, _state), "LSFitCreateWF: DiffStep is not finite!", _state);
     ae_assert(ae_fp_greater(diffstep,0), "LSFitCreateWF: DiffStep<=0!", _state);
+    state->teststep = 0;
+    state->diffstep = diffstep;
     state->npoints = n;
     state->nweights = n;
     state->wkind = 1;
@@ -19072,11 +20071,11 @@ void lsfitcreatewf(/* Real    */ ae_matrix* x,
     lsfitsetxrep(state, ae_false, _state);
     ae_matrix_set_length(&state->taskx, n, m, _state);
     ae_vector_set_length(&state->tasky, n, _state);
-    ae_vector_set_length(&state->w, n, _state);
+    ae_vector_set_length(&state->taskw, n, _state);
     ae_vector_set_length(&state->c, k, _state);
     ae_vector_set_length(&state->x, m, _state);
     ae_v_move(&state->c.ptr.p_double[0], 1, &c->ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->w.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
+    ae_v_move(&state->taskw.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
     for(i=0; i<=n-1; i++)
     {
         ae_v_move(&state->taskx.ptr.pp_double[i][0], 1, &x->ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
@@ -19096,8 +20095,8 @@ void lsfitcreatewf(/* Real    */ ae_matrix* x,
     state->prevalgo = -1;
     minlmcreatev(k, n, &state->c, diffstep, &state->optstate, _state);
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19168,6 +20167,8 @@ void lsfitcreatef(/* Real    */ ae_matrix* x,
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateF: X contains infinite or NaN values!", _state);
     ae_assert(ae_isfinite(diffstep, _state), "LSFitCreateF: DiffStep is not finite!", _state);
     ae_assert(ae_fp_greater(diffstep,0), "LSFitCreateF: DiffStep<=0!", _state);
+    state->teststep = 0;
+    state->diffstep = diffstep;
     state->npoints = n;
     state->wkind = 0;
     state->m = m;
@@ -19199,8 +20200,8 @@ void lsfitcreatef(/* Real    */ ae_matrix* x,
     state->prevalgo = -1;
     minlmcreatev(k, n, &state->c, diffstep, &state->optstate, _state);
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19277,6 +20278,8 @@ void lsfitcreatewfg(/* Real    */ ae_matrix* x,
     ae_assert(x->rows>=n, "LSFitCreateWFG: rows(X)<N!", _state);
     ae_assert(x->cols>=m, "LSFitCreateWFG: cols(X)<M!", _state);
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateWFG: X contains infinite or NaN values!", _state);
+    state->teststep = 0;
+    state->diffstep = 0;
     state->npoints = n;
     state->nweights = n;
     state->wkind = 1;
@@ -19287,12 +20290,12 @@ void lsfitcreatewfg(/* Real    */ ae_matrix* x,
     lsfitsetxrep(state, ae_false, _state);
     ae_matrix_set_length(&state->taskx, n, m, _state);
     ae_vector_set_length(&state->tasky, n, _state);
-    ae_vector_set_length(&state->w, n, _state);
+    ae_vector_set_length(&state->taskw, n, _state);
     ae_vector_set_length(&state->c, k, _state);
     ae_vector_set_length(&state->x, m, _state);
     ae_vector_set_length(&state->g, k, _state);
     ae_v_move(&state->c.ptr.p_double[0], 1, &c->ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->w.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
+    ae_v_move(&state->taskw.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
     for(i=0; i<=n-1; i++)
     {
         ae_v_move(&state->taskx.ptr.pp_double[i][0], 1, &x->ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
@@ -19319,8 +20322,8 @@ void lsfitcreatewfg(/* Real    */ ae_matrix* x,
         minlmcreatevj(k, n, &state->c, &state->optstate, _state);
     }
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19390,6 +20393,8 @@ void lsfitcreatefg(/* Real    */ ae_matrix* x,
     ae_assert(x->rows>=n, "LSFitCreateFG: rows(X)<N!", _state);
     ae_assert(x->cols>=m, "LSFitCreateFG: cols(X)<M!", _state);
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateFG: X contains infinite or NaN values!", _state);
+    state->teststep = 0;
+    state->diffstep = 0;
     state->npoints = n;
     state->wkind = 0;
     state->m = m;
@@ -19429,8 +20434,8 @@ void lsfitcreatefg(/* Real    */ ae_matrix* x,
         minlmcreatevj(k, n, &state->c, &state->optstate, _state);
     }
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19492,6 +20497,8 @@ void lsfitcreatewfgh(/* Real    */ ae_matrix* x,
     ae_assert(x->rows>=n, "LSFitCreateWFGH: rows(X)<N!", _state);
     ae_assert(x->cols>=m, "LSFitCreateWFGH: cols(X)<M!", _state);
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateWFGH: X contains infinite or NaN values!", _state);
+    state->teststep = 0;
+    state->diffstep = 0;
     state->npoints = n;
     state->nweights = n;
     state->wkind = 1;
@@ -19502,13 +20509,13 @@ void lsfitcreatewfgh(/* Real    */ ae_matrix* x,
     lsfitsetxrep(state, ae_false, _state);
     ae_matrix_set_length(&state->taskx, n, m, _state);
     ae_vector_set_length(&state->tasky, n, _state);
-    ae_vector_set_length(&state->w, n, _state);
+    ae_vector_set_length(&state->taskw, n, _state);
     ae_vector_set_length(&state->c, k, _state);
     ae_matrix_set_length(&state->h, k, k, _state);
     ae_vector_set_length(&state->x, m, _state);
     ae_vector_set_length(&state->g, k, _state);
     ae_v_move(&state->c.ptr.p_double[0], 1, &c->ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->w.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
+    ae_v_move(&state->taskw.ptr.p_double[0], 1, &w->ptr.p_double[0], 1, ae_v_len(0,n-1));
     for(i=0; i<=n-1; i++)
     {
         ae_v_move(&state->taskx.ptr.pp_double[i][0], 1, &x->ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
@@ -19528,8 +20535,8 @@ void lsfitcreatewfgh(/* Real    */ ae_matrix* x,
     state->prevalgo = -1;
     minlmcreatefgh(k, &state->c, &state->optstate, _state);
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19588,6 +20595,8 @@ void lsfitcreatefgh(/* Real    */ ae_matrix* x,
     ae_assert(x->rows>=n, "LSFitCreateFGH: rows(X)<N!", _state);
     ae_assert(x->cols>=m, "LSFitCreateFGH: cols(X)<M!", _state);
     ae_assert(apservisfinitematrix(x, n, m, _state), "LSFitCreateFGH: X contains infinite or NaN values!", _state);
+    state->teststep = 0;
+    state->diffstep = 0;
     state->npoints = n;
     state->wkind = 0;
     state->m = m;
@@ -19621,8 +20630,8 @@ void lsfitcreatefgh(/* Real    */ ae_matrix* x,
     state->prevalgo = -1;
     minlmcreatefgh(k, &state->c, &state->optstate, _state);
     lsfit_lsfitclearrequestfields(state, _state);
-    ae_vector_set_length(&state->rstate.ia, 4+1, _state);
-    ae_vector_set_length(&state->rstate.ra, 2+1, _state);
+    ae_vector_set_length(&state->rstate.ia, 6+1, _state);
+    ae_vector_set_length(&state->rstate.ra, 8+1, _state);
     state->rstate.stage = -1;
 }
 
@@ -19766,7 +20775,7 @@ void lsfitsetscale(lsfitstate* state,
     {
         ae_assert(ae_isfinite(s->ptr.p_double[i], _state), "LSFitSetScale: S contains infinite or NAN elements", _state);
         ae_assert(ae_fp_neq(s->ptr.p_double[i],0), "LSFitSetScale: S contains infinite or NAN elements", _state);
-        state->s.ptr.p_double[i] = s->ptr.p_double[i];
+        state->s.ptr.p_double[i] = ae_fabs(s->ptr.p_double[i], _state);
     }
 }
 
@@ -19865,14 +20874,22 @@ NOTES:
 *************************************************************************/
 ae_bool lsfititeration(lsfitstate* state, ae_state *_state)
 {
+    double lx;
+    double lf;
+    double ld;
+    double rx;
+    double rf;
+    double rd;
     ae_int_t n;
     ae_int_t m;
     ae_int_t k;
-    ae_int_t i;
-    ae_int_t j;
     double v;
     double vv;
     double relcnt;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t j1;
+    ae_int_t info;
     ae_bool result;
 
 
@@ -19894,9 +20911,17 @@ ae_bool lsfititeration(lsfitstate* state, ae_state *_state)
         k = state->rstate.ia.ptr.p_int[2];
         i = state->rstate.ia.ptr.p_int[3];
         j = state->rstate.ia.ptr.p_int[4];
-        v = state->rstate.ra.ptr.p_double[0];
-        vv = state->rstate.ra.ptr.p_double[1];
-        relcnt = state->rstate.ra.ptr.p_double[2];
+        j1 = state->rstate.ia.ptr.p_int[5];
+        info = state->rstate.ia.ptr.p_int[6];
+        lx = state->rstate.ra.ptr.p_double[0];
+        lf = state->rstate.ra.ptr.p_double[1];
+        ld = state->rstate.ra.ptr.p_double[2];
+        rx = state->rstate.ra.ptr.p_double[3];
+        rf = state->rstate.ra.ptr.p_double[4];
+        rd = state->rstate.ra.ptr.p_double[5];
+        v = state->rstate.ra.ptr.p_double[6];
+        vv = state->rstate.ra.ptr.p_double[7];
+        relcnt = state->rstate.ra.ptr.p_double[8];
     }
     else
     {
@@ -19905,9 +20930,17 @@ ae_bool lsfititeration(lsfitstate* state, ae_state *_state)
         k = -834;
         i = 900;
         j = -287;
-        v = 364;
-        vv = 214;
-        relcnt = -338;
+        j1 = 364;
+        info = 214;
+        lx = -338;
+        lf = -686;
+        ld = 912;
+        rx = 585;
+        rf = 497;
+        rd = -271;
+        v = -581;
+        vv = 745;
+        relcnt = -533;
     }
     if( state->rstate.stage==0 )
     {
@@ -19937,18 +20970,47 @@ ae_bool lsfititeration(lsfitstate* state, ae_state *_state)
     {
         goto lbl_6;
     }
+    if( state->rstate.stage==7 )
+    {
+        goto lbl_7;
+    }
+    if( state->rstate.stage==8 )
+    {
+        goto lbl_8;
+    }
+    if( state->rstate.stage==9 )
+    {
+        goto lbl_9;
+    }
+    if( state->rstate.stage==10 )
+    {
+        goto lbl_10;
+    }
+    if( state->rstate.stage==11 )
+    {
+        goto lbl_11;
+    }
+    if( state->rstate.stage==12 )
+    {
+        goto lbl_12;
+    }
+    if( state->rstate.stage==13 )
+    {
+        goto lbl_13;
+    }
     
     /*
      * Routine body
      */
     
     /*
-     * init
+     * Init
      */
     if( state->wkind==1 )
     {
         ae_assert(state->npoints==state->nweights, "LSFitFit: number of points is not equal to the number of weights", _state);
     }
+    state->repvaridx = -1;
     n = state->npoints;
     m = state->m;
     k = state->k;
@@ -19959,139 +21021,121 @@ ae_bool lsfititeration(lsfitstate* state, ae_state *_state)
     minlmsetbc(&state->optstate, &state->bndl, &state->bndu, _state);
     
     /*
-     * Optimize
+     *  Check that user-supplied gradient is correct
      */
-lbl_7:
-    if( !minlmiteration(&state->optstate, _state) )
-    {
-        goto lbl_8;
-    }
-    if( !state->optstate.needfi )
-    {
-        goto lbl_9;
-    }
-    
-    /*
-     * calculate f[] = wi*(f(xi,c)-yi)
-     */
-    i = 0;
-lbl_11:
-    if( i>n-1 )
-    {
-        goto lbl_13;
-    }
-    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
-    state->pointindex = i;
     lsfit_lsfitclearrequestfields(state, _state);
-    state->needf = ae_true;
-    state->rstate.stage = 0;
-    goto lbl_rcomm;
-lbl_0:
-    state->needf = ae_false;
-    if( state->wkind==1 )
-    {
-        vv = state->w.ptr.p_double[i];
-    }
-    else
-    {
-        vv = 1.0;
-    }
-    state->optstate.fi.ptr.p_double[i] = vv*(state->f-state->tasky.ptr.p_double[i]);
-    i = i+1;
-    goto lbl_11;
-lbl_13:
-    goto lbl_7;
-lbl_9:
-    if( !state->optstate.needf )
+    if( !(ae_fp_greater(state->teststep,0)&&state->optalgo==1) )
     {
         goto lbl_14;
     }
-    
-    /*
-     * calculate F = sum (wi*(f(xi,c)-yi))^2
-     */
-    state->optstate.f = 0;
+    for(i=0; i<=k-1; i++)
+    {
+        if( ae_isfinite(state->bndl.ptr.p_double[i], _state) )
+        {
+            state->c.ptr.p_double[i] = ae_maxreal(state->c.ptr.p_double[i], state->bndl.ptr.p_double[i], _state);
+        }
+        if( ae_isfinite(state->bndu.ptr.p_double[i], _state) )
+        {
+            state->c.ptr.p_double[i] = ae_minreal(state->c.ptr.p_double[i], state->bndu.ptr.p_double[i], _state);
+        }
+    }
+    state->needfg = ae_true;
     i = 0;
 lbl_16:
-    if( i>n-1 )
+    if( i>k-1 )
     {
         goto lbl_18;
     }
-    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
-    state->pointindex = i;
-    lsfit_lsfitclearrequestfields(state, _state);
-    state->needf = ae_true;
+    ae_assert(ae_fp_less_eq(state->bndl.ptr.p_double[i],state->c.ptr.p_double[i])&&ae_fp_less_eq(state->c.ptr.p_double[i],state->bndu.ptr.p_double[i]), "LSFitIteration: internal error(State.C is out of bounds)", _state);
+    v = state->c.ptr.p_double[i];
+    j = 0;
+lbl_19:
+    if( j>n-1 )
+    {
+        goto lbl_21;
+    }
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[j][0], 1, ae_v_len(0,m-1));
+    state->c.ptr.p_double[i] = v-state->teststep*state->s.ptr.p_double[i];
+    if( ae_isfinite(state->bndl.ptr.p_double[i], _state) )
+    {
+        state->c.ptr.p_double[i] = ae_maxreal(state->c.ptr.p_double[i], state->bndl.ptr.p_double[i], _state);
+    }
+    lx = state->c.ptr.p_double[i];
+    state->rstate.stage = 0;
+    goto lbl_rcomm;
+lbl_0:
+    lf = state->f;
+    ld = state->g.ptr.p_double[i];
+    state->c.ptr.p_double[i] = v+state->teststep*state->s.ptr.p_double[i];
+    if( ae_isfinite(state->bndu.ptr.p_double[i], _state) )
+    {
+        state->c.ptr.p_double[i] = ae_minreal(state->c.ptr.p_double[i], state->bndu.ptr.p_double[i], _state);
+    }
+    rx = state->c.ptr.p_double[i];
     state->rstate.stage = 1;
     goto lbl_rcomm;
 lbl_1:
-    state->needf = ae_false;
-    if( state->wkind==1 )
+    rf = state->f;
+    rd = state->g.ptr.p_double[i];
+    state->c.ptr.p_double[i] = (lx+rx)/2;
+    if( ae_isfinite(state->bndl.ptr.p_double[i], _state) )
     {
-        vv = state->w.ptr.p_double[i];
+        state->c.ptr.p_double[i] = ae_maxreal(state->c.ptr.p_double[i], state->bndl.ptr.p_double[i], _state);
     }
-    else
+    if( ae_isfinite(state->bndu.ptr.p_double[i], _state) )
     {
-        vv = 1.0;
+        state->c.ptr.p_double[i] = ae_minreal(state->c.ptr.p_double[i], state->bndu.ptr.p_double[i], _state);
     }
-    state->optstate.f = state->optstate.f+ae_sqr(vv*(state->f-state->tasky.ptr.p_double[i]), _state);
-    i = i+1;
-    goto lbl_16;
-lbl_18:
-    goto lbl_7;
-lbl_14:
-    if( !state->optstate.needfg )
-    {
-        goto lbl_19;
-    }
-    
-    /*
-     * calculate F/gradF
-     */
-    state->optstate.f = 0;
-    for(i=0; i<=k-1; i++)
-    {
-        state->optstate.g.ptr.p_double[i] = 0;
-    }
-    i = 0;
-lbl_21:
-    if( i>n-1 )
-    {
-        goto lbl_23;
-    }
-    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
-    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
-    state->pointindex = i;
-    lsfit_lsfitclearrequestfields(state, _state);
-    state->needfg = ae_true;
     state->rstate.stage = 2;
     goto lbl_rcomm;
 lbl_2:
-    state->needfg = ae_false;
-    if( state->wkind==1 )
+    state->c.ptr.p_double[i] = v;
+    if( !derivativecheck(lf, ld, rf, rd, state->f, state->g.ptr.p_double[i], rx-lx, _state) )
     {
-        vv = state->w.ptr.p_double[i];
+        state->repvaridx = i;
+        state->repterminationtype = -7;
+        result = ae_false;
+        return result;
     }
-    else
-    {
-        vv = 1.0;
-    }
-    state->optstate.f = state->optstate.f+ae_sqr(vv*(state->f-state->tasky.ptr.p_double[i]), _state);
-    v = ae_sqr(vv, _state)*2*(state->f-state->tasky.ptr.p_double[i]);
-    ae_v_addd(&state->optstate.g.ptr.p_double[0], 1, &state->g.ptr.p_double[0], 1, ae_v_len(0,k-1), v);
+    j = j+1;
+    goto lbl_19;
+lbl_21:
     i = i+1;
-    goto lbl_21;
-lbl_23:
-    goto lbl_7;
-lbl_19:
-    if( !state->optstate.needfij )
+    goto lbl_16;
+lbl_18:
+    state->needfg = ae_false;
+lbl_14:
+    
+    /*
+     * Fill WCur by weights:
+     * * for WKind=0 unit weights are chosen
+     * * for WKind=1 we use user-supplied weights stored in State.TaskW
+     */
+    rvectorsetlengthatleast(&state->wcur, n, _state);
+    for(i=0; i<=n-1; i++)
+    {
+        state->wcur.ptr.p_double[i] = 1.0;
+        if( state->wkind==1 )
+        {
+            state->wcur.ptr.p_double[i] = state->taskw.ptr.p_double[i];
+        }
+    }
+    
+    /*
+     * Optimize
+     */
+lbl_22:
+    if( !minlmiteration(&state->optstate, _state) )
+    {
+        goto lbl_23;
+    }
+    if( !state->optstate.needfi )
     {
         goto lbl_24;
     }
     
     /*
-     * calculate Fi/jac(Fi)
+     * calculate f[] = wi*(f(xi,c)-yi)
      */
     i = 0;
 lbl_26:
@@ -20103,29 +21147,120 @@ lbl_26:
     ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
     state->pointindex = i;
     lsfit_lsfitclearrequestfields(state, _state);
-    state->needfg = ae_true;
+    state->needf = ae_true;
     state->rstate.stage = 3;
     goto lbl_rcomm;
 lbl_3:
-    state->needfg = ae_false;
-    if( state->wkind==1 )
-    {
-        vv = state->w.ptr.p_double[i];
-    }
-    else
-    {
-        vv = 1.0;
-    }
+    state->needf = ae_false;
+    vv = state->wcur.ptr.p_double[i];
     state->optstate.fi.ptr.p_double[i] = vv*(state->f-state->tasky.ptr.p_double[i]);
-    ae_v_moved(&state->optstate.j.ptr.pp_double[i][0], 1, &state->g.ptr.p_double[0], 1, ae_v_len(0,k-1), vv);
     i = i+1;
     goto lbl_26;
 lbl_28:
-    goto lbl_7;
+    goto lbl_22;
 lbl_24:
-    if( !state->optstate.needfgh )
+    if( !state->optstate.needf )
     {
         goto lbl_29;
+    }
+    
+    /*
+     * calculate F = sum (wi*(f(xi,c)-yi))^2
+     */
+    state->optstate.f = 0;
+    i = 0;
+lbl_31:
+    if( i>n-1 )
+    {
+        goto lbl_33;
+    }
+    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
+    state->pointindex = i;
+    lsfit_lsfitclearrequestfields(state, _state);
+    state->needf = ae_true;
+    state->rstate.stage = 4;
+    goto lbl_rcomm;
+lbl_4:
+    state->needf = ae_false;
+    vv = state->wcur.ptr.p_double[i];
+    state->optstate.f = state->optstate.f+ae_sqr(vv*(state->f-state->tasky.ptr.p_double[i]), _state);
+    i = i+1;
+    goto lbl_31;
+lbl_33:
+    goto lbl_22;
+lbl_29:
+    if( !state->optstate.needfg )
+    {
+        goto lbl_34;
+    }
+    
+    /*
+     * calculate F/gradF
+     */
+    state->optstate.f = 0;
+    for(i=0; i<=k-1; i++)
+    {
+        state->optstate.g.ptr.p_double[i] = 0;
+    }
+    i = 0;
+lbl_36:
+    if( i>n-1 )
+    {
+        goto lbl_38;
+    }
+    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
+    state->pointindex = i;
+    lsfit_lsfitclearrequestfields(state, _state);
+    state->needfg = ae_true;
+    state->rstate.stage = 5;
+    goto lbl_rcomm;
+lbl_5:
+    state->needfg = ae_false;
+    vv = state->wcur.ptr.p_double[i];
+    state->optstate.f = state->optstate.f+ae_sqr(vv*(state->f-state->tasky.ptr.p_double[i]), _state);
+    v = ae_sqr(vv, _state)*2*(state->f-state->tasky.ptr.p_double[i]);
+    ae_v_addd(&state->optstate.g.ptr.p_double[0], 1, &state->g.ptr.p_double[0], 1, ae_v_len(0,k-1), v);
+    i = i+1;
+    goto lbl_36;
+lbl_38:
+    goto lbl_22;
+lbl_34:
+    if( !state->optstate.needfij )
+    {
+        goto lbl_39;
+    }
+    
+    /*
+     * calculate Fi/jac(Fi)
+     */
+    i = 0;
+lbl_41:
+    if( i>n-1 )
+    {
+        goto lbl_43;
+    }
+    ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
+    state->pointindex = i;
+    lsfit_lsfitclearrequestfields(state, _state);
+    state->needfg = ae_true;
+    state->rstate.stage = 6;
+    goto lbl_rcomm;
+lbl_6:
+    state->needfg = ae_false;
+    vv = state->wcur.ptr.p_double[i];
+    state->optstate.fi.ptr.p_double[i] = vv*(state->f-state->tasky.ptr.p_double[i]);
+    ae_v_moved(&state->optstate.j.ptr.pp_double[i][0], 1, &state->g.ptr.p_double[0], 1, ae_v_len(0,k-1), vv);
+    i = i+1;
+    goto lbl_41;
+lbl_43:
+    goto lbl_22;
+lbl_39:
+    if( !state->optstate.needfgh )
+    {
+        goto lbl_44;
     }
     
     /*
@@ -20144,28 +21279,21 @@ lbl_24:
         }
     }
     i = 0;
-lbl_31:
+lbl_46:
     if( i>n-1 )
     {
-        goto lbl_33;
+        goto lbl_48;
     }
     ae_v_move(&state->c.ptr.p_double[0], 1, &state->optstate.x.ptr.p_double[0], 1, ae_v_len(0,k-1));
     ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
     state->pointindex = i;
     lsfit_lsfitclearrequestfields(state, _state);
     state->needfgh = ae_true;
-    state->rstate.stage = 4;
+    state->rstate.stage = 7;
     goto lbl_rcomm;
-lbl_4:
+lbl_7:
     state->needfgh = ae_false;
-    if( state->wkind==1 )
-    {
-        vv = state->w.ptr.p_double[i];
-    }
-    else
-    {
-        vv = 1.0;
-    }
+    vv = state->wcur.ptr.p_double[i];
     state->optstate.f = state->optstate.f+ae_sqr(vv*(state->f-state->tasky.ptr.p_double[i]), _state);
     v = ae_sqr(vv, _state)*2*(state->f-state->tasky.ptr.p_double[i]);
     ae_v_addd(&state->optstate.g.ptr.p_double[0], 1, &state->g.ptr.p_double[0], 1, ae_v_len(0,k-1), v);
@@ -20177,13 +21305,13 @@ lbl_4:
         ae_v_addd(&state->optstate.h.ptr.pp_double[j][0], 1, &state->h.ptr.pp_double[j][0], 1, ae_v_len(0,k-1), v);
     }
     i = i+1;
-    goto lbl_31;
-lbl_33:
-    goto lbl_7;
-lbl_29:
+    goto lbl_46;
+lbl_48:
+    goto lbl_22;
+lbl_44:
     if( !state->optstate.xupdated )
     {
-        goto lbl_34;
+        goto lbl_49;
     }
     
     /*
@@ -20193,14 +21321,14 @@ lbl_29:
     state->f = state->optstate.f;
     lsfit_lsfitclearrequestfields(state, _state);
     state->xupdated = ae_true;
-    state->rstate.stage = 5;
+    state->rstate.stage = 8;
     goto lbl_rcomm;
-lbl_5:
-    state->xupdated = ae_false;
-    goto lbl_7;
-lbl_34:
-    goto lbl_7;
 lbl_8:
+    state->xupdated = ae_false;
+    goto lbl_22;
+lbl_49:
+    goto lbl_22;
+lbl_23:
     minlmresults(&state->optstate, &state->c, &state->optrep, _state);
     state->repterminationtype = state->optrep.terminationtype;
     state->repiterationscount = state->optrep.iterationscount;
@@ -20210,8 +21338,12 @@ lbl_8:
      */
     if( state->repterminationtype<=0 )
     {
-        goto lbl_36;
+        goto lbl_51;
     }
+    
+    /*
+     * Calculate RMS/Avg/Max/... errors
+     */
     state->reprmserror = 0;
     state->repwrmserror = 0;
     state->repavgerror = 0;
@@ -20219,29 +21351,22 @@ lbl_8:
     state->repmaxerror = 0;
     relcnt = 0;
     i = 0;
-lbl_38:
+lbl_53:
     if( i>n-1 )
     {
-        goto lbl_40;
+        goto lbl_55;
     }
     ae_v_move(&state->c.ptr.p_double[0], 1, &state->c.ptr.p_double[0], 1, ae_v_len(0,k-1));
     ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
     state->pointindex = i;
     lsfit_lsfitclearrequestfields(state, _state);
     state->needf = ae_true;
-    state->rstate.stage = 6;
+    state->rstate.stage = 9;
     goto lbl_rcomm;
-lbl_6:
+lbl_9:
     state->needf = ae_false;
     v = state->f;
-    if( state->wkind==1 )
-    {
-        vv = state->w.ptr.p_double[i];
-    }
-    else
-    {
-        vv = 1.0;
-    }
+    vv = state->wcur.ptr.p_double[i];
     state->reprmserror = state->reprmserror+ae_sqr(v-state->tasky.ptr.p_double[i], _state);
     state->repwrmserror = state->repwrmserror+ae_sqr(vv*(v-state->tasky.ptr.p_double[i]), _state);
     state->repavgerror = state->repavgerror+ae_fabs(v-state->tasky.ptr.p_double[i], _state);
@@ -20252,8 +21377,8 @@ lbl_6:
     }
     state->repmaxerror = ae_maxreal(state->repmaxerror, ae_fabs(v-state->tasky.ptr.p_double[i], _state), _state);
     i = i+1;
-    goto lbl_38;
-lbl_40:
+    goto lbl_53;
+lbl_55:
     state->reprmserror = ae_sqrt(state->reprmserror/n, _state);
     state->repwrmserror = ae_sqrt(state->repwrmserror/n, _state);
     state->repavgerror = state->repavgerror/n;
@@ -20261,7 +21386,113 @@ lbl_40:
     {
         state->repavgrelerror = state->repavgrelerror/relcnt;
     }
-lbl_36:
+    
+    /*
+     * Calculate covariance matrix
+     */
+    rmatrixsetlengthatleast(&state->tmpjac, n, k, _state);
+    rvectorsetlengthatleast(&state->tmpf, n, _state);
+    rvectorsetlengthatleast(&state->tmp, k, _state);
+    if( ae_fp_less_eq(state->diffstep,0) )
+    {
+        goto lbl_56;
+    }
+    
+    /*
+     * Compute Jacobian by means of numerical differentiation
+     */
+    lsfit_lsfitclearrequestfields(state, _state);
+    state->needf = ae_true;
+    i = 0;
+lbl_58:
+    if( i>n-1 )
+    {
+        goto lbl_60;
+    }
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
+    state->pointindex = i;
+    state->rstate.stage = 10;
+    goto lbl_rcomm;
+lbl_10:
+    state->tmpf.ptr.p_double[i] = state->f;
+    j = 0;
+lbl_61:
+    if( j>k-1 )
+    {
+        goto lbl_63;
+    }
+    v = state->c.ptr.p_double[j];
+    lx = v-state->diffstep*state->s.ptr.p_double[j];
+    state->c.ptr.p_double[j] = lx;
+    if( ae_isfinite(state->bndl.ptr.p_double[j], _state) )
+    {
+        state->c.ptr.p_double[j] = ae_maxreal(state->c.ptr.p_double[j], state->bndl.ptr.p_double[j], _state);
+    }
+    state->rstate.stage = 11;
+    goto lbl_rcomm;
+lbl_11:
+    lf = state->f;
+    rx = v+state->diffstep*state->s.ptr.p_double[j];
+    state->c.ptr.p_double[j] = rx;
+    if( ae_isfinite(state->bndu.ptr.p_double[j], _state) )
+    {
+        state->c.ptr.p_double[j] = ae_minreal(state->c.ptr.p_double[j], state->bndu.ptr.p_double[j], _state);
+    }
+    state->rstate.stage = 12;
+    goto lbl_rcomm;
+lbl_12:
+    rf = state->f;
+    state->c.ptr.p_double[j] = v;
+    if( ae_fp_neq(rx,lx) )
+    {
+        state->tmpjac.ptr.pp_double[i][j] = (rf-lf)/(rx-lx);
+    }
+    else
+    {
+        state->tmpjac.ptr.pp_double[i][j] = 0;
+    }
+    j = j+1;
+    goto lbl_61;
+lbl_63:
+    i = i+1;
+    goto lbl_58;
+lbl_60:
+    state->needf = ae_false;
+    goto lbl_57;
+lbl_56:
+    
+    /*
+     * Jacobian is calculated with user-provided analytic gradient
+     */
+    lsfit_lsfitclearrequestfields(state, _state);
+    state->needfg = ae_true;
+    i = 0;
+lbl_64:
+    if( i>n-1 )
+    {
+        goto lbl_66;
+    }
+    ae_v_move(&state->x.ptr.p_double[0], 1, &state->taskx.ptr.pp_double[i][0], 1, ae_v_len(0,m-1));
+    state->pointindex = i;
+    state->rstate.stage = 13;
+    goto lbl_rcomm;
+lbl_13:
+    state->tmpf.ptr.p_double[i] = state->f;
+    for(j=0; j<=k-1; j++)
+    {
+        state->tmpjac.ptr.pp_double[i][j] = state->g.ptr.p_double[j];
+    }
+    i = i+1;
+    goto lbl_64;
+lbl_66:
+    state->needfg = ae_false;
+lbl_57:
+    for(i=0; i<=k-1; i++)
+    {
+        state->tmp.ptr.p_double[i] = 0.0;
+    }
+    lsfit_estimateerrors(&state->tmpjac, &state->tmpf, &state->tasky, &state->wcur, &state->tmp, &state->s, n, k, &state->rep, &state->tmpjacw, 0, _state);
+lbl_51:
     result = ae_false;
     return result;
     
@@ -20275,9 +21506,17 @@ lbl_rcomm:
     state->rstate.ia.ptr.p_int[2] = k;
     state->rstate.ia.ptr.p_int[3] = i;
     state->rstate.ia.ptr.p_int[4] = j;
-    state->rstate.ra.ptr.p_double[0] = v;
-    state->rstate.ra.ptr.p_double[1] = vv;
-    state->rstate.ra.ptr.p_double[2] = relcnt;
+    state->rstate.ia.ptr.p_int[5] = j1;
+    state->rstate.ia.ptr.p_int[6] = info;
+    state->rstate.ra.ptr.p_double[0] = lx;
+    state->rstate.ra.ptr.p_double[1] = lf;
+    state->rstate.ra.ptr.p_double[2] = ld;
+    state->rstate.ra.ptr.p_double[3] = rx;
+    state->rstate.ra.ptr.p_double[4] = rf;
+    state->rstate.ra.ptr.p_double[5] = rd;
+    state->rstate.ra.ptr.p_double[6] = v;
+    state->rstate.ra.ptr.p_double[7] = vv;
+    state->rstate.ra.ptr.p_double[8] = relcnt;
     return result;
 }
 
@@ -20291,7 +21530,9 @@ INPUT PARAMETERS:
     State   -   algorithm state
 
 OUTPUT PARAMETERS:
-    Info    -   completetion code:
+    Info    -   completion code:
+                    * -7    gradient verification failed.
+                            See LSFitSetGradientCheck() for more information.
                     *  1    relative function improvement is no more than
                             EpsF.
                     *  2    relative step is no more than EpsX.
@@ -20300,15 +21541,56 @@ OUTPUT PARAMETERS:
                     *  7    stopping conditions are too stringent,
                             further improvement is impossible
     C       -   array[0..K-1], solution
-    Rep     -   optimization report. Following fields are set:
-                * Rep.TerminationType completetion code:
+    Rep     -   optimization report. On success following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
                 * WRMSError         weighted rms error on the (X,Y).
+                
+ERRORS IN PARAMETERS                
+                
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(J*CovPar*J')),
+                    where J is Jacobian matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
 
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+            
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -20319,12 +21601,16 @@ void lsfitresults(lsfitstate* state,
      lsfitreport* rep,
      ae_state *_state)
 {
+    ae_int_t i;
+    ae_int_t j;
 
     *info = 0;
     ae_vector_clear(c);
     _lsfitreport_clear(rep);
 
+    lsfit_clearreport(rep, _state);
     *info = state->repterminationtype;
+    rep->varidx = state->repvaridx;
     if( *info>0 )
     {
         ae_vector_set_length(c, state->k, _state);
@@ -20335,7 +21621,88 @@ void lsfitresults(lsfitstate* state,
         rep->avgrelerror = state->repavgrelerror;
         rep->maxerror = state->repmaxerror;
         rep->iterationscount = state->repiterationscount;
+        ae_matrix_set_length(&rep->covpar, state->k, state->k, _state);
+        ae_vector_set_length(&rep->errpar, state->k, _state);
+        ae_vector_set_length(&rep->errcurve, state->npoints, _state);
+        ae_vector_set_length(&rep->noise, state->npoints, _state);
+        rep->r2 = state->rep.r2;
+        for(i=0; i<=state->k-1; i++)
+        {
+            for(j=0; j<=state->k-1; j++)
+            {
+                rep->covpar.ptr.pp_double[i][j] = state->rep.covpar.ptr.pp_double[i][j];
+            }
+            rep->errpar.ptr.p_double[i] = state->rep.errpar.ptr.p_double[i];
+        }
+        for(i=0; i<=state->npoints-1; i++)
+        {
+            rep->errcurve.ptr.p_double[i] = state->rep.errcurve.ptr.p_double[i];
+            rep->noise.ptr.p_double[i] = state->rep.noise.ptr.p_double[i];
+        }
     }
+}
+
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before fitting begins
+* LSFitFit() is called
+* prior to actual fitting, for  each  point  in  data  set  X_i  and  each
+  component  of  parameters  being  fited C_j algorithm performs following
+  steps:
+  * two trial steps are made to C_j-TestStep*S[j] and C_j+TestStep*S[j],
+    where C_j is j-th parameter and S[j] is a scale of j-th parameter
+  * if needed, steps are bounded with respect to constraints on C[]
+  * F(X_i|C) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification needs N*K (points count * parameters count)  gradient
+        evaluations. It is very costly and you should use it only for  low
+        dimensional  problems,  when  you  want  to  be  sure  that you've
+        correctly calculated analytic derivatives. You should not  use  it
+        in the production code  (unless  you  want  to  check  derivatives
+        provided by some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with LSFitSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+NOTE 4: this function works only for optimizers created with LSFitCreateWFG()
+        or LSFitCreateFG() constructors.
+        
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 15.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void lsfitsetgradientcheck(lsfitstate* state,
+     double teststep,
+     ae_state *_state)
+{
+
+
+    ae_assert(ae_isfinite(teststep, _state), "LSFitSetGradientCheck: TestStep contains NaN or Infinite", _state);
+    ae_assert(ae_fp_greater_eq(teststep,0), "LSFitSetGradientCheck: invalid argument TestStep(TestStep<0)", _state);
+    state->teststep = teststep;
 }
 
 
@@ -20914,6 +22281,8 @@ static void lsfit_lsfitlinearinternal(/* Real    */ ae_vector* y,
     ae_vector b;
     ae_vector wmod;
     ae_vector tau;
+    ae_vector nzeros;
+    ae_vector s;
     ae_int_t i;
     ae_int_t j;
     double v;
@@ -20936,6 +22305,8 @@ static void lsfit_lsfitlinearinternal(/* Real    */ ae_vector* y,
     ae_vector_init(&b, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&wmod, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&tau, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&nzeros, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&s, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&sv, 0, DT_REAL, _state, ae_true);
     ae_matrix_init(&u, 0, 0, DT_REAL, _state, ae_true);
     ae_matrix_init(&vt, 0, 0, DT_REAL, _state, ae_true);
@@ -20943,6 +22314,7 @@ static void lsfit_lsfitlinearinternal(/* Real    */ ae_vector* y,
     ae_vector_init(&utb, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&sutb, 0, DT_REAL, _state, ae_true);
 
+    lsfit_clearreport(rep, _state);
     if( n<1||m<1 )
     {
         *info = -1;
@@ -21136,6 +22508,32 @@ static void lsfit_lsfitlinearinternal(/* Real    */ ae_vector* y,
     {
         rep->avgrelerror = rep->avgrelerror/relcnt;
     }
+    ae_vector_set_length(&nzeros, n, _state);
+    ae_vector_set_length(&s, m, _state);
+    for(i=0; i<=m-1; i++)
+    {
+        s.ptr.p_double[i] = 0;
+    }
+    for(i=0; i<=n-1; i++)
+    {
+        for(j=0; j<=m-1; j++)
+        {
+            s.ptr.p_double[j] = s.ptr.p_double[j]+ae_sqr(fmatrix->ptr.pp_double[i][j], _state);
+        }
+        nzeros.ptr.p_double[i] = 0;
+    }
+    for(i=0; i<=m-1; i++)
+    {
+        if( ae_fp_neq(s.ptr.p_double[i],0) )
+        {
+            s.ptr.p_double[i] = ae_sqrt(1/s.ptr.p_double[i], _state);
+        }
+        else
+        {
+            s.ptr.p_double[i] = 1;
+        }
+    }
+    lsfit_estimateerrors(fmatrix, &nzeros, y, w, c, &s, n, m, rep, &r, 1, _state);
     ae_frame_leave(_state);
 }
 
@@ -21324,6 +22722,7 @@ static void lsfit_internalchebyshevfit(/* Real    */ ae_vector* x,
     ae_matrix_init(&fmatrix, 0, 0, DT_REAL, _state, ae_true);
     ae_matrix_init(&cmatrix, 0, 0, DT_REAL, _state, ae_true);
 
+    lsfit_clearreport(rep, _state);
     
     /*
      * weight decay for correct handling of task which becomes
@@ -21742,14 +23141,445 @@ static void lsfit_barycentricfitwcfixedd(/* Real    */ ae_vector* x,
 }
 
 
-ae_bool _polynomialfitreport_init(polynomialfitreport* p, ae_state *_state, ae_bool make_automatic)
+static void lsfit_clearreport(lsfitreport* rep, ae_state *_state)
 {
+
+
+    rep->taskrcond = 0;
+    rep->iterationscount = 0;
+    rep->varidx = -1;
+    rep->rmserror = 0;
+    rep->avgerror = 0;
+    rep->avgrelerror = 0;
+    rep->maxerror = 0;
+    rep->wrmserror = 0;
+    rep->r2 = 0;
+    ae_matrix_set_length(&rep->covpar, 0, 0, _state);
+    ae_vector_set_length(&rep->errpar, 0, _state);
+    ae_vector_set_length(&rep->errcurve, 0, _state);
+    ae_vector_set_length(&rep->noise, 0, _state);
+}
+
+
+/*************************************************************************
+This internal function estimates covariance matrix and other error-related
+information for linear/nonlinear least squares model.
+
+It has a bit awkward interface, but it can be used  for  both  linear  and
+nonlinear problems.
+
+INPUT PARAMETERS:
+    F1  -   array[0..N-1,0..K-1]:
+            * for linear problems - matrix of function values
+            * for nonlinear problems - Jacobian matrix
+    F0  -   array[0..N-1]:
+            * for linear problems - must be filled with zeros
+            * for nonlinear problems - must store values of function being
+              fitted
+    Y   -   array[0..N-1]:
+            * for linear and nonlinear problems - must store target values
+    W   -   weights, array[0..N-1]:
+            * for linear and nonlinear problems - weights
+    X   -   array[0..K-1]:
+            * for linear and nonlinear problems - current solution
+    S   -   array[0..K-1]:
+            * its components should be strictly positive
+            * squared inverse of this diagonal matrix is used as damping
+              factor for covariance matrix (linear and nonlinear problems)
+            * for nonlinear problems, when scale of the variables is usually
+              explicitly given by user, you may use scale vector for this
+              parameter
+            * for linear problems you may set this parameter to
+              S=sqrt(1/diag(F'*F))
+            * this parameter is automatically rescaled by this function,
+              only relative magnitudes of its components (with respect to
+              each other) matter.
+    N   -   number of points, N>0.
+    K   -   number of dimensions
+    Rep -   structure which is used to store results
+    Z   -   additional matrix which, depending on ZKind, may contain some
+            information used to accelerate calculations - or just can be
+            temporary buffer:
+            * for ZKind=0       Z contains no information, just temporary
+                                buffer which can be resized and used as needed
+            * for ZKind=1       Z contains triangular matrix from QR
+                                decomposition of W*F1. This matrix can be used
+                                to speedup calculation of covariance matrix.
+                                It should not be changed by algorithm.
+    ZKind-  contents of Z
+
+OUTPUT PARAMETERS:
+
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(J*CovPar*J')),
+                    where J is Jacobian matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+* Rep.R2            coefficient of determination (non-weighted)
+
+Other fields of Rep are not changed.
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+            
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+            
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+            
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+  -- ALGLIB PROJECT --
+     Copyright 10.12.2009 by Bochkanov Sergey
+*************************************************************************/
+static void lsfit_estimateerrors(/* Real    */ ae_matrix* f1,
+     /* Real    */ ae_vector* f0,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_vector* w,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* s,
+     ae_int_t n,
+     ae_int_t k,
+     lsfitreport* rep,
+     /* Real    */ ae_matrix* z,
+     ae_int_t zkind,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_vector _s;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t j1;
+    double v;
+    double noisec;
+    ae_int_t info;
+    matinvreport invrep;
+    ae_int_t nzcnt;
+    double avg;
+    double rss;
+    double tss;
+    double sz;
+    double ss;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_vector_init_copy(&_s, s, _state, ae_true);
+    s = &_s;
+    _matinvreport_init(&invrep, _state, ae_true);
+
+    
+    /*
+     * Compute NZCnt - count of non-zero weights
+     */
+    nzcnt = 0;
+    for(i=0; i<=n-1; i++)
+    {
+        if( ae_fp_neq(w->ptr.p_double[i],0) )
+        {
+            nzcnt = nzcnt+1;
+        }
+    }
+    
+    /*
+     * Compute R2
+     */
+    if( nzcnt>0 )
+    {
+        avg = 0.0;
+        for(i=0; i<=n-1; i++)
+        {
+            if( ae_fp_neq(w->ptr.p_double[i],0) )
+            {
+                avg = avg+y->ptr.p_double[i];
+            }
+        }
+        avg = avg/nzcnt;
+        rss = 0.0;
+        tss = 0.0;
+        for(i=0; i<=n-1; i++)
+        {
+            if( ae_fp_neq(w->ptr.p_double[i],0) )
+            {
+                v = ae_v_dotproduct(&f1->ptr.pp_double[i][0], 1, &x->ptr.p_double[0], 1, ae_v_len(0,k-1));
+                v = v+f0->ptr.p_double[i];
+                rss = rss+ae_sqr(v-y->ptr.p_double[i], _state);
+                tss = tss+ae_sqr(y->ptr.p_double[i]-avg, _state);
+            }
+        }
+        if( ae_fp_neq(tss,0) )
+        {
+            rep->r2 = ae_maxreal(1.0-rss/tss, 0.0, _state);
+        }
+        else
+        {
+            rep->r2 = 1.0;
+        }
+    }
+    else
+    {
+        rep->r2 = 0;
+    }
+    
+    /*
+     * Compute estimate of proportionality between noise in the data and weights:
+     *     NoiseC = mean(per-point-noise*per-point-weight)
+     * Noise level (standard deviation) at each point is equal to NoiseC/W[I].
+     */
+    if( nzcnt>k )
+    {
+        noisec = 0.0;
+        for(i=0; i<=n-1; i++)
+        {
+            if( ae_fp_neq(w->ptr.p_double[i],0) )
+            {
+                v = ae_v_dotproduct(&f1->ptr.pp_double[i][0], 1, &x->ptr.p_double[0], 1, ae_v_len(0,k-1));
+                v = v+f0->ptr.p_double[i];
+                noisec = noisec+ae_sqr((v-y->ptr.p_double[i])*w->ptr.p_double[i], _state);
+            }
+        }
+        noisec = ae_sqrt(noisec/(nzcnt-k), _state);
+    }
+    else
+    {
+        noisec = 0.0;
+    }
+    
+    /*
+     * Two branches on noise level:
+     * * NoiseC>0   normal situation
+     * * NoiseC=0   degenerate case CovPar is filled by zeros
+     */
+    rmatrixsetlengthatleast(&rep->covpar, k, k, _state);
+    if( ae_fp_greater(noisec,0) )
+    {
+        
+        /*
+         * Normal situation: non-zero noise level
+         */
+        ae_assert(zkind==0||zkind==1, "LSFit: internal error in EstimateErrors() function", _state);
+        if( zkind==0 )
+        {
+            
+            /*
+             * Z contains no additional information which can be used to speed up
+             * calculations. We have to calculate covariance matrix on our own:
+             * * Compute scaled Jacobian N*J, where N[i,i]=WCur[I]/NoiseC, store in Z
+             * * Compute Z'*Z, store in CovPar
+             * * Apply moderate regularization to CovPar and compute matrix inverse.
+             *   In case inverse failed, increase regularization parameter and try
+             *   again.
+             */
+            rmatrixsetlengthatleast(z, n, k, _state);
+            for(i=0; i<=n-1; i++)
+            {
+                v = w->ptr.p_double[i]/noisec;
+                ae_v_moved(&z->ptr.pp_double[i][0], 1, &f1->ptr.pp_double[i][0], 1, ae_v_len(0,k-1), v);
+            }
+            
+            /*
+             * Convert S to automatically scaled damped matrix:
+             * * calculate SZ - sum of diagonal elements of Z'*Z
+             * * calculate SS - sum of diagonal elements of S^(-2)
+             * * overwrite S by (SZ/SS)*S^(-2)
+             * * now S has approximately same magnitude as giagonal of Z'*Z
+             */
+            sz = 0;
+            for(i=0; i<=n-1; i++)
+            {
+                for(j=0; j<=k-1; j++)
+                {
+                    sz = sz+z->ptr.pp_double[i][j]*z->ptr.pp_double[i][j];
+                }
+            }
+            if( ae_fp_eq(sz,0) )
+            {
+                sz = 1;
+            }
+            ss = 0;
+            for(j=0; j<=k-1; j++)
+            {
+                ss = ss+1/ae_sqr(s->ptr.p_double[j], _state);
+            }
+            for(j=0; j<=k-1; j++)
+            {
+                s->ptr.p_double[j] = sz/ss/ae_sqr(s->ptr.p_double[j], _state);
+            }
+            
+            /*
+             * Calculate damped inverse inv(Z'*Z+S).
+             * We increase damping factor V until Z'*Z become well-conditioned.
+             */
+            v = 1.0E3*ae_machineepsilon;
+            do
+            {
+                rmatrixsyrk(k, n, 1.0, z, 0, 0, 2, 0.0, &rep->covpar, 0, 0, ae_true, _state);
+                for(i=0; i<=k-1; i++)
+                {
+                    rep->covpar.ptr.pp_double[i][i] = rep->covpar.ptr.pp_double[i][i]+v*s->ptr.p_double[i];
+                }
+                spdmatrixinverse(&rep->covpar, k, ae_true, &info, &invrep, _state);
+                v = 10*v;
+            }
+            while(info<=0);
+            for(i=0; i<=k-1; i++)
+            {
+                for(j=i+1; j<=k-1; j++)
+                {
+                    rep->covpar.ptr.pp_double[j][i] = rep->covpar.ptr.pp_double[i][j];
+                }
+            }
+        }
+        if( zkind==1 )
+        {
+            
+            /*
+             * We can reuse additional information:
+             * * Z contains R matrix from QR decomposition of W*F1 
+             * * After multiplication by 1/NoiseC we get Z_mod = N*F1, where diag(N)=w[i]/NoiseC
+             * * Such triangular Z_mod is a Cholesky factor from decomposition of J'*N'*N*J.
+             *   Thus, we can calculate covariance matrix as inverse of the matrix given by
+             *   its Cholesky decomposition. It allow us to avoid time-consuming calculation
+             *   of J'*N'*N*J in CovPar - complexity is reduced from O(N*K^2) to O(K^3), which
+             *   is quite good because K is usually orders of magnitude smaller than N.
+             *
+             * First, convert S to automatically scaled damped matrix:
+             * * calculate SZ - sum of magnitudes of diagonal elements of Z/NoiseC
+             * * calculate SS - sum of diagonal elements of S^(-1)
+             * * overwrite S by (SZ/SS)*S^(-1)
+             * * now S has approximately same magnitude as giagonal of Z'*Z
+             */
+            sz = 0;
+            for(j=0; j<=k-1; j++)
+            {
+                sz = sz+ae_fabs(z->ptr.pp_double[j][j]/noisec, _state);
+            }
+            if( ae_fp_eq(sz,0) )
+            {
+                sz = 1;
+            }
+            ss = 0;
+            for(j=0; j<=k-1; j++)
+            {
+                ss = ss+1/s->ptr.p_double[j];
+            }
+            for(j=0; j<=k-1; j++)
+            {
+                s->ptr.p_double[j] = sz/ss/s->ptr.p_double[j];
+            }
+            
+            /*
+             * Calculate damped inverse of inv((Z+v*S)'*(Z+v*S))
+             * We increase damping factor V until matrix become well-conditioned.
+             */
+            v = 1.0E3*ae_machineepsilon;
+            do
+            {
+                for(i=0; i<=k-1; i++)
+                {
+                    for(j=i; j<=k-1; j++)
+                    {
+                        rep->covpar.ptr.pp_double[i][j] = z->ptr.pp_double[i][j]/noisec;
+                    }
+                    rep->covpar.ptr.pp_double[i][i] = rep->covpar.ptr.pp_double[i][i]+v*s->ptr.p_double[i];
+                }
+                spdmatrixcholeskyinverse(&rep->covpar, k, ae_true, &info, &invrep, _state);
+                v = 10*v;
+            }
+            while(info<=0);
+            for(i=0; i<=k-1; i++)
+            {
+                for(j=i+1; j<=k-1; j++)
+                {
+                    rep->covpar.ptr.pp_double[j][i] = rep->covpar.ptr.pp_double[i][j];
+                }
+            }
+        }
+    }
+    else
+    {
+        
+        /*
+         * Degenerate situation: zero noise level, covariance matrix is zero.
+         */
+        for(i=0; i<=k-1; i++)
+        {
+            for(j=0; j<=k-1; j++)
+            {
+                rep->covpar.ptr.pp_double[j][i] = 0;
+            }
+        }
+    }
+    
+    /*
+     * Estimate erorrs in parameters, curve and per-point noise
+     */
+    rvectorsetlengthatleast(&rep->errpar, k, _state);
+    rvectorsetlengthatleast(&rep->errcurve, n, _state);
+    rvectorsetlengthatleast(&rep->noise, n, _state);
+    for(i=0; i<=k-1; i++)
+    {
+        rep->errpar.ptr.p_double[i] = ae_sqrt(rep->covpar.ptr.pp_double[i][i], _state);
+    }
+    for(i=0; i<=n-1; i++)
+    {
+        
+        /*
+         * ErrCurve[I] is sqrt(P[i,i]) where P=J*CovPar*J'
+         */
+        v = 0.0;
+        for(j=0; j<=k-1; j++)
+        {
+            for(j1=0; j1<=k-1; j1++)
+            {
+                v = v+f1->ptr.pp_double[i][j]*rep->covpar.ptr.pp_double[j][j1]*f1->ptr.pp_double[i][j1];
+            }
+        }
+        rep->errcurve.ptr.p_double[i] = ae_sqrt(v, _state);
+        
+        /*
+         * Noise[i] is filled using weights and current estimate of noise level
+         */
+        if( ae_fp_neq(w->ptr.p_double[i],0) )
+        {
+            rep->noise.ptr.p_double[i] = noisec/w->ptr.p_double[i];
+        }
+        else
+        {
+            rep->noise.ptr.p_double[i] = 0;
+        }
+    }
+    ae_frame_leave(_state);
+}
+
+
+ae_bool _polynomialfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    polynomialfitreport *p = (polynomialfitreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _polynomialfitreport_init_copy(polynomialfitreport* dst, polynomialfitreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _polynomialfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    polynomialfitreport *dst = (polynomialfitreport*)_dst;
+    polynomialfitreport *src = (polynomialfitreport*)_src;
     dst->taskrcond = src->taskrcond;
     dst->rmserror = src->rmserror;
     dst->avgerror = src->avgerror;
@@ -21759,19 +23589,32 @@ ae_bool _polynomialfitreport_init_copy(polynomialfitreport* dst, polynomialfitre
 }
 
 
-void _polynomialfitreport_clear(polynomialfitreport* p)
+void _polynomialfitreport_clear(void* _p)
 {
+    polynomialfitreport *p = (polynomialfitreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _barycentricfitreport_init(barycentricfitreport* p, ae_state *_state, ae_bool make_automatic)
+void _polynomialfitreport_destroy(void* _p)
 {
+    polynomialfitreport *p = (polynomialfitreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _barycentricfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    barycentricfitreport *p = (barycentricfitreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _barycentricfitreport_init_copy(barycentricfitreport* dst, barycentricfitreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _barycentricfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    barycentricfitreport *dst = (barycentricfitreport*)_dst;
+    barycentricfitreport *src = (barycentricfitreport*)_src;
     dst->taskrcond = src->taskrcond;
     dst->dbest = src->dbest;
     dst->rmserror = src->rmserror;
@@ -21782,19 +23625,32 @@ ae_bool _barycentricfitreport_init_copy(barycentricfitreport* dst, barycentricfi
 }
 
 
-void _barycentricfitreport_clear(barycentricfitreport* p)
+void _barycentricfitreport_clear(void* _p)
 {
+    barycentricfitreport *p = (barycentricfitreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _spline1dfitreport_init(spline1dfitreport* p, ae_state *_state, ae_bool make_automatic)
+void _barycentricfitreport_destroy(void* _p)
 {
+    barycentricfitreport *p = (barycentricfitreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _spline1dfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    spline1dfitreport *p = (spline1dfitreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _spline1dfitreport_init_copy(spline1dfitreport* dst, spline1dfitreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _spline1dfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    spline1dfitreport *dst = (spline1dfitreport*)_dst;
+    spline1dfitreport *src = (spline1dfitreport*)_src;
     dst->taskrcond = src->taskrcond;
     dst->rmserror = src->rmserror;
     dst->avgerror = src->avgerror;
@@ -21804,37 +23660,87 @@ ae_bool _spline1dfitreport_init_copy(spline1dfitreport* dst, spline1dfitreport* 
 }
 
 
-void _spline1dfitreport_clear(spline1dfitreport* p)
+void _spline1dfitreport_clear(void* _p)
 {
+    spline1dfitreport *p = (spline1dfitreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _lsfitreport_init(lsfitreport* p, ae_state *_state, ae_bool make_automatic)
+void _spline1dfitreport_destroy(void* _p)
 {
+    spline1dfitreport *p = (spline1dfitreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _lsfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    lsfitreport *p = (lsfitreport*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_matrix_init(&p->covpar, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->errpar, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->errcurve, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->noise, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
     return ae_true;
 }
 
 
-ae_bool _lsfitreport_init_copy(lsfitreport* dst, lsfitreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _lsfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    lsfitreport *dst = (lsfitreport*)_dst;
+    lsfitreport *src = (lsfitreport*)_src;
     dst->taskrcond = src->taskrcond;
     dst->iterationscount = src->iterationscount;
+    dst->varidx = src->varidx;
     dst->rmserror = src->rmserror;
     dst->avgerror = src->avgerror;
     dst->avgrelerror = src->avgrelerror;
     dst->maxerror = src->maxerror;
     dst->wrmserror = src->wrmserror;
+    if( !ae_matrix_init_copy(&dst->covpar, &src->covpar, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->errpar, &src->errpar, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->errcurve, &src->errcurve, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->noise, &src->noise, _state, make_automatic) )
+        return ae_false;
+    dst->r2 = src->r2;
     return ae_true;
 }
 
 
-void _lsfitreport_clear(lsfitreport* p)
+void _lsfitreport_clear(void* _p)
 {
+    lsfitreport *p = (lsfitreport*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_clear(&p->covpar);
+    ae_vector_clear(&p->errpar);
+    ae_vector_clear(&p->errcurve);
+    ae_vector_clear(&p->noise);
 }
 
 
-ae_bool _lsfitstate_init(lsfitstate* p, ae_state *_state, ae_bool make_automatic)
+void _lsfitreport_destroy(void* _p)
 {
+    lsfitreport *p = (lsfitreport*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_destroy(&p->covpar);
+    ae_vector_destroy(&p->errpar);
+    ae_vector_destroy(&p->errcurve);
+    ae_vector_destroy(&p->noise);
+}
+
+
+ae_bool _lsfitstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    lsfitstate *p = (lsfitstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->s, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->bndl, 0, DT_REAL, _state, make_automatic) )
@@ -21845,7 +23751,7 @@ ae_bool _lsfitstate_init(lsfitstate* p, ae_state *_state, ae_bool make_automatic
         return ae_false;
     if( !ae_vector_init(&p->tasky, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init(&p->w, 0, DT_REAL, _state, make_automatic) )
+    if( !ae_vector_init(&p->taskw, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
@@ -21854,6 +23760,20 @@ ae_bool _lsfitstate_init(lsfitstate* p, ae_state *_state, ae_bool make_automatic
     if( !ae_vector_init(&p->g, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_matrix_init(&p->h, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->wcur, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->tmp, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->tmpf, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init(&p->tmpjac, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init(&p->tmpjacw, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !_matinvreport_init(&p->invrep, _state, make_automatic) )
+        return ae_false;
+    if( !_lsfitreport_init(&p->rep, _state, make_automatic) )
         return ae_false;
     if( !_minlmstate_init(&p->optstate, _state, make_automatic) )
         return ae_false;
@@ -21865,8 +23785,10 @@ ae_bool _lsfitstate_init(lsfitstate* p, ae_state *_state, ae_bool make_automatic
 }
 
 
-ae_bool _lsfitstate_init_copy(lsfitstate* dst, lsfitstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _lsfitstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    lsfitstate *dst = (lsfitstate*)_dst;
+    lsfitstate *src = (lsfitstate*)_src;
     dst->optalgo = src->optalgo;
     dst->m = src->m;
     dst->k = src->k;
@@ -21886,11 +23808,13 @@ ae_bool _lsfitstate_init_copy(lsfitstate* dst, lsfitstate* src, ae_state *_state
     if( !ae_vector_init_copy(&dst->tasky, &src->tasky, _state, make_automatic) )
         return ae_false;
     dst->npoints = src->npoints;
-    if( !ae_vector_init_copy(&dst->w, &src->w, _state, make_automatic) )
+    if( !ae_vector_init_copy(&dst->taskw, &src->taskw, _state, make_automatic) )
         return ae_false;
     dst->nweights = src->nweights;
     dst->wkind = src->wkind;
     dst->wits = src->wits;
+    dst->diffstep = src->diffstep;
+    dst->teststep = src->teststep;
     dst->xupdated = src->xupdated;
     dst->needf = src->needf;
     dst->needfg = src->needfg;
@@ -21905,13 +23829,29 @@ ae_bool _lsfitstate_init_copy(lsfitstate* dst, lsfitstate* src, ae_state *_state
         return ae_false;
     if( !ae_matrix_init_copy(&dst->h, &src->h, _state, make_automatic) )
         return ae_false;
+    if( !ae_vector_init_copy(&dst->wcur, &src->wcur, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->tmp, &src->tmp, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->tmpf, &src->tmpf, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init_copy(&dst->tmpjac, &src->tmpjac, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init_copy(&dst->tmpjacw, &src->tmpjacw, _state, make_automatic) )
+        return ae_false;
+    dst->tmpnoise = src->tmpnoise;
+    if( !_matinvreport_init_copy(&dst->invrep, &src->invrep, _state, make_automatic) )
+        return ae_false;
     dst->repiterationscount = src->repiterationscount;
     dst->repterminationtype = src->repterminationtype;
+    dst->repvaridx = src->repvaridx;
     dst->reprmserror = src->reprmserror;
     dst->repavgerror = src->repavgerror;
     dst->repavgrelerror = src->repavgrelerror;
     dst->repmaxerror = src->repmaxerror;
     dst->repwrmserror = src->repwrmserror;
+    if( !_lsfitreport_init_copy(&dst->rep, &src->rep, _state, make_automatic) )
+        return ae_false;
     if( !_minlmstate_init_copy(&dst->optstate, &src->optstate, _state, make_automatic) )
         return ae_false;
     if( !_minlmreport_init_copy(&dst->optrep, &src->optrep, _state, make_automatic) )
@@ -21924,21 +23864,57 @@ ae_bool _lsfitstate_init_copy(lsfitstate* dst, lsfitstate* src, ae_state *_state
 }
 
 
-void _lsfitstate_clear(lsfitstate* p)
+void _lsfitstate_clear(void* _p)
 {
+    lsfitstate *p = (lsfitstate*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->s);
     ae_vector_clear(&p->bndl);
     ae_vector_clear(&p->bndu);
     ae_matrix_clear(&p->taskx);
     ae_vector_clear(&p->tasky);
-    ae_vector_clear(&p->w);
+    ae_vector_clear(&p->taskw);
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->c);
     ae_vector_clear(&p->g);
     ae_matrix_clear(&p->h);
+    ae_vector_clear(&p->wcur);
+    ae_vector_clear(&p->tmp);
+    ae_vector_clear(&p->tmpf);
+    ae_matrix_clear(&p->tmpjac);
+    ae_matrix_clear(&p->tmpjacw);
+    _matinvreport_clear(&p->invrep);
+    _lsfitreport_clear(&p->rep);
     _minlmstate_clear(&p->optstate);
     _minlmreport_clear(&p->optrep);
     _rcommstate_clear(&p->rstate);
+}
+
+
+void _lsfitstate_destroy(void* _p)
+{
+    lsfitstate *p = (lsfitstate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->s);
+    ae_vector_destroy(&p->bndl);
+    ae_vector_destroy(&p->bndu);
+    ae_matrix_destroy(&p->taskx);
+    ae_vector_destroy(&p->tasky);
+    ae_vector_destroy(&p->taskw);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->c);
+    ae_vector_destroy(&p->g);
+    ae_matrix_destroy(&p->h);
+    ae_vector_destroy(&p->wcur);
+    ae_vector_destroy(&p->tmp);
+    ae_vector_destroy(&p->tmpf);
+    ae_matrix_destroy(&p->tmpjac);
+    ae_matrix_destroy(&p->tmpjacw);
+    _matinvreport_destroy(&p->invrep);
+    _lsfitreport_destroy(&p->rep);
+    _minlmstate_destroy(&p->optstate);
+    _minlmreport_destroy(&p->optrep);
+    _rcommstate_destroy(&p->rstate);
 }
 
 
@@ -22988,8 +24964,10 @@ static void pspline_pspline3par(/* Real    */ ae_matrix* xy,
 }
 
 
-ae_bool _pspline2interpolant_init(pspline2interpolant* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _pspline2interpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    pspline2interpolant *p = (pspline2interpolant*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->p, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !_spline1dinterpolant_init(&p->x, _state, make_automatic) )
@@ -23000,8 +24978,10 @@ ae_bool _pspline2interpolant_init(pspline2interpolant* p, ae_state *_state, ae_b
 }
 
 
-ae_bool _pspline2interpolant_init_copy(pspline2interpolant* dst, pspline2interpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _pspline2interpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    pspline2interpolant *dst = (pspline2interpolant*)_dst;
+    pspline2interpolant *src = (pspline2interpolant*)_src;
     dst->n = src->n;
     dst->periodic = src->periodic;
     if( !ae_vector_init_copy(&dst->p, &src->p, _state, make_automatic) )
@@ -23014,16 +24994,30 @@ ae_bool _pspline2interpolant_init_copy(pspline2interpolant* dst, pspline2interpo
 }
 
 
-void _pspline2interpolant_clear(pspline2interpolant* p)
+void _pspline2interpolant_clear(void* _p)
 {
+    pspline2interpolant *p = (pspline2interpolant*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->p);
     _spline1dinterpolant_clear(&p->x);
     _spline1dinterpolant_clear(&p->y);
 }
 
 
-ae_bool _pspline3interpolant_init(pspline3interpolant* p, ae_state *_state, ae_bool make_automatic)
+void _pspline2interpolant_destroy(void* _p)
 {
+    pspline2interpolant *p = (pspline2interpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->p);
+    _spline1dinterpolant_destroy(&p->x);
+    _spline1dinterpolant_destroy(&p->y);
+}
+
+
+ae_bool _pspline3interpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    pspline3interpolant *p = (pspline3interpolant*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->p, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !_spline1dinterpolant_init(&p->x, _state, make_automatic) )
@@ -23036,8 +25030,10 @@ ae_bool _pspline3interpolant_init(pspline3interpolant* p, ae_state *_state, ae_b
 }
 
 
-ae_bool _pspline3interpolant_init_copy(pspline3interpolant* dst, pspline3interpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _pspline3interpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    pspline3interpolant *dst = (pspline3interpolant*)_dst;
+    pspline3interpolant *src = (pspline3interpolant*)_src;
     dst->n = src->n;
     dst->periodic = src->periodic;
     if( !ae_vector_init_copy(&dst->p, &src->p, _state, make_automatic) )
@@ -23052,12 +25048,25 @@ ae_bool _pspline3interpolant_init_copy(pspline3interpolant* dst, pspline3interpo
 }
 
 
-void _pspline3interpolant_clear(pspline3interpolant* p)
+void _pspline3interpolant_clear(void* _p)
 {
+    pspline3interpolant *p = (pspline3interpolant*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->p);
     _spline1dinterpolant_clear(&p->x);
     _spline1dinterpolant_clear(&p->y);
     _spline1dinterpolant_clear(&p->z);
+}
+
+
+void _pspline3interpolant_destroy(void* _p)
+{
+    pspline3interpolant *p = (pspline3interpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->p);
+    _spline1dinterpolant_destroy(&p->x);
+    _spline1dinterpolant_destroy(&p->y);
+    _spline1dinterpolant_destroy(&p->z);
 }
 
 
@@ -23608,10 +25617,9 @@ void rbfbuildmodel(rbfmodel* s, rbfreport* rep, ae_state *_state)
     ae_assert(s->nx==2||s->nx==3, "RBFBuildModel: S.NX<>2 or S.NX<>3!", _state);
     
     /*
-     * Quick exit when we have no points or if setted multilayer algorithm
-     * by user without layers.
+     * Quick exit when we have no points
      */
-    if( s->n==0||(s->algorithmtype==2&&s->nlayers==0) )
+    if( s->n==0 )
     {
         rep->terminationtype = 1;
         rep->iterationscount = 0;
@@ -23659,6 +25667,34 @@ void rbfbuildmodel(rbfmodel* s, rbfreport* rep, ae_state *_state)
     if( !rbf_buildlinearmodel(&s->x, &residualy, s->n, s->ny, s->aterm, &v, _state) )
     {
         rep->terminationtype = -5;
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Handle special case: multilayer model with NLayers=0.
+     * Quick exit.
+     */
+    if( s->algorithmtype==2&&s->nlayers==0 )
+    {
+        rep->terminationtype = 1;
+        rep->iterationscount = 0;
+        rep->nmv = 0;
+        rep->arows = 0;
+        rep->acols = 0;
+        kdtreebuildtagged(&s->xc, &tags, 0, rbf_mxnx, 0, 2, &s->tree, _state);
+        ae_matrix_set_length(&s->xc, 0, 0, _state);
+        ae_matrix_set_length(&s->wr, 0, 0, _state);
+        s->nc = 0;
+        s->rmax = 0;
+        ae_matrix_set_length(&s->v, s->ny, rbf_mxnx+1, _state);
+        for(i=0; i<=s->ny-1; i++)
+        {
+            for(j=0; j<=rbf_mxnx; j++)
+            {
+                s->v.ptr.pp_double[i][j] = v.ptr.pp_double[i][j];
+            }
+        }
         ae_frame_leave(_state);
         return;
     }
@@ -24001,8 +26037,13 @@ double rbfcalc2(rbfmodel* s, double x0, double x1, ae_state *_state)
 
     ae_assert(ae_isfinite(x0, _state), "RBFCalc2: invalid value for X0 (X0 is Inf)!", _state);
     ae_assert(ae_isfinite(x1, _state), "RBFCalc2: invalid value for X1 (X1 is Inf)!", _state);
-    result = 0;
-    if( (s->ny!=1||s->nx!=2)||s->nc==0 )
+    if( s->ny!=1||s->nx!=2 )
+    {
+        result = 0;
+        return result;
+    }
+    result = s->v.ptr.pp_double[0][0]*x0+s->v.ptr.pp_double[0][1]*x1+s->v.ptr.pp_double[0][rbf_mxnx];
+    if( s->nc==0 )
     {
         return result;
     }
@@ -24030,7 +26071,6 @@ double rbfcalc2(rbfmodel* s, double x0, double x1, ae_state *_state)
             bfcur = t*t;
         }
     }
-    result = result+s->v.ptr.pp_double[0][0]*x0+s->v.ptr.pp_double[0][1]*x1+s->v.ptr.pp_double[0][rbf_mxnx];
     return result;
 }
 
@@ -24079,8 +26119,13 @@ double rbfcalc3(rbfmodel* s,
     ae_assert(ae_isfinite(x0, _state), "RBFCalc3: invalid value for X0 (X0 is Inf or NaN)!", _state);
     ae_assert(ae_isfinite(x1, _state), "RBFCalc3: invalid value for X1 (X1 is Inf or NaN)!", _state);
     ae_assert(ae_isfinite(x2, _state), "RBFCalc3: invalid value for X2 (X2 is Inf or NaN)!", _state);
-    result = 0;
-    if( (s->ny!=1||s->nx!=3)||s->nc==0 )
+    if( s->ny!=1||s->nx!=3 )
+    {
+        result = 0;
+        return result;
+    }
+    result = s->v.ptr.pp_double[0][0]*x0+s->v.ptr.pp_double[0][1]*x1+s->v.ptr.pp_double[0][2]*x2+s->v.ptr.pp_double[0][rbf_mxnx];
+    if( s->nc==0 )
     {
         return result;
     }
@@ -24111,7 +26156,6 @@ double rbfcalc3(rbfmodel* s,
             bf = t*t;
         }
     }
-    result = result+s->v.ptr.pp_double[0][0]*x0+s->v.ptr.pp_double[0][1]*x1+s->v.ptr.pp_double[0][2]*x2+s->v.ptr.pp_double[0][rbf_mxnx];
     return result;
 }
 
@@ -24198,13 +26242,17 @@ void rbfcalcbuf(rbfmodel* s,
     }
     for(i=0; i<=s->ny-1; i++)
     {
-        y->ptr.p_double[i] = 0;
+        y->ptr.p_double[i] = s->v.ptr.pp_double[i][rbf_mxnx];
+        for(j=0; j<=s->nx-1; j++)
+        {
+            y->ptr.p_double[i] = y->ptr.p_double[i]+s->v.ptr.pp_double[i][j]*x->ptr.p_double[j];
+        }
     }
     if( s->nc==0 )
     {
         return;
     }
-    ae_vector_set_length(&s->calcbufxcx, rbf_mxnx, _state);
+    rvectorsetlengthatleast(&s->calcbufxcx, rbf_mxnx, _state);
     for(i=0; i<=rbf_mxnx-1; i++)
     {
         s->calcbufxcx.ptr.p_double[i] = 0.0;
@@ -24230,7 +26278,6 @@ void rbfcalcbuf(rbfmodel* s,
                 bf = t*t;
             }
         }
-        y->ptr.p_double[i] = y->ptr.p_double[i]+s->v.ptr.pp_double[i][0]*s->calcbufxcx.ptr.p_double[0]+s->v.ptr.pp_double[i][1]*s->calcbufxcx.ptr.p_double[1]+s->v.ptr.pp_double[i][2]*s->calcbufxcx.ptr.p_double[2]+s->v.ptr.pp_double[i][rbf_mxnx];
     }
 }
 
@@ -24572,38 +26619,6 @@ void rbfunserialize(ae_serializer* s, rbfmodel* model, ae_state *_state)
 
 /*************************************************************************
 This function changes centers allocation algorithm to one which  allocates
-centers on a regular grid with step equal to H  in  all  dimensions.  This
-function won't have effect until next call to RBFBuildModel().
-
-Central  point  of  the  grid  is  located  exactly  in  the middle of the 
-bounding rectangle for our dataset. Grid countinues from the center to the
-bounds of the bounding rectangle, and makes one step beyond  bounds  (i.e. 
-leftmost/rightmost/topmost/... lines of the grid are located just  outside
-of the bounding rectangle).
-
-INPUT PARAMETERS:
-    S       -   RBF model, initialized by RBFCreate() call.
-    H       -   grid step, H>0
-
-NOTE: this   function  has   some   serialization-related  subtleties.  We
-      recommend you to study serialization examples from ALGLIB  Reference
-      Manual if you want to perform serialization of your models.
-
-  -- ALGLIB --
-     Copyright 13.12.2011 by Bochkanov Sergey
-*************************************************************************/
-static void rbf_rbfgridregular(rbfmodel* s, double h, ae_state *_state)
-{
-
-
-    ae_assert(ae_isfinite(h, _state)&&ae_fp_greater(h,0), "RBFGridRegular: H<0, INF or NAN", _state);
-    s->h = h;
-    s->gridtype = 1;
-}
-
-
-/*************************************************************************
-This function changes centers allocation algorithm to one which  allocates
 centers exactly at the dataset points (one input point = one center). This
 function won't have effect until next call to RBFBuildModel().
 
@@ -24622,84 +26637,6 @@ static void rbf_rbfgridpoints(rbfmodel* s, ae_state *_state)
 
 
     s->gridtype = 2;
-}
-
-
-/*************************************************************************
-This function sets centers, defined by user.
-
-This function overrides results of the previous calls, i.e. multiple calls
-of this function will result in only the last set being added.
-
-INPUT PARAMETERS:
-    S      -   RBF model, initialized by RBFCreate() call.
-  CXY      -   centers, array[N,NX]. Centers must be distinct, 
-               non-distinct centers are not supported.
-   NC      -   number of centers
-
-NOTE: this   function  has   some   serialization-related  subtleties.  We
-      recommend you to study serialization examples from ALGLIB  Reference
-      Manual if you want to perform serialization of your models.
-
-  -- ALGLIB --
-     Copyright 13.12.2011 by Bochkanov Sergey
-*************************************************************************/
-static void rbf_rbfgridspecial(rbfmodel* s,
-     /* Real    */ ae_matrix* cxy,
-     ae_int_t nc,
-     ae_state *_state)
-{
-    ae_int_t i;
-    ae_int_t j;
-
-
-    ae_assert(nc>0, "RBFGridSpecial: N<0", _state);
-    ae_assert(nc<=cxy->rows, "RBFGridSpecial: Length(CXY)<NC", _state);
-    s->gridtype = 3;
-    s->nc = nc;
-    ae_matrix_set_length(&s->xc, s->nc, rbf_mxnx, _state);
-    for(i=0; i<=s->nc-1; i++)
-    {
-        for(j=0; j<=rbf_mxnx-1; j++)
-        {
-            s->xc.ptr.pp_double[i][j] = 0;
-        }
-        for(j=0; j<=s->nx-1; j++)
-        {
-            s->xc.ptr.pp_double[i][j] = cxy->ptr.pp_double[i][j];
-        }
-    }
-}
-
-
-/*************************************************************************
-This function changes radii calculation algorithm to one which  makes  all
-radii equal to the same fixed value R. This  function  won't  have  effect
-until next call to RBFBuildModel().
-
-IMPORTANT: you should use this function with caution because too  large  R
-will make model fitting algorithm unstable, while too small  R  will  make
-perfect, but useless fit (it will be non-smooth, with sharp  peaks  around
-dataset points).
-
-INPUT PARAMETERS:
-    S       -   RBF model, initialized by RBFCreate() call
-    R       -   radius, R>0
-
-NOTE: this   function  has   some   serialization-related  subtleties.  We
-      recommend you to study serialization examples from ALGLIB  Reference
-      Manual if you want to perform serialization of your models.
-
-  -- ALGLIB --
-     Copyright 13.12.2011 by Bochkanov Sergey
-*************************************************************************/
-static void rbf_rbfradfixed(rbfmodel* s, double r, ae_state *_state)
-{
-
-
-    ae_assert(ae_isfinite(r, _state)&&ae_fp_greater(r,0), "RBFRadFixed: R<=0, infinite or NAN", _state);
-    s->fixrad = ae_true;
-    s->radvalue = r;
 }
 
 
@@ -25567,8 +27504,10 @@ static void rbf_buildrbfmlayersmodellsqr(/* Real    */ ae_matrix* x,
 }
 
 
-ae_bool _rbfmodel_init(rbfmodel* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _rbfmodel_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    rbfmodel *p = (rbfmodel*)_p;
+    ae_touch_ptr((void*)p);
     if( !_kdtree_init(&p->tree, _state, make_automatic) )
         return ae_false;
     if( !ae_matrix_init(&p->xc, 0, 0, DT_REAL, _state, make_automatic) )
@@ -25591,8 +27530,10 @@ ae_bool _rbfmodel_init(rbfmodel* p, ae_state *_state, ae_bool make_automatic)
 }
 
 
-ae_bool _rbfmodel_init_copy(rbfmodel* dst, rbfmodel* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _rbfmodel_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    rbfmodel *dst = (rbfmodel*)_dst;
+    rbfmodel *src = (rbfmodel*)_src;
     dst->ny = src->ny;
     dst->nx = src->nx;
     dst->nc = src->nc;
@@ -25633,8 +27574,10 @@ ae_bool _rbfmodel_init_copy(rbfmodel* dst, rbfmodel* src, ae_state *_state, ae_b
 }
 
 
-void _rbfmodel_clear(rbfmodel* p)
+void _rbfmodel_clear(void* _p)
 {
+    rbfmodel *p = (rbfmodel*)_p;
+    ae_touch_ptr((void*)p);
     _kdtree_clear(&p->tree);
     ae_matrix_clear(&p->xc);
     ae_matrix_clear(&p->wr);
@@ -25647,14 +27590,34 @@ void _rbfmodel_clear(rbfmodel* p)
 }
 
 
-ae_bool _rbfreport_init(rbfreport* p, ae_state *_state, ae_bool make_automatic)
+void _rbfmodel_destroy(void* _p)
 {
+    rbfmodel *p = (rbfmodel*)_p;
+    ae_touch_ptr((void*)p);
+    _kdtree_destroy(&p->tree);
+    ae_matrix_destroy(&p->xc);
+    ae_matrix_destroy(&p->wr);
+    ae_matrix_destroy(&p->v);
+    ae_matrix_destroy(&p->x);
+    ae_matrix_destroy(&p->y);
+    ae_vector_destroy(&p->calcbufxcx);
+    ae_matrix_destroy(&p->calcbufx);
+    ae_vector_destroy(&p->calcbuftags);
+}
+
+
+ae_bool _rbfreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    rbfreport *p = (rbfreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _rbfreport_init_copy(rbfreport* dst, rbfreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _rbfreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    rbfreport *dst = (rbfreport*)_dst;
+    rbfreport *src = (rbfreport*)_src;
     dst->arows = src->arows;
     dst->acols = src->acols;
     dst->annz = src->annz;
@@ -25665,313 +27628,20 @@ ae_bool _rbfreport_init_copy(rbfreport* dst, rbfreport* src, ae_state *_state, a
 }
 
 
-void _rbfreport_clear(rbfreport* p)
+void _rbfreport_clear(void* _p)
 {
+    rbfreport *p = (rbfreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-
-
-/*************************************************************************
-This subroutine builds bilinear spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbilinear(/* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_matrix* f,
-     ae_int_t m,
-     ae_int_t n,
-     spline2dinterpolant* c,
-     ae_state *_state)
+void _rbfreport_destroy(void* _p)
 {
-    ae_frame _frame_block;
-    ae_vector _x;
-    ae_vector _y;
-    ae_matrix _f;
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t k;
-    ae_int_t tblsize;
-    ae_int_t shift;
-    double t;
-    ae_matrix dx;
-    ae_matrix dy;
-    ae_matrix dxy;
-
-    ae_frame_make(_state, &_frame_block);
-    ae_vector_init_copy(&_x, x, _state, ae_true);
-    x = &_x;
-    ae_vector_init_copy(&_y, y, _state, ae_true);
-    y = &_y;
-    ae_matrix_init_copy(&_f, f, _state, ae_true);
-    f = &_f;
-    _spline2dinterpolant_clear(c);
-    ae_matrix_init(&dx, 0, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&dy, 0, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&dxy, 0, 0, DT_REAL, _state, ae_true);
-
-    ae_assert(n>=2&&m>=2, "Spline2DBuildBilinear: N<2 or M<2!", _state);
-    
-    /*
-     * Sort points
-     */
-    for(j=0; j<=n-1; j++)
-    {
-        k = j;
-        for(i=j+1; i<=n-1; i++)
-        {
-            if( ae_fp_less(x->ptr.p_double[i],x->ptr.p_double[k]) )
-            {
-                k = i;
-            }
-        }
-        if( k!=j )
-        {
-            for(i=0; i<=m-1; i++)
-            {
-                t = f->ptr.pp_double[i][j];
-                f->ptr.pp_double[i][j] = f->ptr.pp_double[i][k];
-                f->ptr.pp_double[i][k] = t;
-            }
-            t = x->ptr.p_double[j];
-            x->ptr.p_double[j] = x->ptr.p_double[k];
-            x->ptr.p_double[k] = t;
-        }
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        k = i;
-        for(j=i+1; j<=m-1; j++)
-        {
-            if( ae_fp_less(y->ptr.p_double[j],y->ptr.p_double[k]) )
-            {
-                k = j;
-            }
-        }
-        if( k!=i )
-        {
-            for(j=0; j<=n-1; j++)
-            {
-                t = f->ptr.pp_double[i][j];
-                f->ptr.pp_double[i][j] = f->ptr.pp_double[k][j];
-                f->ptr.pp_double[k][j] = t;
-            }
-            t = y->ptr.p_double[i];
-            y->ptr.p_double[i] = y->ptr.p_double[k];
-            y->ptr.p_double[k] = t;
-        }
-    }
-    
-    /*
-     * Fill C:
-     *  C[0]            -   length(C)
-     *  C[1]            -   type(C):
-     *                      -1 = bilinear interpolant
-     *                      -3 = general cubic spline
-     *                           (see BuildBicubicSpline)
-     *  C[2]:
-     *      N (x count)
-     *  C[3]:
-     *      M (y count)
-     *  C[4]...C[4+N-1]:
-     *      x[i], i = 0...N-1
-     *  C[4+N]...C[4+N+M-1]:
-     *      y[i], i = 0...M-1
-     *  C[4+N+M]...C[4+N+M+(N*M-1)]:
-     *      f(i,j) table. f(0,0), f(0, 1), f(0,2) and so on...
-     */
-    c->k = 1;
-    tblsize = 4+n+m+n*m;
-    ae_vector_set_length(&c->c, tblsize-1+1, _state);
-    c->c.ptr.p_double[0] = tblsize;
-    c->c.ptr.p_double[1] = -1;
-    c->c.ptr.p_double[2] = n;
-    c->c.ptr.p_double[3] = m;
-    for(i=0; i<=n-1; i++)
-    {
-        c->c.ptr.p_double[4+i] = x->ptr.p_double[i];
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        c->c.ptr.p_double[4+n+i] = y->ptr.p_double[i];
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        for(j=0; j<=n-1; j++)
-        {
-            shift = i*n+j;
-            c->c.ptr.p_double[4+n+m+shift] = f->ptr.pp_double[i][j];
-        }
-    }
-    ae_frame_leave(_state);
+    rbfreport *p = (rbfreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-/*************************************************************************
-This subroutine builds bicubic spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbicubic(/* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_matrix* f,
-     ae_int_t m,
-     ae_int_t n,
-     spline2dinterpolant* c,
-     ae_state *_state)
-{
-    ae_frame _frame_block;
-    ae_vector _x;
-    ae_vector _y;
-    ae_matrix _f;
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t k;
-    ae_int_t tblsize;
-    ae_int_t shift;
-    double t;
-    ae_matrix dx;
-    ae_matrix dy;
-    ae_matrix dxy;
-
-    ae_frame_make(_state, &_frame_block);
-    ae_vector_init_copy(&_x, x, _state, ae_true);
-    x = &_x;
-    ae_vector_init_copy(&_y, y, _state, ae_true);
-    y = &_y;
-    ae_matrix_init_copy(&_f, f, _state, ae_true);
-    f = &_f;
-    _spline2dinterpolant_clear(c);
-    ae_matrix_init(&dx, 0, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&dy, 0, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&dxy, 0, 0, DT_REAL, _state, ae_true);
-
-    ae_assert(n>=2&&m>=2, "BuildBicubicSpline: N<2 or M<2!", _state);
-    
-    /*
-     * Sort points
-     */
-    for(j=0; j<=n-1; j++)
-    {
-        k = j;
-        for(i=j+1; i<=n-1; i++)
-        {
-            if( ae_fp_less(x->ptr.p_double[i],x->ptr.p_double[k]) )
-            {
-                k = i;
-            }
-        }
-        if( k!=j )
-        {
-            for(i=0; i<=m-1; i++)
-            {
-                t = f->ptr.pp_double[i][j];
-                f->ptr.pp_double[i][j] = f->ptr.pp_double[i][k];
-                f->ptr.pp_double[i][k] = t;
-            }
-            t = x->ptr.p_double[j];
-            x->ptr.p_double[j] = x->ptr.p_double[k];
-            x->ptr.p_double[k] = t;
-        }
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        k = i;
-        for(j=i+1; j<=m-1; j++)
-        {
-            if( ae_fp_less(y->ptr.p_double[j],y->ptr.p_double[k]) )
-            {
-                k = j;
-            }
-        }
-        if( k!=i )
-        {
-            for(j=0; j<=n-1; j++)
-            {
-                t = f->ptr.pp_double[i][j];
-                f->ptr.pp_double[i][j] = f->ptr.pp_double[k][j];
-                f->ptr.pp_double[k][j] = t;
-            }
-            t = y->ptr.p_double[i];
-            y->ptr.p_double[i] = y->ptr.p_double[k];
-            y->ptr.p_double[k] = t;
-        }
-    }
-    
-    /*
-     * Fill C:
-     *  C[0]            -   length(C)
-     *  C[1]            -   type(C):
-     *                      -1 = bilinear interpolant
-     *                           (see BuildBilinearInterpolant)
-     *                      -3 = general cubic spline
-     *  C[2]:
-     *      N (x count)
-     *  C[3]:
-     *      M (y count)
-     *  C[4]...C[4+N-1]:
-     *      x[i], i = 0...N-1
-     *  C[4+N]...C[4+N+M-1]:
-     *      y[i], i = 0...M-1
-     *  C[4+N+M]...C[4+N+M+(N*M-1)]:
-     *      f(i,j) table. f(0,0), f(0, 1), f(0,2) and so on...
-     *  C[4+N+M+N*M]...C[4+N+M+(2*N*M-1)]:
-     *      df(i,j)/dx table.
-     *  C[4+N+M+2*N*M]...C[4+N+M+(3*N*M-1)]:
-     *      df(i,j)/dy table.
-     *  C[4+N+M+3*N*M]...C[4+N+M+(4*N*M-1)]:
-     *      d2f(i,j)/dxdy table.
-     */
-    c->k = 3;
-    tblsize = 4+n+m+4*n*m;
-    ae_vector_set_length(&c->c, tblsize-1+1, _state);
-    c->c.ptr.p_double[0] = tblsize;
-    c->c.ptr.p_double[1] = -3;
-    c->c.ptr.p_double[2] = n;
-    c->c.ptr.p_double[3] = m;
-    for(i=0; i<=n-1; i++)
-    {
-        c->c.ptr.p_double[4+i] = x->ptr.p_double[i];
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        c->c.ptr.p_double[4+n+i] = y->ptr.p_double[i];
-    }
-    spline2d_bicubiccalcderivatives(f, x, y, m, n, &dx, &dy, &dxy, _state);
-    for(i=0; i<=m-1; i++)
-    {
-        for(j=0; j<=n-1; j++)
-        {
-            shift = i*n+j;
-            c->c.ptr.p_double[4+n+m+shift] = f->ptr.pp_double[i][j];
-            c->c.ptr.p_double[4+n+m+n*m+shift] = dx.ptr.pp_double[i][j];
-            c->c.ptr.p_double[4+n+m+2*n*m+shift] = dy.ptr.pp_double[i][j];
-            c->c.ptr.p_double[4+n+m+3*n*m+shift] = dxy.ptr.pp_double[i][j];
-        }
-    }
-    ae_frame_leave(_state);
-}
 
 
 /*************************************************************************
@@ -26001,6 +27671,13 @@ double spline2dcalc(spline2dinterpolant* c,
     double result;
 
 
+    ae_assert(c->stype==-1||c->stype==-3, "Spline2DCalc: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(x, _state)&&ae_isfinite(y, _state), "Spline2DCalc: X or Y contains NaN or Infinite value", _state);
+    if( c->d!=1 )
+    {
+        result = 0;
+        return result;
+    }
     spline2ddiff(c, x, y, &v, &vx, &vy, &vxy, _state);
     result = v;
     return result;
@@ -26033,8 +27710,6 @@ void spline2ddiff(spline2dinterpolant* c,
      double* fxy,
      ae_state *_state)
 {
-    ae_int_t n;
-    ae_int_t m;
     double t;
     double dt;
     double u;
@@ -26044,12 +27719,10 @@ void spline2ddiff(spline2dinterpolant* c,
     ae_int_t l;
     ae_int_t r;
     ae_int_t h;
-    ae_int_t shift1;
     ae_int_t s1;
     ae_int_t s2;
     ae_int_t s3;
     ae_int_t s4;
-    ae_int_t sf;
     ae_int_t sfx;
     ae_int_t sfy;
     ae_int_t sfxy;
@@ -26072,51 +27745,8 @@ void spline2ddiff(spline2dinterpolant* c,
     *fy = 0;
     *fxy = 0;
 
-    ae_assert(ae_round(c->c.ptr.p_double[1], _state)==-1||ae_round(c->c.ptr.p_double[1], _state)==-3, "Spline2DDiff: incorrect C!", _state);
-    n = ae_round(c->c.ptr.p_double[2], _state);
-    m = ae_round(c->c.ptr.p_double[3], _state);
-    
-    /*
-     * Binary search in the [ x[0], ..., x[n-2] ] (x[n-1] is not included)
-     */
-    l = 4;
-    r = 4+n-2+1;
-    while(l!=r-1)
-    {
-        h = (l+r)/2;
-        if( ae_fp_greater_eq(c->c.ptr.p_double[h],x) )
-        {
-            r = h;
-        }
-        else
-        {
-            l = h;
-        }
-    }
-    t = (x-c->c.ptr.p_double[l])/(c->c.ptr.p_double[l+1]-c->c.ptr.p_double[l]);
-    dt = 1.0/(c->c.ptr.p_double[l+1]-c->c.ptr.p_double[l]);
-    ix = l-4;
-    
-    /*
-     * Binary search in the [ y[0], ..., y[m-2] ] (y[m-1] is not included)
-     */
-    l = 4+n;
-    r = 4+n+(m-2)+1;
-    while(l!=r-1)
-    {
-        h = (l+r)/2;
-        if( ae_fp_greater_eq(c->c.ptr.p_double[h],y) )
-        {
-            r = h;
-        }
-        else
-        {
-            l = h;
-        }
-    }
-    u = (y-c->c.ptr.p_double[l])/(c->c.ptr.p_double[l+1]-c->c.ptr.p_double[l]);
-    du = 1.0/(c->c.ptr.p_double[l+1]-c->c.ptr.p_double[l]);
-    iy = l-(4+n);
+    ae_assert(c->stype==-1||c->stype==-3, "Spline2DDiff: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(x, _state)&&ae_isfinite(y, _state), "Spline2DDiff: X or Y contains NaN or Infinite value", _state);
     
     /*
      * Prepare F, dF/dX, dF/dY, d2F/dXdY
@@ -26125,17 +27755,62 @@ void spline2ddiff(spline2dinterpolant* c,
     *fx = 0;
     *fy = 0;
     *fxy = 0;
+    if( c->d!=1 )
+    {
+        return;
+    }
+    
+    /*
+     * Binary search in the [ x[0], ..., x[n-2] ] (x[n-1] is not included)
+     */
+    l = 0;
+    r = c->n-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->x.ptr.p_double[h],x) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    t = (x-c->x.ptr.p_double[l])/(c->x.ptr.p_double[l+1]-c->x.ptr.p_double[l]);
+    dt = 1.0/(c->x.ptr.p_double[l+1]-c->x.ptr.p_double[l]);
+    ix = l;
+    
+    /*
+     * Binary search in the [ y[0], ..., y[m-2] ] (y[m-1] is not included)
+     */
+    l = 0;
+    r = c->m-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->y.ptr.p_double[h],y) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    u = (y-c->y.ptr.p_double[l])/(c->y.ptr.p_double[l+1]-c->y.ptr.p_double[l]);
+    du = 1.0/(c->y.ptr.p_double[l+1]-c->y.ptr.p_double[l]);
+    iy = l;
     
     /*
      * Bilinear interpolation
      */
-    if( ae_round(c->c.ptr.p_double[1], _state)==-1 )
+    if( c->stype==-1 )
     {
-        shift1 = 4+n+m;
-        y1 = c->c.ptr.p_double[shift1+n*iy+ix];
-        y2 = c->c.ptr.p_double[shift1+n*iy+(ix+1)];
-        y3 = c->c.ptr.p_double[shift1+n*(iy+1)+(ix+1)];
-        y4 = c->c.ptr.p_double[shift1+n*(iy+1)+ix];
+        y1 = c->f.ptr.p_double[c->n*iy+ix];
+        y2 = c->f.ptr.p_double[c->n*iy+(ix+1)];
+        y3 = c->f.ptr.p_double[c->n*(iy+1)+(ix+1)];
+        y4 = c->f.ptr.p_double[c->n*(iy+1)+ix];
         *f = (1-t)*(1-u)*y1+t*(1-u)*y2+t*u*y3+(1-t)*u*y4;
         *fx = (-(1-u)*y1+(1-u)*y2+u*y3-u*y4)*dt;
         *fy = (-(1-t)*y1-t*y2+t*y3+(1-t)*y4)*du;
@@ -26146,7 +27821,7 @@ void spline2ddiff(spline2dinterpolant* c,
     /*
      * Bicubic interpolation
      */
-    if( ae_round(c->c.ptr.p_double[1], _state)==-3 )
+    if( c->stype==-3 )
     {
         
         /*
@@ -26160,234 +27835,83 @@ void spline2ddiff(spline2dinterpolant* c,
         u1 = u;
         u2 = ae_sqr(u, _state);
         u3 = u*u2;
-        sf = 4+n+m;
-        sfx = 4+n+m+n*m;
-        sfy = 4+n+m+2*n*m;
-        sfxy = 4+n+m+3*n*m;
-        s1 = n*iy+ix;
-        s2 = n*iy+(ix+1);
-        s3 = n*(iy+1)+(ix+1);
-        s4 = n*(iy+1)+ix;
+        sfx = c->n*c->m;
+        sfy = 2*c->n*c->m;
+        sfxy = 3*c->n*c->m;
+        s1 = c->n*iy+ix;
+        s2 = c->n*iy+(ix+1);
+        s3 = c->n*(iy+1)+(ix+1);
+        s4 = c->n*(iy+1)+ix;
         
         /*
          * Calculate
          */
-        v = 1*c->c.ptr.p_double[sf+s1];
+        v = c->f.ptr.p_double[s1];
         *f = *f+v*t0*u0;
-        v = 1*c->c.ptr.p_double[sfy+s1]/du;
+        v = c->f.ptr.p_double[sfy+s1]/du;
         *f = *f+v*t0*u1;
-        *fy = *fy+1*v*t0*u0*du;
-        v = -3*c->c.ptr.p_double[sf+s1]+3*c->c.ptr.p_double[sf+s4]-2*c->c.ptr.p_double[sfy+s1]/du-1*c->c.ptr.p_double[sfy+s4]/du;
+        *fy = *fy+v*t0*u0*du;
+        v = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s4]-2*c->f.ptr.p_double[sfy+s1]/du-c->f.ptr.p_double[sfy+s4]/du;
         *f = *f+v*t0*u2;
         *fy = *fy+2*v*t0*u1*du;
-        v = 2*c->c.ptr.p_double[sf+s1]-2*c->c.ptr.p_double[sf+s4]+1*c->c.ptr.p_double[sfy+s1]/du+1*c->c.ptr.p_double[sfy+s4]/du;
+        v = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s4]+c->f.ptr.p_double[sfy+s1]/du+c->f.ptr.p_double[sfy+s4]/du;
         *f = *f+v*t0*u3;
         *fy = *fy+3*v*t0*u2*du;
-        v = 1*c->c.ptr.p_double[sfx+s1]/dt;
+        v = c->f.ptr.p_double[sfx+s1]/dt;
         *f = *f+v*t1*u0;
-        *fx = *fx+1*v*t0*u0*dt;
-        v = 1*c->c.ptr.p_double[sfxy+s1]/(dt*du);
+        *fx = *fx+v*t0*u0*dt;
+        v = c->f.ptr.p_double[sfxy+s1]/(dt*du);
         *f = *f+v*t1*u1;
-        *fx = *fx+1*v*t0*u1*dt;
-        *fy = *fy+1*v*t1*u0*du;
-        *fxy = *fxy+1*v*t0*u0*dt*du;
-        v = -3*c->c.ptr.p_double[sfx+s1]/dt+3*c->c.ptr.p_double[sfx+s4]/dt-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        *fx = *fx+v*t0*u1*dt;
+        *fy = *fy+v*t1*u0*du;
+        *fxy = *fxy+v*t0*u0*dt*du;
+        v = -3*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t1*u2;
-        *fx = *fx+1*v*t0*u2*dt;
+        *fx = *fx+v*t0*u2*dt;
         *fy = *fy+2*v*t1*u1*du;
         *fxy = *fxy+2*v*t0*u1*dt*du;
-        v = 2*c->c.ptr.p_double[sfx+s1]/dt-2*c->c.ptr.p_double[sfx+s4]/dt+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        v = 2*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t1*u3;
-        *fx = *fx+1*v*t0*u3*dt;
+        *fx = *fx+v*t0*u3*dt;
         *fy = *fy+3*v*t1*u2*du;
         *fxy = *fxy+3*v*t0*u2*dt*du;
-        v = -3*c->c.ptr.p_double[sf+s1]+3*c->c.ptr.p_double[sf+s2]-2*c->c.ptr.p_double[sfx+s1]/dt-1*c->c.ptr.p_double[sfx+s2]/dt;
+        v = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s2]-2*c->f.ptr.p_double[sfx+s1]/dt-c->f.ptr.p_double[sfx+s2]/dt;
         *f = *f+v*t2*u0;
         *fx = *fx+2*v*t1*u0*dt;
-        v = -3*c->c.ptr.p_double[sfy+s1]/du+3*c->c.ptr.p_double[sfy+s2]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s2]/(dt*du);
+        v = -3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du);
         *f = *f+v*t2*u1;
         *fx = *fx+2*v*t1*u1*dt;
-        *fy = *fy+1*v*t2*u0*du;
+        *fy = *fy+v*t2*u0*du;
         *fxy = *fxy+2*v*t1*u0*dt*du;
-        v = 9*c->c.ptr.p_double[sf+s1]-9*c->c.ptr.p_double[sf+s2]+9*c->c.ptr.p_double[sf+s3]-9*c->c.ptr.p_double[sf+s4]+6*c->c.ptr.p_double[sfx+s1]/dt+3*c->c.ptr.p_double[sfx+s2]/dt-3*c->c.ptr.p_double[sfx+s3]/dt-6*c->c.ptr.p_double[sfx+s4]/dt+6*c->c.ptr.p_double[sfy+s1]/du-6*c->c.ptr.p_double[sfy+s2]/du-3*c->c.ptr.p_double[sfy+s3]/du+3*c->c.ptr.p_double[sfy+s4]/du+4*c->c.ptr.p_double[sfxy+s1]/(dt*du)+2*c->c.ptr.p_double[sfxy+s2]/(dt*du)+1*c->c.ptr.p_double[sfxy+s3]/(dt*du)+2*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        v = 9*c->f.ptr.p_double[s1]-9*c->f.ptr.p_double[s2]+9*c->f.ptr.p_double[s3]-9*c->f.ptr.p_double[s4]+6*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s2]/dt-3*c->f.ptr.p_double[sfx+s3]/dt-6*c->f.ptr.p_double[sfx+s4]/dt+6*c->f.ptr.p_double[sfy+s1]/du-6*c->f.ptr.p_double[sfy+s2]/du-3*c->f.ptr.p_double[sfy+s3]/du+3*c->f.ptr.p_double[sfy+s4]/du+4*c->f.ptr.p_double[sfxy+s1]/(dt*du)+2*c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t2*u2;
         *fx = *fx+2*v*t1*u2*dt;
         *fy = *fy+2*v*t2*u1*du;
         *fxy = *fxy+4*v*t1*u1*dt*du;
-        v = -6*c->c.ptr.p_double[sf+s1]+6*c->c.ptr.p_double[sf+s2]-6*c->c.ptr.p_double[sf+s3]+6*c->c.ptr.p_double[sf+s4]-4*c->c.ptr.p_double[sfx+s1]/dt-2*c->c.ptr.p_double[sfx+s2]/dt+2*c->c.ptr.p_double[sfx+s3]/dt+4*c->c.ptr.p_double[sfx+s4]/dt-3*c->c.ptr.p_double[sfy+s1]/du+3*c->c.ptr.p_double[sfy+s2]/du+3*c->c.ptr.p_double[sfy+s3]/du-3*c->c.ptr.p_double[sfy+s4]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s2]/(dt*du)-1*c->c.ptr.p_double[sfxy+s3]/(dt*du)-2*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        v = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-4*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s2]/dt+2*c->f.ptr.p_double[sfx+s3]/dt+4*c->f.ptr.p_double[sfx+s4]/dt-3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du+3*c->f.ptr.p_double[sfy+s3]/du-3*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t2*u3;
         *fx = *fx+2*v*t1*u3*dt;
         *fy = *fy+3*v*t2*u2*du;
         *fxy = *fxy+6*v*t1*u2*dt*du;
-        v = 2*c->c.ptr.p_double[sf+s1]-2*c->c.ptr.p_double[sf+s2]+1*c->c.ptr.p_double[sfx+s1]/dt+1*c->c.ptr.p_double[sfx+s2]/dt;
+        v = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s2]+c->f.ptr.p_double[sfx+s1]/dt+c->f.ptr.p_double[sfx+s2]/dt;
         *f = *f+v*t3*u0;
         *fx = *fx+3*v*t2*u0*dt;
-        v = 2*c->c.ptr.p_double[sfy+s1]/du-2*c->c.ptr.p_double[sfy+s2]/du+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s2]/(dt*du);
+        v = 2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du);
         *f = *f+v*t3*u1;
         *fx = *fx+3*v*t2*u1*dt;
-        *fy = *fy+1*v*t3*u0*du;
+        *fy = *fy+v*t3*u0*du;
         *fxy = *fxy+3*v*t2*u0*dt*du;
-        v = -6*c->c.ptr.p_double[sf+s1]+6*c->c.ptr.p_double[sf+s2]-6*c->c.ptr.p_double[sf+s3]+6*c->c.ptr.p_double[sf+s4]-3*c->c.ptr.p_double[sfx+s1]/dt-3*c->c.ptr.p_double[sfx+s2]/dt+3*c->c.ptr.p_double[sfx+s3]/dt+3*c->c.ptr.p_double[sfx+s4]/dt-4*c->c.ptr.p_double[sfy+s1]/du+4*c->c.ptr.p_double[sfy+s2]/du+2*c->c.ptr.p_double[sfy+s3]/du-2*c->c.ptr.p_double[sfy+s4]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-2*c->c.ptr.p_double[sfxy+s2]/(dt*du)-1*c->c.ptr.p_double[sfxy+s3]/(dt*du)-1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        v = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-3*c->f.ptr.p_double[sfx+s1]/dt-3*c->f.ptr.p_double[sfx+s2]/dt+3*c->f.ptr.p_double[sfx+s3]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-4*c->f.ptr.p_double[sfy+s1]/du+4*c->f.ptr.p_double[sfy+s2]/du+2*c->f.ptr.p_double[sfy+s3]/du-2*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-2*c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t3*u2;
         *fx = *fx+3*v*t2*u2*dt;
         *fy = *fy+2*v*t3*u1*du;
         *fxy = *fxy+6*v*t2*u1*dt*du;
-        v = 4*c->c.ptr.p_double[sf+s1]-4*c->c.ptr.p_double[sf+s2]+4*c->c.ptr.p_double[sf+s3]-4*c->c.ptr.p_double[sf+s4]+2*c->c.ptr.p_double[sfx+s1]/dt+2*c->c.ptr.p_double[sfx+s2]/dt-2*c->c.ptr.p_double[sfx+s3]/dt-2*c->c.ptr.p_double[sfx+s4]/dt+2*c->c.ptr.p_double[sfy+s1]/du-2*c->c.ptr.p_double[sfy+s2]/du-2*c->c.ptr.p_double[sfy+s3]/du+2*c->c.ptr.p_double[sfy+s4]/du+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s2]/(dt*du)+1*c->c.ptr.p_double[sfxy+s3]/(dt*du)+1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
+        v = 4*c->f.ptr.p_double[s1]-4*c->f.ptr.p_double[s2]+4*c->f.ptr.p_double[s3]-4*c->f.ptr.p_double[s4]+2*c->f.ptr.p_double[sfx+s1]/dt+2*c->f.ptr.p_double[sfx+s2]/dt-2*c->f.ptr.p_double[sfx+s3]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfy+s3]/du+2*c->f.ptr.p_double[sfy+s4]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
         *f = *f+v*t3*u3;
         *fx = *fx+3*v*t2*u3*dt;
         *fy = *fy+3*v*t3*u2*du;
         *fxy = *fxy+9*v*t2*u2*dt*du;
         return;
-    }
-}
-
-
-/*************************************************************************
-This subroutine unpacks two-dimensional spline into the coefficients table
-
-Input parameters:
-    C   -   spline interpolant.
-
-Result:
-    M, N-   grid size (x-axis and y-axis)
-    Tbl -   coefficients table, unpacked format,
-            [0..(N-1)*(M-1)-1, 0..19].
-            For I = 0...M-2, J=0..N-2:
-                K =  I*(N-1)+J
-                Tbl[K,0] = X[j]
-                Tbl[K,1] = X[j+1]
-                Tbl[K,2] = Y[i]
-                Tbl[K,3] = Y[i+1]
-                Tbl[K,4] = C00
-                Tbl[K,5] = C01
-                Tbl[K,6] = C02
-                Tbl[K,7] = C03
-                Tbl[K,8] = C10
-                Tbl[K,9] = C11
-                ...
-                Tbl[K,19] = C33
-            On each grid square spline is equals to:
-                S(x) = SUM(c[i,j]*(x^i)*(y^j), i=0..3, j=0..3)
-                t = x-x[j]
-                u = y-y[i]
-
-  -- ALGLIB PROJECT --
-     Copyright 29.06.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dunpack(spline2dinterpolant* c,
-     ae_int_t* m,
-     ae_int_t* n,
-     /* Real    */ ae_matrix* tbl,
-     ae_state *_state)
-{
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t ci;
-    ae_int_t cj;
-    ae_int_t k;
-    ae_int_t p;
-    ae_int_t shift;
-    ae_int_t s1;
-    ae_int_t s2;
-    ae_int_t s3;
-    ae_int_t s4;
-    ae_int_t sf;
-    ae_int_t sfx;
-    ae_int_t sfy;
-    ae_int_t sfxy;
-    double y1;
-    double y2;
-    double y3;
-    double y4;
-    double dt;
-    double du;
-
-    *m = 0;
-    *n = 0;
-    ae_matrix_clear(tbl);
-
-    ae_assert(ae_round(c->c.ptr.p_double[1], _state)==-3||ae_round(c->c.ptr.p_double[1], _state)==-1, "SplineUnpack2D: incorrect C!", _state);
-    *n = ae_round(c->c.ptr.p_double[2], _state);
-    *m = ae_round(c->c.ptr.p_double[3], _state);
-    ae_matrix_set_length(tbl, (*n-1)*(*m-1)-1+1, 19+1, _state);
-    
-    /*
-     * Fill
-     */
-    for(i=0; i<=*m-2; i++)
-    {
-        for(j=0; j<=*n-2; j++)
-        {
-            p = i*(*n-1)+j;
-            tbl->ptr.pp_double[p][0] = c->c.ptr.p_double[4+j];
-            tbl->ptr.pp_double[p][1] = c->c.ptr.p_double[4+j+1];
-            tbl->ptr.pp_double[p][2] = c->c.ptr.p_double[4+(*n)+i];
-            tbl->ptr.pp_double[p][3] = c->c.ptr.p_double[4+(*n)+i+1];
-            dt = 1/(tbl->ptr.pp_double[p][1]-tbl->ptr.pp_double[p][0]);
-            du = 1/(tbl->ptr.pp_double[p][3]-tbl->ptr.pp_double[p][2]);
-            
-            /*
-             * Bilinear interpolation
-             */
-            if( ae_round(c->c.ptr.p_double[1], _state)==-1 )
-            {
-                for(k=4; k<=19; k++)
-                {
-                    tbl->ptr.pp_double[p][k] = 0;
-                }
-                shift = 4+(*n)+(*m);
-                y1 = c->c.ptr.p_double[shift+*n*i+j];
-                y2 = c->c.ptr.p_double[shift+*n*i+(j+1)];
-                y3 = c->c.ptr.p_double[shift+*n*(i+1)+(j+1)];
-                y4 = c->c.ptr.p_double[shift+*n*(i+1)+j];
-                tbl->ptr.pp_double[p][4] = y1;
-                tbl->ptr.pp_double[p][4+1*4+0] = y2-y1;
-                tbl->ptr.pp_double[p][4+0*4+1] = y4-y1;
-                tbl->ptr.pp_double[p][4+1*4+1] = y3-y2-y4+y1;
-            }
-            
-            /*
-             * Bicubic interpolation
-             */
-            if( ae_round(c->c.ptr.p_double[1], _state)==-3 )
-            {
-                sf = 4+(*n)+(*m);
-                sfx = 4+(*n)+(*m)+*n*(*m);
-                sfy = 4+(*n)+(*m)+2*(*n)*(*m);
-                sfxy = 4+(*n)+(*m)+3*(*n)*(*m);
-                s1 = *n*i+j;
-                s2 = *n*i+(j+1);
-                s3 = *n*(i+1)+(j+1);
-                s4 = *n*(i+1)+j;
-                tbl->ptr.pp_double[p][4+0*4+0] = 1*c->c.ptr.p_double[sf+s1];
-                tbl->ptr.pp_double[p][4+0*4+1] = 1*c->c.ptr.p_double[sfy+s1]/du;
-                tbl->ptr.pp_double[p][4+0*4+2] = -3*c->c.ptr.p_double[sf+s1]+3*c->c.ptr.p_double[sf+s4]-2*c->c.ptr.p_double[sfy+s1]/du-1*c->c.ptr.p_double[sfy+s4]/du;
-                tbl->ptr.pp_double[p][4+0*4+3] = 2*c->c.ptr.p_double[sf+s1]-2*c->c.ptr.p_double[sf+s4]+1*c->c.ptr.p_double[sfy+s1]/du+1*c->c.ptr.p_double[sfy+s4]/du;
-                tbl->ptr.pp_double[p][4+1*4+0] = 1*c->c.ptr.p_double[sfx+s1]/dt;
-                tbl->ptr.pp_double[p][4+1*4+1] = 1*c->c.ptr.p_double[sfxy+s1]/(dt*du);
-                tbl->ptr.pp_double[p][4+1*4+2] = -3*c->c.ptr.p_double[sfx+s1]/dt+3*c->c.ptr.p_double[sfx+s4]/dt-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-                tbl->ptr.pp_double[p][4+1*4+3] = 2*c->c.ptr.p_double[sfx+s1]/dt-2*c->c.ptr.p_double[sfx+s4]/dt+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-                tbl->ptr.pp_double[p][4+2*4+0] = -3*c->c.ptr.p_double[sf+s1]+3*c->c.ptr.p_double[sf+s2]-2*c->c.ptr.p_double[sfx+s1]/dt-1*c->c.ptr.p_double[sfx+s2]/dt;
-                tbl->ptr.pp_double[p][4+2*4+1] = -3*c->c.ptr.p_double[sfy+s1]/du+3*c->c.ptr.p_double[sfy+s2]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s2]/(dt*du);
-                tbl->ptr.pp_double[p][4+2*4+2] = 9*c->c.ptr.p_double[sf+s1]-9*c->c.ptr.p_double[sf+s2]+9*c->c.ptr.p_double[sf+s3]-9*c->c.ptr.p_double[sf+s4]+6*c->c.ptr.p_double[sfx+s1]/dt+3*c->c.ptr.p_double[sfx+s2]/dt-3*c->c.ptr.p_double[sfx+s3]/dt-6*c->c.ptr.p_double[sfx+s4]/dt+6*c->c.ptr.p_double[sfy+s1]/du-6*c->c.ptr.p_double[sfy+s2]/du-3*c->c.ptr.p_double[sfy+s3]/du+3*c->c.ptr.p_double[sfy+s4]/du+4*c->c.ptr.p_double[sfxy+s1]/(dt*du)+2*c->c.ptr.p_double[sfxy+s2]/(dt*du)+1*c->c.ptr.p_double[sfxy+s3]/(dt*du)+2*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-                tbl->ptr.pp_double[p][4+2*4+3] = -6*c->c.ptr.p_double[sf+s1]+6*c->c.ptr.p_double[sf+s2]-6*c->c.ptr.p_double[sf+s3]+6*c->c.ptr.p_double[sf+s4]-4*c->c.ptr.p_double[sfx+s1]/dt-2*c->c.ptr.p_double[sfx+s2]/dt+2*c->c.ptr.p_double[sfx+s3]/dt+4*c->c.ptr.p_double[sfx+s4]/dt-3*c->c.ptr.p_double[sfy+s1]/du+3*c->c.ptr.p_double[sfy+s2]/du+3*c->c.ptr.p_double[sfy+s3]/du-3*c->c.ptr.p_double[sfy+s4]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-1*c->c.ptr.p_double[sfxy+s2]/(dt*du)-1*c->c.ptr.p_double[sfxy+s3]/(dt*du)-2*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-                tbl->ptr.pp_double[p][4+3*4+0] = 2*c->c.ptr.p_double[sf+s1]-2*c->c.ptr.p_double[sf+s2]+1*c->c.ptr.p_double[sfx+s1]/dt+1*c->c.ptr.p_double[sfx+s2]/dt;
-                tbl->ptr.pp_double[p][4+3*4+1] = 2*c->c.ptr.p_double[sfy+s1]/du-2*c->c.ptr.p_double[sfy+s2]/du+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s2]/(dt*du);
-                tbl->ptr.pp_double[p][4+3*4+2] = -6*c->c.ptr.p_double[sf+s1]+6*c->c.ptr.p_double[sf+s2]-6*c->c.ptr.p_double[sf+s3]+6*c->c.ptr.p_double[sf+s4]-3*c->c.ptr.p_double[sfx+s1]/dt-3*c->c.ptr.p_double[sfx+s2]/dt+3*c->c.ptr.p_double[sfx+s3]/dt+3*c->c.ptr.p_double[sfx+s4]/dt-4*c->c.ptr.p_double[sfy+s1]/du+4*c->c.ptr.p_double[sfy+s2]/du+2*c->c.ptr.p_double[sfy+s3]/du-2*c->c.ptr.p_double[sfy+s4]/du-2*c->c.ptr.p_double[sfxy+s1]/(dt*du)-2*c->c.ptr.p_double[sfxy+s2]/(dt*du)-1*c->c.ptr.p_double[sfxy+s3]/(dt*du)-1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-                tbl->ptr.pp_double[p][4+3*4+3] = 4*c->c.ptr.p_double[sf+s1]-4*c->c.ptr.p_double[sf+s2]+4*c->c.ptr.p_double[sf+s3]-4*c->c.ptr.p_double[sf+s4]+2*c->c.ptr.p_double[sfx+s1]/dt+2*c->c.ptr.p_double[sfx+s2]/dt-2*c->c.ptr.p_double[sfx+s3]/dt-2*c->c.ptr.p_double[sfx+s4]/dt+2*c->c.ptr.p_double[sfy+s1]/du-2*c->c.ptr.p_double[sfy+s2]/du-2*c->c.ptr.p_double[sfy+s3]/du+2*c->c.ptr.p_double[sfy+s4]/du+1*c->c.ptr.p_double[sfxy+s1]/(dt*du)+1*c->c.ptr.p_double[sfxy+s2]/(dt*du)+1*c->c.ptr.p_double[sfxy+s3]/(dt*du)+1*c->c.ptr.p_double[sfxy+s4]/(dt*du);
-            }
-            
-            /*
-             * Rescale Cij
-             */
-            for(ci=0; ci<=3; ci++)
-            {
-                for(cj=0; cj<=3; cj++)
-                {
-                    tbl->ptr.pp_double[p][4+ci*4+cj] = tbl->ptr.pp_double[p][4+ci*4+cj]*ae_pow(dt, ci, _state)*ae_pow(du, cj, _state);
-                }
-            }
-        }
     }
 }
 
@@ -26413,109 +27937,116 @@ void spline2dlintransxy(spline2dinterpolant* c,
      ae_state *_state)
 {
     ae_frame _frame_block;
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t n;
-    ae_int_t m;
-    double v;
     ae_vector x;
     ae_vector y;
-    ae_matrix f;
-    ae_int_t typec;
+    ae_vector f;
+    ae_vector v;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
 
     ae_frame_make(_state, &_frame_block);
     ae_vector_init(&x, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&y, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&f, 0, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&f, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&v, 0, DT_REAL, _state, ae_true);
 
-    typec = ae_round(c->c.ptr.p_double[1], _state);
-    ae_assert(typec==-3||typec==-1, "Spline2DLinTransXY: incorrect C!", _state);
-    n = ae_round(c->c.ptr.p_double[2], _state);
-    m = ae_round(c->c.ptr.p_double[3], _state);
-    ae_vector_set_length(&x, n-1+1, _state);
-    ae_vector_set_length(&y, m-1+1, _state);
-    ae_matrix_set_length(&f, m-1+1, n-1+1, _state);
-    for(j=0; j<=n-1; j++)
+    ae_assert(c->stype==-3||c->stype==-1, "Spline2DLinTransXY: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(ax, _state), "Spline2DLinTransXY: AX is infinite or NaN", _state);
+    ae_assert(ae_isfinite(bx, _state), "Spline2DLinTransXY: BX is infinite or NaN", _state);
+    ae_assert(ae_isfinite(ay, _state), "Spline2DLinTransXY: AY is infinite or NaN", _state);
+    ae_assert(ae_isfinite(by, _state), "Spline2DLinTransXY: BY is infinite or NaN", _state);
+    ae_vector_set_length(&x, c->n, _state);
+    ae_vector_set_length(&y, c->m, _state);
+    ae_vector_set_length(&f, c->m*c->n*c->d, _state);
+    for(j=0; j<=c->n-1; j++)
     {
-        x.ptr.p_double[j] = c->c.ptr.p_double[4+j];
+        x.ptr.p_double[j] = c->x.ptr.p_double[j];
     }
-    for(i=0; i<=m-1; i++)
+    for(i=0; i<=c->m-1; i++)
     {
-        y.ptr.p_double[i] = c->c.ptr.p_double[4+n+i];
+        y.ptr.p_double[i] = c->y.ptr.p_double[i];
     }
-    for(i=0; i<=m-1; i++)
+    for(i=0; i<=c->m-1; i++)
     {
-        for(j=0; j<=n-1; j++)
+        for(j=0; j<=c->n-1; j++)
         {
-            f.ptr.pp_double[i][j] = c->c.ptr.p_double[4+n+m+i*n+j];
+            for(k=0; k<=c->d-1; k++)
+            {
+                f.ptr.p_double[c->d*(i*c->n+j)+k] = c->f.ptr.p_double[c->d*(i*c->n+j)+k];
+            }
         }
     }
     
     /*
-     * Special case: AX=0 or AY=0
+     * Handle different combinations of AX/AY
      */
-    if( ae_fp_eq(ax,0) )
+    if( ae_fp_eq(ax,0)&&ae_fp_neq(ay,0) )
     {
-        for(i=0; i<=m-1; i++)
+        for(i=0; i<=c->m-1; i++)
         {
-            v = spline2dcalc(c, bx, y.ptr.p_double[i], _state);
-            for(j=0; j<=n-1; j++)
+            spline2dcalcvbuf(c, bx, y.ptr.p_double[i], &v, _state);
+            y.ptr.p_double[i] = (y.ptr.p_double[i]-by)/ay;
+            for(j=0; j<=c->n-1; j++)
             {
-                f.ptr.pp_double[i][j] = v;
+                for(k=0; k<=c->d-1; k++)
+                {
+                    f.ptr.p_double[c->d*(i*c->n+j)+k] = v.ptr.p_double[k];
+                }
             }
         }
-        if( typec==-3 )
-        {
-            spline2dbuildbicubic(&x, &y, &f, m, n, c, _state);
-        }
-        if( typec==-1 )
-        {
-            spline2dbuildbilinear(&x, &y, &f, m, n, c, _state);
-        }
-        ax = 1;
-        bx = 0;
     }
-    if( ae_fp_eq(ay,0) )
+    if( ae_fp_neq(ax,0)&&ae_fp_eq(ay,0) )
     {
-        for(j=0; j<=n-1; j++)
+        for(j=0; j<=c->n-1; j++)
         {
-            v = spline2dcalc(c, x.ptr.p_double[j], by, _state);
-            for(i=0; i<=m-1; i++)
+            spline2dcalcvbuf(c, x.ptr.p_double[j], by, &v, _state);
+            x.ptr.p_double[j] = (x.ptr.p_double[j]-bx)/ax;
+            for(i=0; i<=c->m-1; i++)
             {
-                f.ptr.pp_double[i][j] = v;
+                for(k=0; k<=c->d-1; k++)
+                {
+                    f.ptr.p_double[c->d*(i*c->n+j)+k] = v.ptr.p_double[k];
+                }
             }
         }
-        if( typec==-3 )
+    }
+    if( ae_fp_neq(ax,0)&&ae_fp_neq(ay,0) )
+    {
+        for(j=0; j<=c->n-1; j++)
         {
-            spline2dbuildbicubic(&x, &y, &f, m, n, c, _state);
+            x.ptr.p_double[j] = (x.ptr.p_double[j]-bx)/ax;
         }
-        if( typec==-1 )
+        for(i=0; i<=c->m-1; i++)
         {
-            spline2dbuildbilinear(&x, &y, &f, m, n, c, _state);
+            y.ptr.p_double[i] = (y.ptr.p_double[i]-by)/ay;
         }
-        ay = 1;
-        by = 0;
+    }
+    if( ae_fp_eq(ax,0)&&ae_fp_eq(ay,0) )
+    {
+        spline2dcalcvbuf(c, bx, by, &v, _state);
+        for(i=0; i<=c->m-1; i++)
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                for(k=0; k<=c->d-1; k++)
+                {
+                    f.ptr.p_double[c->d*(i*c->n+j)+k] = v.ptr.p_double[k];
+                }
+            }
+        }
     }
     
     /*
-     * General case: AX<>0, AY<>0
-     * Unpack, scale and pack again.
+     * Rebuild spline
      */
-    for(j=0; j<=n-1; j++)
+    if( c->stype==-3 )
     {
-        x.ptr.p_double[j] = (x.ptr.p_double[j]-bx)/ax;
+        spline2dbuildbicubicv(&x, c->n, &y, c->m, &f, c->d, c, _state);
     }
-    for(i=0; i<=m-1; i++)
+    if( c->stype==-1 )
     {
-        y.ptr.p_double[i] = (y.ptr.p_double[i]-by)/ay;
-    }
-    if( typec==-3 )
-    {
-        spline2dbuildbicubic(&x, &y, &f, m, n, c, _state);
-    }
-    if( typec==-1 )
-    {
-        spline2dbuildbilinear(&x, &y, &f, m, n, c, _state);
+        spline2dbuildbilinearv(&x, c->n, &y, c->m, &f, c->d, c, _state);
     }
     ae_frame_leave(_state);
 }
@@ -26540,49 +28071,40 @@ void spline2dlintransf(spline2dinterpolant* c,
      ae_state *_state)
 {
     ae_frame _frame_block;
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t n;
-    ae_int_t m;
     ae_vector x;
     ae_vector y;
-    ae_matrix f;
-    ae_int_t typec;
+    ae_vector f;
+    ae_int_t i;
+    ae_int_t j;
 
     ae_frame_make(_state, &_frame_block);
     ae_vector_init(&x, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&y, 0, DT_REAL, _state, ae_true);
-    ae_matrix_init(&f, 0, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&f, 0, DT_REAL, _state, ae_true);
 
-    typec = ae_round(c->c.ptr.p_double[1], _state);
-    ae_assert(typec==-3||typec==-1, "Spline2DLinTransXY: incorrect C!", _state);
-    n = ae_round(c->c.ptr.p_double[2], _state);
-    m = ae_round(c->c.ptr.p_double[3], _state);
-    ae_vector_set_length(&x, n-1+1, _state);
-    ae_vector_set_length(&y, m-1+1, _state);
-    ae_matrix_set_length(&f, m-1+1, n-1+1, _state);
-    for(j=0; j<=n-1; j++)
+    ae_assert(c->stype==-3||c->stype==-1, "Spline2DLinTransF: incorrect C (incorrect parameter C.SType)", _state);
+    ae_vector_set_length(&x, c->n, _state);
+    ae_vector_set_length(&y, c->m, _state);
+    ae_vector_set_length(&f, c->m*c->n*c->d, _state);
+    for(j=0; j<=c->n-1; j++)
     {
-        x.ptr.p_double[j] = c->c.ptr.p_double[4+j];
+        x.ptr.p_double[j] = c->x.ptr.p_double[j];
     }
-    for(i=0; i<=m-1; i++)
+    for(i=0; i<=c->m-1; i++)
     {
-        y.ptr.p_double[i] = c->c.ptr.p_double[4+n+i];
+        y.ptr.p_double[i] = c->y.ptr.p_double[i];
     }
-    for(i=0; i<=m-1; i++)
+    for(i=0; i<=c->m*c->n*c->d-1; i++)
     {
-        for(j=0; j<=n-1; j++)
-        {
-            f.ptr.pp_double[i][j] = a*c->c.ptr.p_double[4+n+m+i*n+j]+b;
-        }
+        f.ptr.p_double[i] = a*c->f.ptr.p_double[i]+b;
     }
-    if( typec==-3 )
+    if( c->stype==-3 )
     {
-        spline2dbuildbicubic(&x, &y, &f, m, n, c, _state);
+        spline2dbuildbicubicv(&x, c->n, &y, c->m, &f, c->d, c, _state);
     }
-    if( typec==-1 )
+    if( c->stype==-1 )
     {
-        spline2dbuildbilinear(&x, &y, &f, m, n, c, _state);
+        spline2dbuildbilinearv(&x, c->n, &y, c->m, &f, c->d, c, _state);
     }
     ae_frame_leave(_state);
 }
@@ -26604,15 +28126,32 @@ void spline2dcopy(spline2dinterpolant* c,
      spline2dinterpolant* cc,
      ae_state *_state)
 {
-    ae_int_t n;
+    ae_int_t tblsize;
 
     _spline2dinterpolant_clear(cc);
 
-    ae_assert(c->k==1||c->k==3, "Spline2DCopy: incorrect C!", _state);
+    ae_assert(c->k==1||c->k==3, "Spline2DCopy: incorrect C (incorrect parameter C.K)", _state);
     cc->k = c->k;
-    n = ae_round(c->c.ptr.p_double[0], _state);
-    ae_vector_set_length(&cc->c, n, _state);
-    ae_v_move(&cc->c.ptr.p_double[0], 1, &c->c.ptr.p_double[0], 1, ae_v_len(0,n-1));
+    cc->n = c->n;
+    cc->m = c->m;
+    cc->d = c->d;
+    cc->stype = c->stype;
+    tblsize = -1;
+    if( c->stype==-3 )
+    {
+        tblsize = 4*c->n*c->m*c->d;
+    }
+    if( c->stype==-1 )
+    {
+        tblsize = c->n*c->m*c->d;
+    }
+    ae_assert(tblsize>0, "Spline2DCopy: internal error", _state);
+    ae_vector_set_length(&cc->x, cc->n, _state);
+    ae_vector_set_length(&cc->y, cc->m, _state);
+    ae_vector_set_length(&cc->f, tblsize, _state);
+    ae_v_move(&cc->x.ptr.p_double[0], 1, &c->x.ptr.p_double[0], 1, ae_v_len(0,cc->n-1));
+    ae_v_move(&cc->y.ptr.p_double[0], 1, &c->y.ptr.p_double[0], 1, ae_v_len(0,cc->m-1));
+    ae_v_move(&cc->f.ptr.p_double[0], 1, &c->f.ptr.p_double[0], 1, ae_v_len(0,tblsize-1));
 }
 
 
@@ -26648,10 +28187,10 @@ void spline2dresamplebicubic(/* Real    */ ae_matrix* a,
     ae_vector x;
     ae_vector y;
     spline1dinterpolant c;
-    ae_int_t i;
-    ae_int_t j;
     ae_int_t mw;
     ae_int_t mh;
+    ae_int_t i;
+    ae_int_t j;
 
     ae_frame_make(_state, &_frame_block);
     ae_matrix_clear(b);
@@ -26668,10 +28207,10 @@ void spline2dresamplebicubic(/* Real    */ ae_matrix* a,
      */
     mw = ae_maxint(oldwidth, newwidth, _state);
     mh = ae_maxint(oldheight, newheight, _state);
-    ae_matrix_set_length(b, newheight-1+1, newwidth-1+1, _state);
-    ae_matrix_set_length(&buf, oldheight-1+1, newwidth-1+1, _state);
-    ae_vector_set_length(&x, ae_maxint(mw, mh, _state)-1+1, _state);
-    ae_vector_set_length(&y, ae_maxint(mw, mh, _state)-1+1, _state);
+    ae_matrix_set_length(b, newheight, newwidth, _state);
+    ae_matrix_set_length(&buf, oldheight, newwidth, _state);
+    ae_vector_set_length(&x, ae_maxint(mw, mh, _state), _state);
+    ae_vector_set_length(&y, ae_maxint(mw, mh, _state), _state);
     
     /*
      * Horizontal interpolation
@@ -26753,16 +28292,18 @@ void spline2dresamplebilinear(/* Real    */ ae_matrix* a,
      ae_int_t newwidth,
      ae_state *_state)
 {
-    ae_int_t i;
-    ae_int_t j;
     ae_int_t l;
     ae_int_t c;
     double t;
     double u;
+    ae_int_t i;
+    ae_int_t j;
 
     ae_matrix_clear(b);
 
-    ae_matrix_set_length(b, newheight-1+1, newwidth-1+1, _state);
+    ae_assert(oldwidth>1&&oldheight>1, "Spline2DResampleBilinear: width/height less than 1", _state);
+    ae_assert(newwidth>1&&newheight>1, "Spline2DResampleBilinear: width/height less than 1", _state);
+    ae_matrix_set_length(b, newheight, newwidth, _state);
     for(i=0; i<=newheight-1; i++)
     {
         for(j=0; j<=newwidth-1; j++)
@@ -26780,6 +28321,1063 @@ void spline2dresamplebilinear(/* Real    */ ae_matrix* a,
             }
             t = (double)(j*(oldwidth-1))/(double)(newwidth-1)-c;
             b->ptr.pp_double[i][j] = (1-t)*(1-u)*a->ptr.pp_double[l][c]+t*(1-u)*a->ptr.pp_double[l][c+1]+t*u*a->ptr.pp_double[l+1][c+1]+(1-t)*u*a->ptr.pp_double[l+1][c];
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine builds bilinear vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinearv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline2dinterpolant* c,
+     ae_state *_state)
+{
+    double t;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+    ae_int_t i0;
+
+    _spline2dinterpolant_clear(c);
+
+    ae_assert(n>=2, "Spline2DBuildBilinearV: N is less then 2", _state);
+    ae_assert(m>=2, "Spline2DBuildBilinearV: M is less then 2", _state);
+    ae_assert(d>=1, "Spline2DBuildBilinearV: invalid argument D (D<1)", _state);
+    ae_assert(x->cnt>=n&&y->cnt>=m, "Spline2DBuildBilinearV: length of X or Y is too short (Length(X/Y)<N/M)", _state);
+    ae_assert(isfinitevector(x, n, _state)&&isfinitevector(y, m, _state), "Spline2DBuildBilinearV: X or Y contains NaN or Infinite value", _state);
+    k = n*m*d;
+    ae_assert(f->cnt>=k, "Spline2DBuildBilinearV: length of F is too short (Length(F)<N*M*D)", _state);
+    ae_assert(isfinitevector(f, k, _state), "Spline2DBuildBilinearV: F contains NaN or Infinite value", _state);
+    
+    /*
+     * Fill interpolant
+     */
+    c->k = 1;
+    c->n = n;
+    c->m = m;
+    c->d = d;
+    c->stype = -1;
+    ae_vector_set_length(&c->x, c->n, _state);
+    ae_vector_set_length(&c->y, c->m, _state);
+    ae_vector_set_length(&c->f, k, _state);
+    for(i=0; i<=c->n-1; i++)
+    {
+        c->x.ptr.p_double[i] = x->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        c->y.ptr.p_double[i] = y->ptr.p_double[i];
+    }
+    for(i=0; i<=k-1; i++)
+    {
+        c->f.ptr.p_double[i] = f->ptr.p_double[i];
+    }
+    
+    /*
+     * Sort points
+     */
+    for(j=0; j<=c->n-1; j++)
+    {
+        k = j;
+        for(i=j+1; i<=c->n-1; i++)
+        {
+            if( ae_fp_less(c->x.ptr.p_double[i],c->x.ptr.p_double[k]) )
+            {
+                k = i;
+            }
+        }
+        if( k!=j )
+        {
+            for(i=0; i<=c->m-1; i++)
+            {
+                for(i0=0; i0<=c->d-1; i0++)
+                {
+                    t = c->f.ptr.p_double[c->d*(i*c->n+j)+i0];
+                    c->f.ptr.p_double[c->d*(i*c->n+j)+i0] = c->f.ptr.p_double[c->d*(i*c->n+k)+i0];
+                    c->f.ptr.p_double[c->d*(i*c->n+k)+i0] = t;
+                }
+            }
+            t = c->x.ptr.p_double[j];
+            c->x.ptr.p_double[j] = c->x.ptr.p_double[k];
+            c->x.ptr.p_double[k] = t;
+        }
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        k = i;
+        for(j=i+1; j<=c->m-1; j++)
+        {
+            if( ae_fp_less(c->y.ptr.p_double[j],c->y.ptr.p_double[k]) )
+            {
+                k = j;
+            }
+        }
+        if( k!=i )
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                for(i0=0; i0<=c->d-1; i0++)
+                {
+                    t = c->f.ptr.p_double[c->d*(i*c->n+j)+i0];
+                    c->f.ptr.p_double[c->d*(i*c->n+j)+i0] = c->f.ptr.p_double[c->d*(k*c->n+j)+i0];
+                    c->f.ptr.p_double[c->d*(k*c->n+j)+i0] = t;
+                }
+            }
+            t = c->y.ptr.p_double[i];
+            c->y.ptr.p_double[i] = c->y.ptr.p_double[k];
+            c->y.ptr.p_double[k] = t;
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine builds bicubic vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubicv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline2dinterpolant* c,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_vector _f;
+    ae_matrix tf;
+    ae_matrix dx;
+    ae_matrix dy;
+    ae_matrix dxy;
+    double t;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+    ae_int_t di;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_vector_init_copy(&_f, f, _state, ae_true);
+    f = &_f;
+    _spline2dinterpolant_clear(c);
+    ae_matrix_init(&tf, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&dx, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&dy, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&dxy, 0, 0, DT_REAL, _state, ae_true);
+
+    ae_assert(n>=2, "Spline2DBuildBicubicV: N is less than 2", _state);
+    ae_assert(m>=2, "Spline2DBuildBicubicV: M is less than 2", _state);
+    ae_assert(d>=1, "Spline2DBuildBicubicV: invalid argument D (D<1)", _state);
+    ae_assert(x->cnt>=n&&y->cnt>=m, "Spline2DBuildBicubicV: length of X or Y is too short (Length(X/Y)<N/M)", _state);
+    ae_assert(isfinitevector(x, n, _state)&&isfinitevector(y, m, _state), "Spline2DBuildBicubicV: X or Y contains NaN or Infinite value", _state);
+    k = n*m*d;
+    ae_assert(f->cnt>=k, "Spline2DBuildBicubicV: length of F is too short (Length(F)<N*M*D)", _state);
+    ae_assert(isfinitevector(f, k, _state), "Spline2DBuildBicubicV: F contains NaN or Infinite value", _state);
+    
+    /*
+     * Fill interpolant:
+     *  F[0]...F[N*M*D-1]:
+     *      f(i,j) table. f(0,0), f(0, 1), f(0,2) and so on...
+     *  F[N*M*D]...F[2*N*M*D-1]:
+     *      df(i,j)/dx table.
+     *  F[2*N*M*D]...F[3*N*M*D-1]:
+     *      df(i,j)/dy table.
+     *  F[3*N*M*D]...F[4*N*M*D-1]:
+     *      d2f(i,j)/dxdy table.
+     */
+    c->k = 3;
+    c->d = d;
+    c->n = n;
+    c->m = m;
+    c->stype = -3;
+    k = 4*k;
+    ae_vector_set_length(&c->x, c->n, _state);
+    ae_vector_set_length(&c->y, c->m, _state);
+    ae_vector_set_length(&c->f, k, _state);
+    ae_matrix_set_length(&tf, c->m, c->n, _state);
+    for(i=0; i<=c->n-1; i++)
+    {
+        c->x.ptr.p_double[i] = x->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        c->y.ptr.p_double[i] = y->ptr.p_double[i];
+    }
+    
+    /*
+     * Sort points
+     */
+    for(j=0; j<=c->n-1; j++)
+    {
+        k = j;
+        for(i=j+1; i<=c->n-1; i++)
+        {
+            if( ae_fp_less(c->x.ptr.p_double[i],c->x.ptr.p_double[k]) )
+            {
+                k = i;
+            }
+        }
+        if( k!=j )
+        {
+            for(i=0; i<=c->m-1; i++)
+            {
+                for(di=0; di<=c->d-1; di++)
+                {
+                    t = f->ptr.p_double[c->d*(i*c->n+j)+di];
+                    f->ptr.p_double[c->d*(i*c->n+j)+di] = f->ptr.p_double[c->d*(i*c->n+k)+di];
+                    f->ptr.p_double[c->d*(i*c->n+k)+di] = t;
+                }
+            }
+            t = c->x.ptr.p_double[j];
+            c->x.ptr.p_double[j] = c->x.ptr.p_double[k];
+            c->x.ptr.p_double[k] = t;
+        }
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        k = i;
+        for(j=i+1; j<=c->m-1; j++)
+        {
+            if( ae_fp_less(c->y.ptr.p_double[j],c->y.ptr.p_double[k]) )
+            {
+                k = j;
+            }
+        }
+        if( k!=i )
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                for(di=0; di<=c->d-1; di++)
+                {
+                    t = f->ptr.p_double[c->d*(i*c->n+j)+di];
+                    f->ptr.p_double[c->d*(i*c->n+j)+di] = f->ptr.p_double[c->d*(k*c->n+j)+di];
+                    f->ptr.p_double[c->d*(k*c->n+j)+di] = t;
+                }
+            }
+            t = c->y.ptr.p_double[i];
+            c->y.ptr.p_double[i] = c->y.ptr.p_double[k];
+            c->y.ptr.p_double[k] = t;
+        }
+    }
+    for(di=0; di<=c->d-1; di++)
+    {
+        for(i=0; i<=c->m-1; i++)
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                tf.ptr.pp_double[i][j] = f->ptr.p_double[c->d*(i*c->n+j)+di];
+            }
+        }
+        spline2d_bicubiccalcderivatives(&tf, &c->x, &c->y, c->m, c->n, &dx, &dy, &dxy, _state);
+        for(i=0; i<=c->m-1; i++)
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                k = c->d*(i*c->n+j)+di;
+                c->f.ptr.p_double[k] = tf.ptr.pp_double[i][j];
+                c->f.ptr.p_double[c->n*c->m*c->d+k] = dx.ptr.pp_double[i][j];
+                c->f.ptr.p_double[2*c->n*c->m*c->d+k] = dy.ptr.pp_double[i][j];
+                c->f.ptr.p_double[3*c->n*c->m*c->d+k] = dxy.ptr.pp_double[i][j];
+            }
+        }
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcvbuf(spline2dinterpolant* c,
+     double x,
+     double y,
+     /* Real    */ ae_vector* f,
+     ae_state *_state)
+{
+    double t;
+    double dt;
+    double u;
+    double du;
+    ae_int_t ix;
+    ae_int_t iy;
+    ae_int_t l;
+    ae_int_t r;
+    ae_int_t h;
+    ae_int_t s1;
+    ae_int_t s2;
+    ae_int_t s3;
+    ae_int_t s4;
+    ae_int_t sfx;
+    ae_int_t sfy;
+    ae_int_t sfxy;
+    double y1;
+    double y2;
+    double y3;
+    double y4;
+    double v;
+    double t0;
+    double t1;
+    double t2;
+    double t3;
+    double u0;
+    double u1;
+    double u2;
+    double u3;
+    ae_int_t i;
+
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline2DCalcVBuf: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(x, _state)&&ae_isfinite(y, _state), "Spline2DCalcVBuf: either X=NaN/Infinite or Y=NaN/Infinite", _state);
+    rvectorsetlengthatleast(f, c->d, _state);
+    
+    /*
+     * Binary search in the [ x[0], ..., x[n-2] ] (x[n-1] is not included)
+     */
+    l = 0;
+    r = c->n-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->x.ptr.p_double[h],x) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    t = (x-c->x.ptr.p_double[l])/(c->x.ptr.p_double[l+1]-c->x.ptr.p_double[l]);
+    dt = 1.0/(c->x.ptr.p_double[l+1]-c->x.ptr.p_double[l]);
+    ix = l;
+    
+    /*
+     * Binary search in the [ y[0], ..., y[m-2] ] (y[m-1] is not included)
+     */
+    l = 0;
+    r = c->m-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->y.ptr.p_double[h],y) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    u = (y-c->y.ptr.p_double[l])/(c->y.ptr.p_double[l+1]-c->y.ptr.p_double[l]);
+    du = 1.0/(c->y.ptr.p_double[l+1]-c->y.ptr.p_double[l]);
+    iy = l;
+    
+    /*
+     * Bilinear interpolation
+     */
+    if( c->stype==-1 )
+    {
+        for(i=0; i<=c->d-1; i++)
+        {
+            y1 = c->f.ptr.p_double[c->d*(c->n*iy+ix)+i];
+            y2 = c->f.ptr.p_double[c->d*(c->n*iy+(ix+1))+i];
+            y3 = c->f.ptr.p_double[c->d*(c->n*(iy+1)+(ix+1))+i];
+            y4 = c->f.ptr.p_double[c->d*(c->n*(iy+1)+ix)+i];
+            f->ptr.p_double[i] = (1-t)*(1-u)*y1+t*(1-u)*y2+t*u*y3+(1-t)*u*y4;
+        }
+        return;
+    }
+    
+    /*
+     * Bicubic interpolation
+     */
+    if( c->stype==-3 )
+    {
+        
+        /*
+         * Prepare info
+         */
+        t0 = 1;
+        t1 = t;
+        t2 = ae_sqr(t, _state);
+        t3 = t*t2;
+        u0 = 1;
+        u1 = u;
+        u2 = ae_sqr(u, _state);
+        u3 = u*u2;
+        sfx = c->n*c->m*c->d;
+        sfy = 2*c->n*c->m*c->d;
+        sfxy = 3*c->n*c->m*c->d;
+        for(i=0; i<=c->d-1; i++)
+        {
+            
+            /*
+             * Prepare F, dF/dX, dF/dY, d2F/dXdY
+             */
+            f->ptr.p_double[i] = 0;
+            s1 = c->d*(c->n*iy+ix)+i;
+            s2 = c->d*(c->n*iy+(ix+1))+i;
+            s3 = c->d*(c->n*(iy+1)+(ix+1))+i;
+            s4 = c->d*(c->n*(iy+1)+ix)+i;
+            
+            /*
+             * Calculate
+             */
+            v = c->f.ptr.p_double[s1];
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t0*u0;
+            v = c->f.ptr.p_double[sfy+s1]/du;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t0*u1;
+            v = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s4]-2*c->f.ptr.p_double[sfy+s1]/du-c->f.ptr.p_double[sfy+s4]/du;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t0*u2;
+            v = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s4]+c->f.ptr.p_double[sfy+s1]/du+c->f.ptr.p_double[sfy+s4]/du;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t0*u3;
+            v = c->f.ptr.p_double[sfx+s1]/dt;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t1*u0;
+            v = c->f.ptr.p_double[sfxy+s1]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t1*u1;
+            v = -3*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t1*u2;
+            v = 2*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t1*u3;
+            v = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s2]-2*c->f.ptr.p_double[sfx+s1]/dt-c->f.ptr.p_double[sfx+s2]/dt;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t2*u0;
+            v = -3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t2*u1;
+            v = 9*c->f.ptr.p_double[s1]-9*c->f.ptr.p_double[s2]+9*c->f.ptr.p_double[s3]-9*c->f.ptr.p_double[s4]+6*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s2]/dt-3*c->f.ptr.p_double[sfx+s3]/dt-6*c->f.ptr.p_double[sfx+s4]/dt+6*c->f.ptr.p_double[sfy+s1]/du-6*c->f.ptr.p_double[sfy+s2]/du-3*c->f.ptr.p_double[sfy+s3]/du+3*c->f.ptr.p_double[sfy+s4]/du+4*c->f.ptr.p_double[sfxy+s1]/(dt*du)+2*c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t2*u2;
+            v = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-4*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s2]/dt+2*c->f.ptr.p_double[sfx+s3]/dt+4*c->f.ptr.p_double[sfx+s4]/dt-3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du+3*c->f.ptr.p_double[sfy+s3]/du-3*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t2*u3;
+            v = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s2]+c->f.ptr.p_double[sfx+s1]/dt+c->f.ptr.p_double[sfx+s2]/dt;
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t3*u0;
+            v = 2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t3*u1;
+            v = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-3*c->f.ptr.p_double[sfx+s1]/dt-3*c->f.ptr.p_double[sfx+s2]/dt+3*c->f.ptr.p_double[sfx+s3]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-4*c->f.ptr.p_double[sfy+s1]/du+4*c->f.ptr.p_double[sfy+s2]/du+2*c->f.ptr.p_double[sfy+s3]/du-2*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-2*c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t3*u2;
+            v = 4*c->f.ptr.p_double[s1]-4*c->f.ptr.p_double[s2]+4*c->f.ptr.p_double[s3]-4*c->f.ptr.p_double[s4]+2*c->f.ptr.p_double[sfx+s1]/dt+2*c->f.ptr.p_double[sfx+s2]/dt-2*c->f.ptr.p_double[sfx+s3]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfy+s3]/du+2*c->f.ptr.p_double[sfy+s4]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            f->ptr.p_double[i] = f->ptr.p_double[i]+v*t3*u3;
+        }
+        return;
+    }
+}
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcv(spline2dinterpolant* c,
+     double x,
+     double y,
+     /* Real    */ ae_vector* f,
+     ae_state *_state)
+{
+
+    ae_vector_clear(f);
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline2DCalcV: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(x, _state)&&ae_isfinite(y, _state), "Spline2DCalcV: either X=NaN/Infinite or Y=NaN/Infinite", _state);
+    ae_vector_set_length(f, c->d, _state);
+    spline2dcalcvbuf(c, x, y, f, _state);
+}
+
+
+/*************************************************************************
+This subroutine unpacks two-dimensional spline into the coefficients table
+
+Input parameters:
+    C   -   spline interpolant.
+
+Result:
+    M, N-   grid size (x-axis and y-axis)
+    D   -   number of components
+    Tbl -   coefficients table, unpacked format,
+            D - components: [0..(N-1)*(M-1)*D-1, 0..19].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index):
+                K :=  T + I*D + J*D*(N-1)
+                
+                K-th row stores decomposition for T-th component of the
+                vector-valued function
+                
+                Tbl[K,0] = X[i]
+                Tbl[K,1] = X[i+1]
+                Tbl[K,2] = Y[j]
+                Tbl[K,3] = Y[j+1]
+                Tbl[K,4] = C00
+                Tbl[K,5] = C01
+                Tbl[K,6] = C02
+                Tbl[K,7] = C03
+                Tbl[K,8] = C10
+                Tbl[K,9] = C11
+                ...
+                Tbl[K,19] = C33
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j]*(t^i)*(u^j), i=0..3, j=0..3)
+                t = x-x[j]
+                u = y-y[i]
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpackv(spline2dinterpolant* c,
+     ae_int_t* m,
+     ae_int_t* n,
+     ae_int_t* d,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state)
+{
+    ae_int_t k;
+    ae_int_t p;
+    ae_int_t ci;
+    ae_int_t cj;
+    ae_int_t s1;
+    ae_int_t s2;
+    ae_int_t s3;
+    ae_int_t s4;
+    ae_int_t sfx;
+    ae_int_t sfy;
+    ae_int_t sfxy;
+    double y1;
+    double y2;
+    double y3;
+    double y4;
+    double dt;
+    double du;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k0;
+
+    *m = 0;
+    *n = 0;
+    *d = 0;
+    ae_matrix_clear(tbl);
+
+    ae_assert(c->stype==-3||c->stype==-1, "Spline2DUnpackV: incorrect C (incorrect parameter C.SType)", _state);
+    *n = c->n;
+    *m = c->m;
+    *d = c->d;
+    ae_matrix_set_length(tbl, (*n-1)*(*m-1)*(*d), 20, _state);
+    sfx = *n*(*m)*(*d);
+    sfy = 2*(*n)*(*m)*(*d);
+    sfxy = 3*(*n)*(*m)*(*d);
+    for(i=0; i<=*m-2; i++)
+    {
+        for(j=0; j<=*n-2; j++)
+        {
+            for(k=0; k<=*d-1; k++)
+            {
+                p = *d*(i*(*n-1)+j)+k;
+                tbl->ptr.pp_double[p][0] = c->x.ptr.p_double[j];
+                tbl->ptr.pp_double[p][1] = c->x.ptr.p_double[j+1];
+                tbl->ptr.pp_double[p][2] = c->y.ptr.p_double[i];
+                tbl->ptr.pp_double[p][3] = c->y.ptr.p_double[i+1];
+                dt = 1/(tbl->ptr.pp_double[p][1]-tbl->ptr.pp_double[p][0]);
+                du = 1/(tbl->ptr.pp_double[p][3]-tbl->ptr.pp_double[p][2]);
+                
+                /*
+                 * Bilinear interpolation
+                 */
+                if( c->stype==-1 )
+                {
+                    for(k0=4; k0<=19; k0++)
+                    {
+                        tbl->ptr.pp_double[p][k0] = 0;
+                    }
+                    y1 = c->f.ptr.p_double[*d*(*n*i+j)+k];
+                    y2 = c->f.ptr.p_double[*d*(*n*i+(j+1))+k];
+                    y3 = c->f.ptr.p_double[*d*(*n*(i+1)+(j+1))+k];
+                    y4 = c->f.ptr.p_double[*d*(*n*(i+1)+j)+k];
+                    tbl->ptr.pp_double[p][4] = y1;
+                    tbl->ptr.pp_double[p][4+1*4+0] = y2-y1;
+                    tbl->ptr.pp_double[p][4+0*4+1] = y4-y1;
+                    tbl->ptr.pp_double[p][4+1*4+1] = y3-y2-y4+y1;
+                }
+                
+                /*
+                 * Bicubic interpolation
+                 */
+                if( c->stype==-3 )
+                {
+                    s1 = *d*(*n*i+j)+k;
+                    s2 = *d*(*n*i+(j+1))+k;
+                    s3 = *d*(*n*(i+1)+(j+1))+k;
+                    s4 = *d*(*n*(i+1)+j)+k;
+                    tbl->ptr.pp_double[p][4+0*4+0] = c->f.ptr.p_double[s1];
+                    tbl->ptr.pp_double[p][4+0*4+1] = c->f.ptr.p_double[sfy+s1]/du;
+                    tbl->ptr.pp_double[p][4+0*4+2] = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s4]-2*c->f.ptr.p_double[sfy+s1]/du-c->f.ptr.p_double[sfy+s4]/du;
+                    tbl->ptr.pp_double[p][4+0*4+3] = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s4]+c->f.ptr.p_double[sfy+s1]/du+c->f.ptr.p_double[sfy+s4]/du;
+                    tbl->ptr.pp_double[p][4+1*4+0] = c->f.ptr.p_double[sfx+s1]/dt;
+                    tbl->ptr.pp_double[p][4+1*4+1] = c->f.ptr.p_double[sfxy+s1]/(dt*du);
+                    tbl->ptr.pp_double[p][4+1*4+2] = -3*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                    tbl->ptr.pp_double[p][4+1*4+3] = 2*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                    tbl->ptr.pp_double[p][4+2*4+0] = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s2]-2*c->f.ptr.p_double[sfx+s1]/dt-c->f.ptr.p_double[sfx+s2]/dt;
+                    tbl->ptr.pp_double[p][4+2*4+1] = -3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du);
+                    tbl->ptr.pp_double[p][4+2*4+2] = 9*c->f.ptr.p_double[s1]-9*c->f.ptr.p_double[s2]+9*c->f.ptr.p_double[s3]-9*c->f.ptr.p_double[s4]+6*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s2]/dt-3*c->f.ptr.p_double[sfx+s3]/dt-6*c->f.ptr.p_double[sfx+s4]/dt+6*c->f.ptr.p_double[sfy+s1]/du-6*c->f.ptr.p_double[sfy+s2]/du-3*c->f.ptr.p_double[sfy+s3]/du+3*c->f.ptr.p_double[sfy+s4]/du+4*c->f.ptr.p_double[sfxy+s1]/(dt*du)+2*c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                    tbl->ptr.pp_double[p][4+2*4+3] = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-4*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s2]/dt+2*c->f.ptr.p_double[sfx+s3]/dt+4*c->f.ptr.p_double[sfx+s4]/dt-3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du+3*c->f.ptr.p_double[sfy+s3]/du-3*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                    tbl->ptr.pp_double[p][4+3*4+0] = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s2]+c->f.ptr.p_double[sfx+s1]/dt+c->f.ptr.p_double[sfx+s2]/dt;
+                    tbl->ptr.pp_double[p][4+3*4+1] = 2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du);
+                    tbl->ptr.pp_double[p][4+3*4+2] = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-3*c->f.ptr.p_double[sfx+s1]/dt-3*c->f.ptr.p_double[sfx+s2]/dt+3*c->f.ptr.p_double[sfx+s3]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-4*c->f.ptr.p_double[sfy+s1]/du+4*c->f.ptr.p_double[sfy+s2]/du+2*c->f.ptr.p_double[sfy+s3]/du-2*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-2*c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                    tbl->ptr.pp_double[p][4+3*4+3] = 4*c->f.ptr.p_double[s1]-4*c->f.ptr.p_double[s2]+4*c->f.ptr.p_double[s3]-4*c->f.ptr.p_double[s4]+2*c->f.ptr.p_double[sfx+s1]/dt+2*c->f.ptr.p_double[sfx+s2]/dt-2*c->f.ptr.p_double[sfx+s3]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfy+s3]/du+2*c->f.ptr.p_double[sfy+s4]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                }
+                
+                /*
+                 * Rescale Cij
+                 */
+                for(ci=0; ci<=3; ci++)
+                {
+                    for(cj=0; cj<=3; cj++)
+                    {
+                        tbl->ptr.pp_double[p][4+ci*4+cj] = tbl->ptr.pp_double[p][4+ci*4+cj]*ae_pow(dt, ci, _state)*ae_pow(du, cj, _state);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBilinearV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinear(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* f,
+     ae_int_t m,
+     ae_int_t n,
+     spline2dinterpolant* c,
+     ae_state *_state)
+{
+    double t;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+
+    _spline2dinterpolant_clear(c);
+
+    ae_assert(n>=2, "Spline2DBuildBilinear: N<2", _state);
+    ae_assert(m>=2, "Spline2DBuildBilinear: M<2", _state);
+    ae_assert(x->cnt>=n&&y->cnt>=m, "Spline2DBuildBilinear: length of X or Y is too short (Length(X/Y)<N/M)", _state);
+    ae_assert(isfinitevector(x, n, _state)&&isfinitevector(y, m, _state), "Spline2DBuildBilinear: X or Y contains NaN or Infinite value", _state);
+    ae_assert(f->rows>=m&&f->cols>=n, "Spline2DBuildBilinear: size of F is too small (rows(F)<M or cols(F)<N)", _state);
+    ae_assert(apservisfinitematrix(f, m, n, _state), "Spline2DBuildBilinear: F contains NaN or Infinite value", _state);
+    
+    /*
+     * Fill interpolant
+     */
+    c->k = 1;
+    c->n = n;
+    c->m = m;
+    c->d = 1;
+    c->stype = -1;
+    ae_vector_set_length(&c->x, c->n, _state);
+    ae_vector_set_length(&c->y, c->m, _state);
+    ae_vector_set_length(&c->f, c->n*c->m, _state);
+    for(i=0; i<=c->n-1; i++)
+    {
+        c->x.ptr.p_double[i] = x->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        c->y.ptr.p_double[i] = y->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        for(j=0; j<=c->n-1; j++)
+        {
+            c->f.ptr.p_double[i*c->n+j] = f->ptr.pp_double[i][j];
+        }
+    }
+    
+    /*
+     * Sort points
+     */
+    for(j=0; j<=c->n-1; j++)
+    {
+        k = j;
+        for(i=j+1; i<=c->n-1; i++)
+        {
+            if( ae_fp_less(c->x.ptr.p_double[i],c->x.ptr.p_double[k]) )
+            {
+                k = i;
+            }
+        }
+        if( k!=j )
+        {
+            for(i=0; i<=c->m-1; i++)
+            {
+                t = c->f.ptr.p_double[i*c->n+j];
+                c->f.ptr.p_double[i*c->n+j] = c->f.ptr.p_double[i*c->n+k];
+                c->f.ptr.p_double[i*c->n+k] = t;
+            }
+            t = c->x.ptr.p_double[j];
+            c->x.ptr.p_double[j] = c->x.ptr.p_double[k];
+            c->x.ptr.p_double[k] = t;
+        }
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        k = i;
+        for(j=i+1; j<=c->m-1; j++)
+        {
+            if( ae_fp_less(c->y.ptr.p_double[j],c->y.ptr.p_double[k]) )
+            {
+                k = j;
+            }
+        }
+        if( k!=i )
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                t = c->f.ptr.p_double[i*c->n+j];
+                c->f.ptr.p_double[i*c->n+j] = c->f.ptr.p_double[k*c->n+j];
+                c->f.ptr.p_double[k*c->n+j] = t;
+            }
+            t = c->y.ptr.p_double[i];
+            c->y.ptr.p_double[i] = c->y.ptr.p_double[k];
+            c->y.ptr.p_double[k] = t;
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBicubicV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubic(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* f,
+     ae_int_t m,
+     ae_int_t n,
+     spline2dinterpolant* c,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_matrix _f;
+    ae_int_t sfx;
+    ae_int_t sfy;
+    ae_int_t sfxy;
+    ae_matrix dx;
+    ae_matrix dy;
+    ae_matrix dxy;
+    double t;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_matrix_init_copy(&_f, f, _state, ae_true);
+    f = &_f;
+    _spline2dinterpolant_clear(c);
+    ae_matrix_init(&dx, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&dy, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&dxy, 0, 0, DT_REAL, _state, ae_true);
+
+    ae_assert(n>=2, "Spline2DBuildBicubicSpline: N<2", _state);
+    ae_assert(m>=2, "Spline2DBuildBicubicSpline: M<2", _state);
+    ae_assert(x->cnt>=n&&y->cnt>=m, "Spline2DBuildBicubic: length of X or Y is too short (Length(X/Y)<N/M)", _state);
+    ae_assert(isfinitevector(x, n, _state)&&isfinitevector(y, m, _state), "Spline2DBuildBicubic: X or Y contains NaN or Infinite value", _state);
+    ae_assert(f->rows>=m&&f->cols>=n, "Spline2DBuildBicubic: size of F is too small (rows(F)<M or cols(F)<N)", _state);
+    ae_assert(apservisfinitematrix(f, m, n, _state), "Spline2DBuildBicubic: F contains NaN or Infinite value", _state);
+    
+    /*
+     * Fill interpolant:
+     *  F[0]...F[N*M-1]:
+     *      f(i,j) table. f(0,0), f(0, 1), f(0,2) and so on...
+     *  F[N*M]...F[2*N*M-1]:
+     *      df(i,j)/dx table.
+     *  F[2*N*M]...F[3*N*M-1]:
+     *      df(i,j)/dy table.
+     *  F[3*N*M]...F[4*N*M-1]:
+     *      d2f(i,j)/dxdy table.
+     */
+    c->k = 3;
+    c->d = 1;
+    c->n = n;
+    c->m = m;
+    c->stype = -3;
+    sfx = c->n*c->m;
+    sfy = 2*c->n*c->m;
+    sfxy = 3*c->n*c->m;
+    ae_vector_set_length(&c->x, c->n, _state);
+    ae_vector_set_length(&c->y, c->m, _state);
+    ae_vector_set_length(&c->f, 4*c->n*c->m, _state);
+    for(i=0; i<=c->n-1; i++)
+    {
+        c->x.ptr.p_double[i] = x->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        c->y.ptr.p_double[i] = y->ptr.p_double[i];
+    }
+    
+    /*
+     * Sort points
+     */
+    for(j=0; j<=c->n-1; j++)
+    {
+        k = j;
+        for(i=j+1; i<=c->n-1; i++)
+        {
+            if( ae_fp_less(c->x.ptr.p_double[i],c->x.ptr.p_double[k]) )
+            {
+                k = i;
+            }
+        }
+        if( k!=j )
+        {
+            for(i=0; i<=c->m-1; i++)
+            {
+                t = f->ptr.pp_double[i][j];
+                f->ptr.pp_double[i][j] = f->ptr.pp_double[i][k];
+                f->ptr.pp_double[i][k] = t;
+            }
+            t = c->x.ptr.p_double[j];
+            c->x.ptr.p_double[j] = c->x.ptr.p_double[k];
+            c->x.ptr.p_double[k] = t;
+        }
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        k = i;
+        for(j=i+1; j<=c->m-1; j++)
+        {
+            if( ae_fp_less(c->y.ptr.p_double[j],c->y.ptr.p_double[k]) )
+            {
+                k = j;
+            }
+        }
+        if( k!=i )
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                t = f->ptr.pp_double[i][j];
+                f->ptr.pp_double[i][j] = f->ptr.pp_double[k][j];
+                f->ptr.pp_double[k][j] = t;
+            }
+            t = c->y.ptr.p_double[i];
+            c->y.ptr.p_double[i] = c->y.ptr.p_double[k];
+            c->y.ptr.p_double[k] = t;
+        }
+    }
+    spline2d_bicubiccalcderivatives(f, &c->x, &c->y, c->m, c->n, &dx, &dy, &dxy, _state);
+    for(i=0; i<=c->m-1; i++)
+    {
+        for(j=0; j<=c->n-1; j++)
+        {
+            k = i*c->n+j;
+            c->f.ptr.p_double[k] = f->ptr.pp_double[i][j];
+            c->f.ptr.p_double[sfx+k] = dx.ptr.pp_double[i][j];
+            c->f.ptr.p_double[sfy+k] = dy.ptr.pp_double[i][j];
+            c->f.ptr.p_double[sfxy+k] = dxy.ptr.pp_double[i][j];
+        }
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DUnpackV(),  which is more flexible
+and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 29.06.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpack(spline2dinterpolant* c,
+     ae_int_t* m,
+     ae_int_t* n,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state)
+{
+    ae_int_t k;
+    ae_int_t p;
+    ae_int_t ci;
+    ae_int_t cj;
+    ae_int_t s1;
+    ae_int_t s2;
+    ae_int_t s3;
+    ae_int_t s4;
+    ae_int_t sfx;
+    ae_int_t sfy;
+    ae_int_t sfxy;
+    double y1;
+    double y2;
+    double y3;
+    double y4;
+    double dt;
+    double du;
+    ae_int_t i;
+    ae_int_t j;
+
+    *m = 0;
+    *n = 0;
+    ae_matrix_clear(tbl);
+
+    ae_assert(c->stype==-3||c->stype==-1, "Spline2DUnpack: incorrect C (incorrect parameter C.SType)", _state);
+    if( c->d!=1 )
+    {
+        *n = 0;
+        *m = 0;
+        return;
+    }
+    *n = c->n;
+    *m = c->m;
+    ae_matrix_set_length(tbl, (*n-1)*(*m-1), 20, _state);
+    sfx = *n*(*m);
+    sfy = 2*(*n)*(*m);
+    sfxy = 3*(*n)*(*m);
+    
+    /*
+     * Fill
+     */
+    for(i=0; i<=*m-2; i++)
+    {
+        for(j=0; j<=*n-2; j++)
+        {
+            p = i*(*n-1)+j;
+            tbl->ptr.pp_double[p][0] = c->x.ptr.p_double[j];
+            tbl->ptr.pp_double[p][1] = c->x.ptr.p_double[j+1];
+            tbl->ptr.pp_double[p][2] = c->y.ptr.p_double[i];
+            tbl->ptr.pp_double[p][3] = c->y.ptr.p_double[i+1];
+            dt = 1/(tbl->ptr.pp_double[p][1]-tbl->ptr.pp_double[p][0]);
+            du = 1/(tbl->ptr.pp_double[p][3]-tbl->ptr.pp_double[p][2]);
+            
+            /*
+             * Bilinear interpolation
+             */
+            if( c->stype==-1 )
+            {
+                for(k=4; k<=19; k++)
+                {
+                    tbl->ptr.pp_double[p][k] = 0;
+                }
+                y1 = c->f.ptr.p_double[*n*i+j];
+                y2 = c->f.ptr.p_double[*n*i+(j+1)];
+                y3 = c->f.ptr.p_double[*n*(i+1)+(j+1)];
+                y4 = c->f.ptr.p_double[*n*(i+1)+j];
+                tbl->ptr.pp_double[p][4] = y1;
+                tbl->ptr.pp_double[p][4+1*4+0] = y2-y1;
+                tbl->ptr.pp_double[p][4+0*4+1] = y4-y1;
+                tbl->ptr.pp_double[p][4+1*4+1] = y3-y2-y4+y1;
+            }
+            
+            /*
+             * Bicubic interpolation
+             */
+            if( c->stype==-3 )
+            {
+                s1 = *n*i+j;
+                s2 = *n*i+(j+1);
+                s3 = *n*(i+1)+(j+1);
+                s4 = *n*(i+1)+j;
+                tbl->ptr.pp_double[p][4+0*4+0] = c->f.ptr.p_double[s1];
+                tbl->ptr.pp_double[p][4+0*4+1] = c->f.ptr.p_double[sfy+s1]/du;
+                tbl->ptr.pp_double[p][4+0*4+2] = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s4]-2*c->f.ptr.p_double[sfy+s1]/du-c->f.ptr.p_double[sfy+s4]/du;
+                tbl->ptr.pp_double[p][4+0*4+3] = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s4]+c->f.ptr.p_double[sfy+s1]/du+c->f.ptr.p_double[sfy+s4]/du;
+                tbl->ptr.pp_double[p][4+1*4+0] = c->f.ptr.p_double[sfx+s1]/dt;
+                tbl->ptr.pp_double[p][4+1*4+1] = c->f.ptr.p_double[sfxy+s1]/(dt*du);
+                tbl->ptr.pp_double[p][4+1*4+2] = -3*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                tbl->ptr.pp_double[p][4+1*4+3] = 2*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                tbl->ptr.pp_double[p][4+2*4+0] = -3*c->f.ptr.p_double[s1]+3*c->f.ptr.p_double[s2]-2*c->f.ptr.p_double[sfx+s1]/dt-c->f.ptr.p_double[sfx+s2]/dt;
+                tbl->ptr.pp_double[p][4+2*4+1] = -3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du);
+                tbl->ptr.pp_double[p][4+2*4+2] = 9*c->f.ptr.p_double[s1]-9*c->f.ptr.p_double[s2]+9*c->f.ptr.p_double[s3]-9*c->f.ptr.p_double[s4]+6*c->f.ptr.p_double[sfx+s1]/dt+3*c->f.ptr.p_double[sfx+s2]/dt-3*c->f.ptr.p_double[sfx+s3]/dt-6*c->f.ptr.p_double[sfx+s4]/dt+6*c->f.ptr.p_double[sfy+s1]/du-6*c->f.ptr.p_double[sfy+s2]/du-3*c->f.ptr.p_double[sfy+s3]/du+3*c->f.ptr.p_double[sfy+s4]/du+4*c->f.ptr.p_double[sfxy+s1]/(dt*du)+2*c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                tbl->ptr.pp_double[p][4+2*4+3] = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-4*c->f.ptr.p_double[sfx+s1]/dt-2*c->f.ptr.p_double[sfx+s2]/dt+2*c->f.ptr.p_double[sfx+s3]/dt+4*c->f.ptr.p_double[sfx+s4]/dt-3*c->f.ptr.p_double[sfy+s1]/du+3*c->f.ptr.p_double[sfy+s2]/du+3*c->f.ptr.p_double[sfy+s3]/du-3*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-2*c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                tbl->ptr.pp_double[p][4+3*4+0] = 2*c->f.ptr.p_double[s1]-2*c->f.ptr.p_double[s2]+c->f.ptr.p_double[sfx+s1]/dt+c->f.ptr.p_double[sfx+s2]/dt;
+                tbl->ptr.pp_double[p][4+3*4+1] = 2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du);
+                tbl->ptr.pp_double[p][4+3*4+2] = -6*c->f.ptr.p_double[s1]+6*c->f.ptr.p_double[s2]-6*c->f.ptr.p_double[s3]+6*c->f.ptr.p_double[s4]-3*c->f.ptr.p_double[sfx+s1]/dt-3*c->f.ptr.p_double[sfx+s2]/dt+3*c->f.ptr.p_double[sfx+s3]/dt+3*c->f.ptr.p_double[sfx+s4]/dt-4*c->f.ptr.p_double[sfy+s1]/du+4*c->f.ptr.p_double[sfy+s2]/du+2*c->f.ptr.p_double[sfy+s3]/du-2*c->f.ptr.p_double[sfy+s4]/du-2*c->f.ptr.p_double[sfxy+s1]/(dt*du)-2*c->f.ptr.p_double[sfxy+s2]/(dt*du)-c->f.ptr.p_double[sfxy+s3]/(dt*du)-c->f.ptr.p_double[sfxy+s4]/(dt*du);
+                tbl->ptr.pp_double[p][4+3*4+3] = 4*c->f.ptr.p_double[s1]-4*c->f.ptr.p_double[s2]+4*c->f.ptr.p_double[s3]-4*c->f.ptr.p_double[s4]+2*c->f.ptr.p_double[sfx+s1]/dt+2*c->f.ptr.p_double[sfx+s2]/dt-2*c->f.ptr.p_double[sfx+s3]/dt-2*c->f.ptr.p_double[sfx+s4]/dt+2*c->f.ptr.p_double[sfy+s1]/du-2*c->f.ptr.p_double[sfy+s2]/du-2*c->f.ptr.p_double[sfy+s3]/du+2*c->f.ptr.p_double[sfy+s4]/du+c->f.ptr.p_double[sfxy+s1]/(dt*du)+c->f.ptr.p_double[sfxy+s2]/(dt*du)+c->f.ptr.p_double[sfxy+s3]/(dt*du)+c->f.ptr.p_double[sfxy+s4]/(dt*du);
+            }
+            
+            /*
+             * Rescale Cij
+             */
+            for(ci=0; ci<=3; ci++)
+            {
+                for(cj=0; cj<=3; cj++)
+                {
+                    tbl->ptr.pp_double[p][4+ci*4+cj] = tbl->ptr.pp_double[p][4+ci*4+cj]*ae_pow(dt, ci, _state)*ae_pow(du, cj, _state);
+                }
+            }
         }
     }
 }
@@ -26884,26 +29482,1231 @@ static void spline2d_bicubiccalcderivatives(/* Real    */ ae_matrix* a,
 }
 
 
-ae_bool _spline2dinterpolant_init(spline2dinterpolant* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _spline2dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
-    if( !ae_vector_init(&p->c, 0, DT_REAL, _state, make_automatic) )
+    spline2dinterpolant *p = (spline2dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->y, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->f, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-ae_bool _spline2dinterpolant_init_copy(spline2dinterpolant* dst, spline2dinterpolant* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _spline2dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    spline2dinterpolant *dst = (spline2dinterpolant*)_dst;
+    spline2dinterpolant *src = (spline2dinterpolant*)_src;
     dst->k = src->k;
-    if( !ae_vector_init_copy(&dst->c, &src->c, _state, make_automatic) )
+    dst->stype = src->stype;
+    dst->n = src->n;
+    dst->m = src->m;
+    dst->d = src->d;
+    if( !ae_vector_init_copy(&dst->x, &src->x, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->y, &src->y, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->f, &src->f, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-void _spline2dinterpolant_clear(spline2dinterpolant* p)
+void _spline2dinterpolant_clear(void* _p)
 {
-    ae_vector_clear(&p->c);
+    spline2dinterpolant *p = (spline2dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->x);
+    ae_vector_clear(&p->y);
+    ae_vector_clear(&p->f);
+}
+
+
+void _spline2dinterpolant_destroy(void* _p)
+{
+    spline2dinterpolant *p = (spline2dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->y);
+    ae_vector_destroy(&p->f);
+}
+
+
+
+
+/*************************************************************************
+This subroutine calculates the value of the trilinear or tricubic spline at
+the given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   coefficients table.
+            Built by BuildBilinearSpline or BuildBicubicSpline.
+    X, Y,
+    Z   -   point
+
+Result:
+    S(x,y,z)
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+double spline3dcalc(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     ae_state *_state)
+{
+    double v;
+    double vx;
+    double vy;
+    double vxy;
+    double result;
+
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline3DCalc: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert((ae_isfinite(x, _state)&&ae_isfinite(y, _state))&&ae_isfinite(z, _state), "Spline3DCalc: X=NaN/Infinite, Y=NaN/Infinite or Z=NaN/Infinite", _state);
+    if( c->d!=1 )
+    {
+        result = 0;
+        return result;
+    }
+    spline3d_spline3ddiff(c, x, y, z, &v, &vx, &vy, &vxy, _state);
+    result = v;
+    return result;
+}
+
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline argument.
+
+INPUT PARAMETERS:
+    C       -   spline interpolant
+    AX, BX  -   transformation coefficients: x = A*u + B
+    AY, BY  -   transformation coefficients: y = A*v + B
+    AZ, BZ  -   transformation coefficients: z = A*w + B
+    
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransxyz(spline3dinterpolant* c,
+     double ax,
+     double bx,
+     double ay,
+     double by,
+     double az,
+     double bz,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_vector x;
+    ae_vector y;
+    ae_vector z;
+    ae_vector f;
+    ae_vector v;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+    ae_int_t di;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_vector_init(&x, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&y, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&z, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&f, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&v, 0, DT_REAL, _state, ae_true);
+
+    ae_assert(c->stype==-3||c->stype==-1, "Spline3DLinTransXYZ: incorrect C (incorrect parameter C.SType)", _state);
+    ae_vector_set_length(&x, c->n, _state);
+    ae_vector_set_length(&y, c->m, _state);
+    ae_vector_set_length(&z, c->l, _state);
+    ae_vector_set_length(&f, c->m*c->n*c->l*c->d, _state);
+    for(j=0; j<=c->n-1; j++)
+    {
+        x.ptr.p_double[j] = c->x.ptr.p_double[j];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        y.ptr.p_double[i] = c->y.ptr.p_double[i];
+    }
+    for(i=0; i<=c->l-1; i++)
+    {
+        z.ptr.p_double[i] = c->z.ptr.p_double[i];
+    }
+    
+    /*
+     * Handle different combinations of zero/nonzero AX/AY/AZ
+     */
+    if( (ae_fp_neq(ax,0)&&ae_fp_neq(ay,0))&&ae_fp_neq(az,0) )
+    {
+        ae_v_move(&f.ptr.p_double[0], 1, &c->f.ptr.p_double[0], 1, ae_v_len(0,c->m*c->n*c->l*c->d-1));
+    }
+    if( (ae_fp_eq(ax,0)&&ae_fp_neq(ay,0))&&ae_fp_neq(az,0) )
+    {
+        for(i=0; i<=c->m-1; i++)
+        {
+            for(j=0; j<=c->l-1; j++)
+            {
+                spline3dcalcv(c, bx, y.ptr.p_double[i], z.ptr.p_double[j], &v, _state);
+                for(k=0; k<=c->n-1; k++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*j+i)+k)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ax = 1;
+        bx = 0;
+    }
+    if( (ae_fp_neq(ax,0)&&ae_fp_eq(ay,0))&&ae_fp_neq(az,0) )
+    {
+        for(i=0; i<=c->n-1; i++)
+        {
+            for(j=0; j<=c->l-1; j++)
+            {
+                spline3dcalcv(c, x.ptr.p_double[i], by, z.ptr.p_double[j], &v, _state);
+                for(k=0; k<=c->m-1; k++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*j+k)+i)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ay = 1;
+        by = 0;
+    }
+    if( (ae_fp_neq(ax,0)&&ae_fp_neq(ay,0))&&ae_fp_eq(az,0) )
+    {
+        for(i=0; i<=c->n-1; i++)
+        {
+            for(j=0; j<=c->m-1; j++)
+            {
+                spline3dcalcv(c, x.ptr.p_double[i], y.ptr.p_double[j], bz, &v, _state);
+                for(k=0; k<=c->l-1; k++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*k+j)+i)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        az = 1;
+        bz = 0;
+    }
+    if( (ae_fp_eq(ax,0)&&ae_fp_eq(ay,0))&&ae_fp_neq(az,0) )
+    {
+        for(i=0; i<=c->l-1; i++)
+        {
+            spline3dcalcv(c, bx, by, z.ptr.p_double[i], &v, _state);
+            for(k=0; k<=c->m-1; k++)
+            {
+                for(j=0; j<=c->n-1; j++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*i+k)+j)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ax = 1;
+        bx = 0;
+        ay = 1;
+        by = 0;
+    }
+    if( (ae_fp_eq(ax,0)&&ae_fp_neq(ay,0))&&ae_fp_eq(az,0) )
+    {
+        for(i=0; i<=c->m-1; i++)
+        {
+            spline3dcalcv(c, bx, y.ptr.p_double[i], bz, &v, _state);
+            for(k=0; k<=c->l-1; k++)
+            {
+                for(j=0; j<=c->n-1; j++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*k+i)+j)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ax = 1;
+        bx = 0;
+        az = 1;
+        bz = 0;
+    }
+    if( (ae_fp_neq(ax,0)&&ae_fp_eq(ay,0))&&ae_fp_eq(az,0) )
+    {
+        for(i=0; i<=c->n-1; i++)
+        {
+            spline3dcalcv(c, x.ptr.p_double[i], by, bz, &v, _state);
+            for(k=0; k<=c->l-1; k++)
+            {
+                for(j=0; j<=c->m-1; j++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*k+j)+i)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ay = 1;
+        by = 0;
+        az = 1;
+        bz = 0;
+    }
+    if( (ae_fp_eq(ax,0)&&ae_fp_eq(ay,0))&&ae_fp_eq(az,0) )
+    {
+        spline3dcalcv(c, bx, by, bz, &v, _state);
+        for(k=0; k<=c->l-1; k++)
+        {
+            for(j=0; j<=c->m-1; j++)
+            {
+                for(i=0; i<=c->n-1; i++)
+                {
+                    for(di=0; di<=c->d-1; di++)
+                    {
+                        f.ptr.p_double[c->d*(c->n*(c->m*k+j)+i)+di] = v.ptr.p_double[di];
+                    }
+                }
+            }
+        }
+        ax = 1;
+        bx = 0;
+        ay = 1;
+        by = 0;
+        az = 1;
+        bz = 0;
+    }
+    
+    /*
+     * General case: AX<>0, AY<>0, AZ<>0
+     * Unpack, scale and pack again.
+     */
+    for(i=0; i<=c->n-1; i++)
+    {
+        x.ptr.p_double[i] = (x.ptr.p_double[i]-bx)/ax;
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        y.ptr.p_double[i] = (y.ptr.p_double[i]-by)/ay;
+    }
+    for(i=0; i<=c->l-1; i++)
+    {
+        z.ptr.p_double[i] = (z.ptr.p_double[i]-bz)/az;
+    }
+    if( c->stype==-1 )
+    {
+        spline3dbuildtrilinearv(&x, c->n, &y, c->m, &z, c->l, &f, c->d, c, _state);
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline.
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    A, B-   transformation coefficients: S2(x,y) = A*S(x,y,z) + B
+    
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransf(spline3dinterpolant* c,
+     double a,
+     double b,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_vector x;
+    ae_vector y;
+    ae_vector z;
+    ae_vector f;
+    ae_int_t i;
+    ae_int_t j;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_vector_init(&x, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&y, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&z, 0, DT_REAL, _state, ae_true);
+    ae_vector_init(&f, 0, DT_REAL, _state, ae_true);
+
+    ae_assert(c->stype==-3||c->stype==-1, "Spline3DLinTransF: incorrect C (incorrect parameter C.SType)", _state);
+    ae_vector_set_length(&x, c->n, _state);
+    ae_vector_set_length(&y, c->m, _state);
+    ae_vector_set_length(&z, c->l, _state);
+    ae_vector_set_length(&f, c->m*c->n*c->l*c->d, _state);
+    for(j=0; j<=c->n-1; j++)
+    {
+        x.ptr.p_double[j] = c->x.ptr.p_double[j];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        y.ptr.p_double[i] = c->y.ptr.p_double[i];
+    }
+    for(i=0; i<=c->l-1; i++)
+    {
+        z.ptr.p_double[i] = c->z.ptr.p_double[i];
+    }
+    for(i=0; i<=c->m*c->n*c->l*c->d-1; i++)
+    {
+        f.ptr.p_double[i] = a*c->f.ptr.p_double[i]+b;
+    }
+    if( c->stype==-1 )
+    {
+        spline3dbuildtrilinearv(&x, c->n, &y, c->m, &z, c->l, &f, c->d, c, _state);
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine makes the copy of the spline model.
+
+INPUT PARAMETERS:
+    C   -   spline interpolant
+
+OUTPUT PARAMETERS:
+    CC  -   spline copy
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcopy(spline3dinterpolant* c,
+     spline3dinterpolant* cc,
+     ae_state *_state)
+{
+    ae_int_t tblsize;
+
+    _spline3dinterpolant_clear(cc);
+
+    ae_assert(c->k==1||c->k==3, "Spline3DCopy: incorrect C (incorrect parameter C.K)", _state);
+    cc->k = c->k;
+    cc->n = c->n;
+    cc->m = c->m;
+    cc->l = c->l;
+    cc->d = c->d;
+    tblsize = c->n*c->m*c->l*c->d;
+    cc->stype = c->stype;
+    ae_vector_set_length(&cc->x, cc->n, _state);
+    ae_vector_set_length(&cc->y, cc->m, _state);
+    ae_vector_set_length(&cc->z, cc->l, _state);
+    ae_vector_set_length(&cc->f, tblsize, _state);
+    ae_v_move(&cc->x.ptr.p_double[0], 1, &c->x.ptr.p_double[0], 1, ae_v_len(0,cc->n-1));
+    ae_v_move(&cc->y.ptr.p_double[0], 1, &c->y.ptr.p_double[0], 1, ae_v_len(0,cc->m-1));
+    ae_v_move(&cc->z.ptr.p_double[0], 1, &c->z.ptr.p_double[0], 1, ae_v_len(0,cc->l-1));
+    ae_v_move(&cc->f.ptr.p_double[0], 1, &c->f.ptr.p_double[0], 1, ae_v_len(0,tblsize-1));
+}
+
+
+/*************************************************************************
+Trilinear spline resampling
+
+INPUT PARAMETERS:
+    A           -   array[0..OldXCount*OldYCount*OldZCount-1], function
+                    values at the old grid, :
+                        A[0]        x=0,y=0,z=0
+                        A[1]        x=1,y=0,z=0
+                        A[..]       ...
+                        A[..]       x=oldxcount-1,y=0,z=0
+                        A[..]       x=0,y=1,z=0
+                        A[..]       ...
+                        ...
+    OldZCount   -   old Z-count, OldZCount>1
+    OldYCount   -   old Y-count, OldYCount>1
+    OldXCount   -   old X-count, OldXCount>1
+    NewZCount   -   new Z-count, NewZCount>1
+    NewYCount   -   new Y-count, NewYCount>1
+    NewXCount   -   new X-count, NewXCount>1
+
+OUTPUT PARAMETERS:
+    B           -   array[0..NewXCount*NewYCount*NewZCount-1], function
+                    values at the new grid:
+                        B[0]        x=0,y=0,z=0
+                        B[1]        x=1,y=0,z=0
+                        B[..]       ...
+                        B[..]       x=newxcount-1,y=0,z=0
+                        B[..]       x=0,y=1,z=0
+                        B[..]       ...
+                        ...
+
+  -- ALGLIB routine --
+     26.04.2012
+     Copyright by Bochkanov Sergey
+*************************************************************************/
+void spline3dresampletrilinear(/* Real    */ ae_vector* a,
+     ae_int_t oldzcount,
+     ae_int_t oldycount,
+     ae_int_t oldxcount,
+     ae_int_t newzcount,
+     ae_int_t newycount,
+     ae_int_t newxcount,
+     /* Real    */ ae_vector* b,
+     ae_state *_state)
+{
+    double xd;
+    double yd;
+    double zd;
+    double c0;
+    double c1;
+    double c2;
+    double c3;
+    ae_int_t ix;
+    ae_int_t iy;
+    ae_int_t iz;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+
+    ae_vector_clear(b);
+
+    ae_assert((oldycount>1&&oldzcount>1)&&oldxcount>1, "Spline3DResampleTrilinear: length/width/height less than 1", _state);
+    ae_assert((newycount>1&&newzcount>1)&&newxcount>1, "Spline3DResampleTrilinear: length/width/height less than 1", _state);
+    ae_assert(a->cnt>=oldycount*oldzcount*oldxcount, "Spline3DResampleTrilinear: length/width/height less than 1", _state);
+    ae_vector_set_length(b, newxcount*newycount*newzcount, _state);
+    for(i=0; i<=newxcount-1; i++)
+    {
+        for(j=0; j<=newycount-1; j++)
+        {
+            for(k=0; k<=newzcount-1; k++)
+            {
+                ix = i*(oldxcount-1)/(newxcount-1);
+                if( ix==oldxcount-1 )
+                {
+                    ix = oldxcount-2;
+                }
+                xd = (double)(i*(oldxcount-1))/(double)(newxcount-1)-ix;
+                iy = j*(oldycount-1)/(newycount-1);
+                if( iy==oldycount-1 )
+                {
+                    iy = oldycount-2;
+                }
+                yd = (double)(j*(oldycount-1))/(double)(newycount-1)-iy;
+                iz = k*(oldzcount-1)/(newzcount-1);
+                if( iz==oldzcount-1 )
+                {
+                    iz = oldzcount-2;
+                }
+                zd = (double)(k*(oldzcount-1))/(double)(newzcount-1)-iz;
+                c0 = a->ptr.p_double[oldxcount*(oldycount*iz+iy)+ix]*(1-xd)+a->ptr.p_double[oldxcount*(oldycount*iz+iy)+(ix+1)]*xd;
+                c1 = a->ptr.p_double[oldxcount*(oldycount*iz+(iy+1))+ix]*(1-xd)+a->ptr.p_double[oldxcount*(oldycount*iz+(iy+1))+(ix+1)]*xd;
+                c2 = a->ptr.p_double[oldxcount*(oldycount*(iz+1)+iy)+ix]*(1-xd)+a->ptr.p_double[oldxcount*(oldycount*(iz+1)+iy)+(ix+1)]*xd;
+                c3 = a->ptr.p_double[oldxcount*(oldycount*(iz+1)+(iy+1))+ix]*(1-xd)+a->ptr.p_double[oldxcount*(oldycount*(iz+1)+(iy+1))+(ix+1)]*xd;
+                c0 = c0*(1-yd)+c1*yd;
+                c1 = c2*(1-yd)+c3*yd;
+                b->ptr.p_double[newxcount*(newycount*k+j)+i] = c0*(1-zd)+c1*zd;
+            }
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine builds trilinear vector-valued spline.
+
+INPUT PARAMETERS:
+    X   -   spline abscissas,  array[0..N-1]
+    Y   -   spline ordinates,  array[0..M-1]
+    Z   -   spline applicates, array[0..L-1] 
+    F   -   function values, array[0..M*N*L*D-1]:
+            * first D elements store D values at (X[0],Y[0],Z[0])
+            * next D elements store D values at (X[1],Y[0],Z[0])
+            * next D elements store D values at (X[2],Y[0],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[1],Z[0])
+            * next D elements store D values at (X[1],Y[1],Z[0])
+            * next D elements store D values at (X[2],Y[1],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[0],Z[1])
+            * next D elements store D values at (X[1],Y[0],Z[1])
+            * next D elements store D values at (X[2],Y[0],Z[1])
+            * ...
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(N*(M*K+J)+I)...D*(N*(M*K+J)+I)+D-1].
+    M,N,
+    L   -   grid size, M>=2, N>=2, L>=2
+    D   -   vector dimension, D>=1
+
+OUTPUT PARAMETERS:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dbuildtrilinearv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* z,
+     ae_int_t l,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline3dinterpolant* c,
+     ae_state *_state)
+{
+    double t;
+    ae_int_t tblsize;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+    ae_int_t i0;
+    ae_int_t j0;
+
+    _spline3dinterpolant_clear(c);
+
+    ae_assert(m>=2, "Spline3DBuildTrilinearV: M<2", _state);
+    ae_assert(n>=2, "Spline3DBuildTrilinearV: N<2", _state);
+    ae_assert(l>=2, "Spline3DBuildTrilinearV: L<2", _state);
+    ae_assert(d>=1, "Spline3DBuildTrilinearV: D<1", _state);
+    ae_assert((x->cnt>=n&&y->cnt>=m)&&z->cnt>=l, "Spline3DBuildTrilinearV: length of X, Y or Z is too short (Length(X/Y/Z)<N/M/L)", _state);
+    ae_assert((isfinitevector(x, n, _state)&&isfinitevector(y, m, _state))&&isfinitevector(z, l, _state), "Spline3DBuildTrilinearV: X, Y or Z contains NaN or Infinite value", _state);
+    tblsize = n*m*l*d;
+    ae_assert(f->cnt>=tblsize, "Spline3DBuildTrilinearV: length of F is too short (Length(F)<N*M*L*D)", _state);
+    ae_assert(isfinitevector(f, tblsize, _state), "Spline3DBuildTrilinearV: F contains NaN or Infinite value", _state);
+    
+    /*
+     * Fill interpolant
+     */
+    c->k = 1;
+    c->n = n;
+    c->m = m;
+    c->l = l;
+    c->d = d;
+    c->stype = -1;
+    ae_vector_set_length(&c->x, c->n, _state);
+    ae_vector_set_length(&c->y, c->m, _state);
+    ae_vector_set_length(&c->z, c->l, _state);
+    ae_vector_set_length(&c->f, tblsize, _state);
+    for(i=0; i<=c->n-1; i++)
+    {
+        c->x.ptr.p_double[i] = x->ptr.p_double[i];
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        c->y.ptr.p_double[i] = y->ptr.p_double[i];
+    }
+    for(i=0; i<=c->l-1; i++)
+    {
+        c->z.ptr.p_double[i] = z->ptr.p_double[i];
+    }
+    for(i=0; i<=tblsize-1; i++)
+    {
+        c->f.ptr.p_double[i] = f->ptr.p_double[i];
+    }
+    
+    /*
+     * Sort points:
+     *  * sort x;
+     *  * sort y;
+     *  * sort z.
+     */
+    for(j=0; j<=c->n-1; j++)
+    {
+        k = j;
+        for(i=j+1; i<=c->n-1; i++)
+        {
+            if( ae_fp_less(c->x.ptr.p_double[i],c->x.ptr.p_double[k]) )
+            {
+                k = i;
+            }
+        }
+        if( k!=j )
+        {
+            for(i=0; i<=c->m-1; i++)
+            {
+                for(j0=0; j0<=c->l-1; j0++)
+                {
+                    for(i0=0; i0<=c->d-1; i0++)
+                    {
+                        t = c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+j)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+j)+i0] = c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+k)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+k)+i0] = t;
+                    }
+                }
+            }
+            t = c->x.ptr.p_double[j];
+            c->x.ptr.p_double[j] = c->x.ptr.p_double[k];
+            c->x.ptr.p_double[k] = t;
+        }
+    }
+    for(i=0; i<=c->m-1; i++)
+    {
+        k = i;
+        for(j=i+1; j<=c->m-1; j++)
+        {
+            if( ae_fp_less(c->y.ptr.p_double[j],c->y.ptr.p_double[k]) )
+            {
+                k = j;
+            }
+        }
+        if( k!=i )
+        {
+            for(j=0; j<=c->n-1; j++)
+            {
+                for(j0=0; j0<=c->l-1; j0++)
+                {
+                    for(i0=0; i0<=c->d-1; i0++)
+                    {
+                        t = c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+j)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*j0+i)+j)+i0] = c->f.ptr.p_double[c->d*(c->n*(c->m*j0+k)+j)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*j0+k)+j)+i0] = t;
+                    }
+                }
+            }
+            t = c->y.ptr.p_double[i];
+            c->y.ptr.p_double[i] = c->y.ptr.p_double[k];
+            c->y.ptr.p_double[k] = t;
+        }
+    }
+    for(k=0; k<=c->l-1; k++)
+    {
+        i = k;
+        for(j=i+1; j<=c->l-1; j++)
+        {
+            if( ae_fp_less(c->z.ptr.p_double[j],c->z.ptr.p_double[i]) )
+            {
+                i = j;
+            }
+        }
+        if( i!=k )
+        {
+            for(j=0; j<=c->m-1; j++)
+            {
+                for(j0=0; j0<=c->n-1; j0++)
+                {
+                    for(i0=0; i0<=c->d-1; i0++)
+                    {
+                        t = c->f.ptr.p_double[c->d*(c->n*(c->m*k+j)+j0)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*k+j)+j0)+i0] = c->f.ptr.p_double[c->d*(c->n*(c->m*i+j)+j0)+i0];
+                        c->f.ptr.p_double[c->d*(c->n*(c->m*i+j)+j0)+i0] = t;
+                    }
+                }
+            }
+            t = c->z.ptr.p_double[k];
+            c->z.ptr.p_double[k] = c->z.ptr.p_double[i];
+            c->z.ptr.p_double[i] = t;
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcvbuf(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     /* Real    */ ae_vector* f,
+     ae_state *_state)
+{
+    double xd;
+    double yd;
+    double zd;
+    double c0;
+    double c1;
+    double c2;
+    double c3;
+    ae_int_t ix;
+    ae_int_t iy;
+    ae_int_t iz;
+    ae_int_t l;
+    ae_int_t r;
+    ae_int_t h;
+    ae_int_t i;
+
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline3DCalcVBuf: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert((ae_isfinite(x, _state)&&ae_isfinite(y, _state))&&ae_isfinite(z, _state), "Spline3DCalcVBuf: X, Y or Z contains NaN/Infinite", _state);
+    rvectorsetlengthatleast(f, c->d, _state);
+    
+    /*
+     * Binary search in the [ x[0], ..., x[n-2] ] (x[n-1] is not included)
+     */
+    l = 0;
+    r = c->n-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->x.ptr.p_double[h],x) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    ix = l;
+    
+    /*
+     * Binary search in the [ y[0], ..., y[n-2] ] (y[n-1] is not included)
+     */
+    l = 0;
+    r = c->m-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->y.ptr.p_double[h],y) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    iy = l;
+    
+    /*
+     * Binary search in the [ z[0], ..., z[n-2] ] (z[n-1] is not included)
+     */
+    l = 0;
+    r = c->l-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->z.ptr.p_double[h],z) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    iz = l;
+    xd = (x-c->x.ptr.p_double[ix])/(c->x.ptr.p_double[ix+1]-c->x.ptr.p_double[ix]);
+    yd = (y-c->y.ptr.p_double[iy])/(c->y.ptr.p_double[iy+1]-c->y.ptr.p_double[iy]);
+    zd = (z-c->z.ptr.p_double[iz])/(c->z.ptr.p_double[iz+1]-c->z.ptr.p_double[iz]);
+    for(i=0; i<=c->d-1; i++)
+    {
+        
+        /*
+         * Trilinear interpolation
+         */
+        if( c->stype==-1 )
+        {
+            c0 = c->f.ptr.p_double[c->d*(c->n*(c->m*iz+iy)+ix)+i]*(1-xd)+c->f.ptr.p_double[c->d*(c->n*(c->m*iz+iy)+(ix+1))+i]*xd;
+            c1 = c->f.ptr.p_double[c->d*(c->n*(c->m*iz+(iy+1))+ix)+i]*(1-xd)+c->f.ptr.p_double[c->d*(c->n*(c->m*iz+(iy+1))+(ix+1))+i]*xd;
+            c2 = c->f.ptr.p_double[c->d*(c->n*(c->m*(iz+1)+iy)+ix)+i]*(1-xd)+c->f.ptr.p_double[c->d*(c->n*(c->m*(iz+1)+iy)+(ix+1))+i]*xd;
+            c3 = c->f.ptr.p_double[c->d*(c->n*(c->m*(iz+1)+(iy+1))+ix)+i]*(1-xd)+c->f.ptr.p_double[c->d*(c->n*(c->m*(iz+1)+(iy+1))+(ix+1))+i]*xd;
+            c0 = c0*(1-yd)+c1*yd;
+            c1 = c2*(1-yd)+c3*yd;
+            f->ptr.p_double[i] = c0*(1-zd)+c1*zd;
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine calculates trilinear or tricubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcv(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     /* Real    */ ae_vector* f,
+     ae_state *_state)
+{
+
+    ae_vector_clear(f);
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline3DCalcV: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert((ae_isfinite(x, _state)&&ae_isfinite(y, _state))&&ae_isfinite(z, _state), "Spline3DCalcV: X=NaN/Infinite, Y=NaN/Infinite or Z=NaN/Infinite", _state);
+    ae_vector_set_length(f, c->d, _state);
+    spline3dcalcvbuf(c, x, y, z, f, _state);
+}
+
+
+/*************************************************************************
+This subroutine unpacks tri-dimensional spline into the coefficients table
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+
+Result:
+    N   -   grid size (X)
+    M   -   grid size (Y)
+    L   -   grid size (Z)
+    D   -   number of components
+    SType-  spline type. Currently, only one spline type is supported:
+            trilinear spline, as indicated by SType=1.
+    Tbl -   spline coefficients: [0..(N-1)*(M-1)*(L-1)*D-1, 0..13].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index), K=0..L-2 (z index):
+                Q := T + I*D + J*D*(N-1) + K*D*(N-1)*(M-1),
+                
+                Q-th row stores decomposition for T-th component of the
+                vector-valued function
+                
+                Tbl[Q,0] = X[i]
+                Tbl[Q,1] = X[i+1]
+                Tbl[Q,2] = Y[j]
+                Tbl[Q,3] = Y[j+1]
+                Tbl[Q,4] = Z[k]
+                Tbl[Q,5] = Z[k+1]
+                
+                Tbl[Q,6] = C000
+                Tbl[Q,7] = C100
+                Tbl[Q,8] = C010
+                Tbl[Q,9] = C110
+                Tbl[Q,10]= C001
+                Tbl[Q,11]= C101
+                Tbl[Q,12]= C011
+                Tbl[Q,13]= C111
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j,k]*(x^i)*(y^j)*(z^k), i=0..1, j=0..1, k=0..1)
+                t = x-x[j]
+                u = y-y[i]
+                v = z-z[k]
+            
+            NOTE: format of Tbl is given for SType=1. Future versions of
+                  ALGLIB can use different formats for different values of
+                  SType.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dunpackv(spline3dinterpolant* c,
+     ae_int_t* n,
+     ae_int_t* m,
+     ae_int_t* l,
+     ae_int_t* d,
+     ae_int_t* stype,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state)
+{
+    ae_int_t p;
+    ae_int_t ci;
+    ae_int_t cj;
+    ae_int_t ck;
+    double du;
+    double dv;
+    double dw;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t k;
+    ae_int_t di;
+    ae_int_t i0;
+
+    *n = 0;
+    *m = 0;
+    *l = 0;
+    *d = 0;
+    *stype = 0;
+    ae_matrix_clear(tbl);
+
+    ae_assert(c->stype==-1, "Spline3DUnpackV: incorrect C (incorrect parameter C.SType)", _state);
+    *n = c->n;
+    *m = c->m;
+    *l = c->l;
+    *d = c->d;
+    *stype = ae_iabs(c->stype, _state);
+    ae_matrix_set_length(tbl, (*n-1)*(*m-1)*(*l-1)*(*d), 14, _state);
+    
+    /*
+     * Fill
+     */
+    for(i=0; i<=*n-2; i++)
+    {
+        for(j=0; j<=*m-2; j++)
+        {
+            for(k=0; k<=*l-2; k++)
+            {
+                for(di=0; di<=*d-1; di++)
+                {
+                    p = *d*((*n-1)*((*m-1)*k+j)+i)+di;
+                    tbl->ptr.pp_double[p][0] = c->x.ptr.p_double[i];
+                    tbl->ptr.pp_double[p][1] = c->x.ptr.p_double[i+1];
+                    tbl->ptr.pp_double[p][2] = c->y.ptr.p_double[j];
+                    tbl->ptr.pp_double[p][3] = c->y.ptr.p_double[j+1];
+                    tbl->ptr.pp_double[p][4] = c->z.ptr.p_double[k];
+                    tbl->ptr.pp_double[p][5] = c->z.ptr.p_double[k+1];
+                    du = 1/(tbl->ptr.pp_double[p][1]-tbl->ptr.pp_double[p][0]);
+                    dv = 1/(tbl->ptr.pp_double[p][3]-tbl->ptr.pp_double[p][2]);
+                    dw = 1/(tbl->ptr.pp_double[p][5]-tbl->ptr.pp_double[p][4]);
+                    
+                    /*
+                     * Trilinear interpolation
+                     */
+                    if( c->stype==-1 )
+                    {
+                        for(i0=6; i0<=13; i0++)
+                        {
+                            tbl->ptr.pp_double[p][i0] = 0;
+                        }
+                        tbl->ptr.pp_double[p][6+2*(2*0+0)+0] = c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*0+0)+1] = c->f.ptr.p_double[*d*(*n*(*m*k+j)+(i+1))+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*0+1)+0] = c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*0+1)+1] = c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+(i+1))+di]-c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+(i+1))+di]+c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*1+0)+0] = c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*1+0)+1] = c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+(i+1))+di]-c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+(i+1))+di]+c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*1+1)+0] = c->f.ptr.p_double[*d*(*n*(*m*(k+1)+(j+1))+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+i)+di]+c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                        tbl->ptr.pp_double[p][6+2*(2*1+1)+1] = c->f.ptr.p_double[*d*(*n*(*m*(k+1)+(j+1))+(i+1))+di]-c->f.ptr.p_double[*d*(*n*(*m*(k+1)+(j+1))+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+(i+1))+di]+c->f.ptr.p_double[*d*(*n*(*m*(k+1)+j)+i)+di]-c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+(i+1))+di]+c->f.ptr.p_double[*d*(*n*(*m*k+(j+1))+i)+di]+c->f.ptr.p_double[*d*(*n*(*m*k+j)+(i+1))+di]-c->f.ptr.p_double[*d*(*n*(*m*k+j)+i)+di];
+                    }
+                    
+                    /*
+                     * Rescale Cij
+                     */
+                    for(ci=0; ci<=1; ci++)
+                    {
+                        for(cj=0; cj<=1; cj++)
+                        {
+                            for(ck=0; ck<=1; ck++)
+                            {
+                                tbl->ptr.pp_double[p][6+2*(2*ck+cj)+ci] = tbl->ptr.pp_double[p][6+2*(2*ck+cj)+ci]*ae_pow(du, ci, _state)*ae_pow(dv, cj, _state)*ae_pow(dw, ck, _state);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine calculates the value of the trilinear(or tricubic;possible
+will be later) spline  at the given point X(and its derivatives; possible
+will be later).
+
+INPUT PARAMETERS:
+    C       -   spline interpolant.
+    X, Y, Z -   point
+
+OUTPUT PARAMETERS:
+    F   -   S(x,y,z)
+    FX  -   dS(x,y,z)/dX
+    FY  -   dS(x,y,z)/dY
+    FXY -   d2S(x,y,z)/dXdY
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+static void spline3d_spline3ddiff(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     double* f,
+     double* fx,
+     double* fy,
+     double* fxy,
+     ae_state *_state)
+{
+    double xd;
+    double yd;
+    double zd;
+    double c0;
+    double c1;
+    double c2;
+    double c3;
+    ae_int_t ix;
+    ae_int_t iy;
+    ae_int_t iz;
+    ae_int_t l;
+    ae_int_t r;
+    ae_int_t h;
+
+    *f = 0;
+    *fx = 0;
+    *fy = 0;
+    *fxy = 0;
+
+    ae_assert(c->stype==-1||c->stype==-3, "Spline3DDiff: incorrect C (incorrect parameter C.SType)", _state);
+    ae_assert(ae_isfinite(x, _state)&&ae_isfinite(y, _state), "Spline3DDiff: X or Y contains NaN or Infinite value", _state);
+    
+    /*
+     * Prepare F, dF/dX, dF/dY, d2F/dXdY
+     */
+    *f = 0;
+    *fx = 0;
+    *fy = 0;
+    *fxy = 0;
+    if( c->d!=1 )
+    {
+        return;
+    }
+    
+    /*
+     * Binary search in the [ x[0], ..., x[n-2] ] (x[n-1] is not included)
+     */
+    l = 0;
+    r = c->n-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->x.ptr.p_double[h],x) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    ix = l;
+    
+    /*
+     * Binary search in the [ y[0], ..., y[n-2] ] (y[n-1] is not included)
+     */
+    l = 0;
+    r = c->m-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->y.ptr.p_double[h],y) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    iy = l;
+    
+    /*
+     * Binary search in the [ z[0], ..., z[n-2] ] (z[n-1] is not included)
+     */
+    l = 0;
+    r = c->l-1;
+    while(l!=r-1)
+    {
+        h = (l+r)/2;
+        if( ae_fp_greater_eq(c->z.ptr.p_double[h],z) )
+        {
+            r = h;
+        }
+        else
+        {
+            l = h;
+        }
+    }
+    iz = l;
+    xd = (x-c->x.ptr.p_double[ix])/(c->x.ptr.p_double[ix+1]-c->x.ptr.p_double[ix]);
+    yd = (y-c->y.ptr.p_double[iy])/(c->y.ptr.p_double[iy+1]-c->y.ptr.p_double[iy]);
+    zd = (z-c->z.ptr.p_double[iz])/(c->z.ptr.p_double[iz+1]-c->z.ptr.p_double[iz]);
+    
+    /*
+     * Trilinear interpolation
+     */
+    if( c->stype==-1 )
+    {
+        c0 = c->f.ptr.p_double[c->n*(c->m*iz+iy)+ix]*(1-xd)+c->f.ptr.p_double[c->n*(c->m*iz+iy)+(ix+1)]*xd;
+        c1 = c->f.ptr.p_double[c->n*(c->m*iz+(iy+1))+ix]*(1-xd)+c->f.ptr.p_double[c->n*(c->m*iz+(iy+1))+(ix+1)]*xd;
+        c2 = c->f.ptr.p_double[c->n*(c->m*(iz+1)+iy)+ix]*(1-xd)+c->f.ptr.p_double[c->n*(c->m*(iz+1)+iy)+(ix+1)]*xd;
+        c3 = c->f.ptr.p_double[c->n*(c->m*(iz+1)+(iy+1))+ix]*(1-xd)+c->f.ptr.p_double[c->n*(c->m*(iz+1)+(iy+1))+(ix+1)]*xd;
+        c0 = c0*(1-yd)+c1*yd;
+        c1 = c2*(1-yd)+c3*yd;
+        *f = c0*(1-zd)+c1*zd;
+    }
+}
+
+
+ae_bool _spline3dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    spline3dinterpolant *p = (spline3dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->y, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->z, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->f, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _spline3dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    spline3dinterpolant *dst = (spline3dinterpolant*)_dst;
+    spline3dinterpolant *src = (spline3dinterpolant*)_src;
+    dst->k = src->k;
+    dst->stype = src->stype;
+    dst->n = src->n;
+    dst->m = src->m;
+    dst->l = src->l;
+    dst->d = src->d;
+    if( !ae_vector_init_copy(&dst->x, &src->x, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->y, &src->y, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->z, &src->z, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->f, &src->f, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _spline3dinterpolant_clear(void* _p)
+{
+    spline3dinterpolant *p = (spline3dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->x);
+    ae_vector_clear(&p->y);
+    ae_vector_clear(&p->z);
+    ae_vector_clear(&p->f);
+}
+
+
+void _spline3dinterpolant_destroy(void* _p)
+{
+    spline3dinterpolant *p = (spline3dinterpolant*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->y);
+    ae_vector_destroy(&p->z);
+    ae_vector_destroy(&p->f);
 }
 
 

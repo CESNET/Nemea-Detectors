@@ -276,6 +276,25 @@ double spearmancorr2(const real_1d_array &x, const real_1d_array &y);
 /*************************************************************************
 Covariance matrix
 
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
+
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
             * J-th column corresponds to J-th variable
@@ -294,11 +313,32 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void covm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
+void smp_covm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
 void covm(const real_2d_array &x, real_2d_array &c);
+void smp_covm(const real_2d_array &x, real_2d_array &c);
 
 
 /*************************************************************************
 Pearson product-moment correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -318,11 +358,32 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void pearsoncorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
+void smp_pearsoncorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
 void pearsoncorrm(const real_2d_array &x, real_2d_array &c);
+void smp_pearsoncorrm(const real_2d_array &x, real_2d_array &c);
 
 
 /*************************************************************************
 Spearman's rank correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -342,11 +403,32 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void spearmancorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
+void smp_spearmancorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c);
 void spearmancorrm(const real_2d_array &x, real_2d_array &c);
+void smp_spearmancorrm(const real_2d_array &x, real_2d_array &c);
 
 
 /*************************************************************************
 Cross-covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -372,11 +454,32 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void covm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
+void smp_covm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
 void covm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
+void smp_covm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
 
 
 /*************************************************************************
 Pearson product-moment cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -402,11 +505,32 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
+void smp_pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
 void pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
+void smp_pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
 
 
 /*************************************************************************
 Spearman's rank cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -432,7 +556,27 @@ OUTPUT PARAMETERS:
      Copyright 28.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void spearmancorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
+void smp_spearmancorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c);
 void spearmancorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
+void smp_spearmancorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c);
+
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdata(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures);
+void smp_rankdata(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures);
+void rankdata(real_2d_array &xy);
+void smp_rankdata(real_2d_array &xy);
+
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdatacentered(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures);
+void smp_rankdatacentered(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures);
+void rankdatacentered(real_2d_array &xy);
+void smp_rankdatacentered(real_2d_array &xy);
 
 
 /*************************************************************************
@@ -695,12 +839,12 @@ The test is based on the assumption that  a  given  sample  has  a  normal
 distribution and  an  unknown  dispersion.  If  the  distribution  sharply
 differs from normal, the test will work incorrectly.
 
-Input parameters:
+INPUT PARAMETERS:
     X       -   sample. Array whose index goes from 0 to N-1.
-    N       -   size of sample.
+    N       -   size of sample, N>=0
     Mean    -   assumed value of the mean.
 
-Output parameters:
+OUTPUT PARAMETERS:
     BothTails   -   p-value for two-tailed test.
                     If BothTails is less than the given significance level
                     the null hypothesis is rejected.
@@ -710,6 +854,13 @@ Output parameters:
     RightTail   -   p-value for right-tailed test.
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
+
+NOTE: this function correctly handles degenerate cases:
+      * when N=0, all p-values are set to 1.0
+      * when variance of X[] is exactly zero, p-values are set
+        to 1.0 or 0.0, depending on difference between sample mean and
+        value of mean being tested.
+
 
   -- ALGLIB --
      Copyright 08.09.2006 by Bochkanov Sergey
@@ -750,6 +901,11 @@ Output parameters:
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
 
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has exactly zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
 *************************************************************************/
@@ -770,7 +926,7 @@ following tests are performed:
 Test is based on the following assumptions:
     * given samples have normal distributions
     * samples are independent.
-Dispersion equality is not required
+Equality of variances is NOT required.
 
 Input parameters:
     X - sample 1. Array whose index goes from 0 to N-1.
@@ -788,6 +944,13 @@ Output parameters:
     RightTail   -   p-value for right-tailed test.
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
+
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+      * when only one sample has zero variance, test reduces to 1-sample
+        version.
 
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
@@ -977,16 +1140,28 @@ void covm(/* Real    */ ae_matrix* x,
      ae_int_t m,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_covm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state);
 void pearsoncorrm(/* Real    */ ae_matrix* x,
      ae_int_t n,
      ae_int_t m,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_pearsoncorrm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state);
 void spearmancorrm(/* Real    */ ae_matrix* x,
      ae_int_t n,
      ae_int_t m,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_spearmancorrm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state);
 void covm2(/* Real    */ ae_matrix* x,
      /* Real    */ ae_matrix* y,
      ae_int_t n,
@@ -994,6 +1169,12 @@ void covm2(/* Real    */ ae_matrix* x,
      ae_int_t m2,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_covm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state);
 void pearsoncorrm2(/* Real    */ ae_matrix* x,
      /* Real    */ ae_matrix* y,
      ae_int_t n,
@@ -1001,6 +1182,12 @@ void pearsoncorrm2(/* Real    */ ae_matrix* x,
      ae_int_t m2,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_pearsoncorrm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state);
 void spearmancorrm2(/* Real    */ ae_matrix* x,
      /* Real    */ ae_matrix* y,
      ae_int_t n,
@@ -1008,6 +1195,26 @@ void spearmancorrm2(/* Real    */ ae_matrix* x,
      ae_int_t m2,
      /* Real    */ ae_matrix* c,
      ae_state *_state);
+void _pexec_spearmancorrm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state);
+void rankdata(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_state *_state);
+void _pexec_rankdata(/* Real    */ ae_matrix* xy,
+    ae_int_t npoints,
+    ae_int_t nfeatures, ae_state *_state);
+void rankdatacentered(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_state *_state);
+void _pexec_rankdatacentered(/* Real    */ ae_matrix* xy,
+    ae_int_t npoints,
+    ae_int_t nfeatures, ae_state *_state);
 double pearsoncorrelation(/* Real    */ ae_vector* x,
      /* Real    */ ae_vector* y,
      ae_int_t n,

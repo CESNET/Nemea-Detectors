@@ -70,10 +70,6 @@ void samplemoments(const real_1d_array &x, const ae_int_t n, double &mean, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -113,10 +109,6 @@ void samplemoments(const real_1d_array &x, double &mean, double &variance, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -150,10 +142,6 @@ double samplemean(const real_1d_array &x, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -193,10 +181,6 @@ double samplemean(const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -230,10 +214,6 @@ double samplevariance(const real_1d_array &x, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -273,10 +253,6 @@ double samplevariance(const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -310,10 +286,6 @@ double sampleskewness(const real_1d_array &x, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -353,10 +325,6 @@ double sampleskewness(const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -390,10 +358,6 @@ double samplekurtosis(const real_1d_array &x, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -433,10 +397,6 @@ double samplekurtosis(const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -467,10 +427,6 @@ void sampleadev(const real_1d_array &x, const ae_int_t n, double &adev)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -507,10 +463,6 @@ void sampleadev(const real_1d_array &x, double &adev)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -541,10 +493,6 @@ void samplemedian(const real_1d_array &x, const ae_int_t n, double &median)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -581,10 +529,6 @@ void samplemedian(const real_1d_array &x, double &median)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -616,10 +560,6 @@ void samplepercentile(const real_1d_array &x, const ae_int_t n, const double p, 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -657,10 +597,6 @@ void samplepercentile(const real_1d_array &x, const double p, double &v)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -692,10 +628,6 @@ double cov2(const real_1d_array &x, const real_1d_array &y, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -734,10 +666,6 @@ double cov2(const real_1d_array &x, const real_1d_array &y)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -770,10 +698,6 @@ double pearsoncorr2(const real_1d_array &x, const real_1d_array &y, const ae_int
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -813,10 +737,6 @@ double pearsoncorr2(const real_1d_array &x, const real_1d_array &y)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -849,10 +769,6 @@ double spearmancorr2(const real_1d_array &x, const real_1d_array &y, const ae_in
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -892,14 +808,29 @@ double spearmancorr2(const real_1d_array &x, const real_1d_array &y)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
 Covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -932,14 +863,46 @@ void covm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_ar
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_covm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_covm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -978,14 +941,52 @@ void covm(const real_2d_array &x, real_2d_array &c)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_covm(const real_2d_array &x, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m;
+
+    n = x.rows();
+    m = x.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_covm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Pearson product-moment correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -1018,14 +1019,46 @@ void pearsoncorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, re
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_pearsoncorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_pearsoncorrm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Pearson product-moment correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -1064,14 +1097,52 @@ void pearsoncorrm(const real_2d_array &x, real_2d_array &c)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_pearsoncorrm(const real_2d_array &x, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m;
+
+    n = x.rows();
+    m = x.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_pearsoncorrm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Spearman's rank correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -1104,14 +1175,46 @@ void spearmancorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, r
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_spearmancorrm(const real_2d_array &x, const ae_int_t n, const ae_int_t m, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_spearmancorrm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Spearman's rank correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -1150,14 +1253,52 @@ void spearmancorrm(const real_2d_array &x, real_2d_array &c)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_spearmancorrm(const real_2d_array &x, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m;
+
+    n = x.rows();
+    m = x.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_spearmancorrm(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), n, m, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Cross-covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1196,14 +1337,46 @@ void covm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, con
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_covm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_covm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Cross-covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1251,14 +1424,55 @@ void covm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_covm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m1;
+    ae_int_t m2;
+    if( (x.rows()!=y.rows()))
+        throw ap_error("Error while calling 'covm2': looks like one of arguments has wrong size");
+    n = x.rows();
+    m1 = x.cols();
+    m2 = y.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_covm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Pearson product-moment cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1297,14 +1511,46 @@ void pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_pearsoncorrm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Pearson product-moment cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1352,14 +1598,55 @@ void pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_pearsoncorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m1;
+    ae_int_t m2;
+    if( (x.rows()!=y.rows()))
+        throw ap_error("Error while calling 'pearsoncorrm2': looks like one of arguments has wrong size");
+    n = x.rows();
+    m1 = x.cols();
+    m2 = y.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_pearsoncorrm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Spearman's rank cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1398,14 +1685,46 @@ void spearmancorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_spearmancorrm2(const real_2d_array &x, const real_2d_array &y, const ae_int_t n, const ae_int_t m1, const ae_int_t m2, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_spearmancorrm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
 /*************************************************************************
 Spearman's rank cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -1453,9 +1772,199 @@ void spearmancorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_arra
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+
+void smp_spearmancorrm2(const real_2d_array &x, const real_2d_array &y, real_2d_array &c)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t n;
+    ae_int_t m1;
+    ae_int_t m2;
+    if( (x.rows()!=y.rows()))
+        throw ap_error("Error while calling 'spearmancorrm2': looks like one of arguments has wrong size");
+    n = x.rows();
+    m1 = x.cols();
+    m2 = y.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::_pexec_spearmancorrm2(const_cast<alglib_impl::ae_matrix*>(x.c_ptr()), const_cast<alglib_impl::ae_matrix*>(y.c_ptr()), n, m1, m2, const_cast<alglib_impl::ae_matrix*>(c.c_ptr()), &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdata(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::rankdata(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+
+void smp_rankdata(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::_pexec_rankdata(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdata(real_2d_array &xy)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+
+    npoints = xy.rows();
+    nfeatures = xy.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::rankdata(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+
+void smp_rankdata(real_2d_array &xy)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+
+    npoints = xy.rows();
+    nfeatures = xy.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::_pexec_rankdata(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdatacentered(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::rankdatacentered(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+
+void smp_rankdatacentered(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::_pexec_rankdatacentered(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+
+*************************************************************************/
+void rankdatacentered(real_2d_array &xy)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+
+    npoints = xy.rows();
+    nfeatures = xy.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::rankdatacentered(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+
+void smp_rankdatacentered(real_2d_array &xy)
+{
+    alglib_impl::ae_state _alglib_env_state;    
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+
+    npoints = xy.rows();
+    nfeatures = xy.cols();
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::_pexec_rankdatacentered(const_cast<alglib_impl::ae_matrix*>(xy.c_ptr()), npoints, nfeatures, &_alglib_env_state);
+
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -1479,10 +1988,6 @@ double pearsoncorrelation(const real_1d_array &x, const real_1d_array &y, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1504,10 +2009,6 @@ double spearmanrankcorrelation(const real_1d_array &x, const real_1d_array &y, c
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1560,10 +2061,6 @@ void pearsoncorrelationsignificance(const double r, const ae_int_t n, double &bo
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1619,10 +2116,6 @@ void spearmanrankcorrelationsignificance(const double r, const ae_int_t n, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1676,10 +2169,6 @@ void jarqueberatest(const real_1d_array &x, const ae_int_t n, double &p)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1761,10 +2250,6 @@ void mannwhitneyutest(const real_1d_array &x, const ae_int_t n, const real_1d_ar
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1821,10 +2306,6 @@ void onesamplesigntest(const real_1d_array &x, const ae_int_t n, const double me
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1843,12 +2324,12 @@ The test is based on the assumption that  a  given  sample  has  a  normal
 distribution and  an  unknown  dispersion.  If  the  distribution  sharply
 differs from normal, the test will work incorrectly.
 
-Input parameters:
+INPUT PARAMETERS:
     X       -   sample. Array whose index goes from 0 to N-1.
-    N       -   size of sample.
+    N       -   size of sample, N>=0
     Mean    -   assumed value of the mean.
 
-Output parameters:
+OUTPUT PARAMETERS:
     BothTails   -   p-value for two-tailed test.
                     If BothTails is less than the given significance level
                     the null hypothesis is rejected.
@@ -1858,6 +2339,13 @@ Output parameters:
     RightTail   -   p-value for right-tailed test.
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
+
+NOTE: this function correctly handles degenerate cases:
+      * when N=0, all p-values are set to 1.0
+      * when variance of X[] is exactly zero, p-values are set
+        to 1.0 or 0.0, depending on difference between sample mean and
+        value of mean being tested.
+
 
   -- ALGLIB --
      Copyright 08.09.2006 by Bochkanov Sergey
@@ -1875,10 +2363,6 @@ void studentttest1(const real_1d_array &x, const ae_int_t n, const double mean, 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1915,6 +2399,11 @@ Output parameters:
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
 
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has exactly zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
 *************************************************************************/
@@ -1932,10 +2421,6 @@ void studentttest2(const real_1d_array &x, const ae_int_t n, const real_1d_array
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1952,7 +2437,7 @@ following tests are performed:
 Test is based on the following assumptions:
     * given samples have normal distributions
     * samples are independent.
-Dispersion equality is not required
+Equality of variances is NOT required.
 
 Input parameters:
     X - sample 1. Array whose index goes from 0 to N-1.
@@ -1971,6 +2456,13 @@ Output parameters:
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
 
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+      * when only one sample has zero variance, test reduces to 1-sample
+        version.
+
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
 *************************************************************************/
@@ -1987,10 +2479,6 @@ void unequalvariancettest(const real_1d_array &x, const ae_int_t n, const real_1
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2044,10 +2532,6 @@ void ftest(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, con
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2097,10 +2581,6 @@ void onesamplevariancetest(const real_1d_array &x, const ae_int_t n, const doubl
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2167,10 +2647,6 @@ void wilcoxonsignedranktest(const real_1d_array &x, const ae_int_t n, const doub
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 }
 
@@ -2181,6 +2657,22 @@ void wilcoxonsignedranktest(const real_1d_array &x, const ae_int_t n, const doub
 /////////////////////////////////////////////////////////////////////////
 namespace alglib_impl
 {
+static void basestat_rankdatarec(/* Real    */ ae_matrix* xy,
+     ae_int_t i0,
+     ae_int_t i1,
+     ae_int_t nfeatures,
+     ae_bool iscentered,
+     ae_shared_pool* pool,
+     ae_int_t basecasecost,
+     ae_state *_state);
+static void basestat_rankdatabasecase(/* Real    */ ae_matrix* xy,
+     ae_int_t i0,
+     ae_int_t i1,
+     ae_int_t nfeatures,
+     ae_bool iscentered,
+     apbuffers* buf0,
+     apbuffers* buf1,
+     ae_state *_state);
 
 
 static double correlationtests_spearmantail5(double s, ae_state *_state);
@@ -3212,8 +3704,8 @@ double spearmancorr2(/* Real    */ ae_vector* x,
         ae_frame_leave(_state);
         return result;
     }
-    rankx(x, n, &buf, _state);
-    rankx(y, n, &buf, _state);
+    rankx(x, n, ae_false, &buf, _state);
+    rankx(y, n, ae_false, &buf, _state);
     result = pearsoncorr2(x, y, n, _state);
     ae_frame_leave(_state);
     return result;
@@ -3222,6 +3714,25 @@ double spearmancorr2(/* Real    */ ae_vector* x,
 
 /*************************************************************************
 Covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -3329,20 +3840,44 @@ void covm(/* Real    */ ae_matrix* x,
         }
     }
     rmatrixsyrk(m, n, (double)1/(double)(n-1), x, 0, 0, 1, 0.0, c, 0, 0, ae_true, _state);
-    
-    /*
-     * force symmetricity
-     */
-    for(i=0; i<=m-2; i++)
-    {
-        ae_v_move(&c->ptr.pp_double[i+1][i], c->stride, &c->ptr.pp_double[i][i+1], 1, ae_v_len(i+1,m-1));
-    }
+    rmatrixenforcesymmetricity(c, m, ae_true, _state);
     ae_frame_leave(_state);
 }
 
 
 /*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_covm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    covm(x,n,m,c, _state);
+}
+
+
+/*************************************************************************
 Pearson product-moment correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -3371,6 +3906,7 @@ void pearsoncorrm(/* Real    */ ae_matrix* x,
     ae_vector t;
     ae_int_t i;
     ae_int_t j;
+    double v;
 
     ae_frame_make(_state, &_frame_block);
     ae_matrix_clear(c);
@@ -3385,20 +3921,21 @@ void pearsoncorrm(/* Real    */ ae_matrix* x,
     covm(x, n, m, c, _state);
     for(i=0; i<=m-1; i++)
     {
-        t.ptr.p_double[i] = ae_sqrt(c->ptr.pp_double[i][i], _state);
+        if( ae_fp_greater(c->ptr.pp_double[i][i],0) )
+        {
+            t.ptr.p_double[i] = 1/ae_sqrt(c->ptr.pp_double[i][i], _state);
+        }
+        else
+        {
+            t.ptr.p_double[i] = 0.0;
+        }
     }
     for(i=0; i<=m-1; i++)
     {
+        v = t.ptr.p_double[i];
         for(j=0; j<=m-1; j++)
         {
-            if( ae_fp_neq(t.ptr.p_double[i],0)&&ae_fp_neq(t.ptr.p_double[j],0) )
-            {
-                c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]/(t.ptr.p_double[i]*t.ptr.p_double[j]);
-            }
-            else
-            {
-                c->ptr.pp_double[i][j] = 0.0;
-            }
+            c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]*v*t.ptr.p_double[j];
         }
     }
     ae_frame_leave(_state);
@@ -3406,7 +3943,38 @@ void pearsoncorrm(/* Real    */ ae_matrix* x,
 
 
 /*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_pearsoncorrm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    pearsoncorrm(x,n,m,c, _state);
+}
+
+
+/*************************************************************************
 Spearman's rank correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M], sample matrix:
@@ -3432,23 +4000,21 @@ void spearmancorrm(/* Real    */ ae_matrix* x,
      ae_state *_state)
 {
     ae_frame _frame_block;
-    ae_matrix _x;
     ae_int_t i;
     ae_int_t j;
     apbuffers buf;
+    ae_matrix xc;
     ae_vector t;
     double v;
-    ae_vector x0;
-    ae_vector same;
+    double vv;
+    double x0;
+    ae_bool b;
 
     ae_frame_make(_state, &_frame_block);
-    ae_matrix_init_copy(&_x, x, _state, ae_true);
-    x = &_x;
     ae_matrix_clear(c);
     _apbuffers_init(&buf, _state, ae_true);
+    ae_matrix_init(&xc, 0, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&t, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&x0, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&same, 0, DT_BOOL, _state, ae_true);
 
     ae_assert(n>=0, "SpearmanCorrM: N<0", _state);
     ae_assert(m>=1, "SpearmanCorrM: M<1", _state);
@@ -3477,95 +4043,136 @@ void spearmancorrm(/* Real    */ ae_matrix* x,
      * Allocate
      */
     ae_vector_set_length(&t, ae_maxint(n, m, _state), _state);
-    ae_vector_set_length(&x0, m, _state);
-    ae_vector_set_length(&same, m, _state);
     ae_matrix_set_length(c, m, m, _state);
     
     /*
      * Replace data with ranks
      */
-    for(j=0; j<=m-1; j++)
-    {
-        ae_v_move(&t.ptr.p_double[0], 1, &x->ptr.pp_double[0][j], x->stride, ae_v_len(0,n-1));
-        rankx(&t, n, &buf, _state);
-        ae_v_move(&x->ptr.pp_double[0][j], x->stride, &t.ptr.p_double[0], 1, ae_v_len(0,n-1));
-    }
+    ae_matrix_set_length(&xc, m, n, _state);
+    rmatrixtranspose(n, m, x, 0, 0, &xc, 0, 0, _state);
+    rankdata(&xc, m, n, _state);
     
     /*
-     * Calculate means,
-     * check for constant columns
+     * 1. Calculate means, check for constant columns
+     * 2. Center variables, constant  columns are
+     *   artificialy zeroed (they must be zero in exact arithmetics,
+     *   but unfortunately floating point is not exact).
      */
     for(i=0; i<=m-1; i++)
     {
-        t.ptr.p_double[i] = 0;
-        same.ptr.p_bool[i] = ae_true;
-    }
-    ae_v_move(&x0.ptr.p_double[0], 1, &x->ptr.pp_double[0][0], 1, ae_v_len(0,m-1));
-    v = (double)1/(double)n;
-    for(i=0; i<=n-1; i++)
-    {
-        ae_v_addd(&t.ptr.p_double[0], 1, &x->ptr.pp_double[i][0], 1, ae_v_len(0,m-1), v);
-        for(j=0; j<=m-1; j++)
+        
+        /*
+         * Calculate:
+         * * V - mean value of I-th variable
+         * * B - True in case all variable values are same
+         */
+        v = 0;
+        b = ae_true;
+        x0 = xc.ptr.pp_double[i][0];
+        for(j=0; j<=n-1; j++)
         {
-            same.ptr.p_bool[j] = same.ptr.p_bool[j]&&ae_fp_eq(x->ptr.pp_double[i][j],x0.ptr.p_double[j]);
+            vv = xc.ptr.pp_double[i][j];
+            v = v+vv;
+            b = b&&ae_fp_eq(vv,x0);
+        }
+        v = v/n;
+        
+        /*
+         * Center/zero I-th variable
+         */
+        if( b )
+        {
+            
+            /*
+             * Zero
+             */
+            for(j=0; j<=n-1; j++)
+            {
+                xc.ptr.pp_double[i][j] = 0.0;
+            }
+        }
+        else
+        {
+            
+            /*
+             * Center
+             */
+            for(j=0; j<=n-1; j++)
+            {
+                xc.ptr.pp_double[i][j] = xc.ptr.pp_double[i][j]-v;
+            }
         }
     }
     
     /*
-     * * center variables;
-     * * if we have constant columns, these columns are
-     *   artificialy zeroed (they must be zero in exact arithmetics,
-     *   but unfortunately floating point is not exact).
-     * * calculate upper half of symmetric covariance matrix
+     * Calculate upper half of symmetric covariance matrix
      */
-    for(i=0; i<=n-1; i++)
+    rmatrixsyrk(m, n, (double)1/(double)(n-1), &xc, 0, 0, 0, 0.0, c, 0, 0, ae_true, _state);
+    
+    /*
+     * Calculate Pearson coefficients (upper triangle)
+     */
+    for(i=0; i<=m-1; i++)
     {
-        ae_v_sub(&x->ptr.pp_double[i][0], 1, &t.ptr.p_double[0], 1, ae_v_len(0,m-1));
-        for(j=0; j<=m-1; j++)
+        if( ae_fp_greater(c->ptr.pp_double[i][i],0) )
         {
-            if( same.ptr.p_bool[j] )
-            {
-                x->ptr.pp_double[i][j] = 0;
-            }
+            t.ptr.p_double[i] = 1/ae_sqrt(c->ptr.pp_double[i][i], _state);
+        }
+        else
+        {
+            t.ptr.p_double[i] = 0.0;
         }
     }
-    rmatrixsyrk(m, n, (double)1/(double)(n-1), x, 0, 0, 1, 0.0, c, 0, 0, ae_true, _state);
+    for(i=0; i<=m-1; i++)
+    {
+        v = t.ptr.p_double[i];
+        for(j=i; j<=m-1; j++)
+        {
+            c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]*v*t.ptr.p_double[j];
+        }
+    }
     
     /*
      * force symmetricity
      */
-    for(i=0; i<=m-2; i++)
-    {
-        ae_v_move(&c->ptr.pp_double[i+1][i], c->stride, &c->ptr.pp_double[i][i+1], 1, ae_v_len(i+1,m-1));
-    }
-    
-    /*
-     * Calculate Pearson coefficients
-     */
-    for(i=0; i<=m-1; i++)
-    {
-        t.ptr.p_double[i] = ae_sqrt(c->ptr.pp_double[i][i], _state);
-    }
-    for(i=0; i<=m-1; i++)
-    {
-        for(j=0; j<=m-1; j++)
-        {
-            if( ae_fp_neq(t.ptr.p_double[i],0)&&ae_fp_neq(t.ptr.p_double[j],0) )
-            {
-                c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]/(t.ptr.p_double[i]*t.ptr.p_double[j]);
-            }
-            else
-            {
-                c->ptr.pp_double[i][j] = 0.0;
-            }
-        }
-    }
+    rmatrixenforcesymmetricity(c, m, ae_true, _state);
     ae_frame_leave(_state);
 }
 
 
 /*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_spearmancorrm(/* Real    */ ae_matrix* x,
+    ae_int_t n,
+    ae_int_t m,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    spearmancorrm(x,n,m,c, _state);
+}
+
+
+/*************************************************************************
 Cross-covariance matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with covariance matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -3732,7 +4339,40 @@ void covm2(/* Real    */ ae_matrix* x,
 
 
 /*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_covm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    covm2(x,y,n,m1,m2,c, _state);
+}
+
+
+/*************************************************************************
 Pearson product-moment cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -3919,16 +4559,32 @@ void pearsoncorrm2(/* Real    */ ae_matrix* x,
      */
     for(i=0; i<=m1-1; i++)
     {
+        if( ae_fp_neq(sx.ptr.p_double[i],0) )
+        {
+            sx.ptr.p_double[i] = 1/sx.ptr.p_double[i];
+        }
+        else
+        {
+            sx.ptr.p_double[i] = 0.0;
+        }
+    }
+    for(i=0; i<=m2-1; i++)
+    {
+        if( ae_fp_neq(sy.ptr.p_double[i],0) )
+        {
+            sy.ptr.p_double[i] = 1/sy.ptr.p_double[i];
+        }
+        else
+        {
+            sy.ptr.p_double[i] = 0.0;
+        }
+    }
+    for(i=0; i<=m1-1; i++)
+    {
+        v = sx.ptr.p_double[i];
         for(j=0; j<=m2-1; j++)
         {
-            if( ae_fp_neq(sx.ptr.p_double[i],0)&&ae_fp_neq(sy.ptr.p_double[j],0) )
-            {
-                c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]/(sx.ptr.p_double[i]*sy.ptr.p_double[j]);
-            }
-            else
-            {
-                c->ptr.pp_double[i][j] = 0;
-            }
+            c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]*v*sy.ptr.p_double[j];
         }
     }
     ae_frame_leave(_state);
@@ -3936,7 +4592,40 @@ void pearsoncorrm2(/* Real    */ ae_matrix* x,
 
 
 /*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_pearsoncorrm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    pearsoncorrm2(x,y,n,m1,m2,c, _state);
+}
+
+
+/*************************************************************************
 Spearman's rank cross-correlation matrix
+
+SMP EDITION OF ALGLIB:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  ! 
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero cost. Although  multicore  version  is  pretty  efficient on
+  ! large problems, we do not recommend you to use it on small problems -
+  ! with correlation matrices smaller than 128*128.
 
 INPUT PARAMETERS:
     X   -   array[N,M1], sample matrix:
@@ -3970,33 +4659,28 @@ void spearmancorrm2(/* Real    */ ae_matrix* x,
      ae_state *_state)
 {
     ae_frame _frame_block;
-    ae_matrix _x;
-    ae_matrix _y;
     ae_int_t i;
     ae_int_t j;
     double v;
+    double v2;
+    double vv;
+    ae_bool b;
     ae_vector t;
-    ae_vector x0;
-    ae_vector y0;
+    double x0;
+    double y0;
     ae_vector sx;
     ae_vector sy;
-    ae_vector samex;
-    ae_vector samey;
+    ae_matrix xc;
+    ae_matrix yc;
     apbuffers buf;
 
     ae_frame_make(_state, &_frame_block);
-    ae_matrix_init_copy(&_x, x, _state, ae_true);
-    x = &_x;
-    ae_matrix_init_copy(&_y, y, _state, ae_true);
-    y = &_y;
     ae_matrix_clear(c);
     ae_vector_init(&t, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&x0, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&y0, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&sx, 0, DT_REAL, _state, ae_true);
     ae_vector_init(&sy, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&samex, 0, DT_BOOL, _state, ae_true);
-    ae_vector_init(&samey, 0, DT_BOOL, _state, ae_true);
+    ae_matrix_init(&xc, 0, 0, DT_REAL, _state, ae_true);
+    ae_matrix_init(&yc, 0, 0, DT_REAL, _state, ae_true);
     _apbuffers_init(&buf, _state, ae_true);
 
     ae_assert(n>=0, "SpearmanCorrM2: N<0", _state);
@@ -4030,130 +4714,272 @@ void spearmancorrm2(/* Real    */ ae_matrix* x,
      * Allocate
      */
     ae_vector_set_length(&t, ae_maxint(ae_maxint(m1, m2, _state), n, _state), _state);
-    ae_vector_set_length(&x0, m1, _state);
-    ae_vector_set_length(&y0, m2, _state);
     ae_vector_set_length(&sx, m1, _state);
     ae_vector_set_length(&sy, m2, _state);
-    ae_vector_set_length(&samex, m1, _state);
-    ae_vector_set_length(&samey, m2, _state);
     ae_matrix_set_length(c, m1, m2, _state);
     
     /*
      * Replace data with ranks
      */
-    for(j=0; j<=m1-1; j++)
-    {
-        ae_v_move(&t.ptr.p_double[0], 1, &x->ptr.pp_double[0][j], x->stride, ae_v_len(0,n-1));
-        rankx(&t, n, &buf, _state);
-        ae_v_move(&x->ptr.pp_double[0][j], x->stride, &t.ptr.p_double[0], 1, ae_v_len(0,n-1));
-    }
-    for(j=0; j<=m2-1; j++)
-    {
-        ae_v_move(&t.ptr.p_double[0], 1, &y->ptr.pp_double[0][j], y->stride, ae_v_len(0,n-1));
-        rankx(&t, n, &buf, _state);
-        ae_v_move(&y->ptr.pp_double[0][j], y->stride, &t.ptr.p_double[0], 1, ae_v_len(0,n-1));
-    }
+    ae_matrix_set_length(&xc, m1, n, _state);
+    ae_matrix_set_length(&yc, m2, n, _state);
+    rmatrixtranspose(n, m1, x, 0, 0, &xc, 0, 0, _state);
+    rmatrixtranspose(n, m2, y, 0, 0, &yc, 0, 0, _state);
+    rankdata(&xc, m1, n, _state);
+    rankdata(&yc, m2, n, _state);
     
     /*
-     * * calculate means of X
-     * * center X
-     * * if we have constant columns, these columns are
-     *   artificially zeroed (they must be zero in exact arithmetics,
-     *   but unfortunately floating point ops are not exact).
-     * * calculate column variances
+     * 1. Calculate means, variances, check for constant columns
+     * 2. Center variables, constant  columns are
+     *   artificialy zeroed (they must be zero in exact arithmetics,
+     *   but unfortunately floating point is not exact).
+     *
+     * Description of variables:
+     * * V - mean value of I-th variable
+     * * V2- variance
+     * * VV-temporary
+     * * B - True in case all variable values are same
      */
     for(i=0; i<=m1-1; i++)
     {
-        t.ptr.p_double[i] = 0;
-        samex.ptr.p_bool[i] = ae_true;
-        sx.ptr.p_double[i] = 0;
-    }
-    ae_v_move(&x0.ptr.p_double[0], 1, &x->ptr.pp_double[0][0], 1, ae_v_len(0,m1-1));
-    v = (double)1/(double)n;
-    for(i=0; i<=n-1; i++)
-    {
-        ae_v_addd(&t.ptr.p_double[0], 1, &x->ptr.pp_double[i][0], 1, ae_v_len(0,m1-1), v);
-        for(j=0; j<=m1-1; j++)
+        v = 0;
+        v2 = 0.0;
+        b = ae_true;
+        x0 = xc.ptr.pp_double[i][0];
+        for(j=0; j<=n-1; j++)
         {
-            samex.ptr.p_bool[j] = samex.ptr.p_bool[j]&&ae_fp_eq(x->ptr.pp_double[i][j],x0.ptr.p_double[j]);
+            vv = xc.ptr.pp_double[i][j];
+            v = v+vv;
+            b = b&&ae_fp_eq(vv,x0);
         }
-    }
-    for(i=0; i<=n-1; i++)
-    {
-        ae_v_sub(&x->ptr.pp_double[i][0], 1, &t.ptr.p_double[0], 1, ae_v_len(0,m1-1));
-        for(j=0; j<=m1-1; j++)
+        v = v/n;
+        if( b )
         {
-            if( samex.ptr.p_bool[j] )
+            for(j=0; j<=n-1; j++)
             {
-                x->ptr.pp_double[i][j] = 0;
+                xc.ptr.pp_double[i][j] = 0.0;
             }
-            sx.ptr.p_double[j] = sx.ptr.p_double[j]+x->ptr.pp_double[i][j]*x->ptr.pp_double[i][j];
         }
+        else
+        {
+            for(j=0; j<=n-1; j++)
+            {
+                vv = xc.ptr.pp_double[i][j];
+                xc.ptr.pp_double[i][j] = vv-v;
+                v2 = v2+(vv-v)*(vv-v);
+            }
+        }
+        sx.ptr.p_double[i] = ae_sqrt(v2/(n-1), _state);
     }
-    for(j=0; j<=m1-1; j++)
-    {
-        sx.ptr.p_double[j] = ae_sqrt(sx.ptr.p_double[j]/(n-1), _state);
-    }
-    
-    /*
-     * Repeat same steps for Y
-     */
     for(i=0; i<=m2-1; i++)
     {
-        t.ptr.p_double[i] = 0;
-        samey.ptr.p_bool[i] = ae_true;
-        sy.ptr.p_double[i] = 0;
-    }
-    ae_v_move(&y0.ptr.p_double[0], 1, &y->ptr.pp_double[0][0], 1, ae_v_len(0,m2-1));
-    v = (double)1/(double)n;
-    for(i=0; i<=n-1; i++)
-    {
-        ae_v_addd(&t.ptr.p_double[0], 1, &y->ptr.pp_double[i][0], 1, ae_v_len(0,m2-1), v);
-        for(j=0; j<=m2-1; j++)
+        v = 0;
+        v2 = 0.0;
+        b = ae_true;
+        y0 = yc.ptr.pp_double[i][0];
+        for(j=0; j<=n-1; j++)
         {
-            samey.ptr.p_bool[j] = samey.ptr.p_bool[j]&&ae_fp_eq(y->ptr.pp_double[i][j],y0.ptr.p_double[j]);
+            vv = yc.ptr.pp_double[i][j];
+            v = v+vv;
+            b = b&&ae_fp_eq(vv,y0);
         }
-    }
-    for(i=0; i<=n-1; i++)
-    {
-        ae_v_sub(&y->ptr.pp_double[i][0], 1, &t.ptr.p_double[0], 1, ae_v_len(0,m2-1));
-        for(j=0; j<=m2-1; j++)
+        v = v/n;
+        if( b )
         {
-            if( samey.ptr.p_bool[j] )
+            for(j=0; j<=n-1; j++)
             {
-                y->ptr.pp_double[i][j] = 0;
+                yc.ptr.pp_double[i][j] = 0.0;
             }
-            sy.ptr.p_double[j] = sy.ptr.p_double[j]+y->ptr.pp_double[i][j]*y->ptr.pp_double[i][j];
         }
-    }
-    for(j=0; j<=m2-1; j++)
-    {
-        sy.ptr.p_double[j] = ae_sqrt(sy.ptr.p_double[j]/(n-1), _state);
+        else
+        {
+            for(j=0; j<=n-1; j++)
+            {
+                vv = yc.ptr.pp_double[i][j];
+                yc.ptr.pp_double[i][j] = vv-v;
+                v2 = v2+(vv-v)*(vv-v);
+            }
+        }
+        sy.ptr.p_double[i] = ae_sqrt(v2/(n-1), _state);
     }
     
     /*
      * calculate cross-covariance matrix
      */
-    rmatrixgemm(m1, m2, n, (double)1/(double)(n-1), x, 0, 0, 1, y, 0, 0, 0, 0.0, c, 0, 0, _state);
+    rmatrixgemm(m1, m2, n, (double)1/(double)(n-1), &xc, 0, 0, 0, &yc, 0, 0, 1, 0.0, c, 0, 0, _state);
     
     /*
      * Divide by standard deviations
      */
     for(i=0; i<=m1-1; i++)
     {
+        if( ae_fp_neq(sx.ptr.p_double[i],0) )
+        {
+            sx.ptr.p_double[i] = 1/sx.ptr.p_double[i];
+        }
+        else
+        {
+            sx.ptr.p_double[i] = 0.0;
+        }
+    }
+    for(i=0; i<=m2-1; i++)
+    {
+        if( ae_fp_neq(sy.ptr.p_double[i],0) )
+        {
+            sy.ptr.p_double[i] = 1/sy.ptr.p_double[i];
+        }
+        else
+        {
+            sy.ptr.p_double[i] = 0.0;
+        }
+    }
+    for(i=0; i<=m1-1; i++)
+    {
+        v = sx.ptr.p_double[i];
         for(j=0; j<=m2-1; j++)
         {
-            if( ae_fp_neq(sx.ptr.p_double[i],0)&&ae_fp_neq(sy.ptr.p_double[j],0) )
-            {
-                c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]/(sx.ptr.p_double[i]*sy.ptr.p_double[j]);
-            }
-            else
-            {
-                c->ptr.pp_double[i][j] = 0;
-            }
+            c->ptr.pp_double[i][j] = c->ptr.pp_double[i][j]*v*sy.ptr.p_double[j];
         }
     }
     ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_spearmancorrm2(/* Real    */ ae_matrix* x,
+    /* Real    */ ae_matrix* y,
+    ae_int_t n,
+    ae_int_t m1,
+    ae_int_t m2,
+    /* Real    */ ae_matrix* c, ae_state *_state)
+{
+    spearmancorrm2(x,y,n,m1,m2,c, _state);
+}
+
+
+void rankdata(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    apbuffers buf0;
+    apbuffers buf1;
+    ae_int_t basecasecost;
+    ae_shared_pool pool;
+
+    ae_frame_make(_state, &_frame_block);
+    _apbuffers_init(&buf0, _state, ae_true);
+    _apbuffers_init(&buf1, _state, ae_true);
+    ae_shared_pool_init(&pool, _state, ae_true);
+
+    ae_assert(npoints>=0, "RankData: NPoints<0", _state);
+    ae_assert(nfeatures>=1, "RankData: NFeatures<1", _state);
+    ae_assert(xy->rows>=npoints, "RankData: Rows(XY)<NPoints", _state);
+    ae_assert(xy->cols>=nfeatures||npoints==0, "RankData: Cols(XY)<NFeatures", _state);
+    ae_assert(apservisfinitematrix(xy, npoints, nfeatures, _state), "RankData: XY contains infinite/NAN elements", _state);
+    
+    /*
+     * Basecase cost is a maximum cost of basecase problems.
+     * Problems harded than that cost will be split.
+     *
+     * Problem cost is assumed to be NPoints*NFeatures*log2(NFeatures),
+     * which is proportional, but NOT equal to number of FLOPs required
+     * to solve problem.
+     */
+    basecasecost = 10000;
+    
+    /*
+     * Try to use serial code, no SMP functionality, no shared pools.
+     */
+    if( ae_fp_less(inttoreal(npoints, _state)*inttoreal(nfeatures, _state)*log2(nfeatures, _state),basecasecost) )
+    {
+        basestat_rankdatabasecase(xy, 0, npoints, nfeatures, ae_false, &buf0, &buf1, _state);
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Parallel code
+     */
+    ae_shared_pool_set_seed(&pool, &buf0, sizeof(buf0), _apbuffers_init, _apbuffers_init_copy, _apbuffers_destroy, _state);
+    basestat_rankdatarec(xy, 0, npoints, nfeatures, ae_false, &pool, basecasecost, _state);
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_rankdata(/* Real    */ ae_matrix* xy,
+    ae_int_t npoints,
+    ae_int_t nfeatures, ae_state *_state)
+{
+    rankdata(xy,npoints,nfeatures, _state);
+}
+
+
+void rankdatacentered(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    apbuffers buf0;
+    apbuffers buf1;
+    ae_int_t basecasecost;
+    ae_shared_pool pool;
+
+    ae_frame_make(_state, &_frame_block);
+    _apbuffers_init(&buf0, _state, ae_true);
+    _apbuffers_init(&buf1, _state, ae_true);
+    ae_shared_pool_init(&pool, _state, ae_true);
+
+    ae_assert(npoints>=0, "RankData: NPoints<0", _state);
+    ae_assert(nfeatures>=1, "RankData: NFeatures<1", _state);
+    ae_assert(xy->rows>=npoints, "RankData: Rows(XY)<NPoints", _state);
+    ae_assert(xy->cols>=nfeatures||npoints==0, "RankData: Cols(XY)<NFeatures", _state);
+    ae_assert(apservisfinitematrix(xy, npoints, nfeatures, _state), "RankData: XY contains infinite/NAN elements", _state);
+    
+    /*
+     * Basecase cost is a maximum cost of basecase problems.
+     * Problems harded than that cost will be split.
+     *
+     * Problem cost is assumed to be NPoints*NFeatures*log2(NFeatures),
+     * which is proportional, but NOT equal to number of FLOPs required
+     * to solve problem.
+     */
+    basecasecost = 10000;
+    
+    /*
+     * Try to use serial code, no SMP functionality, no shared pools.
+     */
+    if( ae_fp_less(inttoreal(npoints, _state)*inttoreal(nfeatures, _state)*log2(nfeatures, _state),basecasecost) )
+    {
+        basestat_rankdatabasecase(xy, 0, npoints, nfeatures, ae_true, &buf0, &buf1, _state);
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Parallel code
+     */
+    ae_shared_pool_set_seed(&pool, &buf0, sizeof(buf0), _apbuffers_init, _apbuffers_init_copy, _apbuffers_destroy, _state);
+    basestat_rankdatarec(xy, 0, npoints, nfeatures, ae_true, &pool, basecasecost, _state);
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+Single-threaded stub. HPC ALGLIB replaces it by multithreaded code.
+*************************************************************************/
+void _pexec_rankdatacentered(/* Real    */ ae_matrix* xy,
+    ae_int_t npoints,
+    ae_int_t nfeatures, ae_state *_state)
+{
+    rankdatacentered(xy,npoints,nfeatures, _state);
 }
 
 
@@ -4192,6 +5018,80 @@ double spearmanrankcorrelation(/* Real    */ ae_vector* x,
 
     result = spearmancorr2(x, y, n, _state);
     return result;
+}
+
+
+static void basestat_rankdatarec(/* Real    */ ae_matrix* xy,
+     ae_int_t i0,
+     ae_int_t i1,
+     ae_int_t nfeatures,
+     ae_bool iscentered,
+     ae_shared_pool* pool,
+     ae_int_t basecasecost,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    apbuffers *buf0;
+    ae_smart_ptr _buf0;
+    apbuffers *buf1;
+    ae_smart_ptr _buf1;
+    double problemcost;
+    ae_int_t im;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_smart_ptr_init(&_buf0, (void**)&buf0, _state, ae_true);
+    ae_smart_ptr_init(&_buf1, (void**)&buf1, _state, ae_true);
+
+    ae_assert(i1>=i0, "RankDataRec: internal error", _state);
+    
+    /*
+     * Recursively split problem, if it is too large
+     */
+    problemcost = inttoreal(i1-i0, _state)*inttoreal(nfeatures, _state)*log2(nfeatures, _state);
+    if( i1-i0>=2&&ae_fp_greater(problemcost,basecasecost) )
+    {
+        im = (i1+i0)/2;
+        basestat_rankdatarec(xy, i0, im, nfeatures, iscentered, pool, basecasecost, _state);
+        basestat_rankdatarec(xy, im, i1, nfeatures, iscentered, pool, basecasecost, _state);
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Retrieve buffers from pool, call serial code, return buffers to pool
+     */
+    ae_shared_pool_retrieve(pool, &_buf0, _state);
+    ae_shared_pool_retrieve(pool, &_buf1, _state);
+    basestat_rankdatabasecase(xy, i0, i1, nfeatures, iscentered, buf0, buf1, _state);
+    ae_shared_pool_recycle(pool, &_buf0, _state);
+    ae_shared_pool_recycle(pool, &_buf1, _state);
+    ae_frame_leave(_state);
+}
+
+
+static void basestat_rankdatabasecase(/* Real    */ ae_matrix* xy,
+     ae_int_t i0,
+     ae_int_t i1,
+     ae_int_t nfeatures,
+     ae_bool iscentered,
+     apbuffers* buf0,
+     apbuffers* buf1,
+     ae_state *_state)
+{
+    ae_int_t i;
+
+
+    ae_assert(i1>=i0, "RankDataBasecase: internal error", _state);
+    if( buf1->ra0.cnt<nfeatures )
+    {
+        ae_vector_set_length(&buf1->ra0, nfeatures, _state);
+    }
+    for(i=i0; i<=i1-1; i++)
+    {
+        ae_v_move(&buf1->ra0.ptr.p_double[0], 1, &xy->ptr.pp_double[i][0], 1, ae_v_len(0,nfeatures-1));
+        rankx(&buf1->ra0, nfeatures, iscentered, buf0, _state);
+        ae_v_move(&xy->ptr.pp_double[i][0], 1, &buf1->ra0.ptr.p_double[0], 1, ae_v_len(0,nfeatures-1));
+    }
 }
 
 
@@ -11750,12 +12650,12 @@ void onesamplesigntest(/* Real    */ ae_vector* x,
          * all x[i] are equal to Median.
          * So we can conclude that Median is a true median :)
          */
-        *bothtails = 0.0;
-        *lefttail = 0.0;
-        *righttail = 0.0;
+        *bothtails = 1.0;
+        *lefttail = 1.0;
+        *righttail = 1.0;
         return;
     }
-    *bothtails = 2*binomialdistribution(ae_minint(gtcnt, necnt-gtcnt, _state), necnt, 0.5, _state);
+    *bothtails = ae_minreal(2*binomialdistribution(ae_minint(gtcnt, necnt-gtcnt, _state), necnt, 0.5, _state), 1.0, _state);
     *lefttail = binomialdistribution(gtcnt, necnt, 0.5, _state);
     *righttail = binomialcdistribution(gtcnt-1, necnt, 0.5, _state);
 }
@@ -11779,12 +12679,12 @@ The test is based on the assumption that  a  given  sample  has  a  normal
 distribution and  an  unknown  dispersion.  If  the  distribution  sharply
 differs from normal, the test will work incorrectly.
 
-Input parameters:
+INPUT PARAMETERS:
     X       -   sample. Array whose index goes from 0 to N-1.
-    N       -   size of sample.
+    N       -   size of sample, N>=0
     Mean    -   assumed value of the mean.
 
-Output parameters:
+OUTPUT PARAMETERS:
     BothTails   -   p-value for two-tailed test.
                     If BothTails is less than the given significance level
                     the null hypothesis is rejected.
@@ -11794,6 +12694,13 @@ Output parameters:
     RightTail   -   p-value for right-tailed test.
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
+
+NOTE: this function correctly handles degenerate cases:
+      * when N=0, all p-values are set to 1.0
+      * when variance of X[] is exactly zero, p-values are set
+        to 1.0 or 0.0, depending on difference between sample mean and
+        value of mean being tested.
+
 
   -- ALGLIB --
      Copyright 08.09.2006 by Bochkanov Sergey
@@ -11808,6 +12715,9 @@ void studentttest1(/* Real    */ ae_vector* x,
 {
     ae_int_t i;
     double xmean;
+    double x0;
+    double v;
+    ae_bool samex;
     double xvariance;
     double xstddev;
     double v1;
@@ -11819,7 +12729,7 @@ void studentttest1(/* Real    */ ae_vector* x,
     *lefttail = 0;
     *righttail = 0;
 
-    if( n<=1 )
+    if( n<=0 )
     {
         *bothtails = 1.0;
         *lefttail = 1.0;
@@ -11831,18 +12741,29 @@ void studentttest1(/* Real    */ ae_vector* x,
      * Mean
      */
     xmean = 0;
+    x0 = x->ptr.p_double[0];
+    samex = ae_true;
     for(i=0; i<=n-1; i++)
     {
-        xmean = xmean+x->ptr.p_double[i];
+        v = x->ptr.p_double[i];
+        xmean = xmean+v;
+        samex = samex&&ae_fp_eq(v,x0);
     }
-    xmean = xmean/n;
+    if( samex )
+    {
+        xmean = x0;
+    }
+    else
+    {
+        xmean = xmean/n;
+    }
     
     /*
      * Variance (using corrected two-pass algorithm)
      */
     xvariance = 0;
     xstddev = 0;
-    if( n!=1 )
+    if( n!=1&&!samex )
     {
         v1 = 0;
         for(i=0; i<=n-1; i++)
@@ -11864,9 +12785,30 @@ void studentttest1(/* Real    */ ae_vector* x,
     }
     if( ae_fp_eq(xstddev,0) )
     {
-        *bothtails = 1.0;
-        *lefttail = 1.0;
-        *righttail = 1.0;
+        if( ae_fp_eq(xmean,mean) )
+        {
+            *bothtails = 1.0;
+        }
+        else
+        {
+            *bothtails = 0.0;
+        }
+        if( ae_fp_greater_eq(xmean,mean) )
+        {
+            *lefttail = 1.0;
+        }
+        else
+        {
+            *lefttail = 0.0;
+        }
+        if( ae_fp_less_eq(xmean,mean) )
+        {
+            *righttail = 1.0;
+        }
+        else
+        {
+            *righttail = 0.0;
+        }
         return;
     }
     
@@ -11914,6 +12856,11 @@ Output parameters:
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
 
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has exactly zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
 *************************************************************************/
@@ -11927,8 +12874,13 @@ void studentttest2(/* Real    */ ae_vector* x,
      ae_state *_state)
 {
     ae_int_t i;
+    ae_bool samex;
+    ae_bool samey;
+    double x0;
+    double y0;
     double xmean;
     double ymean;
+    double v;
     double stat;
     double s;
     double p;
@@ -11937,7 +12889,7 @@ void studentttest2(/* Real    */ ae_vector* x,
     *lefttail = 0;
     *righttail = 0;
 
-    if( n<=1||m<=1 )
+    if( n<=0||m<=0 )
     {
         *bothtails = 1.0;
         *lefttail = 1.0;
@@ -11949,36 +12901,82 @@ void studentttest2(/* Real    */ ae_vector* x,
      * Mean
      */
     xmean = 0;
+    x0 = x->ptr.p_double[0];
+    samex = ae_true;
     for(i=0; i<=n-1; i++)
     {
-        xmean = xmean+x->ptr.p_double[i];
+        v = x->ptr.p_double[i];
+        xmean = xmean+v;
+        samex = samex&&ae_fp_eq(v,x0);
     }
-    xmean = xmean/n;
+    if( samex )
+    {
+        xmean = x0;
+    }
+    else
+    {
+        xmean = xmean/n;
+    }
     ymean = 0;
+    y0 = y->ptr.p_double[0];
+    samey = ae_true;
     for(i=0; i<=m-1; i++)
     {
-        ymean = ymean+y->ptr.p_double[i];
+        v = y->ptr.p_double[i];
+        ymean = ymean+v;
+        samey = samey&&ae_fp_eq(v,y0);
     }
-    ymean = ymean/m;
+    if( samey )
+    {
+        ymean = y0;
+    }
+    else
+    {
+        ymean = ymean/m;
+    }
     
     /*
      * S
      */
     s = 0;
-    for(i=0; i<=n-1; i++)
+    if( n+m>2 )
     {
-        s = s+ae_sqr(x->ptr.p_double[i]-xmean, _state);
+        for(i=0; i<=n-1; i++)
+        {
+            s = s+ae_sqr(x->ptr.p_double[i]-xmean, _state);
+        }
+        for(i=0; i<=m-1; i++)
+        {
+            s = s+ae_sqr(y->ptr.p_double[i]-ymean, _state);
+        }
+        s = ae_sqrt(s*((double)1/(double)n+(double)1/(double)m)/(n+m-2), _state);
     }
-    for(i=0; i<=m-1; i++)
-    {
-        s = s+ae_sqr(y->ptr.p_double[i]-ymean, _state);
-    }
-    s = ae_sqrt(s*((double)1/(double)n+(double)1/(double)m)/(n+m-2), _state);
     if( ae_fp_eq(s,0) )
     {
-        *bothtails = 1.0;
-        *lefttail = 1.0;
-        *righttail = 1.0;
+        if( ae_fp_eq(xmean,ymean) )
+        {
+            *bothtails = 1.0;
+        }
+        else
+        {
+            *bothtails = 0.0;
+        }
+        if( ae_fp_greater_eq(xmean,ymean) )
+        {
+            *lefttail = 1.0;
+        }
+        else
+        {
+            *lefttail = 0.0;
+        }
+        if( ae_fp_less_eq(xmean,ymean) )
+        {
+            *righttail = 1.0;
+        }
+        else
+        {
+            *righttail = 0.0;
+        }
         return;
     }
     
@@ -12007,7 +13005,7 @@ following tests are performed:
 Test is based on the following assumptions:
     * given samples have normal distributions
     * samples are independent.
-Dispersion equality is not required
+Equality of variances is NOT required.
 
 Input parameters:
     X - sample 1. Array whose index goes from 0 to N-1.
@@ -12026,6 +13024,13 @@ Output parameters:
                     If RightTail is less than the given significance level
                     the null hypothesis is rejected.
 
+NOTE: this function correctly handles degenerate cases:
+      * when N=0 or M=0, all p-values are set to 1.0
+      * when both samples has zero variance, p-values are set
+        to 1.0 or 0.0, depending on difference between means.
+      * when only one sample has zero variance, test reduces to 1-sample
+        version.
+
   -- ALGLIB --
      Copyright 18.09.2006 by Bochkanov Sergey
 *************************************************************************/
@@ -12039,10 +13044,15 @@ void unequalvariancettest(/* Real    */ ae_vector* x,
      ae_state *_state)
 {
     ae_int_t i;
+    ae_bool samex;
+    ae_bool samey;
+    double x0;
+    double y0;
     double xmean;
     double ymean;
     double xvar;
     double yvar;
+    double v;
     double df;
     double p;
     double stat;
@@ -12052,7 +13062,7 @@ void unequalvariancettest(/* Real    */ ae_vector* x,
     *lefttail = 0;
     *righttail = 0;
 
-    if( n<=1||m<=1 )
+    if( n<=0||m<=0 )
     {
         *bothtails = 1.0;
         *lefttail = 1.0;
@@ -12064,38 +13074,114 @@ void unequalvariancettest(/* Real    */ ae_vector* x,
      * Mean
      */
     xmean = 0;
+    x0 = x->ptr.p_double[0];
+    samex = ae_true;
     for(i=0; i<=n-1; i++)
     {
-        xmean = xmean+x->ptr.p_double[i];
+        v = x->ptr.p_double[i];
+        xmean = xmean+v;
+        samex = samex&&ae_fp_eq(v,x0);
     }
-    xmean = xmean/n;
+    if( samex )
+    {
+        xmean = x0;
+    }
+    else
+    {
+        xmean = xmean/n;
+    }
     ymean = 0;
+    y0 = y->ptr.p_double[0];
+    samey = ae_true;
     for(i=0; i<=m-1; i++)
     {
-        ymean = ymean+y->ptr.p_double[i];
+        v = y->ptr.p_double[i];
+        ymean = ymean+v;
+        samey = samey&&ae_fp_eq(v,y0);
     }
-    ymean = ymean/m;
+    if( samey )
+    {
+        ymean = y0;
+    }
+    else
+    {
+        ymean = ymean/m;
+    }
     
     /*
      * Variance (using corrected two-pass algorithm)
      */
     xvar = 0;
-    for(i=0; i<=n-1; i++)
+    if( n>=2&&!samex )
     {
-        xvar = xvar+ae_sqr(x->ptr.p_double[i]-xmean, _state);
+        for(i=0; i<=n-1; i++)
+        {
+            xvar = xvar+ae_sqr(x->ptr.p_double[i]-xmean, _state);
+        }
+        xvar = xvar/(n-1);
     }
-    xvar = xvar/(n-1);
     yvar = 0;
-    for(i=0; i<=m-1; i++)
+    if( m>=2&&!samey )
     {
-        yvar = yvar+ae_sqr(y->ptr.p_double[i]-ymean, _state);
+        for(i=0; i<=m-1; i++)
+        {
+            yvar = yvar+ae_sqr(y->ptr.p_double[i]-ymean, _state);
+        }
+        yvar = yvar/(m-1);
     }
-    yvar = yvar/(m-1);
-    if( ae_fp_eq(xvar,0)||ae_fp_eq(yvar,0) )
+    
+    /*
+     * Handle different special cases
+     * (one or both variances are zero).
+     */
+    if( ae_fp_eq(xvar,0)&&ae_fp_eq(yvar,0) )
     {
-        *bothtails = 1.0;
-        *lefttail = 1.0;
-        *righttail = 1.0;
+        if( ae_fp_eq(xmean,ymean) )
+        {
+            *bothtails = 1.0;
+        }
+        else
+        {
+            *bothtails = 0.0;
+        }
+        if( ae_fp_greater_eq(xmean,ymean) )
+        {
+            *lefttail = 1.0;
+        }
+        else
+        {
+            *lefttail = 0.0;
+        }
+        if( ae_fp_less_eq(xmean,ymean) )
+        {
+            *righttail = 1.0;
+        }
+        else
+        {
+            *righttail = 0.0;
+        }
+        return;
+    }
+    if( ae_fp_eq(xvar,0) )
+    {
+        
+        /*
+         * X is constant, unpooled 2-sample test reduces to 1-sample test.
+         *
+         * NOTE: right-tail and left-tail must be passed to 1-sample
+         *       t-test in reverse order because we reverse order of
+         *       of samples.
+         */
+        studentttest1(y, m, xmean, bothtails, righttail, lefttail, _state);
+        return;
+    }
+    if( ae_fp_eq(yvar,0) )
+    {
+        
+        /*
+         * Y is constant, unpooled 2-sample test reduces to 1-sample test.
+         */
+        studentttest1(x, n, ymean, bothtails, lefttail, righttail, _state);
         return;
     }
     

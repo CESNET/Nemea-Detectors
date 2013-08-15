@@ -131,10 +131,6 @@ void hqrndrandomize(hqrndstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -156,10 +152,6 @@ void hqrndseed(const ae_int_t s1, const ae_int_t s2, hqrndstate &state)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -186,17 +178,16 @@ double hqrnduniformr(const hqrndstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
 This function generates random integer number in [0, N)
 
-1. N must be less than HQRNDMax-1.
-2. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+1. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+2. N can be any positive number except for very large numbers:
+   * close to 2^31 on 32-bit systems
+   * close to 2^62 on 64-bit systems
+   An exception will be generated if N is too large.
 
   -- ALGLIB --
      Copyright 02.12.2009 by Bochkanov Sergey
@@ -214,10 +205,6 @@ ae_int_t hqrnduniformi(const hqrndstate &state, const ae_int_t n)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -246,10 +233,6 @@ double hqrndnormal(const hqrndstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -273,10 +256,6 @@ void hqrndunit2(const hqrndstate &state, double &x, double &y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -305,10 +284,6 @@ void hqrndnormal2(const hqrndstate &state, double &x1, double &x2)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -332,10 +307,6 @@ double hqrndexponential(const hqrndstate &state, const double lambdav)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -368,10 +339,6 @@ double hqrnddiscrete(const hqrndstate &state, const real_1d_array &x, const ae_i
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -407,10 +374,6 @@ double hqrndcontinuous(const hqrndstate &state, const real_1d_array &x, const ae
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -528,10 +491,6 @@ void kdtreeserialize(kdtree &obj, std::string &s_out)
     {
         throw ap_error(state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 /*************************************************************************
 This function unserializes data structure from string.
@@ -554,10 +513,6 @@ void kdtreeunserialize(std::string &s_in, kdtree &obj)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -609,10 +564,6 @@ void kdtreebuild(const real_2d_array &xy, const ae_int_t n, const ae_int_t nx, c
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -669,10 +620,6 @@ void kdtreebuild(const real_2d_array &xy, const ae_int_t nx, const ae_int_t ny, 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -725,10 +672,6 @@ void kdtreebuildtagged(const real_2d_array &xy, const integer_1d_array &tags, co
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -788,10 +731,6 @@ void kdtreebuildtagged(const real_2d_array &xy, const integer_1d_array &tags, co
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -835,10 +774,6 @@ ae_int_t kdtreequeryknn(const kdtree &kdt, const real_1d_array &x, const ae_int_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -888,10 +823,6 @@ ae_int_t kdtreequeryknn(const kdtree &kdt, const real_1d_array &x, const ae_int_
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -935,10 +866,6 @@ ae_int_t kdtreequeryrnn(const kdtree &kdt, const real_1d_array &x, const double 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -987,10 +914,6 @@ ae_int_t kdtreequeryrnn(const kdtree &kdt, const real_1d_array &x, const double 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1042,10 +965,6 @@ ae_int_t kdtreequeryaknn(const kdtree &kdt, const real_1d_array &x, const ae_int
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1102,10 +1021,6 @@ ae_int_t kdtreequeryaknn(const kdtree &kdt, const real_1d_array &x, const ae_int
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1150,10 +1065,6 @@ void kdtreequeryresultsx(const kdtree &kdt, real_2d_array &x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1201,10 +1112,6 @@ void kdtreequeryresultsxy(const kdtree &kdt, real_2d_array &xy)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1251,10 +1158,6 @@ void kdtreequeryresultstags(const kdtree &kdt, integer_1d_array &tags)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1300,10 +1203,6 @@ void kdtreequeryresultsdistances(const kdtree &kdt, real_1d_array &r)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1331,10 +1230,6 @@ void kdtreequeryresultsxi(const kdtree &kdt, real_2d_array &x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1364,10 +1259,6 @@ void kdtreequeryresultsxyi(const kdtree &kdt, real_2d_array &xy)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1395,10 +1286,6 @@ void kdtreequeryresultstagsi(const kdtree &kdt, integer_1d_array &tags)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1428,10 +1315,6 @@ void kdtreequeryresultsdistancesi(const kdtree &kdt, real_1d_array &r)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 }
 
@@ -1442,7 +1325,7 @@ void kdtreequeryresultsdistancesi(const kdtree &kdt, real_1d_array &r)
 /////////////////////////////////////////////////////////////////////////
 namespace alglib_impl
 {
-static ae_int_t hqrnd_hqrndmax = 2147483563;
+static ae_int_t hqrnd_hqrndmax = 2147483561;
 static ae_int_t hqrnd_hqrndm1 = 2147483563;
 static ae_int_t hqrnd_hqrndm2 = 2147483399;
 static ae_int_t hqrnd_hqrndmagic = 1634357784;
@@ -1500,10 +1383,14 @@ RNG.
 *************************************************************************/
 void hqrndrandomize(hqrndstate* state, ae_state *_state)
 {
+    ae_int_t s0;
+    ae_int_t s1;
 
     _hqrndstate_clear(state);
 
-    hqrndseed(ae_randominteger(hqrnd_hqrndm1, _state), ae_randominteger(hqrnd_hqrndm2, _state), state, _state);
+    s0 = ae_randominteger(hqrnd_hqrndm1, _state);
+    s1 = ae_randominteger(hqrnd_hqrndm2, _state);
+    hqrndseed(s0, s1, state, _state);
 }
 
 
@@ -1521,9 +1408,27 @@ void hqrndseed(ae_int_t s1,
 
     _hqrndstate_clear(state);
 
+    
+    /*
+     * Protection against negative seeds:
+     *
+     *     SEED := -(SEED+1)
+     *
+     * We can use just "-SEED" because there exists such integer number  N
+     * that N<0, -N=N<0 too. (This number is equal to 0x800...000).   Need
+     * to handle such seed correctly forces us to use  a  bit  complicated
+     * formula.
+     */
+    if( s1<0 )
+    {
+        s1 = -(s1+1);
+    }
+    if( s2<0 )
+    {
+        s2 = -(s2+1);
+    }
     state->s1 = s1%(hqrnd_hqrndm1-1)+1;
     state->s2 = s2%(hqrnd_hqrndm2-1)+1;
-    state->v = (double)1/(double)hqrnd_hqrndmax;
     state->magicv = hqrnd_hqrndmagic;
 }
 
@@ -1542,7 +1447,7 @@ double hqrnduniformr(hqrndstate* state, ae_state *_state)
     double result;
 
 
-    result = state->v*hqrnd_hqrndintegerbase(state, _state);
+    result = (double)(hqrnd_hqrndintegerbase(state, _state)+1)/(double)(hqrnd_hqrndmax+2);
     return result;
 }
 
@@ -1550,32 +1455,117 @@ double hqrnduniformr(hqrndstate* state, ae_state *_state)
 /*************************************************************************
 This function generates random integer number in [0, N)
 
-1. N must be less than HQRNDMax-1.
-2. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+1. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+2. N can be any positive number except for very large numbers:
+   * close to 2^31 on 32-bit systems
+   * close to 2^62 on 64-bit systems
+   An exception will be generated if N is too large.
 
   -- ALGLIB --
      Copyright 02.12.2009 by Bochkanov Sergey
 *************************************************************************/
 ae_int_t hqrnduniformi(hqrndstate* state, ae_int_t n, ae_state *_state)
 {
+    ae_int_t maxcnt;
     ae_int_t mx;
+    ae_int_t a;
+    ae_int_t b;
     ae_int_t result;
 
 
+    ae_assert(n>0, "HQRNDUniformI: N<=0!", _state);
+    maxcnt = hqrnd_hqrndmax+1;
     
     /*
-     * Correct handling of N's close to RNDBaseMax
-     * (avoiding skewed distributions for RNDBaseMax<>K*N)
+     * Two branches: one for N<=MaxCnt, another for N>MaxCnt.
      */
-    ae_assert(n>0, "HQRNDUniformI: N<=0!", _state);
-    ae_assert(n<hqrnd_hqrndmax-1, "HQRNDUniformI: N>=RNDBaseMax-1!", _state);
-    mx = hqrnd_hqrndmax-1-(hqrnd_hqrndmax-1)%n;
-    do
+    if( n>maxcnt )
     {
-        result = hqrnd_hqrndintegerbase(state, _state)-1;
+        
+        /*
+         * N>=MaxCnt.
+         *
+         * We have two options here:
+         * a) N is exactly divisible by MaxCnt
+         * b) N is not divisible by MaxCnt
+         *
+         * In both cases we reduce problem on interval spanning [0,N)
+         * to several subproblems on intervals spanning [0,MaxCnt).
+         */
+        if( n%maxcnt==0 )
+        {
+            
+            /*
+             * N is exactly divisible by MaxCnt.
+             *
+             * [0,N) range is dividided into N/MaxCnt bins,
+             * each of them having length equal to MaxCnt.
+             *
+             * We generate:
+             * * random bin number B
+             * * random offset within bin A
+             * Both random numbers are generated by recursively
+             * calling HQRNDUniformI().
+             *
+             * Result is equal to A+MaxCnt*B.
+             */
+            ae_assert(n/maxcnt<=maxcnt, "HQRNDUniformI: N is too large", _state);
+            a = hqrnduniformi(state, maxcnt, _state);
+            b = hqrnduniformi(state, n/maxcnt, _state);
+            result = a+maxcnt*b;
+        }
+        else
+        {
+            
+            /*
+             * N is NOT exactly divisible by MaxCnt.
+             *
+             * [0,N) range is dividided into Ceil(N/MaxCnt) bins,
+             * each of them having length equal to MaxCnt.
+             *
+             * We generate:
+             * * random bin number B in [0, Ceil(N/MaxCnt)-1]
+             * * random offset within bin A
+             * * if both of what is below is true
+             *   1) bin number B is that of the last bin
+             *   2) A >= N mod MaxCnt
+             *   then we repeat generation of A/B.
+             *   This stage is essential in order to avoid bias in the result.
+             * * otherwise, we return A*MaxCnt+N
+             */
+            ae_assert(n/maxcnt+1<=maxcnt, "HQRNDUniformI: N is too large", _state);
+            result = -1;
+            do
+            {
+                a = hqrnduniformi(state, maxcnt, _state);
+                b = hqrnduniformi(state, n/maxcnt+1, _state);
+                if( b==n/maxcnt&&a>=n%maxcnt )
+                {
+                    continue;
+                }
+                result = a+maxcnt*b;
+            }
+            while(result<0);
+        }
     }
-    while(result>=mx);
-    result = result%n;
+    else
+    {
+        
+        /*
+         * N<=MaxCnt
+         *
+         * Code below is a bit complicated because we can not simply
+         * return "HQRNDIntegerBase() mod N" - it will be skewed for
+         * large N's in [0.1*HQRNDMax...HQRNDMax].
+         */
+        mx = maxcnt-maxcnt%n;
+        do
+        {
+            result = hqrnd_hqrndintegerbase(state, _state);
+        }
+        while(result>=mx);
+        result = result%n;
+    }
     return result;
 }
 
@@ -1784,6 +1774,7 @@ double hqrndcontinuous(hqrndstate* state,
 
 
 /*************************************************************************
+This function returns random integer in [0,HQRNDMax]
 
 L'Ecuyer, Efficient and portable combined random number generators
 *************************************************************************/
@@ -1816,28 +1807,41 @@ static ae_int_t hqrnd_hqrndintegerbase(hqrndstate* state,
     {
         result = result+2147483562;
     }
+    result = result-1;
     return result;
 }
 
 
-ae_bool _hqrndstate_init(hqrndstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _hqrndstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    hqrndstate *p = (hqrndstate*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _hqrndstate_init_copy(hqrndstate* dst, hqrndstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _hqrndstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    hqrndstate *dst = (hqrndstate*)_dst;
+    hqrndstate *src = (hqrndstate*)_src;
     dst->s1 = src->s1;
     dst->s2 = src->s2;
-    dst->v = src->v;
     dst->magicv = src->magicv;
     return ae_true;
 }
 
 
-void _hqrndstate_clear(hqrndstate* p)
+void _hqrndstate_clear(void* _p)
 {
+    hqrndstate *p = (hqrndstate*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _hqrndstate_destroy(void* _p)
+{
+    hqrndstate *p = (hqrndstate*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
@@ -1900,7 +1904,7 @@ void kdtreebuild(/* Real    */ ae_matrix* xy,
     ae_assert(normtype>=0&&normtype<=2, "KDTreeBuild: incorrect NormType", _state);
     ae_assert(xy->rows>=n, "KDTreeBuild: rows(X)<N", _state);
     ae_assert(xy->cols>=nx+ny||n==0, "KDTreeBuild: cols(X)<NX+NY", _state);
-    ae_assert(apservisfinitematrix(xy, n, nx+ny, _state), "KDTreeBuild: X contains infinite or NaN values", _state);
+    ae_assert(apservisfinitematrix(xy, n, nx+ny, _state), "KDTreeBuild: XY contains infinite or NaN values", _state);
     if( n>0 )
     {
         ae_vector_set_length(&tags, n, _state);
@@ -1974,7 +1978,7 @@ void kdtreebuildtagged(/* Real    */ ae_matrix* xy,
     ae_assert(normtype>=0&&normtype<=2, "KDTreeBuildTagged: incorrect NormType", _state);
     ae_assert(xy->rows>=n, "KDTreeBuildTagged: rows(X)<N", _state);
     ae_assert(xy->cols>=nx+ny||n==0, "KDTreeBuildTagged: cols(X)<NX+NY", _state);
-    ae_assert(apservisfinitematrix(xy, n, nx+ny, _state), "KDTreeBuildTagged: X contains infinite or NaN values", _state);
+    ae_assert(apservisfinitematrix(xy, n, nx+ny, _state), "KDTreeBuildTagged: XY contains infinite or NaN values", _state);
     
     /*
      * initialize
@@ -2838,6 +2842,8 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
     double ds;
     double s;
     double v;
+    double v0;
+    double v1;
 
 
     ae_assert(kdt->n>0, "KDTreeGenerateTreeRec: internal error", _state);
@@ -2861,8 +2867,9 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
     ny = kdt->ny;
     
     /*
-     * select dimension to split:
+     * Select dimension to split:
      * * D is a dimension number
+     * In case bounding box has zero size, we enforce creation of the leaf node.
      */
     d = 0;
     ds = kdt->curboxmax.ptr.p_double[0]-kdt->curboxmin.ptr.p_double[0];
@@ -2875,10 +2882,21 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
             d = i;
         }
     }
+    if( ae_fp_eq(ds,0) )
+    {
+        kdt->nodes.ptr.p_int[*nodesoffs+0] = i2-i1;
+        kdt->nodes.ptr.p_int[*nodesoffs+1] = i1;
+        *nodesoffs = *nodesoffs+2;
+        return;
+    }
     
     /*
      * Select split position S using sliding midpoint rule,
-     * rearrange points into [I1,I3) and [I3,I2)
+     * rearrange points into [I1,I3) and [I3,I2).
+     *
+     * In case all points has same value of D-th component
+     * (MinV=MaxV) we enforce D-th dimension of bounding
+     * box to become exactly zero and repeat tree construction.
      */
     s = kdt->curboxmin.ptr.p_double[d]+0.5*ds;
     ae_v_move(&kdt->buf.ptr.p_double[0], 1, &kdt->xy.ptr.pp_double[i1][d], kdt->xy.stride, ae_v_len(0,i2-i1-1));
@@ -2911,6 +2929,23 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
             cntgreater = cntgreater+1;
         }
     }
+    if( ae_fp_eq(minv,maxv) )
+    {
+        
+        /*
+         * In case all points has same value of D-th component
+         * (MinV=MaxV) we enforce D-th dimension of bounding
+         * box to become exactly zero and repeat tree construction.
+         */
+        v0 = kdt->curboxmin.ptr.p_double[d];
+        v1 = kdt->curboxmax.ptr.p_double[d];
+        kdt->curboxmin.ptr.p_double[d] = minv;
+        kdt->curboxmax.ptr.p_double[d] = maxv;
+        nearestneighbor_kdtreegeneratetreerec(kdt, nodesoffs, splitsoffs, i1, i2, maxleafsize, _state);
+        kdt->curboxmin.ptr.p_double[d] = v0;
+        kdt->curboxmax.ptr.p_double[d] = v1;
+        return;
+    }
     if( cntless>0&&cntgreater>0 )
     {
         
@@ -2936,7 +2971,7 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
             s = minv;
             if( minidx!=i1 )
             {
-                for(i=0; i<=2*kdt->nx+kdt->ny-1; i++)
+                for(i=0; i<=2*nx+ny-1; i++)
                 {
                     v = kdt->xy.ptr.pp_double[minidx][i];
                     kdt->xy.ptr.pp_double[minidx][i] = kdt->xy.ptr.pp_double[i1][i];
@@ -2959,7 +2994,7 @@ static void nearestneighbor_kdtreegeneratetreerec(kdtree* kdt,
             s = maxv;
             if( maxidx!=i2-1 )
             {
-                for(i=0; i<=2*kdt->nx+kdt->ny-1; i++)
+                for(i=0; i<=2*nx+ny-1; i++)
                 {
                     v = kdt->xy.ptr.pp_double[maxidx][i];
                     kdt->xy.ptr.pp_double[maxidx][i] = kdt->xy.ptr.pp_double[i2-1][i];
@@ -3458,8 +3493,10 @@ static void nearestneighbor_kdtreealloctemporaries(kdtree* kdt,
 }
 
 
-ae_bool _kdtree_init(kdtree* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _kdtree_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    kdtree *p = (kdtree*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_matrix_init(&p->xy, 0, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->tags, 0, DT_INT, _state, make_automatic) )
@@ -3488,8 +3525,10 @@ ae_bool _kdtree_init(kdtree* p, ae_state *_state, ae_bool make_automatic)
 }
 
 
-ae_bool _kdtree_init_copy(kdtree* dst, kdtree* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _kdtree_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    kdtree *dst = (kdtree*)_dst;
+    kdtree *src = (kdtree*)_src;
     dst->n = src->n;
     dst->nx = src->nx;
     dst->ny = src->ny;
@@ -3529,8 +3568,10 @@ ae_bool _kdtree_init_copy(kdtree* dst, kdtree* src, ae_state *_state, ae_bool ma
 }
 
 
-void _kdtree_clear(kdtree* p)
+void _kdtree_clear(void* _p)
 {
+    kdtree *p = (kdtree*)_p;
+    ae_touch_ptr((void*)p);
     ae_matrix_clear(&p->xy);
     ae_vector_clear(&p->tags);
     ae_vector_clear(&p->boxmin);
@@ -3543,6 +3584,25 @@ void _kdtree_clear(kdtree* p)
     ae_vector_clear(&p->buf);
     ae_vector_clear(&p->curboxmin);
     ae_vector_clear(&p->curboxmax);
+}
+
+
+void _kdtree_destroy(void* _p)
+{
+    kdtree *p = (kdtree*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_destroy(&p->xy);
+    ae_vector_destroy(&p->tags);
+    ae_vector_destroy(&p->boxmin);
+    ae_vector_destroy(&p->boxmax);
+    ae_vector_destroy(&p->nodes);
+    ae_vector_destroy(&p->splits);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->idx);
+    ae_vector_destroy(&p->r);
+    ae_vector_destroy(&p->buf);
+    ae_vector_destroy(&p->curboxmin);
+    ae_vector_destroy(&p->curboxmax);
 }
 
 

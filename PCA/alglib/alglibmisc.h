@@ -32,7 +32,6 @@ typedef struct
 {
     ae_int_t s1;
     ae_int_t s2;
-    double v;
     ae_int_t magicv;
 } hqrndstate;
 typedef struct
@@ -163,8 +162,11 @@ double hqrnduniformr(const hqrndstate &state);
 /*************************************************************************
 This function generates random integer number in [0, N)
 
-1. N must be less than HQRNDMax-1.
-2. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+1. State structure must be initialized with HQRNDRandomize() or HQRNDSeed()
+2. N can be any positive number except for very large numbers:
+   * close to 2^31 on 32-bit systems
+   * close to 2^62 on 64-bit systems
+   An exception will be generated if N is too large.
 
   -- ALGLIB --
      Copyright 02.12.2009 by Bochkanov Sergey
@@ -695,9 +697,10 @@ double hqrndcontinuous(hqrndstate* state,
      /* Real    */ ae_vector* x,
      ae_int_t n,
      ae_state *_state);
-ae_bool _hqrndstate_init(hqrndstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _hqrndstate_init_copy(hqrndstate* dst, hqrndstate* src, ae_state *_state, ae_bool make_automatic);
-void _hqrndstate_clear(hqrndstate* p);
+ae_bool _hqrndstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _hqrndstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _hqrndstate_clear(void* _p);
+void _hqrndstate_destroy(void* _p);
 void kdtreebuild(/* Real    */ ae_matrix* xy,
      ae_int_t n,
      ae_int_t nx,
@@ -756,9 +759,10 @@ void kdtreequeryresultsdistancesi(kdtree* kdt,
 void kdtreealloc(ae_serializer* s, kdtree* tree, ae_state *_state);
 void kdtreeserialize(ae_serializer* s, kdtree* tree, ae_state *_state);
 void kdtreeunserialize(ae_serializer* s, kdtree* tree, ae_state *_state);
-ae_bool _kdtree_init(kdtree* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _kdtree_init_copy(kdtree* dst, kdtree* src, ae_state *_state, ae_bool make_automatic);
-void _kdtree_clear(kdtree* p);
+ae_bool _kdtree_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _kdtree_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _kdtree_clear(void* _p);
+void _kdtree_destroy(void* _p);
 
 }
 #endif

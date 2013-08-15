@@ -34,6 +34,114 @@ namespace alglib_impl
 typedef struct
 {
     ae_int_t n;
+    ae_int_t k;
+    double alpha;
+    double tau;
+    double theta;
+    ae_matrix a;
+    ae_matrix q;
+    ae_vector b;
+    ae_vector r;
+    ae_vector xc;
+    ae_vector d;
+    ae_vector activeset;
+    ae_matrix tq2dense;
+    ae_matrix tk2;
+    ae_vector tq2diag;
+    ae_vector tq1;
+    ae_vector tk1;
+    double tq0;
+    double tk0;
+    ae_vector txc;
+    ae_vector tb;
+    ae_int_t nfree;
+    ae_int_t ecakind;
+    ae_matrix ecadense;
+    ae_matrix eq;
+    ae_matrix eccm;
+    ae_vector ecadiag;
+    ae_vector eb;
+    double ec;
+    ae_vector tmp0;
+    ae_vector tmp1;
+    ae_vector tmpg;
+    ae_matrix tmp2;
+    ae_bool ismaintermchanged;
+    ae_bool issecondarytermchanged;
+    ae_bool islineartermchanged;
+    ae_bool isactivesetchanged;
+} convexquadraticmodel;
+typedef struct
+{
+    ae_int_t ns;
+    ae_int_t nd;
+    ae_int_t nr;
+    ae_matrix densea;
+    ae_vector b;
+    ae_vector nnc;
+    ae_int_t refinementits;
+    double debugflops;
+    ae_int_t debugmaxnewton;
+    ae_vector xn;
+    ae_matrix tmpz;
+    ae_matrix tmpca;
+    ae_vector g;
+    ae_vector d;
+    ae_vector dx;
+    ae_vector diagaa;
+    ae_vector cb;
+    ae_vector cx;
+    ae_vector cborg;
+    ae_vector columnmap;
+    ae_vector rowmap;
+    ae_vector tmpcholesky;
+    ae_vector r;
+} snnlssolver;
+typedef struct
+{
+    ae_int_t n;
+    ae_int_t algostate;
+    ae_vector xc;
+    ae_bool hasxc;
+    ae_vector s;
+    ae_vector h;
+    ae_vector activeset;
+    ae_bool basisisready;
+    ae_matrix sbasis;
+    ae_matrix pbasis;
+    ae_matrix ibasis;
+    ae_int_t basissize;
+    ae_bool constraintschanged;
+    ae_vector hasbndl;
+    ae_vector hasbndu;
+    ae_vector bndl;
+    ae_vector bndu;
+    ae_matrix cleic;
+    ae_int_t nec;
+    ae_int_t nic;
+    ae_vector mtx;
+    ae_vector mtas;
+    ae_vector cdtmp;
+    ae_vector corrtmp;
+    ae_vector unitdiagonal;
+    snnlssolver solver;
+    ae_vector scntmp;
+    ae_vector tmp0;
+    ae_vector tmpfeas;
+    ae_matrix tmpm0;
+    ae_vector rctmps;
+    ae_vector rctmpg;
+    ae_vector rctmprightpart;
+    ae_matrix rctmpdense0;
+    ae_matrix rctmpdense1;
+    ae_vector rctmpisequality;
+    ae_vector rctmpconstraintidx;
+    ae_vector rctmplambdas;
+    ae_matrix tmpbasis;
+} sactiveset;
+typedef struct
+{
+    ae_int_t n;
     double epsg;
     double epsf;
     double epsx;
@@ -78,9 +186,11 @@ typedef struct
     ae_bool algpowerup;
     ae_bool lsstart;
     ae_bool lsend;
+    double teststep;
     rcommstate rstate;
     ae_int_t repiterationscount;
     ae_int_t repnfev;
+    ae_int_t repvaridx;
     ae_int_t repterminationtype;
     ae_int_t debugrestartscount;
     linminstate lstate;
@@ -98,23 +208,24 @@ typedef struct
 {
     ae_int_t iterationscount;
     ae_int_t nfev;
+    ae_int_t varidx;
     ae_int_t terminationtype;
 } mincgreport;
 typedef struct
 {
     ae_int_t nmain;
     ae_int_t nslack;
-    double innerepsg;
-    double innerepsf;
-    double innerepsx;
-    double outerepsx;
-    double outerepsi;
+    double epsg;
+    double epsf;
+    double epsx;
     ae_int_t maxits;
     ae_bool xrep;
+    ae_bool drep;
     double stpmax;
     double diffstep;
+    sactiveset sas;
+    ae_vector s;
     ae_int_t prectype;
-    ae_vector diaghoriginal;
     ae_vector diagh;
     ae_vector x;
     double f;
@@ -122,10 +233,34 @@ typedef struct
     ae_bool needf;
     ae_bool needfg;
     ae_bool xupdated;
+    ae_bool lsstart;
+    ae_bool lbfgssearch;
+    ae_bool boundedstep;
+    double teststep;
     rcommstate rstate;
+    ae_vector gc;
+    ae_vector xn;
+    ae_vector gn;
+    ae_vector xp;
+    ae_vector gp;
+    double fc;
+    double fn;
+    double fp;
+    ae_vector d;
+    ae_matrix cleic;
+    ae_int_t nec;
+    ae_int_t nic;
+    double lastgoodstep;
+    double lastscaledgoodstep;
+    double maxscaledgrad;
+    ae_vector hasbndl;
+    ae_vector hasbndu;
+    ae_vector bndl;
+    ae_vector bndu;
     ae_int_t repinneriterationscount;
     ae_int_t repouteriterationscount;
     ae_int_t repnfev;
+    ae_int_t repvaridx;
     ae_int_t repterminationtype;
     double repdebugeqerr;
     double repdebugfs;
@@ -133,47 +268,8 @@ typedef struct
     double repdebugdx;
     ae_int_t repdebugfeasqpits;
     ae_int_t repdebugfeasgpaits;
-    ae_vector xcur;
-    ae_vector xprev;
     ae_vector xstart;
-    ae_int_t itsleft;
-    ae_vector xend;
-    ae_vector lastg;
-    double trimthreshold;
-    ae_matrix ceoriginal;
-    ae_matrix ceeffective;
-    ae_matrix cecurrent;
-    ae_vector ct;
-    ae_int_t cecnt;
-    ae_int_t cedim;
-    ae_vector xe;
-    ae_vector hasbndl;
-    ae_vector hasbndu;
-    ae_vector bndloriginal;
-    ae_vector bnduoriginal;
-    ae_vector bndleffective;
-    ae_vector bndueffective;
-    ae_vector activeconstraints;
-    ae_vector constrainedvalues;
-    ae_vector transforms;
-    ae_vector seffective;
-    ae_vector soriginal;
-    ae_vector w;
-    ae_vector tmp0;
-    ae_vector tmp1;
-    ae_vector tmp2;
-    ae_vector r;
-    ae_matrix lmmatrix;
-    double v0;
-    double v1;
-    double v2;
-    double t;
-    double errfeas;
-    double gnorm;
-    double mpgnorm;
-    double mba;
-    ae_int_t variabletofreeze;
-    double valuetofreeze;
+    snnlssolver solver;
     double fbase;
     double fm2;
     double fm1;
@@ -181,15 +277,33 @@ typedef struct
     double fp2;
     double xm1;
     double xp1;
-    mincgstate cgstate;
-    mincgreport cgrep;
-    ae_int_t optdim;
+    double gm1;
+    double gp1;
+    ae_int_t cidx;
+    double cval;
+    ae_vector tmpprec;
+    ae_int_t nfev;
+    ae_int_t mcstage;
+    double stp;
+    double curstpmax;
+    double activationstep;
+    ae_vector work;
+    linminstate lstate;
+    double trimthreshold;
+    ae_int_t nonmonotoniccnt;
+    ae_int_t k;
+    ae_int_t q;
+    ae_int_t p;
+    ae_vector rho;
+    ae_matrix yk;
+    ae_matrix sk;
+    ae_vector theta;
 } minbleicstate;
 typedef struct
 {
-    ae_int_t inneriterationscount;
-    ae_int_t outeriterationscount;
+    ae_int_t iterationscount;
     ae_int_t nfev;
+    ae_int_t varidx;
     ae_int_t terminationtype;
     double debugeqerr;
     double debugfs;
@@ -197,6 +311,8 @@ typedef struct
     double debugdx;
     ae_int_t debugfeasqpits;
     ae_int_t debugfeasgpaits;
+    ae_int_t inneriterationscount;
+    ae_int_t outeriterationscount;
 } minbleicreport;
 typedef struct
 {
@@ -240,9 +356,11 @@ typedef struct
     ae_bool needf;
     ae_bool needfg;
     ae_bool xupdated;
+    double teststep;
     rcommstate rstate;
     ae_int_t repiterationscount;
     ae_int_t repnfev;
+    ae_int_t repvaridx;
     ae_int_t repterminationtype;
     linminstate lstate;
 } minlbfgsstate;
@@ -250,6 +368,7 @@ typedef struct
 {
     ae_int_t iterationscount;
     ae_int_t nfev;
+    ae_int_t varidx;
     ae_int_t terminationtype;
 } minlbfgsreport;
 typedef struct
@@ -257,39 +376,50 @@ typedef struct
     ae_int_t n;
     ae_int_t algokind;
     ae_int_t akind;
-    ae_matrix densea;
+    convexquadraticmodel a;
+    sparsematrix sparsea;
+    ae_bool sparseaupper;
+    double anorm;
     ae_vector b;
     ae_vector bndl;
     ae_vector bndu;
+    ae_vector s;
     ae_vector havebndl;
     ae_vector havebndu;
     ae_vector xorigin;
     ae_vector startx;
     ae_bool havex;
-    ae_vector xc;
+    ae_matrix cleic;
+    ae_int_t nec;
+    ae_int_t nic;
+    double bleicepsg;
+    double bleicepsf;
+    double bleicepsx;
+    ae_int_t bleicmaxits;
+    sactiveset sas;
     ae_vector gc;
-    ae_vector dc;
-    ae_vector xcand0;
-    ae_vector xcand1;
     ae_vector xn;
     ae_vector pg;
-    ae_vector activeset;
-    double constterm;
     ae_vector workbndl;
     ae_vector workbndu;
+    ae_matrix workcleic;
+    ae_vector xs;
     ae_int_t repinneriterationscount;
     ae_int_t repouteriterationscount;
     ae_int_t repncholesky;
     ae_int_t repnmv;
     ae_int_t repterminationtype;
+    double debugphase1flops;
+    double debugphase2flops;
+    double debugphase3flops;
     ae_vector tmp0;
     ae_vector tmp1;
-    ae_vector itmp0;
-    ae_vector p2;
-    ae_matrix bufa;
-    ae_vector bufb;
-    ae_vector bufx;
-    apbuffers buf;
+    ae_vector tmpb;
+    ae_vector rctmpg;
+    ae_vector tmpi;
+    normestimatorstate estimator;
+    minbleicstate solver;
+    minbleicreport solverrep;
 } minqpstate;
 typedef struct
 {
@@ -346,8 +476,11 @@ typedef struct
     ae_vector deltaf;
     ae_bool deltaxready;
     ae_bool deltafready;
+    double teststep;
     ae_int_t repiterationscount;
     ae_int_t repterminationtype;
+    ae_int_t repfuncidx;
+    ae_int_t repvaridx;
     ae_int_t repnfunc;
     ae_int_t repnjac;
     ae_int_t repngrad;
@@ -362,6 +495,10 @@ typedef struct
     double xp1;
     ae_vector fm1;
     ae_vector fp1;
+    ae_vector fc1;
+    ae_vector gm1;
+    ae_vector gp1;
+    ae_vector gc1;
     minlbfgsstate internalstate;
     minlbfgsreport internalrep;
     minqpstate qpstate;
@@ -371,6 +508,8 @@ typedef struct
 {
     ae_int_t iterationscount;
     ae_int_t terminationtype;
+    ae_int_t funcidx;
+    ae_int_t varidx;
     ae_int_t nfunc;
     ae_int_t njac;
     ae_int_t ngrad;
@@ -444,6 +583,12 @@ namespace alglib
 
 
 
+
+
+
+
+
+
 /*************************************************************************
 This object stores state of the nonlinear CG optimizer.
 
@@ -502,6 +647,7 @@ public:
     virtual ~mincgreport();
     ae_int_t &iterationscount;
     ae_int_t &nfev;
+    ae_int_t &varidx;
     ae_int_t &terminationtype;
 
 };
@@ -542,26 +688,21 @@ public:
 
 /*************************************************************************
 This structure stores optimization report:
-* InnerIterationsCount      number of inner iterations
-* OuterIterationsCount      number of outer iterations
+* IterationsCount           number of iterations
 * NFEV                      number of gradient evaluations
 * TerminationType           termination type (see below)
 
 TERMINATION CODES
 
 TerminationType field contains completion code, which can be:
-  -10   unsupported combination of algorithm settings:
-        1) StpMax is set to non-zero value,
-        AND 2) non-default preconditioner is used.
-        You can't use both features at the same moment,
-        so you have to choose one of them (and to turn
-        off another one).
+  -7    gradient verification failed.
+        See MinBLEICSetGradientCheck() for more information.
   -3    inconsistent constraints. Feasible point is
         either nonexistent or too hard to find. Try to
-        restart optimizer with better initial
-        approximation
-   4    conditions on constraints are fulfilled
-        with error less than or equal to EpsC
+        restart optimizer with better initial approximation
+   1    relative function improvement is no more than EpsF.
+   2    relative step is no more than EpsX.
+   4    gradient norm is no more than EpsG
    5    MaxIts steps was taken
    7    stopping conditions are too stringent,
         further improvement is impossible,
@@ -595,9 +736,9 @@ public:
     minbleicreport(const minbleicreport &rhs);
     minbleicreport& operator=(const minbleicreport &rhs);
     virtual ~minbleicreport();
-    ae_int_t &inneriterationscount;
-    ae_int_t &outeriterationscount;
+    ae_int_t &iterationscount;
     ae_int_t &nfev;
+    ae_int_t &varidx;
     ae_int_t &terminationtype;
     double &debugeqerr;
     double &debugfs;
@@ -605,6 +746,8 @@ public:
     double &debugdx;
     ae_int_t &debugfeasqpits;
     ae_int_t &debugfeasgpaits;
+    ae_int_t &inneriterationscount;
+    ae_int_t &outeriterationscount;
 
 };
 
@@ -664,6 +807,7 @@ public:
     virtual ~minlbfgsreport();
     ae_int_t &iterationscount;
     ae_int_t &nfev;
+    ae_int_t &varidx;
     ae_int_t &terminationtype;
 
 };
@@ -710,6 +854,10 @@ Completion codes:
 * -5    inappropriate solver was used:
         * Cholesky solver for semidefinite or indefinite problems
         * Cholesky solver for problems with non-boundary constraints
+* -4    BLEIC-QP algorithm found unconstrained direction
+        of negative curvature (function is unbounded from
+        below  even  under  constraints),  no  meaningful
+        minimum can be found.
 * -3    inconsistent constraints (or, maybe, feasible point is
         too hard to find). If you are sure that constraints are feasible,
         try to restart optimizer with better initial approximation.
@@ -794,7 +942,7 @@ Optimization report, filled by MinLMResults() function
 
 FIELDS:
 * TerminationType, completetion code:
-    * -9    derivative correctness check failed;
+    * -7    derivative correctness check failed;
             see Rep.WrongNum, Rep.WrongI, Rep.WrongJ for
             more information.
     *  1    relative function improvement is no more than
@@ -832,6 +980,8 @@ public:
     virtual ~minlmreport();
     ae_int_t &iterationscount;
     ae_int_t &terminationtype;
+    ae_int_t &funcidx;
+    ae_int_t &varidx;
     ae_int_t &nfunc;
     ae_int_t &njac;
     ae_int_t &ngrad;
@@ -899,6 +1049,12 @@ public:
     ae_int_t &activeconstraints;
 
 };
+
+
+
+
+
+
 
 
 
@@ -1291,6 +1447,8 @@ OUTPUT PARAMETERS:
     X       -   array[0..N-1], solution
     Rep     -   optimization report:
                 * Rep.TerminationType completetion code:
+                    * -7    gradient verification failed.
+                            See MinCGSetGradientCheck() for more information.
                     *  1    relative function improvement is no more than
                             EpsF.
                     *  2    relative step is no more than EpsX.
@@ -1339,6 +1497,57 @@ INPUT PARAMETERS:
 *************************************************************************/
 void mincgrestartfrom(const mincgstate &state, const real_1d_array &x);
 
+
+/*************************************************************************
+
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before optimization begins
+* MinCGOptimize() is called
+* prior to  actual  optimization, for each component  of  parameters being
+  optimized X[i] algorithm performs following steps:
+  * two trial steps are made to X[i]-TestStep*S[i] and X[i]+TestStep*S[i],
+    where X[i] is i-th component of the initial point and S[i] is a  scale
+    of i-th parameter
+  * F(X) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification  needs  N (parameters count) gradient evaluations. It
+        is very costly and you should use  it  only  for  low  dimensional
+        problems,  when  you  want  to  be  sure  that  you've   correctly
+        calculated  analytic  derivatives.  You  should  not use it in the
+        production code (unless you want to check derivatives provided  by
+        some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with MinCGSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 31.05.2012 by Bochkanov Sergey
+*************************************************************************/
+void mincgsetgradientcheck(const mincgstate &state, const double teststep);
+
 /*************************************************************************
                      BOUND CONSTRAINED OPTIMIZATION
        WITH ADDITIONAL LINEAR EQUALITY AND INEQUALITY CONSTRAINTS
@@ -1370,24 +1579,14 @@ on optimization, which is available at http://www.alglib.net/optimization/
 2. USer adds boundary and/or linear constraints by calling
    MinBLEICSetBC() and MinBLEICSetLC() functions.
 
-3. User sets stopping conditions for underlying unconstrained solver
-   with MinBLEICSetInnerCond() call.
-   This function controls accuracy of underlying optimization algorithm.
+3. User sets stopping conditions with MinBLEICSetCond().
 
-4. User sets stopping conditions for outer iteration by calling
-   MinBLEICSetOuterCond() function.
-   This function controls handling of boundary and inequality constraints.
-
-5. Additionally, user may set limit on number of internal iterations
-   by MinBLEICSetMaxIts() call.
-   This function allows to prevent algorithm from looping forever.
-
-6. User calls MinBLEICOptimize() function which takes algorithm  state and
+4. User calls MinBLEICOptimize() function which takes algorithm  state and
    pointer (delegate, etc.) to callback function which calculates F/G.
 
-7. User calls MinBLEICResults() to get solution
+5. User calls MinBLEICResults() to get solution
 
-8. Optionally user may call MinBLEICRestartFrom() to solve another problem
+6. Optionally user may call MinBLEICRestartFrom() to solve another problem
    with same N but another starting point.
    MinBLEICRestartFrom() allows to reuse already initialized structure.
 
@@ -1529,9 +1728,7 @@ void minbleicsetlc(const minbleicstate &state, const real_2d_array &c, const int
 
 
 /*************************************************************************
-This function sets stopping conditions for the underlying nonlinear CG
-optimizer. It controls overall accuracy of solution. These conditions
-should be strict enough in order for algorithm to converge.
+This function sets stopping conditions for the optimizer.
 
 INPUT PARAMETERS:
     State   -   structure which stores algorithm state
@@ -1551,50 +1748,22 @@ INPUT PARAMETERS:
                 the condition |v|<=EpsX is fulfilled, where:
                 * |.| means Euclidian norm
                 * v - scaled step vector, v[i]=dx[i]/s[i]
-                * dx - ste pvector, dx=X(k+1)-X(k)
+                * dx - step vector, dx=X(k+1)-X(k)
                 * s - scaling coefficients set by MinBLEICSetScale()
+    MaxIts  -   maximum number of iterations. If MaxIts=0, the  number  of
+                iterations is unlimited.
 
-Passing EpsG=0, EpsF=0 and EpsX=0 (simultaneously) will lead to
-automatic stopping criterion selection.
+Passing EpsG=0, EpsF=0 and EpsX=0 and MaxIts=0 (simultaneously) will lead
+to automatic stopping criterion selection.
 
-These conditions are used to terminate inner iterations. However, you
-need to tune termination conditions for outer iterations too.
-
-  -- ALGLIB --
-     Copyright 28.11.2010 by Bochkanov Sergey
-*************************************************************************/
-void minbleicsetinnercond(const minbleicstate &state, const double epsg, const double epsf, const double epsx);
-
-
-/*************************************************************************
-This function sets stopping conditions for outer iteration of BLEIC algo.
-
-These conditions control accuracy of constraint handling and amount of
-infeasibility allowed in the solution.
-
-INPUT PARAMETERS:
-    State   -   structure which stores algorithm state
-    EpsX    -   >0, stopping condition on outer iteration step length
-    EpsI    -   >0, stopping condition on infeasibility
-
-Both EpsX and EpsI must be non-zero.
-
-MEANING OF EpsX
-
-EpsX  is  a  stopping  condition for outer iterations. Algorithm will stop
-when  solution  of  the  current  modified  subproblem will be within EpsX
-(using 2-norm) of the previous solution.
-
-MEANING OF EpsI
-
-EpsI controls feasibility properties -  algorithm  won't  stop  until  all
-inequality constraints will be satisfied with error (distance from current
-point to the feasible area) at most EpsI.
+NOTE: when SetCond() called with non-zero MaxIts, BLEIC solver may perform
+      slightly more than MaxIts iterations. I.e., MaxIts  sets  non-strict
+      limit on iterations count.
 
   -- ALGLIB --
      Copyright 28.11.2010 by Bochkanov Sergey
 *************************************************************************/
-void minbleicsetoutercond(const minbleicstate &state, const double epsx, const double epsi);
+void minbleicsetcond(const minbleicstate &state, const double epsg, const double epsf, const double epsx, const ae_int_t maxits);
 
 
 /*************************************************************************
@@ -1685,21 +1854,6 @@ INPUT PARAMETERS:
      Copyright 13.10.2010 by Bochkanov Sergey
 *************************************************************************/
 void minbleicsetprecscale(const minbleicstate &state);
-
-
-/*************************************************************************
-This function allows to stop algorithm after specified number of inner
-iterations.
-
-INPUT PARAMETERS:
-    State   -   structure which stores algorithm state
-    MaxIts  -   maximum number of inner iterations.
-                If MaxIts=0, the number of iterations is unlimited.
-
-  -- ALGLIB --
-     Copyright 28.11.2010 by Bochkanov Sergey
-*************************************************************************/
-void minbleicsetmaxits(const minbleicstate &state, const ae_int_t maxits);
 
 
 /*************************************************************************
@@ -1824,7 +1978,16 @@ OUTPUT PARAMETERS:
     X       -   array[0..N-1], solution
     Rep     -   optimization report. You should check Rep.TerminationType
                 in  order  to  distinguish  successful  termination  from
-                unsuccessful one.
+                unsuccessful one:
+                * -7   gradient verification failed.
+                       See MinBLEICSetGradientCheck() for more information.
+                * -3   inconsistent constraints. Feasible point is
+                       either nonexistent or too hard to find. Try to
+                       restart optimizer with better initial approximation
+                *  1   relative function improvement is no more than EpsF.
+                *  2   scaled step is no more than EpsX.
+                *  4   scaled gradient norm is no more than EpsG.
+                *  5   MaxIts steps was taken
                 More information about fields of this  structure  can  be
                 found in the comments on MinBLEICReport datatype.
 
@@ -1863,6 +2026,57 @@ INPUT PARAMETERS:
      Copyright 28.11.2010 by Bochkanov Sergey
 *************************************************************************/
 void minbleicrestartfrom(const minbleicstate &state, const real_1d_array &x);
+
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before optimization begins
+* MinBLEICOptimize() is called
+* prior to  actual  optimization, for each component  of  parameters being
+  optimized X[i] algorithm performs following steps:
+  * two trial steps are made to X[i]-TestStep*S[i] and X[i]+TestStep*S[i],
+    where X[i] is i-th component of the initial point and S[i] is a  scale
+    of i-th parameter
+  * if needed, steps are bounded with respect to constraints on X[]
+  * F(X) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification  needs  N (parameters count) gradient evaluations. It
+        is very costly and you should use  it  only  for  low  dimensional
+        problems,  when  you  want  to  be  sure  that  you've   correctly
+        calculated  analytic  derivatives.  You  should  not use it in the
+        production code (unless you want to check derivatives provided  by
+        some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with MinBLEICSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 15.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void minbleicsetgradientcheck(const minbleicstate &state, const double teststep);
 
 /*************************************************************************
         LIMITED MEMORY BFGS METHOD FOR LARGE SCALE OPTIMIZATION
@@ -2247,6 +2461,8 @@ OUTPUT PARAMETERS:
     X       -   array[0..N-1], solution
     Rep     -   optimization report:
                 * Rep.TerminationType completetion code:
+                    * -7    gradient verification failed.
+                            See MinLBFGSSetGradientCheck() for more information.
                     * -2    rounding errors prevent further improvement.
                             X contains best point found.
                     * -1    incorrect parameters were specified
@@ -2296,6 +2512,57 @@ INPUT PARAMETERS:
 *************************************************************************/
 void minlbfgsrestartfrom(const minlbfgsstate &state, const real_1d_array &x);
 
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before optimization begins
+* MinLBFGSOptimize() is called
+* prior to  actual  optimization, for each component  of  parameters being
+  optimized X[i] algorithm performs following steps:
+  * two trial steps are made to X[i]-TestStep*S[i] and X[i]+TestStep*S[i],
+    where X[i] is i-th component of the initial point and S[i] is a  scale
+    of i-th parameter
+  * if needed, steps are bounded with respect to constraints on X[]
+  * F(X) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification  needs  N (parameters count) gradient evaluations. It
+        is very costly and you should use  it  only  for  low  dimensional
+        problems,  when  you  want  to  be  sure  that  you've   correctly
+        calculated  analytic  derivatives.  You  should  not use it in the
+        production code (unless you want to check derivatives provided  by
+        some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with MinLBFGSSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 24.05.2012 by Bochkanov Sergey
+*************************************************************************/
+void minlbfgssetgradientcheck(const minlbfgsstate &state, const double teststep);
+
 /*************************************************************************
                     CONSTRAINED QUADRATIC PROGRAMMING
 
@@ -2333,11 +2600,17 @@ void minqpsetlinearterm(const minqpstate &state, const real_1d_array &b);
 
 
 /*************************************************************************
-This function sets quadratic term for QP solver.
+This  function  sets  dense  quadratic  term  for  QP solver. By  default,
+quadratic term is zero.
 
-By default quadratic term is zero.
+SUPPORT BY ALGLIB QP ALGORITHMS:
 
-IMPORTANT: this solver minimizes following  function:
+Dense quadratic term can be handled by any of the QP algorithms  supported
+by ALGLIB QP Solver.
+
+IMPORTANT:
+
+This solver minimizes following  function:
     f(x) = 0.5*x'*A*x + b'*x.
 Note that quadratic term has 0.5 before it. So if  you  want  to  minimize
     f(x) = x^2 + x
@@ -2361,6 +2634,47 @@ INPUT PARAMETERS:
 *************************************************************************/
 void minqpsetquadraticterm(const minqpstate &state, const real_2d_array &a, const bool isupper);
 void minqpsetquadraticterm(const minqpstate &state, const real_2d_array &a);
+
+
+/*************************************************************************
+This  function  sets  sparse  quadratic  term  for  QP solver. By default,
+quadratic term is zero.
+
+SUPPORT BY ALGLIB QP ALGORITHMS:
+
+Sparse quadratic term is supported only by BLEIC-based QP  algorithm  (one
+which is activated by MinQPSetAlgoBLEIC function). Cholesky-based QP  algo
+won't be able to deal  with  sparse  quadratic  term  and  will  terminate
+abnormally.
+
+IF YOU CALLED THIS FUNCTION, YOU MUST SWITCH TO BLEIC-BASED  QP  ALGORITHM
+BEFORE CALLING MINQPOPTIMIZE() FUNCTION.
+
+IMPORTANT:
+
+This solver minimizes following  function:
+    f(x) = 0.5*x'*A*x + b'*x.
+Note that quadratic term has 0.5 before it. So if  you  want  to  minimize
+    f(x) = x^2 + x
+you should rewrite your problem as follows:
+    f(x) = 0.5*(2*x^2) + x
+and your matrix A will be equal to [[2.0]], not to [[1.0]]
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+    A       -   matrix, array[N,N]
+    IsUpper -   (optional) storage type:
+                * if True, symmetric matrix  A  is  given  by  its  upper
+                  triangle, and the lower triangle isn’t used
+                * if False, symmetric matrix  A  is  given  by  its lower
+                  triangle, and the upper triangle isn’t used
+                * if not given, both lower and upper  triangles  must  be
+                  filled.
+
+  -- ALGLIB --
+     Copyright 11.01.2011 by Bochkanov Sergey
+*************************************************************************/
+void minqpsetquadratictermsparse(const minqpstate &state, const sparsematrix &a, const bool isupper);
 
 
 /*************************************************************************
@@ -2399,15 +2713,62 @@ void minqpsetorigin(const minqpstate &state, const real_1d_array &xorigin);
 
 
 /*************************************************************************
-This function tells solver to use Cholesky-based algorithm.
+This function sets scaling coefficients.
 
-Cholesky-based algorithm can be used when:
-* problem is convex
-* there is no constraints or only boundary constraints are present
+ALGLIB optimizers use scaling matrices to test stopping  conditions  (step
+size and gradient are scaled before comparison with tolerances).  Scale of
+the I-th variable is a translation invariant measure of:
+a) "how large" the variable is
+b) how large the step should be to make significant changes in the function
 
-This algorithm has O(N^3) complexity for unconstrained problem and  is  up
-to several times slower on bound constrained  problems  (these  additional
-iterations are needed to identify active constraints).
+BLEIC-based QP solver uses scale for two purposes:
+* to evaluate stopping conditions
+* for preconditioning of the underlying BLEIC solver
+
+INPUT PARAMETERS:
+    State   -   structure stores algorithm state
+    S       -   array[N], non-zero scaling coefficients
+                S[i] may be negative, sign doesn't matter.
+
+  -- ALGLIB --
+     Copyright 14.01.2011 by Bochkanov Sergey
+*************************************************************************/
+void minqpsetscale(const minqpstate &state, const real_1d_array &s);
+
+
+/*************************************************************************
+This function tells solver to use Cholesky-based algorithm. This algorithm
+is active by default.
+
+DESCRIPTION:
+
+Cholesky-based algorithm can be used only for problems which:
+* have dense quadratic term, set  by  MinQPSetQuadraticTerm(),  sparse  or
+  structured problems are not supported.
+* are strictly convex, i.e. quadratic term is symmetric positive definite,
+  indefinite or semidefinite problems are not supported by this algorithm.
+
+If anything of what listed above is violated, you may use  BLEIC-based  QP
+algorithm which can be activated by MinQPSetAlgoBLEIC().
+
+BENEFITS AND DRAWBACKS:
+
+This  algorithm  gives  best  precision amongst all QP solvers provided by
+ALGLIB (Newton iterations  have  much  higher  precision  than  any  other
+optimization algorithm). This solver also gracefully handles problems with
+very large amount of constraints.
+
+Performance of the algorithm is good because internally  it  uses  Level 3
+Dense BLAS for its performance-critical parts.
+
+
+From the other side, algorithm has  O(N^3)  complexity  for  unconstrained
+problems and up to orders of  magnitude  slower  on  constrained  problems
+(these additional iterations are needed to identify  active  constraints).
+So, its running time depends on number of constraints active  at solution.
+
+Furthermore, this algorithm can not solve problems with sparse matrices or
+problems with semidefinite/indefinite matrices of any kind (dense/sparse).
 
 INPUT PARAMETERS:
     State   -   structure which stores algorithm state
@@ -2416,6 +2777,82 @@ INPUT PARAMETERS:
      Copyright 11.01.2011 by Bochkanov Sergey
 *************************************************************************/
 void minqpsetalgocholesky(const minqpstate &state);
+
+
+/*************************************************************************
+This function tells solver to use BLEIC-based algorithm and sets  stopping
+criteria for the algorithm.
+
+DESCRIPTION:
+
+BLEIC-based QP algorithm can be used for any kind of QP problems:
+* problems with both dense and sparse quadratic terms
+* problems with positive definite, semidefinite, indefinite terms
+
+BLEIC-based algorithm can solve even indefinite problems - as long as they
+are bounded from below on the feasible set. Of course, global  minimum  is
+found only  for  positive  definite  and  semidefinite  problems.  As  for
+indefinite ones - only local minimum is found.
+
+BENEFITS AND DRAWBACKS:
+
+This algorithm can be used to solve both convex and indefinite QP problems
+and it can utilize sparsity of the quadratic  term  (algorithm  calculates
+matrix-vector products, which can be  performed  efficiently  in  case  of
+sparse matrix).
+
+Algorithm has iteration cost, which (assuming fixed amount of non-boundary
+linear constraints) linearly depends on problem size. Boundary constraints
+does not significantly change iteration cost.
+
+Thus, it outperforms Cholesky-based QP algorithm (CQP) on high-dimensional
+sparse problems with moderate amount of constraints.
+
+
+From the other side, unlike CQP solver, this algorithm does NOT  make  use
+of Level 3 Dense BLAS. Thus, its performance on dense problems is inferior
+to that of CQP solver.
+
+Its precision is also inferior to that of CQP. CQP performs  Newton  steps
+which are know to achieve very good  precision. In many cases Newton  step
+leads us exactly to the solution. BLEIC-QP performs LBFGS steps, which are
+good at detecting neighborhood of the solution, buy need  many  iterations
+to find solution with 6 digits of precision.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+    EpsG    -   >=0
+                The  subroutine  finishes  its  work   if   the  condition
+                |v|<EpsG is satisfied, where:
+                * |.| means Euclidian norm
+                * v - scaled constrained gradient vector, v[i]=g[i]*s[i]
+                * g - gradient
+                * s - scaling coefficients set by MinQPSetScale()
+    EpsF    -   >=0
+                The  subroutine  finishes  its work if exploratory steepest
+                descent  step  on  k+1-th  iteration  satisfies   following
+                condition:  |F(k+1)-F(k)|<=EpsF*max{|F(k)|,|F(k+1)|,1}
+    EpsX    -   >=0
+                The  subroutine  finishes  its work if exploratory steepest
+                descent  step  on  k+1-th  iteration  satisfies   following
+                condition:
+                * |.| means Euclidian norm
+                * v - scaled step vector, v[i]=dx[i]/s[i]
+                * dx - step vector, dx=X(k+1)-X(k)
+                * s - scaling coefficients set by MinQPSetScale()
+    MaxIts  -   maximum number of iterations. If MaxIts=0, the  number  of
+                iterations is unlimited.
+
+Passing EpsG=0, EpsF=0 and EpsX=0 and MaxIts=0 (simultaneously) will lead
+to automatic stopping criterion selection (presently it is  small    step
+length, but it may change in the future versions of ALGLIB).
+
+IT IS VERY IMPORTANT THAT YOU CALL MinQPSetScale() WHEN YOU USE THIS ALGO!
+
+  -- ALGLIB --
+     Copyright 11.01.2011 by Bochkanov Sergey
+*************************************************************************/
+void minqpsetalgobleic(const minqpstate &state, const double epsg, const double epsf, const double epsx, const ae_int_t maxits);
 
 
 /*************************************************************************
@@ -2446,6 +2883,38 @@ void minqpsetbc(const minqpstate &state, const real_1d_array &bndl, const real_1
 
 
 /*************************************************************************
+This function sets linear constraints for QP optimizer.
+
+Linear constraints are inactive by default (after initial creation).
+
+INPUT PARAMETERS:
+    State   -   structure previously allocated with MinQPCreate call.
+    C       -   linear constraints, array[K,N+1].
+                Each row of C represents one constraint, either equality
+                or inequality (see below):
+                * first N elements correspond to coefficients,
+                * last element corresponds to the right part.
+                All elements of C (including right part) must be finite.
+    CT      -   type of constraints, array[K]:
+                * if CT[i]>0, then I-th constraint is C[i,*]*x >= C[i,n+1]
+                * if CT[i]=0, then I-th constraint is C[i,*]*x  = C[i,n+1]
+                * if CT[i]<0, then I-th constraint is C[i,*]*x <= C[i,n+1]
+    K       -   number of equality/inequality constraints, K>=0:
+                * if given, only leading K elements of C/CT are used
+                * if not given, automatically determined from sizes of C/CT
+
+NOTE 1: linear (non-bound) constraints are satisfied only approximately  -
+        there always exists some minor violation (about 10^-10...10^-13)
+        due to numerical errors.
+
+  -- ALGLIB --
+     Copyright 19.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void minqpsetlc(const minqpstate &state, const real_2d_array &c, const integer_1d_array &ct, const ae_int_t k);
+void minqpsetlc(const minqpstate &state, const real_2d_array &c, const integer_1d_array &ct);
+
+
+/*************************************************************************
 This function solves quadratic programming problem.
 You should call it after setting solver options with MinQPSet...() calls.
 
@@ -2456,7 +2925,9 @@ You should use MinQPResults() function to access results after calls
 to this function.
 
   -- ALGLIB --
-     Copyright 11.01.2011 by Bochkanov Sergey
+     Copyright 11.01.2011 by Bochkanov Sergey.
+     Special thanks to Elvira Illarionova  for  important  suggestions  on
+     the linearly constrained QP algorithm.
 *************************************************************************/
 void minqpoptimize(const minqpstate &state);
 
@@ -2468,11 +2939,35 @@ INPUT PARAMETERS:
     State   -   algorithm state
 
 OUTPUT PARAMETERS:
-    X       -   array[0..N-1], solution
+    X       -   array[0..N-1], solution.
+                This array is allocated and initialized only when
+                Rep.TerminationType parameter is positive (success).
     Rep     -   optimization report. You should check Rep.TerminationType,
                 which contains completion code, and you may check  another
                 fields which contain another information  about  algorithm
                 functioning.
+
+                Failure codes returned by algorithm are:
+                * -5    inappropriate solver was used:
+                        * Cholesky solver for (semi)indefinite problems
+                        * Cholesky solver for problems with sparse matrix
+                * -4    BLEIC-QP algorithm found unconstrained direction
+                        of negative curvature (function is unbounded from
+                        below  even  under  constraints),  no  meaningful
+                        minimum can be found.
+                * -3    inconsistent constraints (or maybe  feasible point
+                        is too  hard  to  find).  If  you  are  sure  that
+                        constraints are feasible, try to restart optimizer
+                        with better initial approximation.
+
+                Completion codes specific for Cholesky algorithm:
+                *  4   successful completion
+
+                Completion codes specific for BLEIC-based algorithm:
+                *  1   relative function improvement is no more than EpsF.
+                *  2   scaled step is no more than EpsX.
+                *  4   scaled gradient norm is no more than EpsG.
+                *  5   MaxIts steps was taken
 
   -- ALGLIB --
      Copyright 11.01.2011 by Bochkanov Sergey
@@ -3036,6 +3531,57 @@ provides similar, but more consistent and feature-rich interface.
 void minlmcreatefj(const ae_int_t n, const ae_int_t m, const real_1d_array &x, minlmstate &state);
 void minlmcreatefj(const ae_int_t m, const real_1d_array &x, minlmstate &state);
 
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before optimization begins
+* MinLMOptimize() is called
+* prior to actual optimization, for  each  function Fi and each  component
+  of parameters  being  optimized X[j] algorithm performs following steps:
+  * two trial steps are made to X[j]-TestStep*S[j] and X[j]+TestStep*S[j],
+    where X[j] is j-th parameter and S[j] is a scale of j-th parameter
+  * if needed, steps are bounded with respect to constraints on X[]
+  * Fi(X) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative,
+    Rep.FuncIdx is set to index of the function.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification  needs  N (parameters count) Jacobian evaluations. It
+        is  very  costly  and  you  should use it only for low dimensional
+        problems,  when  you  want  to  be  sure  that  you've   correctly
+        calculated  analytic  derivatives.  You should not  use  it in the
+        production code  (unless  you  want  to check derivatives provided
+        by some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with MinLMSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 15.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void minlmsetgradientcheck(const minlmstate &state, const double teststep);
+
 /*************************************************************************
 Obsolete function, use MinLBFGSSetPrecDefault() instead.
 
@@ -3275,6 +3821,172 @@ ae_bool findfeasiblepoint(/* Real    */ ae_vector* x,
      ae_int_t* qpits,
      ae_int_t* gpaits,
      ae_state *_state);
+ae_bool derivativecheck(double f0,
+     double df0,
+     double f1,
+     double df1,
+     double f,
+     double df,
+     double width,
+     ae_state *_state);
+void cqminit(ae_int_t n, convexquadraticmodel* s, ae_state *_state);
+void cqmseta(convexquadraticmodel* s,
+     /* Real    */ ae_matrix* a,
+     ae_bool isupper,
+     double alpha,
+     ae_state *_state);
+void cqmrewritedensediagonal(convexquadraticmodel* s,
+     /* Real    */ ae_vector* z,
+     ae_state *_state);
+void cqmsetd(convexquadraticmodel* s,
+     /* Real    */ ae_vector* d,
+     double tau,
+     ae_state *_state);
+void cqmdropa(convexquadraticmodel* s, ae_state *_state);
+void cqmsetb(convexquadraticmodel* s,
+     /* Real    */ ae_vector* b,
+     ae_state *_state);
+void cqmsetq(convexquadraticmodel* s,
+     /* Real    */ ae_matrix* q,
+     /* Real    */ ae_vector* r,
+     ae_int_t k,
+     double theta,
+     ae_state *_state);
+void cqmsetactiveset(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     /* Boolean */ ae_vector* activeset,
+     ae_state *_state);
+double cqmeval(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+void cqmevalx(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     double* r,
+     double* noise,
+     ae_state *_state);
+void cqmgradunconstrained(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* g,
+     ae_state *_state);
+double cqmxtadx2(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+void cqmadx(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     ae_state *_state);
+ae_bool cqmconstrainedoptimum(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+void cqmscalevector(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+double cqmdebugconstrainedevalt(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+double cqmdebugconstrainedevale(convexquadraticmodel* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+ae_bool _convexquadraticmodel_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _convexquadraticmodel_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _convexquadraticmodel_clear(void* _p);
+void _convexquadraticmodel_destroy(void* _p);
+void snnlsinit(ae_int_t nsmax,
+     ae_int_t ndmax,
+     ae_int_t nrmax,
+     snnlssolver* s,
+     ae_state *_state);
+void snnlssetproblem(snnlssolver* s,
+     /* Real    */ ae_matrix* a,
+     /* Real    */ ae_vector* b,
+     ae_int_t ns,
+     ae_int_t nd,
+     ae_int_t nr,
+     ae_state *_state);
+void snnlsdropnnc(snnlssolver* s, ae_int_t idx, ae_state *_state);
+void snnlssolve(snnlssolver* s,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+ae_bool _snnlssolver_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _snnlssolver_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _snnlssolver_clear(void* _p);
+void _snnlssolver_destroy(void* _p);
+void sasinit(ae_int_t n, sactiveset* s, ae_state *_state);
+void sassetscale(sactiveset* state,
+     /* Real    */ ae_vector* s,
+     ae_state *_state);
+void sassetprecdiag(sactiveset* state,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sassetbc(sactiveset* state,
+     /* Real    */ ae_vector* bndl,
+     /* Real    */ ae_vector* bndu,
+     ae_state *_state);
+void sassetlc(sactiveset* state,
+     /* Real    */ ae_matrix* c,
+     /* Integer */ ae_vector* ct,
+     ae_int_t k,
+     ae_state *_state);
+void sassetlcx(sactiveset* state,
+     /* Real    */ ae_matrix* cleic,
+     ae_int_t nec,
+     ae_int_t nic,
+     ae_state *_state);
+ae_bool sasstartoptimization(sactiveset* state,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+void sasexploredirection(sactiveset* state,
+     /* Real    */ ae_vector* d,
+     double* stpmax,
+     ae_int_t* cidx,
+     double* vval,
+     ae_state *_state);
+ae_int_t sasmoveto(sactiveset* state,
+     /* Real    */ ae_vector* xn,
+     ae_bool needact,
+     ae_int_t cidx,
+     double cval,
+     ae_state *_state);
+void sasimmediateactivation(sactiveset* state,
+     ae_int_t cidx,
+     double cval,
+     ae_state *_state);
+void sasconstraineddescent(sactiveset* state,
+     /* Real    */ ae_vector* g,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sasconstraineddescentprec(sactiveset* state,
+     /* Real    */ ae_vector* g,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sasconstraineddirection(sactiveset* state,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sasconstraineddirectionprec(sactiveset* state,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sascorrection(sactiveset* state,
+     /* Real    */ ae_vector* x,
+     double* penalty,
+     ae_state *_state);
+double sasactivelcpenalty1(sactiveset* state,
+     /* Real    */ ae_vector* x,
+     ae_state *_state);
+double sasscaledconstrainednorm(sactiveset* state,
+     /* Real    */ ae_vector* d,
+     ae_state *_state);
+void sasstopoptimization(sactiveset* state, ae_state *_state);
+void sasreactivateconstraints(sactiveset* state,
+     /* Real    */ ae_vector* gc,
+     ae_state *_state);
+void sasreactivateconstraintsprec(sactiveset* state,
+     /* Real    */ ae_vector* gc,
+     ae_state *_state);
+void sasrebuildbasis(sactiveset* state, ae_state *_state);
+ae_bool _sactiveset_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sactiveset_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sactiveset_clear(void* _p);
+void _sactiveset_destroy(void* _p);
 void mincgcreate(ae_int_t n,
      /* Real    */ ae_vector* x,
      mincgstate* state,
@@ -3327,12 +4039,17 @@ void mincgsetpreclowrankfast(mincgstate* state,
 void mincgsetprecvarpart(mincgstate* state,
      /* Real    */ ae_vector* d2,
      ae_state *_state);
-ae_bool _mincgstate_init(mincgstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mincgstate_init_copy(mincgstate* dst, mincgstate* src, ae_state *_state, ae_bool make_automatic);
-void _mincgstate_clear(mincgstate* p);
-ae_bool _mincgreport_init(mincgreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mincgreport_init_copy(mincgreport* dst, mincgreport* src, ae_state *_state, ae_bool make_automatic);
-void _mincgreport_clear(mincgreport* p);
+void mincgsetgradientcheck(mincgstate* state,
+     double teststep,
+     ae_state *_state);
+ae_bool _mincgstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mincgstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mincgstate_clear(void* _p);
+void _mincgstate_destroy(void* _p);
+ae_bool _mincgreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mincgreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mincgreport_clear(void* _p);
+void _mincgreport_destroy(void* _p);
 void minbleiccreate(ae_int_t n,
      /* Real    */ ae_vector* x,
      minbleicstate* state,
@@ -3351,14 +4068,11 @@ void minbleicsetlc(minbleicstate* state,
      /* Integer */ ae_vector* ct,
      ae_int_t k,
      ae_state *_state);
-void minbleicsetinnercond(minbleicstate* state,
+void minbleicsetcond(minbleicstate* state,
      double epsg,
      double epsf,
      double epsx,
-     ae_state *_state);
-void minbleicsetoutercond(minbleicstate* state,
-     double epsx,
-     double epsi,
+     ae_int_t maxits,
      ae_state *_state);
 void minbleicsetscale(minbleicstate* state,
      /* Real    */ ae_vector* s,
@@ -3368,11 +4082,11 @@ void minbleicsetprecdiag(minbleicstate* state,
      /* Real    */ ae_vector* d,
      ae_state *_state);
 void minbleicsetprecscale(minbleicstate* state, ae_state *_state);
-void minbleicsetmaxits(minbleicstate* state,
-     ae_int_t maxits,
-     ae_state *_state);
 void minbleicsetxrep(minbleicstate* state,
      ae_bool needxrep,
+     ae_state *_state);
+void minbleicsetdrep(minbleicstate* state,
+     ae_bool needdrep,
      ae_state *_state);
 void minbleicsetstpmax(minbleicstate* state,
      double stpmax,
@@ -3389,12 +4103,18 @@ void minbleicresultsbuf(minbleicstate* state,
 void minbleicrestartfrom(minbleicstate* state,
      /* Real    */ ae_vector* x,
      ae_state *_state);
-ae_bool _minbleicstate_init(minbleicstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minbleicstate_init_copy(minbleicstate* dst, minbleicstate* src, ae_state *_state, ae_bool make_automatic);
-void _minbleicstate_clear(minbleicstate* p);
-ae_bool _minbleicreport_init(minbleicreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minbleicreport_init_copy(minbleicreport* dst, minbleicreport* src, ae_state *_state, ae_bool make_automatic);
-void _minbleicreport_clear(minbleicreport* p);
+void minbleicemergencytermination(minbleicstate* state, ae_state *_state);
+void minbleicsetgradientcheck(minbleicstate* state,
+     double teststep,
+     ae_state *_state);
+ae_bool _minbleicstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minbleicstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minbleicstate_clear(void* _p);
+void _minbleicstate_destroy(void* _p);
+ae_bool _minbleicreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minbleicreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minbleicreport_clear(void* _p);
+void _minbleicreport_destroy(void* _p);
 void minlbfgscreate(ae_int_t n,
      ae_int_t m,
      /* Real    */ ae_vector* x,
@@ -3449,12 +4169,17 @@ void minlbfgsresultsbuf(minlbfgsstate* state,
 void minlbfgsrestartfrom(minlbfgsstate* state,
      /* Real    */ ae_vector* x,
      ae_state *_state);
-ae_bool _minlbfgsstate_init(minlbfgsstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minlbfgsstate_init_copy(minlbfgsstate* dst, minlbfgsstate* src, ae_state *_state, ae_bool make_automatic);
-void _minlbfgsstate_clear(minlbfgsstate* p);
-ae_bool _minlbfgsreport_init(minlbfgsreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minlbfgsreport_init_copy(minlbfgsreport* dst, minlbfgsreport* src, ae_state *_state, ae_bool make_automatic);
-void _minlbfgsreport_clear(minlbfgsreport* p);
+void minlbfgssetgradientcheck(minlbfgsstate* state,
+     double teststep,
+     ae_state *_state);
+ae_bool _minlbfgsstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minlbfgsstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minlbfgsstate_clear(void* _p);
+void _minlbfgsstate_destroy(void* _p);
+ae_bool _minlbfgsreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minlbfgsreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minlbfgsreport_clear(void* _p);
+void _minlbfgsreport_destroy(void* _p);
 void minqpcreate(ae_int_t n, minqpstate* state, ae_state *_state);
 void minqpsetlinearterm(minqpstate* state,
      /* Real    */ ae_vector* b,
@@ -3463,16 +4188,34 @@ void minqpsetquadraticterm(minqpstate* state,
      /* Real    */ ae_matrix* a,
      ae_bool isupper,
      ae_state *_state);
+void minqpsetquadratictermsparse(minqpstate* state,
+     sparsematrix* a,
+     ae_bool isupper,
+     ae_state *_state);
 void minqpsetstartingpoint(minqpstate* state,
      /* Real    */ ae_vector* x,
      ae_state *_state);
 void minqpsetorigin(minqpstate* state,
      /* Real    */ ae_vector* xorigin,
      ae_state *_state);
+void minqpsetscale(minqpstate* state,
+     /* Real    */ ae_vector* s,
+     ae_state *_state);
 void minqpsetalgocholesky(minqpstate* state, ae_state *_state);
+void minqpsetalgobleic(minqpstate* state,
+     double epsg,
+     double epsf,
+     double epsx,
+     ae_int_t maxits,
+     ae_state *_state);
 void minqpsetbc(minqpstate* state,
      /* Real    */ ae_vector* bndl,
      /* Real    */ ae_vector* bndu,
+     ae_state *_state);
+void minqpsetlc(minqpstate* state,
+     /* Real    */ ae_matrix* c,
+     /* Integer */ ae_vector* ct,
+     ae_int_t k,
      ae_state *_state);
 void minqpoptimize(minqpstate* state, ae_state *_state);
 void minqpresults(minqpstate* state,
@@ -3500,12 +4243,14 @@ void minqpsetstartingpointfast(minqpstate* state,
 void minqpsetoriginfast(minqpstate* state,
      /* Real    */ ae_vector* xorigin,
      ae_state *_state);
-ae_bool _minqpstate_init(minqpstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minqpstate_init_copy(minqpstate* dst, minqpstate* src, ae_state *_state, ae_bool make_automatic);
-void _minqpstate_clear(minqpstate* p);
-ae_bool _minqpreport_init(minqpreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minqpreport_init_copy(minqpreport* dst, minqpreport* src, ae_state *_state, ae_bool make_automatic);
-void _minqpreport_clear(minqpreport* p);
+ae_bool _minqpstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minqpstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minqpstate_clear(void* _p);
+void _minqpstate_destroy(void* _p);
+ae_bool _minqpreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minqpreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minqpreport_clear(void* _p);
+void _minqpreport_destroy(void* _p);
 void minlmcreatevj(ae_int_t n,
      ae_int_t m,
      /* Real    */ ae_vector* x,
@@ -3566,12 +4311,17 @@ void minlmcreatefj(ae_int_t n,
      /* Real    */ ae_vector* x,
      minlmstate* state,
      ae_state *_state);
-ae_bool _minlmstate_init(minlmstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minlmstate_init_copy(minlmstate* dst, minlmstate* src, ae_state *_state, ae_bool make_automatic);
-void _minlmstate_clear(minlmstate* p);
-ae_bool _minlmreport_init(minlmreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minlmreport_init_copy(minlmreport* dst, minlmreport* src, ae_state *_state, ae_bool make_automatic);
-void _minlmreport_clear(minlmreport* p);
+void minlmsetgradientcheck(minlmstate* state,
+     double teststep,
+     ae_state *_state);
+ae_bool _minlmstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minlmstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minlmstate_clear(void* _p);
+void _minlmstate_destroy(void* _p);
+ae_bool _minlmreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minlmreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minlmreport_clear(void* _p);
+void _minlmreport_destroy(void* _p);
 void minlbfgssetdefaultpreconditioner(minlbfgsstate* state,
      ae_state *_state);
 void minlbfgssetcholeskypreconditioner(minlbfgsstate* state,
@@ -3615,12 +4365,14 @@ void minasarestartfrom(minasastate* state,
      /* Real    */ ae_vector* bndl,
      /* Real    */ ae_vector* bndu,
      ae_state *_state);
-ae_bool _minasastate_init(minasastate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minasastate_init_copy(minasastate* dst, minasastate* src, ae_state *_state, ae_bool make_automatic);
-void _minasastate_clear(minasastate* p);
-ae_bool _minasareport_init(minasareport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _minasareport_init_copy(minasareport* dst, minasareport* src, ae_state *_state, ae_bool make_automatic);
-void _minasareport_clear(minasareport* p);
+ae_bool _minasastate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minasastate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minasastate_clear(void* _p);
+void _minasastate_destroy(void* _p);
+ae_bool _minasareport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _minasareport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _minasareport_clear(void* _p);
+void _minasareport_destroy(void* _p);
 
 }
 #endif

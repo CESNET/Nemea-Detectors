@@ -71,10 +71,6 @@ double gammafunction(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -123,10 +119,6 @@ double lngamma(const double x, double &sgngam)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -168,10 +160,6 @@ double errorfunction(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -215,10 +203,6 @@ double errorfunctionc(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -266,10 +250,6 @@ double normaldistribution(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -291,10 +271,6 @@ double inverf(const double e)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -336,10 +312,6 @@ double invnormaldistribution(const double y0)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -385,10 +357,6 @@ double incompletegamma(const double a, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -438,10 +406,6 @@ double incompletegammac(const double a, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -495,10 +459,6 @@ double invincompletegammac(const double a, const double y0)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -547,10 +507,6 @@ void airy(const double x, double &ai, double &aip, double &bi, double &bip)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -597,10 +553,6 @@ double besselj0(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -636,10 +588,6 @@ double besselj1(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -683,10 +631,6 @@ double besseljn(const ae_int_t n, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -732,10 +676,6 @@ double bessely0(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -772,10 +712,6 @@ double bessely1(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -815,10 +751,6 @@ double besselyn(const ae_int_t n, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -855,10 +787,6 @@ double besseli0(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -897,10 +825,6 @@ double besseli1(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -938,10 +862,6 @@ double besselk0(const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -976,10 +896,6 @@ double besselk1(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1019,10 +935,6 @@ double besselkn(const ae_int_t nn, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1060,10 +972,6 @@ double beta(const double a, const double b)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1122,10 +1030,6 @@ double incompletebeta(const double a, const double b, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1169,10 +1073,6 @@ double invincompletebeta(const double a, const double b, const double y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1220,10 +1120,6 @@ double binomialdistribution(const ae_int_t k, const ae_int_t n, const double p)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1274,10 +1170,6 @@ double binomialcdistribution(const ae_int_t k, const ae_int_t n, const double p)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1322,10 +1214,6 @@ double invbinomialdistribution(const ae_int_t k, const ae_int_t n, const double 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1353,10 +1241,6 @@ double chebyshevcalculate(const ae_int_t r, const ae_int_t n, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1391,10 +1275,6 @@ double chebyshevsum(const real_1d_array &c, const ae_int_t r, const ae_int_t n, 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1419,10 +1299,6 @@ void chebyshevcoefficients(const ae_int_t n, real_1d_array &c)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1452,10 +1328,6 @@ void fromchebyshev(const real_1d_array &a, const ae_int_t n, real_1d_array &b)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1506,10 +1378,6 @@ double chisquaredistribution(const double v, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1557,10 +1425,6 @@ double chisquarecdistribution(const double v, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1596,10 +1460,6 @@ double invchisquaredistribution(const double v, const double y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1641,10 +1501,6 @@ double dawsonintegral(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1691,10 +1547,6 @@ double ellipticintegralk(const double m)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1747,10 +1599,6 @@ double ellipticintegralkhighprecision(const double m1)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1801,10 +1649,6 @@ double incompleteellipticintegralk(const double phi, const double m)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1847,10 +1691,6 @@ double ellipticintegrale(const double m)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1898,10 +1738,6 @@ double incompleteellipticintegrale(const double phi, const double m)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1942,10 +1778,6 @@ double exponentialintegralei(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1994,10 +1826,6 @@ double exponentialintegralen(const double x, const ae_int_t n)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2045,10 +1873,6 @@ double fdistribution(const ae_int_t a, const ae_int_t b, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2102,10 +1926,6 @@ double fcdistribution(const ae_int_t a, const ae_int_t b, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2156,10 +1976,6 @@ double invfdistribution(const ae_int_t a, const ae_int_t b, const double y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2219,10 +2035,6 @@ void fresnelintegral(const double x, double &c, double &s)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2248,10 +2060,6 @@ double hermitecalculate(const ae_int_t n, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2282,10 +2090,6 @@ double hermitesum(const real_1d_array &c, const ae_int_t n, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2310,10 +2114,6 @@ void hermitecoefficients(const ae_int_t n, real_1d_array &c)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2371,10 +2171,6 @@ void jacobianellipticfunctions(const double u, const double m, double &sn, doubl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2400,10 +2196,6 @@ double laguerrecalculate(const ae_int_t n, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2433,10 +2225,6 @@ double laguerresum(const real_1d_array &c, const ae_int_t n, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2461,10 +2249,6 @@ void laguerrecoefficients(const ae_int_t n, real_1d_array &c)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2491,10 +2275,6 @@ double legendrecalculate(const ae_int_t n, const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2525,10 +2305,6 @@ double legendresum(const real_1d_array &c, const ae_int_t n, const double x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2553,10 +2329,6 @@ void legendrecoefficients(const ae_int_t n, real_1d_array &c)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2598,10 +2370,6 @@ double poissondistribution(const ae_int_t k, const double m)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2645,10 +2413,6 @@ double poissoncdistribution(const ae_int_t k, const double m)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2683,10 +2447,6 @@ double invpoissondistribution(const ae_int_t k, const double y)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2742,10 +2502,6 @@ double psi(const double x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2804,10 +2560,6 @@ double studenttdistribution(const ae_int_t k, const double t)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2840,10 +2592,6 @@ double invstudenttdistribution(const ae_int_t k, const double p)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2900,10 +2648,6 @@ void sinecosineintegrals(const double x, double &si, double &ci)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2959,10 +2703,6 @@ void hyperbolicsinecosineintegrals(const double x, double &shi, double &chi)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 }
@@ -3424,7 +3164,7 @@ double errorfunction(double x, ae_state *_state)
     {
         xsq = x*x;
         p = 0.007547728033418631287834;
-        p = 0.288805137207594084924010+xsq*p;
+        p = -0.288805137207594084924010+xsq*p;
         p = 14.3383842191748205576712+xsq*p;
         p = 38.0140318123903008244444+xsq*p;
         p = 3017.82788536507577809226+xsq*p;

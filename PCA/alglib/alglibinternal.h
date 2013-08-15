@@ -41,6 +41,57 @@ typedef struct
 } apbuffers;
 typedef struct
 {
+    ae_bool val;
+} sboolean;
+typedef struct
+{
+    ae_vector val;
+} sbooleanarray;
+typedef struct
+{
+    ae_int_t val;
+} sinteger;
+typedef struct
+{
+    ae_vector val;
+} sintegerarray;
+typedef struct
+{
+    double val;
+} sreal;
+typedef struct
+{
+    ae_vector val;
+} srealarray;
+typedef struct
+{
+    ae_complex val;
+} scomplex;
+typedef struct
+{
+    ae_vector val;
+} scomplexarray;
+typedef struct
+{
+    ae_int_t chunksize;
+    ae_int_t ntotal;
+    ae_int_t nin;
+    ae_int_t nout;
+    ae_int_t wcount;
+    ae_vector batch4buf;
+    ae_vector hpcbuf;
+    ae_matrix xy;
+    ae_matrix xy2;
+    ae_vector xyrow;
+    ae_vector x;
+    ae_vector y;
+    ae_vector desiredy;
+    double e;
+    ae_vector g;
+    ae_vector tmp0;
+} mlpbuffers;
+typedef struct
+{
     ae_bool brackt;
     ae_bool stage1;
     ae_int_t infoc;
@@ -85,11 +136,12 @@ typedef struct
 } armijostate;
 typedef struct
 {
-    ae_vector plan;
-    ae_vector precomputed;
-    ae_vector tmpbuf;
-    ae_vector stackbuf;
-} ftplan;
+    ae_matrix entries;
+    ae_vector buffer;
+    ae_vector precr;
+    ae_vector preci;
+    ae_shared_pool bluesteinpool;
+} fasttransformplan;
 
 }
 
@@ -111,11 +163,17 @@ namespace alglib
 /////////////////////////////////////////////////////////////////////////
 namespace alglib_impl
 {
-ae_int_t getrdfserializationcode(ae_state *_state);
-ae_int_t getkdtreeserializationcode(ae_state *_state);
-ae_int_t getmlpserializationcode(ae_state *_state);
-ae_int_t getmlpeserializationcode(ae_state *_state);
-ae_int_t getrbfserializationcode(ae_state *_state);
+ae_bool seterrorflag(ae_bool* flag, ae_bool cond, ae_state *_state);
+ae_bool seterrorflagdiff(ae_bool* flag,
+     double val,
+     double refval,
+     double tol,
+     double s,
+     ae_state *_state);
+void touchint(ae_int_t* a, ae_state *_state);
+void touchreal(double* a, ae_state *_state);
+double inttoreal(ae_int_t a, ae_state *_state);
+double log2(double x, ae_state *_state);
 ae_bool approxequalrel(double a, double b, double tol, ae_state *_state);
 void taskgenint1d(double a,
      double b,
@@ -150,7 +208,6 @@ void bvectorsetlengthatleast(/* Boolean */ ae_vector* x,
      ae_state *_state);
 void ivectorsetlengthatleast(/* Integer */ ae_vector* x,
      ae_int_t n,
-
      ae_state *_state);
 void rvectorsetlengthatleast(/* Real    */ ae_vector* x,
      ae_int_t n,
@@ -160,6 +217,10 @@ void rmatrixsetlengthatleast(/* Real    */ ae_matrix* x,
      ae_int_t n,
      ae_state *_state);
 void rmatrixresize(/* Real    */ ae_matrix* x,
+     ae_int_t m,
+     ae_int_t n,
+     ae_state *_state);
+void imatrixresize(/* Integer */ ae_matrix* x,
      ae_int_t m,
      ae_int_t n,
      ae_state *_state);
@@ -198,6 +259,11 @@ void apperiodicmap(double* x,
      double b,
      double* k,
      ae_state *_state);
+double randomnormal(ae_state *_state);
+void randomunit(ae_int_t n, /* Real    */ ae_vector* x, ae_state *_state);
+void inc(ae_int_t* v, ae_state *_state);
+void dec(ae_int_t* v, ae_state *_state);
+void countdown(ae_int_t* v, ae_state *_state);
 double boundval(double x, double b1, double b2, ae_state *_state);
 void alloccomplex(ae_serializer* s, ae_complex v, ae_state *_state);
 void serializecomplex(ae_serializer* s, ae_complex v, ae_state *_state);
@@ -253,9 +319,56 @@ ae_int_t recsearch(/* Integer */ ae_vector* a,
      ae_int_t i1,
      /* Integer */ ae_vector* b,
      ae_state *_state);
-ae_bool _apbuffers_init(apbuffers* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _apbuffers_init_copy(apbuffers* dst, apbuffers* src, ae_state *_state, ae_bool make_automatic);
-void _apbuffers_clear(apbuffers* p);
+void splitlengtheven(ae_int_t tasksize,
+     ae_int_t* task0,
+     ae_int_t* task1,
+     ae_state *_state);
+void splitlength(ae_int_t tasksize,
+     ae_int_t chunksize,
+     ae_int_t* task0,
+     ae_int_t* task1,
+     ae_state *_state);
+ae_bool _apbuffers_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _apbuffers_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _apbuffers_clear(void* _p);
+void _apbuffers_destroy(void* _p);
+ae_bool _sboolean_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sboolean_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sboolean_clear(void* _p);
+void _sboolean_destroy(void* _p);
+ae_bool _sbooleanarray_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sbooleanarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sbooleanarray_clear(void* _p);
+void _sbooleanarray_destroy(void* _p);
+ae_bool _sinteger_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sinteger_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sinteger_clear(void* _p);
+void _sinteger_destroy(void* _p);
+ae_bool _sintegerarray_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sintegerarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sintegerarray_clear(void* _p);
+void _sintegerarray_destroy(void* _p);
+ae_bool _sreal_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sreal_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sreal_clear(void* _p);
+void _sreal_destroy(void* _p);
+ae_bool _srealarray_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _srealarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _srealarray_clear(void* _p);
+void _srealarray_destroy(void* _p);
+ae_bool _scomplex_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _scomplex_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _scomplex_clear(void* _p);
+void _scomplex_destroy(void* _p);
+ae_bool _scomplexarray_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _scomplexarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _scomplexarray_clear(void* _p);
+void _scomplexarray_destroy(void* _p);
+ae_int_t getrdfserializationcode(ae_state *_state);
+ae_int_t getkdtreeserializationcode(ae_state *_state);
+ae_int_t getmlpserializationcode(ae_state *_state);
+ae_int_t getmlpeserializationcode(ae_state *_state);
+ae_int_t getrbfserializationcode(ae_state *_state);
 void tagsort(/* Real    */ ae_vector* a,
      ae_int_t n,
      /* Integer */ ae_vector* p1,
@@ -314,6 +427,7 @@ ae_int_t upperbound(/* Real    */ ae_vector* a,
      ae_state *_state);
 void rankx(/* Real    */ ae_vector* x,
      ae_int_t n,
+     ae_bool iscentered,
      apbuffers* buf,
      ae_state *_state);
 ae_bool cmatrixrank1f(ae_int_t m,
@@ -466,83 +580,129 @@ ae_bool cmatrixgemmf(ae_int_t m,
      ae_int_t ic,
      ae_int_t jc,
      ae_state *_state);
-void hermitianmatrixvectormultiply(/* Complex */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Complex */ ae_vector* x,
-     ae_complex alpha,
-     /* Complex */ ae_vector* y,
-     ae_state *_state);
-void hermitianrank2update(/* Complex */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Complex */ ae_vector* x,
-     /* Complex */ ae_vector* y,
-     /* Complex */ ae_vector* t,
-     ae_complex alpha,
-     ae_state *_state);
-void generatereflection(/* Real    */ ae_vector* x,
+void cmatrixgemmk(ae_int_t m,
      ae_int_t n,
-     double* tau,
+     ae_int_t k,
+     ae_complex alpha,
+     /* Complex */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Complex */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     ae_complex beta,
+     /* Complex */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state);
-void applyreflectionfromtheleft(/* Real    */ ae_matrix* c,
-     double tau,
-     /* Real    */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Real    */ ae_vector* work,
-     ae_state *_state);
-void applyreflectionfromtheright(/* Real    */ ae_matrix* c,
-     double tau,
-     /* Real    */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Real    */ ae_vector* work,
-     ae_state *_state);
-void complexgeneratereflection(/* Complex */ ae_vector* x,
+void rmatrixgemmk(ae_int_t m,
      ae_int_t n,
-     ae_complex* tau,
-     ae_state *_state);
-void complexapplyreflectionfromtheleft(/* Complex */ ae_matrix* c,
-     ae_complex tau,
-     /* Complex */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Complex */ ae_vector* work,
-     ae_state *_state);
-void complexapplyreflectionfromtheright(/* Complex */ ae_matrix* c,
-     ae_complex tau,
-     /* Complex */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Complex */ ae_vector* work,
-     ae_state *_state);
-void symmetricmatrixvectormultiply(/* Real    */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Real    */ ae_vector* x,
+     ae_int_t k,
      double alpha,
-     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state);
-void symmetricrank2update(/* Real    */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_vector* t,
+void rmatrixgemmk44v00(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
      double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state);
+void rmatrixgemmk44v01(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state);
+void rmatrixgemmk44v10(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state);
+void rmatrixgemmk44v11(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state);
+ae_bool rmatrixsyrkmkl(ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_bool isupper,
+     ae_state *_state);
+ae_bool rmatrixgemmmkl(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state);
 double vectornorm2(/* Real    */ ae_vector* x,
      ae_int_t i1,
@@ -635,6 +795,84 @@ void matrixmatrixmultiply(/* Real    */ ae_matrix* a,
      double beta,
      /* Real    */ ae_vector* work,
      ae_state *_state);
+void hermitianmatrixvectormultiply(/* Complex */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Complex */ ae_vector* x,
+     ae_complex alpha,
+     /* Complex */ ae_vector* y,
+     ae_state *_state);
+void hermitianrank2update(/* Complex */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Complex */ ae_vector* x,
+     /* Complex */ ae_vector* y,
+     /* Complex */ ae_vector* t,
+     ae_complex alpha,
+     ae_state *_state);
+void generatereflection(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     double* tau,
+     ae_state *_state);
+void applyreflectionfromtheleft(/* Real    */ ae_matrix* c,
+     double tau,
+     /* Real    */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Real    */ ae_vector* work,
+     ae_state *_state);
+void applyreflectionfromtheright(/* Real    */ ae_matrix* c,
+     double tau,
+     /* Real    */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Real    */ ae_vector* work,
+     ae_state *_state);
+void complexgeneratereflection(/* Complex */ ae_vector* x,
+     ae_int_t n,
+     ae_complex* tau,
+     ae_state *_state);
+void complexapplyreflectionfromtheleft(/* Complex */ ae_matrix* c,
+     ae_complex tau,
+     /* Complex */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Complex */ ae_vector* work,
+     ae_state *_state);
+void complexapplyreflectionfromtheright(/* Complex */ ae_matrix* c,
+     ae_complex tau,
+     /* Complex */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Complex */ ae_vector* work,
+     ae_state *_state);
+void symmetricmatrixvectormultiply(/* Real    */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Real    */ ae_vector* x,
+     double alpha,
+     /* Real    */ ae_vector* y,
+     ae_state *_state);
+void symmetricrank2update(/* Real    */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_vector* t,
+     double alpha,
+     ae_state *_state);
 void applyrotationsfromtheleft(ae_bool isforward,
      ae_int_t m1,
      ae_int_t m2,
@@ -710,6 +948,42 @@ ae_bool cmatrixscaledtrsafesolve(/* Complex */ ae_matrix* a,
      ae_bool isunit,
      double maxgrowth,
      ae_state *_state);
+void hpcpreparechunkedgradient(/* Real    */ ae_vector* weights,
+     ae_int_t wcount,
+     ae_int_t ntotal,
+     ae_int_t nin,
+     ae_int_t nout,
+     mlpbuffers* buf,
+     ae_state *_state);
+void hpcfinalizechunkedgradient(mlpbuffers* buf,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state);
+ae_bool hpcchunkedgradient(/* Real    */ ae_vector* weights,
+     /* Integer */ ae_vector* structinfo,
+     /* Real    */ ae_vector* columnmeans,
+     /* Real    */ ae_vector* columnsigmas,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t cstart,
+     ae_int_t csize,
+     /* Real    */ ae_vector* batch4buf,
+     /* Real    */ ae_vector* hpcbuf,
+     double* e,
+     ae_bool naturalerrorfunc,
+     ae_state *_state);
+ae_bool hpcchunkedprocess(/* Real    */ ae_vector* weights,
+     /* Integer */ ae_vector* structinfo,
+     /* Real    */ ae_vector* columnmeans,
+     /* Real    */ ae_vector* columnsigmas,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t cstart,
+     ae_int_t csize,
+     /* Real    */ ae_vector* batch4buf,
+     /* Real    */ ae_vector* hpcbuf,
+     ae_state *_state);
+ae_bool _mlpbuffers_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpbuffers_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpbuffers_clear(void* _p);
+void _mlpbuffers_destroy(void* _p);
 void xdot(/* Real    */ ae_vector* a,
      /* Real    */ ae_vector* b,
      ae_int_t n,
@@ -757,27 +1031,26 @@ void armijoresults(armijostate* state,
      double* stp,
      double* f,
      ae_state *_state);
-ae_bool _linminstate_init(linminstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _linminstate_init_copy(linminstate* dst, linminstate* src, ae_state *_state, ae_bool make_automatic);
-void _linminstate_clear(linminstate* p);
-ae_bool _armijostate_init(armijostate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _armijostate_init_copy(armijostate* dst, armijostate* src, ae_state *_state, ae_bool make_automatic);
-void _armijostate_clear(armijostate* p);
-void ftbasegeneratecomplexfftplan(ae_int_t n,
-     ftplan* plan,
+ae_bool _linminstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _linminstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _linminstate_clear(void* _p);
+void _linminstate_destroy(void* _p);
+ae_bool _armijostate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _armijostate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _armijostate_clear(void* _p);
+void _armijostate_destroy(void* _p);
+void findprimitiverootandinverse(ae_int_t n,
+     ae_int_t* proot,
+     ae_int_t* invproot,
      ae_state *_state);
-void ftbasegeneraterealfftplan(ae_int_t n, ftplan* plan, ae_state *_state);
-void ftbasegeneraterealfhtplan(ae_int_t n, ftplan* plan, ae_state *_state);
-void ftbaseexecuteplan(/* Real    */ ae_vector* a,
-     ae_int_t aoffset,
-     ae_int_t n,
-     ftplan* plan,
+void ftcomplexfftplan(ae_int_t n,
+     ae_int_t k,
+     fasttransformplan* plan,
      ae_state *_state);
-void ftbaseexecuteplanrec(/* Real    */ ae_vector* a,
-     ae_int_t aoffset,
-     ftplan* plan,
-     ae_int_t entryoffset,
-     ae_int_t stackptr,
+void ftapplyplan(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t offsa,
+     ae_int_t repcnt,
      ae_state *_state);
 void ftbasefactorize(ae_int_t n,
      ae_int_t tasktype,
@@ -788,9 +1061,10 @@ ae_bool ftbaseissmooth(ae_int_t n, ae_state *_state);
 ae_int_t ftbasefindsmooth(ae_int_t n, ae_state *_state);
 ae_int_t ftbasefindsmootheven(ae_int_t n, ae_state *_state);
 double ftbasegetflopestimate(ae_int_t n, ae_state *_state);
-ae_bool _ftplan_init(ftplan* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _ftplan_init_copy(ftplan* dst, ftplan* src, ae_state *_state, ae_bool make_automatic);
-void _ftplan_clear(ftplan* p);
+ae_bool _fasttransformplan_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _fasttransformplan_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _fasttransformplan_clear(void* _p);
+void _fasttransformplan_destroy(void* _p);
 double nulog1p(double x, ae_state *_state);
 double nuexpm1(double x, ae_state *_state);
 double nucosm1(double x, ae_state *_state);

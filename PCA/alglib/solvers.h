@@ -49,6 +49,7 @@ typedef struct
     ae_vector b;
     ae_int_t n;
     ae_int_t m;
+    ae_int_t prectype;
     ae_vector ui;
     ae_vector uip1;
     ae_vector vi;
@@ -92,6 +93,8 @@ typedef struct
     ae_int_t repnmv;
     ae_int_t repterminationtype;
     ae_bool running;
+    ae_vector tmpd;
+    ae_vector tmpx;
     rcommstate rstate;
 } linlsqrstate;
 typedef struct
@@ -105,6 +108,7 @@ typedef struct
     ae_vector rx;
     ae_vector b;
     ae_int_t n;
+    ae_int_t prectype;
     ae_vector cx;
     ae_vector cr;
     ae_vector cz;
@@ -135,6 +139,7 @@ typedef struct
     ae_int_t repnmv;
     ae_int_t repterminationtype;
     ae_bool running;
+    ae_vector tmpd;
     rcommstate rstate;
 } lincgstate;
 typedef struct
@@ -1069,10 +1074,10 @@ Dense solver.
 This subroutine finds solution of the linear system A*X=B with non-square,
 possibly degenerate A.  System  is  solved in the least squares sense, and
 general least squares solution  X = X0 + CX*y  which  minimizes |A*X-B| is
-returned. If A is non-degenerate, solution in the  usual sense is returned
+returned. If A is non-degenerate, solution in the usual sense is returned.
 
 Algorithm features:
-* automatic detection of degenerate cases
+* automatic detection (and correct handling!) of degenerate cases
 * iterative refinement
 * O(N^3) complexity
 
@@ -1093,10 +1098,8 @@ OUTPUT PARAMETERS
                 *  1    if task is solved
     Rep     -   solver report, see below for more info
     X       -   array[0..N-1,0..M-1], it contains:
-                * solution of A*X=B if A is non-singular (well-conditioned
-                  or ill-conditioned, but not very close to singular)
-                * zeros,  if  A  is  singular  or  VERY  close to singular
-                  (in this case Info=-3).
+                * solution of A*X=B (even for singular A)
+                * zeros, if SVD subroutine failed
 
 SOLVER REPORT
 
@@ -1141,6 +1144,35 @@ void linlsqrcreate(const ae_int_t m, const ae_int_t n, linlsqrstate &state);
 
 
 /*************************************************************************
+This  function  changes  preconditioning  settings of LinLSQQSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecunit(const linlsqrstate &state);
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecdiag(const linlsqrstate &state);
+
+
+/*************************************************************************
 This function sets optional Tikhonov regularization coefficient.
 It is zero by default.
 
@@ -1169,6 +1201,12 @@ INPUT PARAMETERS:
 RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
+
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinLSQRSetPrecUnit(). However, preconditioning cost is   low
+      and preconditioner is very important for solution  of  badly  scaled
+      problems.
 
   -- ALGLIB --
      Copyright 30.11.2011 by Bochkanov Sergey
@@ -1285,6 +1323,35 @@ void lincgsetstartingpoint(const lincgstate &state, const real_1d_array &x);
 
 
 /*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecunit(const lincgstate &state);
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecdiag(const lincgstate &state);
+
+
+/*************************************************************************
 This function sets stopping criteria.
 
 INPUT PARAMETERS:
@@ -1323,6 +1390,12 @@ INPUT PARAMETERS:
 RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
+
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinCGSetPrecUnit(). However, preconditioning cost is low and
+      preconditioner  is  very  important  for  solution  of  badly scaled
+      problems.
 
   -- ALGLIB --
      Copyright 14.11.2011 by Bochkanov Sergey
@@ -1821,12 +1894,14 @@ void rmatrixsolvels(/* Real    */ ae_matrix* a,
      densesolverlsreport* rep,
      /* Real    */ ae_vector* x,
      ae_state *_state);
-ae_bool _densesolverreport_init(densesolverreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _densesolverreport_init_copy(densesolverreport* dst, densesolverreport* src, ae_state *_state, ae_bool make_automatic);
-void _densesolverreport_clear(densesolverreport* p);
-ae_bool _densesolverlsreport_init(densesolverlsreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _densesolverlsreport_init_copy(densesolverlsreport* dst, densesolverlsreport* src, ae_state *_state, ae_bool make_automatic);
-void _densesolverlsreport_clear(densesolverlsreport* p);
+ae_bool _densesolverreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _densesolverreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _densesolverreport_clear(void* _p);
+void _densesolverreport_destroy(void* _p);
+ae_bool _densesolverlsreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _densesolverlsreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _densesolverlsreport_clear(void* _p);
+void _densesolverlsreport_destroy(void* _p);
 void linlsqrcreate(ae_int_t m,
      ae_int_t n,
      linlsqrstate* state,
@@ -1834,6 +1909,8 @@ void linlsqrcreate(ae_int_t m,
 void linlsqrsetb(linlsqrstate* state,
      /* Real    */ ae_vector* b,
      ae_state *_state);
+void linlsqrsetprecunit(linlsqrstate* state, ae_state *_state);
+void linlsqrsetprecdiag(linlsqrstate* state, ae_state *_state);
 void linlsqrsetlambdai(linlsqrstate* state,
      double lambdai,
      ae_state *_state);
@@ -1855,12 +1932,14 @@ void linlsqrsetxrep(linlsqrstate* state,
      ae_bool needxrep,
      ae_state *_state);
 void linlsqrrestart(linlsqrstate* state, ae_state *_state);
-ae_bool _linlsqrstate_init(linlsqrstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _linlsqrstate_init_copy(linlsqrstate* dst, linlsqrstate* src, ae_state *_state, ae_bool make_automatic);
-void _linlsqrstate_clear(linlsqrstate* p);
-ae_bool _linlsqrreport_init(linlsqrreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _linlsqrreport_init_copy(linlsqrreport* dst, linlsqrreport* src, ae_state *_state, ae_bool make_automatic);
-void _linlsqrreport_clear(linlsqrreport* p);
+ae_bool _linlsqrstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _linlsqrstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _linlsqrstate_clear(void* _p);
+void _linlsqrstate_destroy(void* _p);
+ae_bool _linlsqrreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _linlsqrreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _linlsqrreport_clear(void* _p);
+void _linlsqrreport_destroy(void* _p);
 void lincgcreate(ae_int_t n, lincgstate* state, ae_state *_state);
 void lincgsetstartingpoint(lincgstate* state,
      /* Real    */ ae_vector* x,
@@ -1868,6 +1947,8 @@ void lincgsetstartingpoint(lincgstate* state,
 void lincgsetb(lincgstate* state,
      /* Real    */ ae_vector* b,
      ae_state *_state);
+void lincgsetprecunit(lincgstate* state, ae_state *_state);
+void lincgsetprecdiag(lincgstate* state, ae_state *_state);
 void lincgsetcond(lincgstate* state,
      double epsf,
      ae_int_t maxits,
@@ -1890,12 +1971,14 @@ void lincgsetrupdatefreq(lincgstate* state,
      ae_state *_state);
 void lincgsetxrep(lincgstate* state, ae_bool needxrep, ae_state *_state);
 void lincgrestart(lincgstate* state, ae_state *_state);
-ae_bool _lincgstate_init(lincgstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _lincgstate_init_copy(lincgstate* dst, lincgstate* src, ae_state *_state, ae_bool make_automatic);
-void _lincgstate_clear(lincgstate* p);
-ae_bool _lincgreport_init(lincgreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _lincgreport_init_copy(lincgreport* dst, lincgreport* src, ae_state *_state, ae_bool make_automatic);
-void _lincgreport_clear(lincgreport* p);
+ae_bool _lincgstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _lincgstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _lincgstate_clear(void* _p);
+void _lincgstate_destroy(void* _p);
+ae_bool _lincgreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _lincgreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _lincgreport_clear(void* _p);
+void _lincgreport_destroy(void* _p);
 void nleqcreatelm(ae_int_t n,
      ae_int_t m,
      /* Real    */ ae_vector* x,
@@ -1919,12 +2002,14 @@ void nleqresultsbuf(nleqstate* state,
 void nleqrestartfrom(nleqstate* state,
      /* Real    */ ae_vector* x,
      ae_state *_state);
-ae_bool _nleqstate_init(nleqstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _nleqstate_init_copy(nleqstate* dst, nleqstate* src, ae_state *_state, ae_bool make_automatic);
-void _nleqstate_clear(nleqstate* p);
-ae_bool _nleqreport_init(nleqreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _nleqreport_init_copy(nleqreport* dst, nleqreport* src, ae_state *_state, ae_bool make_automatic);
-void _nleqreport_clear(nleqreport* p);
+ae_bool _nleqstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _nleqstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _nleqstate_clear(void* _p);
+void _nleqstate_destroy(void* _p);
+ae_bool _nleqreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _nleqreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _nleqreport_clear(void* _p);
+void _nleqreport_destroy(void* _p);
 
 }
 #endif

@@ -22,8 +22,8 @@ http://www.fsf.org/licensing/licenses
 #include "alglibinternal.h"
 #include "linalg.h"
 #include "statistics.h"
-#include "specialfunctions.h"
 #include "alglibmisc.h"
+#include "specialfunctions.h"
 #include "solvers.h"
 #include "optimization.h"
 
@@ -42,6 +42,35 @@ typedef struct
     double avgerror;
     double avgrelerror;
 } cvreport;
+typedef struct
+{
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+    ae_int_t disttype;
+    ae_matrix xy;
+    ae_matrix d;
+    ae_int_t ahcalgo;
+    ae_int_t kmeansrestarts;
+    ae_int_t kmeansmaxits;
+} clusterizerstate;
+typedef struct
+{
+    ae_int_t npoints;
+    ae_vector p;
+    ae_matrix z;
+    ae_matrix pz;
+    ae_matrix pm;
+    ae_vector mergedist;
+} ahcreport;
+typedef struct
+{
+    ae_int_t npoints;
+    ae_int_t nfeatures;
+    ae_int_t terminationtype;
+    ae_int_t k;
+    ae_matrix c;
+    ae_vector cidx;
+} kmeansreport;
 typedef struct
 {
     ae_int_t nvars;
@@ -96,6 +125,19 @@ typedef struct
 } lrreport;
 typedef struct
 {
+    double relclserror;
+    double avgce;
+    double rmserror;
+    double avgerror;
+    double avgrelerror;
+} modelerrors;
+typedef struct
+{
+    double f;
+    ae_vector g;
+} smlpgrad;
+typedef struct
+{
     ae_int_t hlnetworktype;
     ae_int_t hlnormtype;
     ae_vector hllayersizes;
@@ -110,9 +152,18 @@ typedef struct
     ae_vector derror;
     ae_vector x;
     ae_vector y;
-    ae_matrix chunks;
+    ae_matrix xy;
+    ae_vector xyrow;
     ae_vector nwbuf;
     ae_vector integerbuf;
+    modelerrors err;
+    ae_vector rndbuf;
+    ae_shared_pool buf;
+    ae_shared_pool gradbuf;
+    ae_matrix dummydxy;
+    sparsematrix dummysxy;
+    ae_vector dummyidx;
+    ae_shared_pool dummypool;
 } multilayerperceptron;
 typedef struct
 {
@@ -190,6 +241,20 @@ typedef struct
 } mcpdreport;
 typedef struct
 {
+    ae_int_t ensemblesize;
+    ae_vector weights;
+    ae_vector columnmeans;
+    ae_vector columnsigmas;
+    multilayerperceptron network;
+    ae_vector y;
+} mlpensemble;
+typedef struct
+{
+    double relclserror;
+    double avgce;
+    double rmserror;
+    double avgerror;
+    double avgrelerror;
     ae_int_t ngrad;
     ae_int_t nhess;
     ae_int_t ncholesky;
@@ -204,13 +269,62 @@ typedef struct
 } mlpcvreport;
 typedef struct
 {
-    ae_int_t ensemblesize;
-    ae_vector weights;
-    ae_vector columnmeans;
-    ae_vector columnsigmas;
+    ae_vector bestparameters;
+    double bestrmserror;
+    ae_bool randomizenetwork;
     multilayerperceptron network;
+    minlbfgsstate optimizer;
+    minlbfgsreport optimizerrep;
+    ae_vector wbuf0;
+    ae_vector wbuf1;
+    ae_vector allminibatches;
+    ae_vector currentminibatch;
+    rcommstate rstate;
+    ae_int_t algoused;
+    ae_int_t minibatchsize;
+    hqrndstate generator;
+} smlptrnsession;
+typedef struct
+{
+    ae_vector trnsubset;
+    ae_vector valsubset;
+    ae_shared_pool mlpsessions;
+    mlpreport mlprep;
+    multilayerperceptron network;
+} mlpetrnsession;
+typedef struct
+{
+    ae_int_t nin;
+    ae_int_t nout;
+    ae_bool rcpar;
+    ae_int_t lbfgsfactor;
+    double decay;
+    double wstep;
+    ae_int_t maxits;
+    ae_int_t datatype;
+    ae_int_t npoints;
+    ae_matrix densexy;
+    sparsematrix sparsexy;
+    smlptrnsession session;
+    ae_int_t ngradbatch;
+    ae_vector subset;
+    ae_int_t subsetsize;
+    ae_vector valsubset;
+    ae_int_t valsubsetsize;
+    ae_int_t algokind;
+    ae_int_t minibatchsize;
+} mlptrainer;
+typedef struct
+{
+    multilayerperceptron network;
+    mlpreport rep;
+    ae_vector subset;
+    ae_int_t subsetsize;
+    ae_vector xyrow;
     ae_vector y;
-} mlpensemble;
+    ae_int_t ngrad;
+    ae_shared_pool trnpool;
+} mlpparallelizationcv;
 
 }
 
@@ -221,6 +335,215 @@ typedef struct
 /////////////////////////////////////////////////////////////////////////
 namespace alglib
 {
+
+
+
+/*************************************************************************
+This structure is a clusterization engine.
+
+You should not try to access its fields directly.
+Use ALGLIB functions in order to work with this object.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+class _clusterizerstate_owner
+{
+public:
+    _clusterizerstate_owner();
+    _clusterizerstate_owner(const _clusterizerstate_owner &rhs);
+    _clusterizerstate_owner& operator=(const _clusterizerstate_owner &rhs);
+    virtual ~_clusterizerstate_owner();
+    alglib_impl::clusterizerstate* c_ptr();
+    alglib_impl::clusterizerstate* c_ptr() const;
+protected:
+    alglib_impl::clusterizerstate *p_struct;
+};
+class clusterizerstate : public _clusterizerstate_owner
+{
+public:
+    clusterizerstate();
+    clusterizerstate(const clusterizerstate &rhs);
+    clusterizerstate& operator=(const clusterizerstate &rhs);
+    virtual ~clusterizerstate();
+
+};
+
+
+/*************************************************************************
+This structure  is used to store results of the agglomerative hierarchical
+clustering (AHC).
+
+Following information is returned:
+
+* NPoints contains number of points in the original dataset
+
+* Z contains information about merges performed  (see below).  Z  contains
+  indexes from the original (unsorted) dataset and it can be used when you
+  need to know what points were merged. However, it is not convenient when
+  you want to build a dendrograd (see below).
+
+* if  you  want  to  build  dendrogram, you  can use Z, but it is not good
+  option, because Z contains  indexes from  unsorted  dataset.  Dendrogram
+  built from such dataset is likely to have intersections. So, you have to
+  reorder you points before building dendrogram.
+  Permutation which reorders point is returned in P. Another representation
+  of  merges,  which  is  more  convenient for dendorgram construction, is
+  returned in PM.
+
+* more information on format of Z, P and PM can be found below and in the
+  examples from ALGLIB Reference Manual.
+
+FORMAL DESCRIPTION OF FIELDS:
+    NPoints         number of points
+    Z               array[NPoints-1,2],  contains   indexes   of  clusters
+                    linked in pairs to  form  clustering  tree.  I-th  row
+                    corresponds to I-th merge:
+                    * Z[I,0] - index of the first cluster to merge
+                    * Z[I,1] - index of the second cluster to merge
+                    * Z[I,0]<Z[I,1]
+                    * clusters are  numbered  from 0 to 2*NPoints-2,  with
+                      indexes from 0 to NPoints-1 corresponding to  points
+                      of the original dataset, and indexes from NPoints to
+                      2*NPoints-2  correspond  to  clusters  generated  by
+                      subsequent  merges  (I-th  row  of Z creates cluster
+                      with index NPoints+I).
+
+                    IMPORTANT: indexes in Z[] are indexes in the ORIGINAL,
+                    unsorted dataset. In addition to  Z algorithm  outputs
+                    permutation which rearranges points in such  way  that
+                    subsequent merges are  performed  on  adjacent  points
+                    (such order is needed if you want to build dendrogram).
+                    However,  indexes  in  Z  are  related  to   original,
+                    unrearranged sequence of points.
+
+    P               array[NPoints], permutation which reorders points  for
+                    dendrogram  construction.  P[i] contains  index of the
+                    position  where  we  should  move  I-th  point  of the
+                    original dataset in order to apply merges PZ/PM.
+
+    PZ              same as Z, but for permutation of points given  by  P.
+                    The  only  thing  which  changed  are  indexes  of the
+                    original points; indexes of clusters remained same.
+
+    MergeDist       array[NPoints-1], contains distances between  clusters
+                    being merged (MergeDist[i] correspond to merge  stored
+                    in Z[i,...]).
+
+    PM              array[NPoints-1,6], another representation of  merges,
+                    which is suited for dendrogram construction. It  deals
+                    with rearranged points (permutation P is applied)  and
+                    represents merges in a form which different  from  one
+                    used by Z.
+                    For each I from 0 to NPoints-2, I-th row of PM represents
+                    merge performed on two clusters C0 and C1. Here:
+                    * C0 contains points with indexes PM[I,0]...PM[I,1]
+                    * C1 contains points with indexes PM[I,2]...PM[I,3]
+                    * indexes stored in PM are given for dataset sorted
+                      according to permutation P
+                    * PM[I,1]=PM[I,2]-1 (only adjacent clusters are merged)
+                    * PM[I,0]<=PM[I,1], PM[I,2]<=PM[I,3], i.e. both
+                      clusters contain at least one point
+                    * heights of "subdendrograms" corresponding  to  C0/C1
+                      are stored in PM[I,4]  and  PM[I,5].  Subdendrograms
+                      corresponding   to   single-point   clusters    have
+                      height=0. Dendrogram of the merge result has  height
+                      H=max(H0,H1)+1.
+
+NOTE: there is one-to-one correspondence between merges described by Z and
+      PM. I-th row of Z describes same merge of clusters as I-th row of PM,
+      with "left" cluster from Z corresponding to the "left" one from PM.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+class _ahcreport_owner
+{
+public:
+    _ahcreport_owner();
+    _ahcreport_owner(const _ahcreport_owner &rhs);
+    _ahcreport_owner& operator=(const _ahcreport_owner &rhs);
+    virtual ~_ahcreport_owner();
+    alglib_impl::ahcreport* c_ptr();
+    alglib_impl::ahcreport* c_ptr() const;
+protected:
+    alglib_impl::ahcreport *p_struct;
+};
+class ahcreport : public _ahcreport_owner
+{
+public:
+    ahcreport();
+    ahcreport(const ahcreport &rhs);
+    ahcreport& operator=(const ahcreport &rhs);
+    virtual ~ahcreport();
+    ae_int_t &npoints;
+    integer_1d_array p;
+    integer_2d_array z;
+    integer_2d_array pz;
+    integer_2d_array pm;
+    real_1d_array mergedist;
+
+};
+
+
+/*************************************************************************
+This  structure   is  used  to  store  results of the k-means++ clustering
+algorithm.
+
+Following information is always returned:
+* NPoints contains number of points in the original dataset
+* TerminationType contains completion code, negative on failure, positive
+  on success
+* K contains number of clusters
+
+For positive TerminationType we return:
+* NFeatures contains number of variables in the original dataset
+* C, which contains centers found by algorithm
+* CIdx, which maps points of the original dataset to clusters
+
+FORMAL DESCRIPTION OF FIELDS:
+    NPoints         number of points, >=0
+    NFeatures       number of variables, >=1
+    TerminationType completion code:
+                    * -5 if  distance  type  is  anything  different  from
+                         Euclidean metric
+                    * -3 for degenerate dataset: a) less  than  K  distinct
+                         points, b) K=0 for non-empty dataset.
+                    * +1 for successful completion
+    K               number of clusters
+    C               array[K,NFeatures], rows of the array store centers
+    CIdx            array[NPoints], which contains cluster indexes
+
+  -- ALGLIB --
+     Copyright 27.11.2012 by Bochkanov Sergey
+*************************************************************************/
+class _kmeansreport_owner
+{
+public:
+    _kmeansreport_owner();
+    _kmeansreport_owner(const _kmeansreport_owner &rhs);
+    _kmeansreport_owner& operator=(const _kmeansreport_owner &rhs);
+    virtual ~_kmeansreport_owner();
+    alglib_impl::kmeansreport* c_ptr();
+    alglib_impl::kmeansreport* c_ptr() const;
+protected:
+    alglib_impl::kmeansreport *p_struct;
+};
+class kmeansreport : public _kmeansreport_owner
+{
+public:
+    kmeansreport();
+    kmeansreport(const kmeansreport &rhs);
+    kmeansreport& operator=(const kmeansreport &rhs);
+    virtual ~kmeansreport();
+    ae_int_t &npoints;
+    ae_int_t &nfeatures;
+    ae_int_t &terminationtype;
+    ae_int_t &k;
+    real_2d_array c;
+    integer_1d_array cidx;
+
+};
 
 
 
@@ -363,6 +686,45 @@ public:
 
 
 
+/*************************************************************************
+Model's errors:
+    * RelCLSError   -   fraction of misclassified cases.
+    * AvgCE         -   acerage cross-entropy
+    * RMSError      -   root-mean-square error
+    * AvgError      -   average error
+    * AvgRelError   -   average relative error
+
+NOTE 1: RelCLSError/AvgCE are zero on regression problems.
+
+NOTE 2: on classification problems  RMSError/AvgError/AvgRelError  contain
+        errors in prediction of posterior probabilities
+*************************************************************************/
+class _modelerrors_owner
+{
+public:
+    _modelerrors_owner();
+    _modelerrors_owner(const _modelerrors_owner &rhs);
+    _modelerrors_owner& operator=(const _modelerrors_owner &rhs);
+    virtual ~_modelerrors_owner();
+    alglib_impl::modelerrors* c_ptr();
+    alglib_impl::modelerrors* c_ptr() const;
+protected:
+    alglib_impl::modelerrors *p_struct;
+};
+class modelerrors : public _modelerrors_owner
+{
+public:
+    modelerrors();
+    modelerrors(const modelerrors &rhs);
+    modelerrors& operator=(const modelerrors &rhs);
+    virtual ~modelerrors();
+    double &relclserror;
+    double &avgce;
+    double &rmserror;
+    double &avgerror;
+    double &avgrelerror;
+
+};
 
 
 /*************************************************************************
@@ -518,10 +880,45 @@ public:
 };
 
 /*************************************************************************
+Neural networks ensemble
+*************************************************************************/
+class _mlpensemble_owner
+{
+public:
+    _mlpensemble_owner();
+    _mlpensemble_owner(const _mlpensemble_owner &rhs);
+    _mlpensemble_owner& operator=(const _mlpensemble_owner &rhs);
+    virtual ~_mlpensemble_owner();
+    alglib_impl::mlpensemble* c_ptr();
+    alglib_impl::mlpensemble* c_ptr() const;
+protected:
+    alglib_impl::mlpensemble *p_struct;
+};
+class mlpensemble : public _mlpensemble_owner
+{
+public:
+    mlpensemble();
+    mlpensemble(const mlpensemble &rhs);
+    mlpensemble& operator=(const mlpensemble &rhs);
+    virtual ~mlpensemble();
+
+};
+
+/*************************************************************************
 Training report:
-    * NGrad     - number of gradient calculations
-    * NHess     - number of Hessian calculations
-    * NCholesky - number of Cholesky decompositions
+    * RelCLSError   -   fraction of misclassified cases.
+    * AvgCE         -   acerage cross-entropy
+    * RMSError      -   root-mean-square error
+    * AvgError      -   average error
+    * AvgRelError   -   average relative error
+    * NGrad         -   number of gradient calculations
+    * NHess         -   number of Hessian calculations
+    * NCholesky     -   number of Cholesky decompositions
+
+NOTE 1: RelCLSError/AvgCE are zero on regression problems.
+
+NOTE 2: on classification problems  RMSError/AvgError/AvgRelError  contain
+        errors in prediction of posterior probabilities
 *************************************************************************/
 class _mlpreport_owner
 {
@@ -542,6 +939,11 @@ public:
     mlpreport(const mlpreport &rhs);
     mlpreport& operator=(const mlpreport &rhs);
     virtual ~mlpreport();
+    double &relclserror;
+    double &avgce;
+    double &rmserror;
+    double &avgerror;
+    double &avgrelerror;
     ae_int_t &ngrad;
     ae_int_t &nhess;
     ae_int_t &ncholesky;
@@ -579,28 +981,32 @@ public:
 
 };
 
+
 /*************************************************************************
-Neural networks ensemble
+Trainer object for neural network.
+
+You should not try to access fields of this object directly -  use  ALGLIB
+functions to work with this object.
 *************************************************************************/
-class _mlpensemble_owner
+class _mlptrainer_owner
 {
 public:
-    _mlpensemble_owner();
-    _mlpensemble_owner(const _mlpensemble_owner &rhs);
-    _mlpensemble_owner& operator=(const _mlpensemble_owner &rhs);
-    virtual ~_mlpensemble_owner();
-    alglib_impl::mlpensemble* c_ptr();
-    alglib_impl::mlpensemble* c_ptr() const;
+    _mlptrainer_owner();
+    _mlptrainer_owner(const _mlptrainer_owner &rhs);
+    _mlptrainer_owner& operator=(const _mlptrainer_owner &rhs);
+    virtual ~_mlptrainer_owner();
+    alglib_impl::mlptrainer* c_ptr();
+    alglib_impl::mlptrainer* c_ptr() const;
 protected:
-    alglib_impl::mlpensemble *p_struct;
+    alglib_impl::mlptrainer *p_struct;
 };
-class mlpensemble : public _mlpensemble_owner
+class mlptrainer : public _mlptrainer_owner
 {
 public:
-    mlpensemble();
-    mlpensemble(const mlpensemble &rhs);
-    mlpensemble& operator=(const mlpensemble &rhs);
-    virtual ~mlpensemble();
+    mlptrainer();
+    mlptrainer(const mlptrainer &rhs);
+    mlptrainer& operator=(const mlptrainer &rhs);
+    virtual ~mlptrainer();
 
 };
 
@@ -659,6 +1065,447 @@ Note:
      Copyright 11.12.2008 by Bochkanov Sergey
 *************************************************************************/
 void dsoptimalsplit2fast(real_1d_array &a, integer_1d_array &c, integer_1d_array &tiesbuf, integer_1d_array &cntbuf, real_1d_array &bufr, integer_1d_array &bufi, const ae_int_t n, const ae_int_t nc, const double alpha, ae_int_t &info, double &threshold, double &rms, double &cvrms);
+
+/*************************************************************************
+This function initializes clusterizer object. Newly initialized object  is
+empty, i.e. it does not contain dataset. You should use it as follows:
+1. creation
+2. dataset is added with ClusterizerSetPoints()
+3. additional parameters are set
+3. clusterization is performed with one of the clustering functions
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizercreate(clusterizerstate &s);
+
+
+/*************************************************************************
+This function adds dataset to the clusterizer structure.
+
+This function overrides all previous calls  of  ClusterizerSetPoints()  or
+ClusterizerSetDistances().
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+    XY      -   array[NPoints,NFeatures], dataset
+    NPoints -   number of points, >=0
+    NFeatures-  number of features, >=1
+    DistType-   distance function:
+                *  0    Chebyshev distance  (L-inf norm)
+                *  1    city block distance (L1 norm)
+                *  2    Euclidean distance  (L2 norm)
+                * 10    Pearson correlation:
+                        dist(a,b) = 1-corr(a,b)
+                * 11    Absolute Pearson correlation:
+                        dist(a,b) = 1-|corr(a,b)|
+                * 12    Uncentered Pearson correlation (cosine of the angle):
+                        dist(a,b) = a'*b/(|a|*|b|)
+                * 13    Absolute uncentered Pearson correlation
+                        dist(a,b) = |a'*b|/(|a|*|b|)
+                * 20    Spearman rank correlation:
+                        dist(a,b) = 1-rankcorr(a,b)
+                * 21    Absolute Spearman rank correlation
+                        dist(a,b) = 1-|rankcorr(a,b)|
+
+NOTE 1: different distance functions have different performance penalty:
+        * Euclidean or Pearson correlation distances are the fastest ones
+        * Spearman correlation distance function is a bit slower
+        * city block and Chebyshev distances are order of magnitude slower
+
+        The reason behing difference in performance is that correlation-based
+        distance functions are computed using optimized linear algebra kernels,
+        while Chebyshev and city block distance functions are computed using
+        simple nested loops with two branches at each iteration.
+
+NOTE 2: different clustering algorithms have different limitations:
+        * agglomerative hierarchical clustering algorithms may be used with
+          any kind of distance metric
+        * k-means++ clustering algorithm may be used only  with  Euclidean
+          distance function
+        Thus, list of specific clustering algorithms you may  use  depends
+        on distance function you specify when you set your dataset.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizersetpoints(const clusterizerstate &s, const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures, const ae_int_t disttype);
+void clusterizersetpoints(const clusterizerstate &s, const real_2d_array &xy, const ae_int_t disttype);
+
+
+/*************************************************************************
+This function adds dataset given by distance  matrix  to  the  clusterizer
+structure. It is important that dataset is not  given  explicitly  -  only
+distance matrix is given.
+
+This function overrides all previous calls  of  ClusterizerSetPoints()  or
+ClusterizerSetDistances().
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+    D       -   array[NPoints,NPoints], distance matrix given by its upper
+                or lower triangle (main diagonal is  ignored  because  its
+                entries are expected to be zero).
+    NPoints -   number of points
+    IsUpper -   whether upper or lower triangle of D is given.
+
+NOTE 1: different clustering algorithms have different limitations:
+        * agglomerative hierarchical clustering algorithms may be used with
+          any kind of distance metric, including one  which  is  given  by
+          distance matrix
+        * k-means++ clustering algorithm may be used only  with  Euclidean
+          distance function and explicitly given points - it  can  not  be
+          used with dataset given by distance matrix
+        Thus, if you call this function, you will be unable to use k-means
+        clustering algorithm to process your problem.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizersetdistances(const clusterizerstate &s, const real_2d_array &d, const ae_int_t npoints, const bool isupper);
+void clusterizersetdistances(const clusterizerstate &s, const real_2d_array &d, const bool isupper);
+
+
+/*************************************************************************
+This function sets agglomerative hierarchical clustering algorithm
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+    Algo    -   algorithm type:
+                * 0     complete linkage (default algorithm)
+                * 1     single linkage
+                * 2     unweighted average linkage
+                * 3     weighted average linkage
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizersetahcalgo(const clusterizerstate &s, const ae_int_t algo);
+
+
+/*************************************************************************
+This  function  sets k-means++ properties : number of restarts and maximum
+number of iterations per one run.
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+    Restarts-   restarts count, >=1.
+                k-means++ algorithm performs several restarts and  chooses
+                best set of centers (one with minimum squared distance).
+    MaxIts  -   maximum number of k-means iterations performed during  one
+                run. >=0, zero value means that algorithm performs unlimited
+                number of iterations.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizersetkmeanslimits(const clusterizerstate &s, const ae_int_t restarts, const ae_int_t maxits);
+
+
+/*************************************************************************
+This function performs agglomerative hierarchical clustering
+
+FOR USERS OF SMP EDITION:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero  cost.  Multicore  version  is  pretty  efficient  on  large
+  ! problems  which  need  more  than  1.000.000 operations to be solved,
+  ! gives  moderate  speed-up in mid-range (from 100.000 to 1.000.000 CPU
+  ! cycles), but gives no speed-up for small problems (less than  100.000
+  ! operations).
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+
+OUTPUT PARAMETERS:
+    Rep     -   clustering results; see description of AHCReport
+                structure for more information.
+
+NOTE 1: hierarchical clustering algorithms require large amounts of memory.
+        In particular, this implementation needs  sizeof(double)*NPoints^2
+        bytes, which are used to store distance matrix. In  case  we  work
+        with user-supplied matrix, this amount is multiplied by 2 (we have
+        to store original matrix and to work with its copy).
+
+        For example, problem with 10000 points  would require 800M of RAM,
+        even when working in a 1-dimensional space.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizerrunahc(const clusterizerstate &s, ahcreport &rep);
+void smp_clusterizerrunahc(const clusterizerstate &s, ahcreport &rep);
+
+
+/*************************************************************************
+This function performs clustering by k-means++ algorithm.
+
+You may change algorithm properties like number of restarts or  iterations
+limit by calling ClusterizerSetKMeansLimits() functions.
+
+INPUT PARAMETERS:
+    S       -   clusterizer state, initialized by ClusterizerCreate()
+    K       -   number of clusters, K>=0.
+                K  can  be  zero only when algorithm is called  for  empty
+                dataset,  in   this   case   completion  code  is  set  to
+                success (+1).
+                If  K=0  and  dataset  size  is  non-zero,  we   can   not
+                meaningfully assign points to some center  (there  are  no
+                centers because K=0) and  return  -3  as  completion  code
+                (failure).
+
+OUTPUT PARAMETERS:
+    Rep     -   clustering results; see description of KMeansReport
+                structure for more information.
+
+NOTE 1: k-means  clustering  can  be  performed  only  for  datasets  with
+        Euclidean  distance  function.  Algorithm  will  return   negative
+        completion code in Rep.TerminationType in case dataset  was  added
+        to clusterizer with DistType other than Euclidean (or dataset  was
+        specified by distance matrix instead of explicitly given points).
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizerrunkmeans(const clusterizerstate &s, const ae_int_t k, kmeansreport &rep);
+
+
+/*************************************************************************
+This function returns distance matrix for dataset
+
+FOR USERS OF SMP EDITION:
+
+  ! This function can utilize multicore capabilities of  your system.  In
+  ! order to do this you have to call version with "smp_" prefix,   which
+  ! indicates that multicore code will be used.
+  !
+  ! This note is given for users of SMP edition; if you use GPL  edition,
+  ! or commercial edition of ALGLIB without SMP support, you  still  will
+  ! be able to call smp-version of this function,  but  all  computations
+  ! will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+  !
+  ! You should remember that starting/stopping worker thread always  have
+  ! non-zero  cost.  Multicore  version  is  pretty  efficient  on  large
+  ! problems  which  need  more  than  1.000.000 operations to be solved,
+  ! gives  moderate  speed-up in mid-range (from 100.000 to 1.000.000 CPU
+  ! cycles), but gives no speed-up for small problems (less than  100.000
+  ! operations).
+
+INPUT PARAMETERS:
+    XY      -   array[NPoints,NFeatures], dataset
+    NPoints -   number of points, >=0
+    NFeatures-  number of features, >=1
+    DistType-   distance function:
+                *  0    Chebyshev distance  (L-inf norm)
+                *  1    city block distance (L1 norm)
+                *  2    Euclidean distance  (L2 norm)
+                * 10    Pearson correlation:
+                        dist(a,b) = 1-corr(a,b)
+                * 11    Absolute Pearson correlation:
+                        dist(a,b) = 1-|corr(a,b)|
+                * 12    Uncentered Pearson correlation (cosine of the angle):
+                        dist(a,b) = a'*b/(|a|*|b|)
+                * 13    Absolute uncentered Pearson correlation
+                        dist(a,b) = |a'*b|/(|a|*|b|)
+                * 20    Spearman rank correlation:
+                        dist(a,b) = 1-rankcorr(a,b)
+                * 21    Absolute Spearman rank correlation
+                        dist(a,b) = 1-|rankcorr(a,b)|
+
+OUTPUT PARAMETERS:
+    D       -   array[NPoints,NPoints], distance matrix
+                (full matrix is returned, with lower and upper triangles)
+
+NOTES: different distance functions have different performance penalty:
+       * Euclidean or Pearson correlation distances are the fastest ones
+       * Spearman correlation distance function is a bit slower
+       * city block and Chebyshev distances are order of magnitude slower
+
+       The reason behing difference in performance is that correlation-based
+       distance functions are computed using optimized linear algebra kernels,
+       while Chebyshev and city block distance functions are computed using
+       simple nested loops with two branches at each iteration.
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizergetdistances(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures, const ae_int_t disttype, real_2d_array &d);
+void smp_clusterizergetdistances(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nfeatures, const ae_int_t disttype, real_2d_array &d);
+
+
+/*************************************************************************
+This function takes as input clusterization report Rep,  desired  clusters
+count K, and builds top K clusters from hierarchical clusterization  tree.
+It returns assignment of points to clusters (array of cluster indexes).
+
+INPUT PARAMETERS:
+    Rep     -   report from ClusterizerRunAHC() performed on XY
+    K       -   desired number of clusters, 1<=K<=NPoints.
+                K can be zero only when NPoints=0.
+
+OUTPUT PARAMETERS:
+    CIdx    -   array[NPoints], I-th element contains cluster index  (from
+                0 to K-1) for I-th point of the dataset.
+    CZ      -   array[K]. This array allows  to  convert  cluster  indexes
+                returned by this function to indexes used by  Rep.Z.  J-th
+                cluster returned by this function corresponds to  CZ[J]-th
+                cluster stored in Rep.Z/PZ/PM.
+                It is guaranteed that CZ[I]<CZ[I+1].
+
+NOTE: K clusters built by this subroutine are assumed to have no hierarchy.
+      Although  they  were  obtained  by  manipulation with top K nodes of
+      dendrogram  (i.e.  hierarchical  decomposition  of  dataset),   this
+      function does not return information about hierarchy.  Each  of  the
+      clusters stand on its own.
+
+NOTE: Cluster indexes returned by this function  does  not  correspond  to
+      indexes returned in Rep.Z/PZ/PM. Either you work  with  hierarchical
+      representation of the dataset (dendrogram), or you work with  "flat"
+      representation returned by this function.  Each  of  representations
+      has its own clusters indexing system (former uses [0, 2*NPoints-2]),
+      while latter uses [0..K-1]), although  it  is  possible  to  perform
+      conversion from one system to another by means of CZ array, returned
+      by this function, which allows you to convert indexes stored in CIdx
+      to the numeration system used by Rep.Z.
+
+NOTE: this subroutine is optimized for moderate values of K. Say, for  K=5
+      it will perform many times faster than  for  K=100.  Its  worst-case
+      performance is O(N*K), although in average case  it  perform  better
+      (up to O(N*log(K))).
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizergetkclusters(const ahcreport &rep, const ae_int_t k, integer_1d_array &cidx, integer_1d_array &cz);
+
+
+/*************************************************************************
+This  function  accepts  AHC  report  Rep,  desired  minimum  intercluster
+distance and returns top clusters from  hierarchical  clusterization  tree
+which are separated by distance R or HIGHER.
+
+It returns assignment of points to clusters (array of cluster indexes).
+
+There is one more function with similar name - ClusterizerSeparatedByCorr,
+which returns clusters with intercluster correlation equal to R  or  LOWER
+(note: higher for distance, lower for correlation).
+
+INPUT PARAMETERS:
+    Rep     -   report from ClusterizerRunAHC() performed on XY
+    R       -   desired minimum intercluster distance, R>=0
+
+OUTPUT PARAMETERS:
+    K       -   number of clusters, 1<=K<=NPoints
+    CIdx    -   array[NPoints], I-th element contains cluster index  (from
+                0 to K-1) for I-th point of the dataset.
+    CZ      -   array[K]. This array allows  to  convert  cluster  indexes
+                returned by this function to indexes used by  Rep.Z.  J-th
+                cluster returned by this function corresponds to  CZ[J]-th
+                cluster stored in Rep.Z/PZ/PM.
+                It is guaranteed that CZ[I]<CZ[I+1].
+
+NOTE: K clusters built by this subroutine are assumed to have no hierarchy.
+      Although  they  were  obtained  by  manipulation with top K nodes of
+      dendrogram  (i.e.  hierarchical  decomposition  of  dataset),   this
+      function does not return information about hierarchy.  Each  of  the
+      clusters stand on its own.
+
+NOTE: Cluster indexes returned by this function  does  not  correspond  to
+      indexes returned in Rep.Z/PZ/PM. Either you work  with  hierarchical
+      representation of the dataset (dendrogram), or you work with  "flat"
+      representation returned by this function.  Each  of  representations
+      has its own clusters indexing system (former uses [0, 2*NPoints-2]),
+      while latter uses [0..K-1]), although  it  is  possible  to  perform
+      conversion from one system to another by means of CZ array, returned
+      by this function, which allows you to convert indexes stored in CIdx
+      to the numeration system used by Rep.Z.
+
+NOTE: this subroutine is optimized for moderate values of K. Say, for  K=5
+      it will perform many times faster than  for  K=100.  Its  worst-case
+      performance is O(N*K), although in average case  it  perform  better
+      (up to O(N*log(K))).
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizerseparatedbydist(const ahcreport &rep, const double r, ae_int_t &k, integer_1d_array &cidx, integer_1d_array &cz);
+
+
+/*************************************************************************
+This  function  accepts  AHC  report  Rep,  desired  maximum  intercluster
+correlation and returns top clusters from hierarchical clusterization tree
+which are separated by correlation R or LOWER.
+
+It returns assignment of points to clusters (array of cluster indexes).
+
+There is one more function with similar name - ClusterizerSeparatedByDist,
+which returns clusters with intercluster distance equal  to  R  or  HIGHER
+(note: higher for distance, lower for correlation).
+
+INPUT PARAMETERS:
+    Rep     -   report from ClusterizerRunAHC() performed on XY
+    R       -   desired maximum intercluster correlation, -1<=R<=+1
+
+OUTPUT PARAMETERS:
+    K       -   number of clusters, 1<=K<=NPoints
+    CIdx    -   array[NPoints], I-th element contains cluster index  (from
+                0 to K-1) for I-th point of the dataset.
+    CZ      -   array[K]. This array allows  to  convert  cluster  indexes
+                returned by this function to indexes used by  Rep.Z.  J-th
+                cluster returned by this function corresponds to  CZ[J]-th
+                cluster stored in Rep.Z/PZ/PM.
+                It is guaranteed that CZ[I]<CZ[I+1].
+
+NOTE: K clusters built by this subroutine are assumed to have no hierarchy.
+      Although  they  were  obtained  by  manipulation with top K nodes of
+      dendrogram  (i.e.  hierarchical  decomposition  of  dataset),   this
+      function does not return information about hierarchy.  Each  of  the
+      clusters stand on its own.
+
+NOTE: Cluster indexes returned by this function  does  not  correspond  to
+      indexes returned in Rep.Z/PZ/PM. Either you work  with  hierarchical
+      representation of the dataset (dendrogram), or you work with  "flat"
+      representation returned by this function.  Each  of  representations
+      has its own clusters indexing system (former uses [0, 2*NPoints-2]),
+      while latter uses [0..K-1]), although  it  is  possible  to  perform
+      conversion from one system to another by means of CZ array, returned
+      by this function, which allows you to convert indexes stored in CIdx
+      to the numeration system used by Rep.Z.
+
+NOTE: this subroutine is optimized for moderate values of K. Say, for  K=5
+      it will perform many times faster than  for  K=100.  Its  worst-case
+      performance is O(N*K), although in average case  it  perform  better
+      (up to O(N*log(K))).
+
+  -- ALGLIB --
+     Copyright 10.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void clusterizerseparatedbycorr(const ahcreport &rep, const double r, ae_int_t &k, integer_1d_array &cidx, integer_1d_array &cz);
+
+/*************************************************************************
+k-means++ clusterization.
+Backward compatibility function, we recommend to use CLUSTERING subpackage
+as better replacement.
+
+  -- ALGLIB --
+     Copyright 21.03.2009 by Bochkanov Sergey
+*************************************************************************/
+void kmeansgenerate(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nvars, const ae_int_t k, const ae_int_t restarts, ae_int_t &info, real_2d_array &c, integer_1d_array &xyc);
 
 /*************************************************************************
 This function serializes data structure to string.
@@ -1205,31 +2052,6 @@ NOTE 3: this  is  unsymmetric version of the algorithm,  which  does  NOT
 *************************************************************************/
 void filterlrma(real_1d_array &x, const ae_int_t n, const ae_int_t k);
 void filterlrma(real_1d_array &x, const ae_int_t k);
-
-/*************************************************************************
-k-means++ clusterization
-
-INPUT PARAMETERS:
-    XY          -   dataset, array [0..NPoints-1,0..NVars-1].
-    NPoints     -   dataset size, NPoints>=K
-    NVars       -   number of variables, NVars>=1
-    K           -   desired number of clusters, K>=1
-    Restarts    -   number of restarts, Restarts>=1
-
-OUTPUT PARAMETERS:
-    Info        -   return code:
-                    * -3, if task is degenerate (number of distinct points is
-                          less than K)
-                    * -1, if incorrect NPoints/NFeatures/K/Restarts was passed
-                    *  1, if subroutine finished successfully
-    C           -   array[0..NVars-1,0..K-1].matrix whose columns store
-                    cluster's centers
-    XYC         -   array[NPoints], which contains cluster indexes
-
-  -- ALGLIB --
-     Copyright 21.03.2009 by Bochkanov Sergey
-*************************************************************************/
-void kmeansgenerate(const real_2d_array &xy, const ae_int_t npoints, const ae_int_t nvars, const ae_int_t k, const ae_int_t restarts, ae_int_t &info, real_2d_array &c, integer_1d_array &xyc);
 
 /*************************************************************************
 Multiclass Fisher LDA
@@ -1792,16 +2614,144 @@ void mlpprocessi(const multilayerperceptron &network, const real_1d_array &x, re
 
 
 /*************************************************************************
-Error function for neural network, internal subroutine.
+Error of the neural network on dataset.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore systems.
+  ! Second improvement gives constant speedup (2-3x, depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+    sum-of-squares error, SUM(sqr(y[i]-desired_y[i])/2)
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 04.11.2007 by Bochkanov Sergey
 *************************************************************************/
-double mlperror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t ssize);
+double mlperror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlperror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+Error of the neural network on dataset given by sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore systems.
+  ! Second improvement gives constant speedup (2-3x, depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.  Sparse  matrix  must  use  CRS  format for
+                    storage.
+    NPoints     -   points count, >=0
+
+RESULT:
+    sum-of-squares error, SUM(sqr(y[i]-desired_y[i])/2)
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlperrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlperrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
 Natural error function for neural network, internal subroutine.
+
+NOTE: this function is single-threaded. Unlike other  error  function,  it
+receives no speed-up from being executed in SMP mode.
 
   -- ALGLIB --
      Copyright 04.11.2007 by Bochkanov Sergey
@@ -1810,107 +2760,750 @@ double mlperrorn(const multilayerperceptron &network, const real_2d_array &xy, c
 
 
 /*************************************************************************
-Classification error
+Classification error of the neural network on dataset.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+    classification error (number of misclassified cases)
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 04.11.2007 by Bochkanov Sergey
 *************************************************************************/
-ae_int_t mlpclserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t ssize);
+ae_int_t mlpclserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+ae_int_t smp_mlpclserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
-Relative classification error on the test set
+Relative classification error on the test set.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
 
 INPUT PARAMETERS:
-    Network -   network
-    XY      -   test set
-    NPoints -   test set size
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
 
 RESULT:
-    percent of incorrectly classified cases. Works both for
-    classifier networks and general purpose networks used as
-    classifiers.
+Percent   of incorrectly   classified  cases.  Works  both  for classifier
+networks and general purpose networks used as classifiers.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 25.12.2008 by Bochkanov Sergey
 *************************************************************************/
 double mlprelclserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlprelclserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
-Average cross-entropy (in bits per element) on the test set
+Relative classification error on the test set given by sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
 
 INPUT PARAMETERS:
-    Network -   neural network
-    XY      -   test set
-    NPoints -   test set size
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. Sparse matrix must use CRS format
+                    for storage.
+    NPoints     -   points count, >=0.
 
 RESULT:
-    CrossEntropy/(NPoints*LN(2)).
-    Zero if network solves regression task.
+Percent   of incorrectly   classified  cases.  Works  both  for classifier
+networks and general purpose networks used as classifiers.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 09.08.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlprelclserrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlprelclserrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+Average cross-entropy  (in bits  per element) on the test set.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+CrossEntropy/(NPoints*LN(2)).
+Zero if network solves regression task.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 08.01.2009 by Bochkanov Sergey
 *************************************************************************/
 double mlpavgce(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlpavgce(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
-RMS error on the test set
+Average  cross-entropy  (in bits  per element)  on the  test set  given by
+sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
 
 INPUT PARAMETERS:
-    Network -   neural network
-    XY      -   test set
-    NPoints -   test set size
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.  Sparse  matrix  must  use  CRS  format for
+                    storage.
+    NPoints     -   points count, >=0.
 
 RESULT:
-    root mean square error.
-    Its meaning for regression task is obvious. As for
-    classification task, RMS error means error when estimating posterior
-    probabilities.
+CrossEntropy/(NPoints*LN(2)).
+Zero if network solves regression task.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 9.08.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlpavgcesparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlpavgcesparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+RMS error on the test set given.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+Root mean  square error. Its meaning for regression task is obvious. As for
+classification  task,  RMS  error  means  error  when estimating  posterior
+probabilities.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 04.11.2007 by Bochkanov Sergey
 *************************************************************************/
 double mlprmserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlprmserror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
-Average error on the test set
+RMS error on the test set given by sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
 
 INPUT PARAMETERS:
-    Network -   neural network
-    XY      -   test set
-    NPoints -   test set size
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.  Sparse  matrix  must  use  CRS  format for
+                    storage.
+    NPoints     -   points count, >=0.
 
 RESULT:
-    Its meaning for regression task is obvious. As for
-    classification task, it means average error when estimating posterior
-    probabilities.
+Root mean  square error. Its meaning for regression task is obvious. As for
+classification  task,  RMS  error  means  error  when estimating  posterior
+probabilities.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 09.08.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlprmserrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlprmserrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+Average absolute error on the test set.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+Its meaning for regression task is obvious. As for classification task, it
+means average error when estimating posterior probabilities.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 11.03.2008 by Bochkanov Sergey
 *************************************************************************/
 double mlpavgerror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlpavgerror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
-Average relative error on the test set
+Average absolute error on the test set given by sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
 
 INPUT PARAMETERS:
-    Network -   neural network
-    XY      -   test set
-    NPoints -   test set size
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.  Sparse  matrix  must  use  CRS  format for
+                    storage.
+    NPoints     -   points count, >=0.
 
 RESULT:
-    Its meaning for regression task is obvious. As for
-    classification task, it means average relative error when estimating
-    posterior probability of belonging to the correct class.
+Its meaning for regression task is obvious. As for classification task, it
+means average error when estimating posterior probabilities.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 09.08.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlpavgerrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlpavgerrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+Average relative error on the test set.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format;
+    NPoints     -   points count.
+
+RESULT:
+Its meaning for regression task is obvious. As for classification task, it
+means  average  relative  error  when  estimating posterior probability of
+belonging to the correct class.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
 
   -- ALGLIB --
      Copyright 11.03.2008 by Bochkanov Sergey
 *************************************************************************/
 double mlpavgrelerror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+double smp_mlpavgrelerror(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+Average relative error on the test set given by sparse matrix.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network     -   neural network;
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.  Sparse  matrix  must  use  CRS  format for
+                    storage.
+    NPoints     -   points count, >=0.
+
+RESULT:
+Its meaning for regression task is obvious. As for classification task, it
+means  average  relative  error  when  estimating posterior probability of
+belonging to the correct class.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 09.08.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlpavgrelerrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
+double smp_mlpavgrelerrorsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t npoints);
 
 
 /*************************************************************************
@@ -1961,11 +3554,42 @@ void mlpgradn(const multilayerperceptron &network, const real_1d_array &x, const
 /*************************************************************************
 Batch gradient calculation for a set of inputs/outputs
 
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
 INPUT PARAMETERS:
     Network -   network initialized with one of the network creation funcs
-    XY      -   set of inputs/outputs; one sample = one row;
-                first NIn columns contain inputs,
-                next NOut columns - desired outputs.
+    XY      -   original dataset in dense format; one sample = one row:
+                * first NIn columns contain inputs,
+                * for regression problem, next NOut columns store
+                  desired outputs.
+                * for classification problem, next column (just one!)
+                  stores class number.
     SSize   -   number of elements in XY
     Grad    -   possibly preallocated array. If size of array is smaller
                 than WCount, it will be reallocated. It is recommended to
@@ -1980,6 +3604,210 @@ OUTPUT PARAMETERS:
      Copyright 04.11.2007 by Bochkanov Sergey
 *************************************************************************/
 void mlpgradbatch(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t ssize, double &e, real_1d_array &grad);
+void smp_mlpgradbatch(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t ssize, double &e, real_1d_array &grad);
+
+
+/*************************************************************************
+Batch gradient calculation for a set  of inputs/outputs  given  by  sparse
+matrices
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network -   network initialized with one of the network creation funcs
+    XY      -   original dataset in sparse format; one sample = one row:
+                * MATRIX MUST BE STORED IN CRS FORMAT
+                * first NIn columns contain inputs.
+                * for regression problem, next NOut columns store
+                  desired outputs.
+                * for classification problem, next column (just one!)
+                  stores class number.
+    SSize   -   number of elements in XY
+    Grad    -   possibly preallocated array. If size of array is smaller
+                than WCount, it will be reallocated. It is recommended to
+                reuse previously allocated array to reduce allocation
+                overhead.
+
+OUTPUT PARAMETERS:
+    E       -   error function, SUM(sqr(y[i]-desiredy[i])/2,i)
+    Grad    -   gradient of E with respect to weights of network, array[WCount]
+
+  -- ALGLIB --
+     Copyright 26.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpgradbatchsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t ssize, double &e, real_1d_array &grad);
+void smp_mlpgradbatchsparse(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t ssize, double &e, real_1d_array &grad);
+
+
+/*************************************************************************
+Batch gradient calculation for a subset of dataset
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network -   network initialized with one of the network creation funcs
+    XY      -   original dataset in dense format; one sample = one row:
+                * first NIn columns contain inputs,
+                * for regression problem, next NOut columns store
+                  desired outputs.
+                * for classification problem, next column (just one!)
+                  stores class number.
+    SetSize -   real size of XY, SetSize>=0;
+    Idx     -   subset of SubsetSize elements, array[SubsetSize]:
+                * Idx[I] stores row index in the original dataset which is
+                  given by XY. Gradient is calculated with respect to rows
+                  whose indexes are stored in Idx[].
+                * Idx[]  must store correct indexes; this function  throws
+                  an  exception  in  case  incorrect index (less than 0 or
+                  larger than rows(XY)) is given
+                * Idx[]  may  store  indexes  in  any  order and even with
+                  repetitions.
+    SubsetSize- number of elements in Idx[] array:
+                * positive value means that subset given by Idx[] is processed
+                * zero value results in zero gradient
+                * negative value means that full dataset is processed
+    Grad      - possibly  preallocated array. If size of array is  smaller
+                than WCount, it will be reallocated. It is  recommended to
+                reuse  previously  allocated  array  to  reduce allocation
+                overhead.
+
+OUTPUT PARAMETERS:
+    E         - error function, SUM(sqr(y[i]-desiredy[i])/2,i)
+    Grad      - gradient  of  E  with  respect   to  weights  of  network,
+                array[WCount]
+
+  -- ALGLIB --
+     Copyright 26.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpgradbatchsubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &idx, const ae_int_t subsetsize, double &e, real_1d_array &grad);
+void smp_mlpgradbatchsubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &idx, const ae_int_t subsetsize, double &e, real_1d_array &grad);
+
+
+/*************************************************************************
+Batch gradient calculation for a set of inputs/outputs  for  a  subset  of
+dataset given by set of indexes.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network -   network initialized with one of the network creation funcs
+    XY      -   original dataset in sparse format; one sample = one row:
+                * MATRIX MUST BE STORED IN CRS FORMAT
+                * first NIn columns contain inputs,
+                * for regression problem, next NOut columns store
+                  desired outputs.
+                * for classification problem, next column (just one!)
+                  stores class number.
+    SetSize -   real size of XY, SetSize>=0;
+    Idx     -   subset of SubsetSize elements, array[SubsetSize]:
+                * Idx[I] stores row index in the original dataset which is
+                  given by XY. Gradient is calculated with respect to rows
+                  whose indexes are stored in Idx[].
+                * Idx[]  must store correct indexes; this function  throws
+                  an  exception  in  case  incorrect index (less than 0 or
+                  larger than rows(XY)) is given
+                * Idx[]  may  store  indexes  in  any  order and even with
+                  repetitions.
+    SubsetSize- number of elements in Idx[] array:
+                * positive value means that subset given by Idx[] is processed
+                * zero value results in zero gradient
+                * negative value means that full dataset is processed
+    Grad      - possibly  preallocated array. If size of array is  smaller
+                than WCount, it will be reallocated. It is  recommended to
+                reuse  previously  allocated  array  to  reduce allocation
+                overhead.
+
+OUTPUT PARAMETERS:
+    E       -   error function, SUM(sqr(y[i]-desiredy[i])/2,i)
+    Grad    -   gradient  of  E  with  respect   to  weights  of  network,
+                array[WCount]
+
+NOTE: when  SubsetSize<0 is used full dataset by call MLPGradBatchSparse
+      function.
+
+  -- ALGLIB --
+     Copyright 26.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpgradbatchsparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &idx, const ae_int_t subsetsize, double &e, real_1d_array &grad);
+void smp_mlpgradbatchsparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &idx, const ae_int_t subsetsize, double &e, real_1d_array &grad);
 
 
 /*************************************************************************
@@ -2036,6 +3864,250 @@ Internal subroutine.
      Neural Computation, 1994.
 *************************************************************************/
 void mlphessianbatch(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t ssize, double &e, real_1d_array &grad, real_2d_array &h);
+
+
+/*************************************************************************
+Calculation of all types of errors.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network -   network initialized with one of the network creation funcs
+    XY      -   original dataset; one sample = one row;
+                first NIn columns contain inputs,
+                next NOut columns - desired outputs.
+    SetSize -   real size of XY, SetSize>=0;
+    Subset  -   subset of SubsetSize elements, array[SubsetSize];
+    SubsetSize- number of elements in Subset[] array.
+
+OUTPUT PARAMETERS:
+    Rep     -   it contains all type of errors.
+
+NOTE: when SubsetSize<0 is used full dataset by call MLPGradBatch function.
+
+  -- ALGLIB --
+     Copyright 04.09.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpallerrorssubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize, modelerrors &rep);
+void smp_mlpallerrorssubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize, modelerrors &rep);
+
+
+/*************************************************************************
+Calculation of all types of errors on sparse dataset.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network -   network initialized with one of the network creation funcs
+    XY      -   original dataset given by sparse matrix;
+                one sample = one row;
+                first NIn columns contain inputs,
+                next NOut columns - desired outputs.
+    SetSize -   real size of XY, SetSize>=0;
+    Subset  -   subset of SubsetSize elements, array[SubsetSize];
+    SubsetSize- number of elements in Subset[] array.
+
+OUTPUT PARAMETERS:
+    Rep     -   it contains all type of errors.
+
+NOTE: when SubsetSize<0 is used full dataset by call MLPGradBatch function.
+
+  -- ALGLIB --
+     Copyright 04.09.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpallerrorssparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize, modelerrors &rep);
+void smp_mlpallerrorssparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize, modelerrors &rep);
+
+
+/*************************************************************************
+Error of the neural network on dataset.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network   -   neural network;
+    XY        -   training  set,  see  below  for  information  on   the
+                  training set format;
+    SetSize   -   real size of XY, SetSize>=0;
+    Subset    -   subset of SubsetSize elements, array[SubsetSize];
+    SubsetSize-   number of elements in Subset[] array.
+
+RESULT:
+    sum-of-squares error, SUM(sqr(y[i]-desired_y[i])/2)
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 04.09.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlperrorsubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize);
+double smp_mlperrorsubset(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize);
+
+
+/*************************************************************************
+Error of the neural network on sparse dataset.
+
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support
+  !
+  ! First improvement gives close-to-linear speedup on multicore  systems.
+  ! Second improvement gives constant speedup (2-3x depending on your CPU)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+
+INPUT PARAMETERS:
+    Network   -   neural network;
+    XY        -   training  set,  see  below  for  information  on   the
+                  training set format. This function checks  correctness
+                  of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                  correct) and throws exception when  incorrect  dataset
+                  is passed.  Sparse  matrix  must  use  CRS  format for
+                  storage.
+    SetSize   -   real size of XY, SetSize>=0;
+                  it is used when SubsetSize<0;
+    Subset    -   subset of SubsetSize elements, array[SubsetSize];
+    SubsetSize-   number of elements in Subset[] array.
+
+RESULT:
+    sum-of-squares error, SUM(sqr(y[i]-desired_y[i])/2)
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+dataset format is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 04.09.2012 by Bochkanov Sergey
+*************************************************************************/
+double mlperrorsparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize);
+double smp_mlperrorsparsesubset(const multilayerperceptron &network, const sparsematrix &xy, const ae_int_t setsize, const integer_1d_array &subset, const ae_int_t subsetsize);
 
 /*************************************************************************
 This subroutine trains logit model.
@@ -2859,194 +4931,6 @@ OUTPUT PARAMETERS:
 void mcpdresults(const mcpdstate &s, real_2d_array &p, mcpdreport &rep);
 
 /*************************************************************************
-Neural network training  using  modified  Levenberg-Marquardt  with  exact
-Hessian calculation and regularization. Subroutine trains  neural  network
-with restarts from random positions. Algorithm is well  suited  for  small
-and medium scale problems (hundreds of weights).
-
-INPUT PARAMETERS:
-    Network     -   neural network with initialized geometry
-    XY          -   training set
-    NPoints     -   training set size
-    Decay       -   weight decay constant, >=0.001
-                    Decay term 'Decay*||Weights||^2' is added to error
-                    function.
-                    If you don't know what Decay to choose, use 0.001.
-    Restarts    -   number of restarts from random position, >0.
-                    If you don't know what Restarts to choose, use 2.
-
-OUTPUT PARAMETERS:
-    Network     -   trained neural network.
-    Info        -   return code:
-                    * -9, if internal matrix inverse subroutine failed
-                    * -2, if there is a point with class number
-                          outside of [0..NOut-1].
-                    * -1, if wrong parameters specified
-                          (NPoints<0, Restarts<1).
-                    *  2, if task has been solved.
-    Rep         -   training report
-
-  -- ALGLIB --
-     Copyright 10.03.2009 by Bochkanov Sergey
-*************************************************************************/
-void mlptrainlm(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, ae_int_t &info, mlpreport &rep);
-
-
-/*************************************************************************
-Neural  network  training  using  L-BFGS  algorithm  with  regularization.
-Subroutine  trains  neural  network  with  restarts from random positions.
-Algorithm  is  well  suited  for  problems  of  any dimensionality (memory
-requirements and step complexity are linear by weights number).
-
-INPUT PARAMETERS:
-    Network     -   neural network with initialized geometry
-    XY          -   training set
-    NPoints     -   training set size
-    Decay       -   weight decay constant, >=0.001
-                    Decay term 'Decay*||Weights||^2' is added to error
-                    function.
-                    If you don't know what Decay to choose, use 0.001.
-    Restarts    -   number of restarts from random position, >0.
-                    If you don't know what Restarts to choose, use 2.
-    WStep       -   stopping criterion. Algorithm stops if  step  size  is
-                    less than WStep. Recommended value - 0.01.  Zero  step
-                    size means stopping after MaxIts iterations.
-    MaxIts      -   stopping   criterion.  Algorithm  stops  after  MaxIts
-                    iterations (NOT gradient  calculations).  Zero  MaxIts
-                    means stopping when step is sufficiently small.
-
-OUTPUT PARAMETERS:
-    Network     -   trained neural network.
-    Info        -   return code:
-                    * -8, if both WStep=0 and MaxIts=0
-                    * -2, if there is a point with class number
-                          outside of [0..NOut-1].
-                    * -1, if wrong parameters specified
-                          (NPoints<0, Restarts<1).
-                    *  2, if task has been solved.
-    Rep         -   training report
-
-  -- ALGLIB --
-     Copyright 09.12.2007 by Bochkanov Sergey
-*************************************************************************/
-void mlptrainlbfgs(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const double wstep, const ae_int_t maxits, ae_int_t &info, mlpreport &rep);
-
-
-/*************************************************************************
-Neural network training using early stopping (base algorithm - L-BFGS with
-regularization).
-
-INPUT PARAMETERS:
-    Network     -   neural network with initialized geometry
-    TrnXY       -   training set
-    TrnSize     -   training set size, TrnSize>0
-    ValXY       -   validation set
-    ValSize     -   validation set size, ValSize>0
-    Decay       -   weight decay constant, >=0.001
-                    Decay term 'Decay*||Weights||^2' is added to error
-                    function.
-                    If you don't know what Decay to choose, use 0.001.
-    Restarts    -   number of restarts, either:
-                    * strictly positive number - algorithm make specified
-                      number of restarts from random position.
-                    * -1, in which case algorithm makes exactly one run
-                      from the initial state of the network (no randomization).
-                    If you don't know what Restarts to choose, choose one
-                    one the following:
-                    * -1 (deterministic start)
-                    * +1 (one random restart)
-                    * +5 (moderate amount of random restarts)
-
-OUTPUT PARAMETERS:
-    Network     -   trained neural network.
-    Info        -   return code:
-                    * -2, if there is a point with class number
-                          outside of [0..NOut-1].
-                    * -1, if wrong parameters specified
-                          (NPoints<0, Restarts<1, ...).
-                    *  2, task has been solved, stopping  criterion  met -
-                          sufficiently small step size.  Not expected  (we
-                          use  EARLY  stopping)  but  possible  and not an
-                          error.
-                    *  6, task has been solved, stopping  criterion  met -
-                          increasing of validation set error.
-    Rep         -   training report
-
-NOTE:
-
-Algorithm stops if validation set error increases for  a  long  enough  or
-step size is small enought  (there  are  task  where  validation  set  may
-decrease for eternity). In any case solution returned corresponds  to  the
-minimum of validation set error.
-
-  -- ALGLIB --
-     Copyright 10.03.2009 by Bochkanov Sergey
-*************************************************************************/
-void mlptraines(const multilayerperceptron &network, const real_2d_array &trnxy, const ae_int_t trnsize, const real_2d_array &valxy, const ae_int_t valsize, const double decay, const ae_int_t restarts, ae_int_t &info, mlpreport &rep);
-
-
-/*************************************************************************
-Cross-validation estimate of generalization error.
-
-Base algorithm - L-BFGS.
-
-INPUT PARAMETERS:
-    Network     -   neural network with initialized geometry.   Network is
-                    not changed during cross-validation -  it is used only
-                    as a representative of its architecture.
-    XY          -   training set.
-    SSize       -   training set size
-    Decay       -   weight  decay, same as in MLPTrainLBFGS
-    Restarts    -   number of restarts, >0.
-                    restarts are counted for each partition separately, so
-                    total number of restarts will be Restarts*FoldsCount.
-    WStep       -   stopping criterion, same as in MLPTrainLBFGS
-    MaxIts      -   stopping criterion, same as in MLPTrainLBFGS
-    FoldsCount  -   number of folds in k-fold cross-validation,
-                    2<=FoldsCount<=SSize.
-                    recommended value: 10.
-
-OUTPUT PARAMETERS:
-    Info        -   return code, same as in MLPTrainLBFGS
-    Rep         -   report, same as in MLPTrainLM/MLPTrainLBFGS
-    CVRep       -   generalization error estimates
-
-  -- ALGLIB --
-     Copyright 09.12.2007 by Bochkanov Sergey
-*************************************************************************/
-void mlpkfoldcvlbfgs(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const double wstep, const ae_int_t maxits, const ae_int_t foldscount, ae_int_t &info, mlpreport &rep, mlpcvreport &cvrep);
-
-
-/*************************************************************************
-Cross-validation estimate of generalization error.
-
-Base algorithm - Levenberg-Marquardt.
-
-INPUT PARAMETERS:
-    Network     -   neural network with initialized geometry.   Network is
-                    not changed during cross-validation -  it is used only
-                    as a representative of its architecture.
-    XY          -   training set.
-    SSize       -   training set size
-    Decay       -   weight  decay, same as in MLPTrainLBFGS
-    Restarts    -   number of restarts, >0.
-                    restarts are counted for each partition separately, so
-                    total number of restarts will be Restarts*FoldsCount.
-    FoldsCount  -   number of folds in k-fold cross-validation,
-                    2<=FoldsCount<=SSize.
-                    recommended value: 10.
-
-OUTPUT PARAMETERS:
-    Info        -   return code, same as in MLPTrainLBFGS
-    Rep         -   report, same as in MLPTrainLM/MLPTrainLBFGS
-    CVRep       -   generalization error estimates
-
-  -- ALGLIB --
-     Copyright 09.12.2007 by Bochkanov Sergey
-*************************************************************************/
-void mlpkfoldcvlm(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const ae_int_t foldscount, ae_int_t &info, mlpreport &rep, mlpcvreport &cvrep);
-
-/*************************************************************************
 This function serializes data structure to string.
 
 Important properties of s_out:
@@ -3346,6 +5230,673 @@ it means average relative error when estimating posterior probabilities.
 *************************************************************************/
 double mlpeavgrelerror(const mlpensemble &ensemble, const real_2d_array &xy, const ae_int_t npoints);
 
+/*************************************************************************
+Neural network training  using  modified  Levenberg-Marquardt  with  exact
+Hessian calculation and regularization. Subroutine trains  neural  network
+with restarts from random positions. Algorithm is well  suited  for  small
+and medium scale problems (hundreds of weights).
+
+INPUT PARAMETERS:
+    Network     -   neural network with initialized geometry
+    XY          -   training set
+    NPoints     -   training set size
+    Decay       -   weight decay constant, >=0.001
+                    Decay term 'Decay*||Weights||^2' is added to error
+                    function.
+                    If you don't know what Decay to choose, use 0.001.
+    Restarts    -   number of restarts from random position, >0.
+                    If you don't know what Restarts to choose, use 2.
+
+OUTPUT PARAMETERS:
+    Network     -   trained neural network.
+    Info        -   return code:
+                    * -9, if internal matrix inverse subroutine failed
+                    * -2, if there is a point with class number
+                          outside of [0..NOut-1].
+                    * -1, if wrong parameters specified
+                          (NPoints<0, Restarts<1).
+                    *  2, if task has been solved.
+    Rep         -   training report
+
+  -- ALGLIB --
+     Copyright 10.03.2009 by Bochkanov Sergey
+*************************************************************************/
+void mlptrainlm(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, ae_int_t &info, mlpreport &rep);
+
+
+/*************************************************************************
+Neural  network  training  using  L-BFGS  algorithm  with  regularization.
+Subroutine  trains  neural  network  with  restarts from random positions.
+Algorithm  is  well  suited  for  problems  of  any dimensionality (memory
+requirements and step complexity are linear by weights number).
+
+INPUT PARAMETERS:
+    Network     -   neural network with initialized geometry
+    XY          -   training set
+    NPoints     -   training set size
+    Decay       -   weight decay constant, >=0.001
+                    Decay term 'Decay*||Weights||^2' is added to error
+                    function.
+                    If you don't know what Decay to choose, use 0.001.
+    Restarts    -   number of restarts from random position, >0.
+                    If you don't know what Restarts to choose, use 2.
+    WStep       -   stopping criterion. Algorithm stops if  step  size  is
+                    less than WStep. Recommended value - 0.01.  Zero  step
+                    size means stopping after MaxIts iterations.
+    MaxIts      -   stopping   criterion.  Algorithm  stops  after  MaxIts
+                    iterations (NOT gradient  calculations).  Zero  MaxIts
+                    means stopping when step is sufficiently small.
+
+OUTPUT PARAMETERS:
+    Network     -   trained neural network.
+    Info        -   return code:
+                    * -8, if both WStep=0 and MaxIts=0
+                    * -2, if there is a point with class number
+                          outside of [0..NOut-1].
+                    * -1, if wrong parameters specified
+                          (NPoints<0, Restarts<1).
+                    *  2, if task has been solved.
+    Rep         -   training report
+
+  -- ALGLIB --
+     Copyright 09.12.2007 by Bochkanov Sergey
+*************************************************************************/
+void mlptrainlbfgs(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const double wstep, const ae_int_t maxits, ae_int_t &info, mlpreport &rep);
+
+
+/*************************************************************************
+Neural network training using early stopping (base algorithm - L-BFGS with
+regularization).
+
+INPUT PARAMETERS:
+    Network     -   neural network with initialized geometry
+    TrnXY       -   training set
+    TrnSize     -   training set size, TrnSize>0
+    ValXY       -   validation set
+    ValSize     -   validation set size, ValSize>0
+    Decay       -   weight decay constant, >=0.001
+                    Decay term 'Decay*||Weights||^2' is added to error
+                    function.
+                    If you don't know what Decay to choose, use 0.001.
+    Restarts    -   number of restarts, either:
+                    * strictly positive number - algorithm make specified
+                      number of restarts from random position.
+                    * -1, in which case algorithm makes exactly one run
+                      from the initial state of the network (no randomization).
+                    If you don't know what Restarts to choose, choose one
+                    one the following:
+                    * -1 (deterministic start)
+                    * +1 (one random restart)
+                    * +5 (moderate amount of random restarts)
+
+OUTPUT PARAMETERS:
+    Network     -   trained neural network.
+    Info        -   return code:
+                    * -2, if there is a point with class number
+                          outside of [0..NOut-1].
+                    * -1, if wrong parameters specified
+                          (NPoints<0, Restarts<1, ...).
+                    *  2, task has been solved, stopping  criterion  met -
+                          sufficiently small step size.  Not expected  (we
+                          use  EARLY  stopping)  but  possible  and not an
+                          error.
+                    *  6, task has been solved, stopping  criterion  met -
+                          increasing of validation set error.
+    Rep         -   training report
+
+NOTE:
+
+Algorithm stops if validation set error increases for  a  long  enough  or
+step size is small enought  (there  are  task  where  validation  set  may
+decrease for eternity). In any case solution returned corresponds  to  the
+minimum of validation set error.
+
+  -- ALGLIB --
+     Copyright 10.03.2009 by Bochkanov Sergey
+*************************************************************************/
+void mlptraines(const multilayerperceptron &network, const real_2d_array &trnxy, const ae_int_t trnsize, const real_2d_array &valxy, const ae_int_t valsize, const double decay, const ae_int_t restarts, ae_int_t &info, mlpreport &rep);
+
+
+/*************************************************************************
+Cross-validation estimate of generalization error.
+
+Base algorithm - L-BFGS.
+
+INPUT PARAMETERS:
+    Network     -   neural network with initialized geometry.   Network is
+                    not changed during cross-validation -  it is used only
+                    as a representative of its architecture.
+    XY          -   training set.
+    SSize       -   training set size
+    Decay       -   weight  decay, same as in MLPTrainLBFGS
+    Restarts    -   number of restarts, >0.
+                    restarts are counted for each partition separately, so
+                    total number of restarts will be Restarts*FoldsCount.
+    WStep       -   stopping criterion, same as in MLPTrainLBFGS
+    MaxIts      -   stopping criterion, same as in MLPTrainLBFGS
+    FoldsCount  -   number of folds in k-fold cross-validation,
+                    2<=FoldsCount<=SSize.
+                    recommended value: 10.
+
+OUTPUT PARAMETERS:
+    Info        -   return code, same as in MLPTrainLBFGS
+    Rep         -   report, same as in MLPTrainLM/MLPTrainLBFGS
+    CVRep       -   generalization error estimates
+
+  -- ALGLIB --
+     Copyright 09.12.2007 by Bochkanov Sergey
+*************************************************************************/
+void mlpkfoldcvlbfgs(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const double wstep, const ae_int_t maxits, const ae_int_t foldscount, ae_int_t &info, mlpreport &rep, mlpcvreport &cvrep);
+
+
+/*************************************************************************
+Cross-validation estimate of generalization error.
+
+Base algorithm - Levenberg-Marquardt.
+
+INPUT PARAMETERS:
+    Network     -   neural network with initialized geometry.   Network is
+                    not changed during cross-validation -  it is used only
+                    as a representative of its architecture.
+    XY          -   training set.
+    SSize       -   training set size
+    Decay       -   weight  decay, same as in MLPTrainLBFGS
+    Restarts    -   number of restarts, >0.
+                    restarts are counted for each partition separately, so
+                    total number of restarts will be Restarts*FoldsCount.
+    FoldsCount  -   number of folds in k-fold cross-validation,
+                    2<=FoldsCount<=SSize.
+                    recommended value: 10.
+
+OUTPUT PARAMETERS:
+    Info        -   return code, same as in MLPTrainLBFGS
+    Rep         -   report, same as in MLPTrainLM/MLPTrainLBFGS
+    CVRep       -   generalization error estimates
+
+  -- ALGLIB --
+     Copyright 09.12.2007 by Bochkanov Sergey
+*************************************************************************/
+void mlpkfoldcvlm(const multilayerperceptron &network, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, const ae_int_t foldscount, ae_int_t &info, mlpreport &rep, mlpcvreport &cvrep);
+
+
+/*************************************************************************
+This function estimates generalization error using cross-validation on the
+current dataset with current training settings.
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support (C++ computational core)
+  !
+  ! Second improvement gives constant  speedup (2-3X).  First  improvement
+  ! gives  close-to-linear  speedup  on   multicore   systems.   Following
+  ! operations can be executed in parallel:
+  ! * FoldsCount cross-validation rounds (always)
+  ! * NRestarts training sessions performed within each of
+  !   cross-validation rounds (if NRestarts>1)
+  ! * gradient calculation over large dataset (if dataset is large enough)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    Network     -   neural network. It must have same number of inputs and
+                    output/classes as was specified during creation of the
+                    trainer object. Network is not changed  during  cross-
+                    validation and is not trained - it  is  used  only  as
+                    representative of its architecture. I.e., we  estimate
+                    generalization properties of  ARCHITECTURE,  not  some
+                    specific network.
+    NRestarts   -   number of restarts, >=0:
+                    * NRestarts>0  means  that  for  each cross-validation
+                      round   specified  number   of  random  restarts  is
+                      performed,  with  best  network  being  chosen after
+                      training.
+                    * NRestarts=0 is same as NRestarts=1
+    FoldsCount  -   number of folds in k-fold cross-validation:
+                    * 2<=FoldsCount<=size of dataset
+                    * recommended value: 10.
+                    * values larger than dataset size will be silently
+                      truncated down to dataset size
+
+OUTPUT PARAMETERS:
+    Rep         -   structure which contains cross-validation estimates:
+                    * Rep.RelCLSError - fraction of misclassified cases.
+                    * Rep.AvgCE - acerage cross-entropy
+                    * Rep.RMSError - root-mean-square error
+                    * Rep.AvgError - average error
+                    * Rep.AvgRelError - average relative error
+
+NOTE: when no dataset was specified with MLPSetDataset/SetSparseDataset(),
+      or subset with only one point  was  given,  zeros  are  returned  as
+      estimates.
+
+NOTE: this method performs FoldsCount cross-validation  rounds,  each  one
+      with NRestarts random starts.  Thus,  FoldsCount*NRestarts  networks
+      are trained in total.
+
+NOTE: Rep.RelCLSError/Rep.AvgCE are zero on regression problems.
+
+NOTE: on classification problems Rep.RMSError/Rep.AvgError/Rep.AvgRelError
+      contain errors in prediction of posterior probabilities.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpkfoldcv(const mlptrainer &s, const multilayerperceptron &network, const ae_int_t nrestarts, const ae_int_t foldscount, mlpreport &rep);
+void smp_mlpkfoldcv(const mlptrainer &s, const multilayerperceptron &network, const ae_int_t nrestarts, const ae_int_t foldscount, mlpreport &rep);
+
+
+/*************************************************************************
+Creation of the network trainer object for regression networks
+
+INPUT PARAMETERS:
+    NIn         -   number of inputs, NIn>=1
+    NOut        -   number of outputs, NOut>=1
+
+OUTPUT PARAMETERS:
+    S           -   neural network trainer object.
+                    This structure can be used to train any regression
+                    network with NIn inputs and NOut outputs.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpcreatetrainer(const ae_int_t nin, const ae_int_t nout, mlptrainer &s);
+
+
+/*************************************************************************
+Creation of the network trainer object for classification networks
+
+INPUT PARAMETERS:
+    NIn         -   number of inputs, NIn>=1
+    NClasses    -   number of classes, NClasses>=2
+
+OUTPUT PARAMETERS:
+    S           -   neural network trainer object.
+                    This structure can be used to train any classification
+                    network with NIn inputs and NOut outputs.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpcreatetrainercls(const ae_int_t nin, const ae_int_t nclasses, mlptrainer &s);
+
+
+/*************************************************************************
+This function sets "current dataset" of the trainer object to  one  passed
+by user.
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed.
+    NPoints     -   points count, >=0.
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+datasetformat is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpsetdataset(const mlptrainer &s, const real_2d_array &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+This function sets "current dataset" of the trainer object to  one  passed
+by user (sparse matrix is used to store dataset).
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    XY          -   training  set,  see  below  for  information  on   the
+                    training set format. This function checks  correctness
+                    of  the  dataset  (no  NANs/INFs,  class  numbers  are
+                    correct) and throws exception when  incorrect  dataset
+                    is passed. Any  sparse  storage  format  can be  used:
+                    Hash-table, CRS...
+    NPoints     -   points count, >=0
+
+DATASET FORMAT:
+
+This  function  uses  two  different  dataset formats - one for regression
+networks, another one for classification networks.
+
+For regression networks with NIn inputs and NOut outputs following dataset
+format is used:
+* dataset is given by NPoints*(NIn+NOut) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, next NOut columns are outputs
+
+For classification networks with NIn inputs and NClasses clases  following
+datasetformat is used:
+* dataset is given by NPoints*(NIn+1) matrix
+* each row corresponds to one example
+* first NIn columns are inputs, last column stores class number (from 0 to
+  NClasses-1).
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpsetsparsedataset(const mlptrainer &s, const sparsematrix &xy, const ae_int_t npoints);
+
+
+/*************************************************************************
+This function sets weight decay coefficient which is used for training.
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    Decay       -   weight  decay  coefficient,  >=0.  Weight  decay  term
+                    'Decay*||Weights||^2' is added to error  function.  If
+                    you don't know what Decay to choose, use 1.0E-3.
+                    Weight decay can be set to zero,  in this case network
+                    is trained without weight decay.
+
+NOTE: by default network uses some small nonzero value for weight decay.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpsetdecay(const mlptrainer &s, const double decay);
+
+
+/*************************************************************************
+This function sets stopping criteria for the optimizer.
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    WStep       -   stopping criterion. Algorithm stops if  step  size  is
+                    less than WStep. Recommended value - 0.01.  Zero  step
+                    size means stopping after MaxIts iterations.
+                    WStep>=0.
+    MaxIts      -   stopping   criterion.  Algorithm  stops  after  MaxIts
+                    epochs (full passes over entire dataset).  Zero MaxIts
+                    means stopping when step is sufficiently small.
+                    MaxIts>=0.
+
+NOTE: by default, WStep=0.005 and MaxIts=0 are used. These values are also
+      used when MLPSetCond() is called with WStep=0 and MaxIts=0.
+
+NOTE: these stopping criteria are used for all kinds of neural training  -
+      from "conventional" networks to early stopping ensembles. When  used
+      for "conventional" networks, they are  used  as  the  only  stopping
+      criteria. When combined with early stopping, they used as ADDITIONAL
+      stopping criteria which can terminate early stopping algorithm.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpsetcond(const mlptrainer &s, const double wstep, const ae_int_t maxits);
+
+
+/*************************************************************************
+This function sets training algorithm: batch training using L-BFGS will be
+used.
+
+This algorithm:
+* the most robust for small-scale problems, but may be too slow for  large
+  scale ones.
+* perfoms full pass through the dataset before performing step
+* uses conditions specified by MLPSetCond() for stopping
+* is default one used by trainer object
+
+INPUT PARAMETERS:
+    S           -   trainer object
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpsetalgobatch(const mlptrainer &s);
+
+
+/*************************************************************************
+This function trains neural network passed to this function, using current
+dataset (one which was passed to MLPSetDataset() or MLPSetSparseDataset())
+and current training settings. Training  from  NRestarts  random  starting
+positions is performed, best network is chosen.
+
+Training is performed using current training algorithm.
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support (C++ computational core)
+  !
+  ! Second improvement gives constant  speedup (2-3X).  First  improvement
+  ! gives  close-to-linear  speedup  on   multicore   systems.   Following
+  ! operations can be executed in parallel:
+  ! * NRestarts training sessions performed within each of
+  !   cross-validation rounds (if NRestarts>1)
+  ! * gradient calculation over large dataset (if dataset is large enough)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    Network     -   neural network. It must have same number of inputs and
+                    output/classes as was specified during creation of the
+                    trainer object.
+    NRestarts   -   number of restarts, >=0:
+                    * NRestarts>0 means that specified  number  of  random
+                      restarts are performed, best network is chosen after
+                      training
+                    * NRestarts=0 means that current state of the  network
+                      is used for training.
+
+OUTPUT PARAMETERS:
+    Network     -   trained network
+
+NOTE: when no dataset was specified with MLPSetDataset/SetSparseDataset(),
+      network  is  filled  by zero  values.  Same  behavior  for functions
+      MLPStartTraining and MLPContinueTraining.
+
+NOTE: this method uses sum-of-squares error function for training.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlptrainnetwork(const mlptrainer &s, const multilayerperceptron &network, const ae_int_t nrestarts, mlpreport &rep);
+void smp_mlptrainnetwork(const mlptrainer &s, const multilayerperceptron &network, const ae_int_t nrestarts, mlpreport &rep);
+
+
+/*************************************************************************
+IMPORTANT: this is an "expert" version of the MLPTrain() function.  We  do
+           not recommend you to use it unless you are pretty sure that you
+           need ability to monitor training progress.
+
+This function performs step-by-step training of the neural  network.  Here
+"step-by-step" means that training  starts  with  MLPStartTraining() call,
+and then user subsequently calls MLPContinueTraining() to perform one more
+iteration of the training.
+
+After call to this function trainer object remembers network and  is ready
+to  train  it.  However,  no  training  is  performed  until first call to
+MLPContinueTraining() function. Subsequent calls  to MLPContinueTraining()
+will advance training progress one iteration further.
+
+EXAMPLE:
+    >
+    > ...initialize network and trainer object....
+    >
+    > MLPStartTraining(Trainer, Network, True)
+    > while MLPContinueTraining(Trainer, Network) do
+    >     ...visualize training progress...
+    >
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    Network     -   neural network. It must have same number of inputs and
+                    output/classes as was specified during creation of the
+                    trainer object.
+    RandomStart -   randomize network before training or not:
+                    * True  means  that  network  is  randomized  and  its
+                      initial state (one which was passed to  the  trainer
+                      object) is lost.
+                    * False  means  that  training  is  started  from  the
+                      current state of the network
+
+OUTPUT PARAMETERS:
+    Network     -   neural network which is ready to training (weights are
+                    initialized, preprocessor is initialized using current
+                    training set)
+
+NOTE: this method uses sum-of-squares error function for training.
+
+NOTE: it is expected that trainer object settings are NOT  changed  during
+      step-by-step training, i.e. no  one  changes  stopping  criteria  or
+      training set during training. It is possible and there is no defense
+      against  such  actions,  but  algorithm  behavior  in  such cases is
+      undefined and can be unpredictable.
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlpstarttraining(const mlptrainer &s, const multilayerperceptron &network, const bool randomstart);
+
+
+/*************************************************************************
+IMPORTANT: this is an "expert" version of the MLPTrain() function.  We  do
+           not recommend you to use it unless you are pretty sure that you
+           need ability to monitor training progress.
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support (C++ computational core)
+  !
+  ! Second improvement gives constant  speedup (2-3X).  First  improvement
+  ! gives  close-to-linear  speedup  on   multicore   systems.   Following
+  ! operations can be executed in parallel:
+  ! * gradient calculation over large dataset (if dataset is large enough)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+This function performs step-by-step training of the neural  network.  Here
+"step-by-step" means that training starts  with  MLPStartTraining()  call,
+and then user subsequently calls MLPContinueTraining() to perform one more
+iteration of the training.
+
+This  function  performs  one  more  iteration of the training and returns
+either True (training continues) or False (training stopped). In case True
+was returned, Network weights are updated according to the  current  state
+of the optimization progress. In case False was  returned,  no  additional
+updates is performed (previous update of  the  network weights moved us to
+the final point, and no additional updates is needed).
+
+EXAMPLE:
+    >
+    > [initialize network and trainer object]
+    >
+    > MLPStartTraining(Trainer, Network, True)
+    > while MLPContinueTraining(Trainer, Network) do
+    >     [visualize training progress]
+    >
+
+INPUT PARAMETERS:
+    S           -   trainer object
+    Network     -   neural  network  structure,  which  is  used to  store
+                    current state of the training process.
+
+OUTPUT PARAMETERS:
+    Network     -   weights of the neural network  are  rewritten  by  the
+                    current approximation.
+
+NOTE: this method uses sum-of-squares error function for training.
+
+NOTE: it is expected that trainer object settings are NOT  changed  during
+      step-by-step training, i.e. no  one  changes  stopping  criteria  or
+      training set during training. It is possible and there is no defense
+      against  such  actions,  but  algorithm  behavior  in  such cases is
+      undefined and can be unpredictable.
+
+NOTE: It  is  expected that Network is the same one which  was  passed  to
+      MLPStartTraining() function.  However,  THIS  function  checks  only
+      following:
+      * that number of network inputs is consistent with trainer object
+        settings
+      * that number of network outputs/classes is consistent with  trainer
+        object settings
+      * that number of network weights is the same as number of weights in
+        the network passed to MLPStartTraining() function
+      Exception is thrown when these conditions are violated.
+
+      It is also expected that you do not change state of the  network  on
+      your own - the only party who has right to change network during its
+      training is a trainer object. Any attempt to interfere with  trainer
+      may lead to unpredictable results.
+
+
+  -- ALGLIB --
+     Copyright 23.07.2012 by Bochkanov Sergey
+*************************************************************************/
+bool mlpcontinuetraining(const mlptrainer &s, const multilayerperceptron &network);
+bool smp_mlpcontinuetraining(const mlptrainer &s, const multilayerperceptron &network);
+
 
 /*************************************************************************
 Training neural networks ensemble using  bootstrap  aggregating (bagging).
@@ -3431,6 +5982,75 @@ OUTPUT PARAMETERS:
      Copyright 10.03.2009 by Bochkanov Sergey
 *************************************************************************/
 void mlpetraines(const mlpensemble &ensemble, const real_2d_array &xy, const ae_int_t npoints, const double decay, const ae_int_t restarts, ae_int_t &info, mlpreport &rep);
+
+
+/*************************************************************************
+This function trains neural network ensemble passed to this function using
+current dataset and early stopping training algorithm. Each early stopping
+round performs NRestarts  random  restarts  (thus,  EnsembleSize*NRestarts
+training rounds is performed in total).
+
+FOR USERS OF COMMERCIAL EDITION:
+
+  ! Commercial version of ALGLIB includes two  important  improvements  of
+  ! this function:
+  ! * multicore support (C++ and C# computational cores)
+  ! * SSE support (C++ computational core)
+  !
+  ! Second improvement gives constant  speedup (2-3X).  First  improvement
+  ! gives  close-to-linear  speedup  on   multicore   systems.   Following
+  ! operations can be executed in parallel:
+  ! * EnsembleSize  training  sessions  performed  for  each  of  ensemble
+  !   members (always parallelized)
+  ! * NRestarts  training  sessions  performed  within  each  of  training
+  !   sessions (if NRestarts>1)
+  ! * gradient calculation over large dataset (if dataset is large enough)
+  !
+  ! In order to use multicore features you have to:
+  ! * use commercial version of ALGLIB
+  ! * call  this  function  with  "smp_"  prefix,  which  indicates  that
+  !   multicore code will be used (for multicore support)
+  !
+  ! In order to use SSE features you have to:
+  ! * use commercial version of ALGLIB on Intel processors
+  ! * use C++ computational core
+  !
+  ! This note is given for users of commercial edition; if  you  use  GPL
+  ! edition, you still will be able to call smp-version of this function,
+  ! but all computations will be done serially.
+  !
+  ! We recommend you to carefully read ALGLIB Reference  Manual,  section
+  ! called 'SMP support', before using parallel version of this function.
+
+INPUT PARAMETERS:
+    S           -   trainer object;
+    Ensemble    -   neural network ensemble. It must have same  number  of
+                    inputs and outputs/classes  as  was  specified  during
+                    creation of the trainer object.
+    NRestarts   -   number of restarts, >=0:
+                    * NRestarts>0 means that specified  number  of  random
+                      restarts are performed during each ES round;
+                    * NRestarts=0 is silently replaced by 1.
+
+OUTPUT PARAMETERS:
+    Ensemble    -   trained ensemble;
+    Rep         -   it contains all type of errors.
+
+NOTE: this training method uses BOTH early stopping and weight decay!  So,
+      you should select weight decay before starting training just as  you
+      select it before training "conventional" networks.
+
+NOTE: when no dataset was specified with MLPSetDataset/SetSparseDataset(),
+      or  single-point  dataset  was  passed,  ensemble  is filled by zero
+      values.
+
+NOTE: this method uses sum-of-squares error function for training.
+
+  -- ALGLIB --
+     Copyright 22.08.2012 by Bochkanov Sergey
+*************************************************************************/
+void mlptrainensemblees(const mlptrainer &s, const mlpensemble &ensemble, const ae_int_t nrestarts, mlpreport &rep);
+void smp_mlptrainensemblees(const mlptrainer &s, const mlpensemble &ensemble, const ae_int_t nrestarts, mlpreport &rep);
 
 /*************************************************************************
 Principal components analysis
@@ -3557,9 +6177,100 @@ void dsoptimalsplitk(/* Real    */ ae_vector* a,
      ae_int_t* ni,
      double* cve,
      ae_state *_state);
-ae_bool _cvreport_init(cvreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _cvreport_init_copy(cvreport* dst, cvreport* src, ae_state *_state, ae_bool make_automatic);
-void _cvreport_clear(cvreport* p);
+ae_bool _cvreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _cvreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _cvreport_clear(void* _p);
+void _cvreport_destroy(void* _p);
+void clusterizercreate(clusterizerstate* s, ae_state *_state);
+void clusterizersetpoints(clusterizerstate* s,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_int_t disttype,
+     ae_state *_state);
+void clusterizersetdistances(clusterizerstate* s,
+     /* Real    */ ae_matrix* d,
+     ae_int_t npoints,
+     ae_bool isupper,
+     ae_state *_state);
+void clusterizersetahcalgo(clusterizerstate* s,
+     ae_int_t algo,
+     ae_state *_state);
+void clusterizersetkmeanslimits(clusterizerstate* s,
+     ae_int_t restarts,
+     ae_int_t maxits,
+     ae_state *_state);
+void clusterizerrunahc(clusterizerstate* s,
+     ahcreport* rep,
+     ae_state *_state);
+void _pexec_clusterizerrunahc(clusterizerstate* s,
+    ahcreport* rep, ae_state *_state);
+void clusterizerrunkmeans(clusterizerstate* s,
+     ae_int_t k,
+     kmeansreport* rep,
+     ae_state *_state);
+void clusterizergetdistances(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nfeatures,
+     ae_int_t disttype,
+     /* Real    */ ae_matrix* d,
+     ae_state *_state);
+void _pexec_clusterizergetdistances(/* Real    */ ae_matrix* xy,
+    ae_int_t npoints,
+    ae_int_t nfeatures,
+    ae_int_t disttype,
+    /* Real    */ ae_matrix* d, ae_state *_state);
+void clusterizergetkclusters(ahcreport* rep,
+     ae_int_t k,
+     /* Integer */ ae_vector* cidx,
+     /* Integer */ ae_vector* cz,
+     ae_state *_state);
+void clusterizerseparatedbydist(ahcreport* rep,
+     double r,
+     ae_int_t* k,
+     /* Integer */ ae_vector* cidx,
+     /* Integer */ ae_vector* cz,
+     ae_state *_state);
+void clusterizerseparatedbycorr(ahcreport* rep,
+     double r,
+     ae_int_t* k,
+     /* Integer */ ae_vector* cidx,
+     /* Integer */ ae_vector* cz,
+     ae_state *_state);
+void kmeansgenerateinternal(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nvars,
+     ae_int_t k,
+     ae_int_t maxits,
+     ae_int_t restarts,
+     ae_int_t* info,
+     /* Real    */ ae_matrix* ccol,
+     ae_bool needccol,
+     /* Real    */ ae_matrix* crow,
+     ae_bool needcrow,
+     /* Integer */ ae_vector* xyc,
+     ae_state *_state);
+ae_bool _clusterizerstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _clusterizerstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _clusterizerstate_clear(void* _p);
+void _clusterizerstate_destroy(void* _p);
+ae_bool _ahcreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _ahcreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _ahcreport_clear(void* _p);
+void _ahcreport_destroy(void* _p);
+ae_bool _kmeansreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _kmeansreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _kmeansreport_clear(void* _p);
+void _kmeansreport_destroy(void* _p);
+void kmeansgenerate(/* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_int_t nvars,
+     ae_int_t k,
+     ae_int_t restarts,
+     ae_int_t* info,
+     /* Real    */ ae_matrix* c,
+     /* Integer */ ae_vector* xyc,
+     ae_state *_state);
 void dfbuildrandomdecisionforest(/* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_int_t nvars,
@@ -3629,15 +6340,18 @@ void dfserialize(ae_serializer* s,
 void dfunserialize(ae_serializer* s,
      decisionforest* forest,
      ae_state *_state);
-ae_bool _decisionforest_init(decisionforest* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _decisionforest_init_copy(decisionforest* dst, decisionforest* src, ae_state *_state, ae_bool make_automatic);
-void _decisionforest_clear(decisionforest* p);
-ae_bool _dfreport_init(dfreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _dfreport_init_copy(dfreport* dst, dfreport* src, ae_state *_state, ae_bool make_automatic);
-void _dfreport_clear(dfreport* p);
-ae_bool _dfinternalbuffers_init(dfinternalbuffers* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _dfinternalbuffers_init_copy(dfinternalbuffers* dst, dfinternalbuffers* src, ae_state *_state, ae_bool make_automatic);
-void _dfinternalbuffers_clear(dfinternalbuffers* p);
+ae_bool _decisionforest_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _decisionforest_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _decisionforest_clear(void* _p);
+void _decisionforest_destroy(void* _p);
+ae_bool _dfreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _dfreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _dfreport_clear(void* _p);
+void _dfreport_destroy(void* _p);
+ae_bool _dfinternalbuffers_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _dfinternalbuffers_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _dfinternalbuffers_clear(void* _p);
+void _dfinternalbuffers_destroy(void* _p);
 void lrbuild(/* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_int_t nvars,
@@ -3710,12 +6424,14 @@ void lrline(/* Real    */ ae_matrix* xy,
      double* a,
      double* b,
      ae_state *_state);
-ae_bool _linearmodel_init(linearmodel* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _linearmodel_init_copy(linearmodel* dst, linearmodel* src, ae_state *_state, ae_bool make_automatic);
-void _linearmodel_clear(linearmodel* p);
-ae_bool _lrreport_init(lrreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _lrreport_init_copy(lrreport* dst, lrreport* src, ae_state *_state, ae_bool make_automatic);
-void _lrreport_clear(lrreport* p);
+ae_bool _linearmodel_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _linearmodel_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _linearmodel_clear(void* _p);
+void _linearmodel_destroy(void* _p);
+ae_bool _lrreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _lrreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _lrreport_clear(void* _p);
+void _lrreport_destroy(void* _p);
 void filtersma(/* Real    */ ae_vector* x,
      ae_int_t n,
      ae_int_t k,
@@ -3727,15 +6443,6 @@ void filterema(/* Real    */ ae_vector* x,
 void filterlrma(/* Real    */ ae_vector* x,
      ae_int_t n,
      ae_int_t k,
-     ae_state *_state);
-void kmeansgenerate(/* Real    */ ae_matrix* xy,
-     ae_int_t npoints,
-     ae_int_t nvars,
-     ae_int_t k,
-     ae_int_t restarts,
-     ae_int_t* info,
-     /* Real    */ ae_matrix* c,
-     /* Integer */ ae_vector* xyc,
      ae_state *_state);
 void fisherlda(/* Real    */ ae_matrix* xy,
      ae_int_t npoints,
@@ -3751,6 +6458,8 @@ void fisherldan(/* Real    */ ae_matrix* xy,
      ae_int_t* info,
      /* Real    */ ae_matrix* w,
      ae_state *_state);
+ae_int_t mlpgradsplitcost(ae_state *_state);
+ae_int_t mlpgradsplitsize(ae_state *_state);
 void mlpcreate0(ae_int_t nin,
      ae_int_t nout,
      multilayerperceptron* network,
@@ -3826,6 +6535,22 @@ void mlpcreatec2(ae_int_t nin,
 void mlpcopy(multilayerperceptron* network1,
      multilayerperceptron* network2,
      ae_state *_state);
+void mlpcopyshared(multilayerperceptron* network1,
+     multilayerperceptron* network2,
+     ae_state *_state);
+ae_bool mlpsamearchitecture(multilayerperceptron* network1,
+     multilayerperceptron* network2,
+     ae_state *_state);
+void mlpcopytunableparameters(multilayerperceptron* network1,
+     multilayerperceptron* network2,
+     ae_state *_state);
+void mlpexporttunableparameters(multilayerperceptron* network,
+     /* Real    */ ae_vector* p,
+     ae_int_t* pcount,
+     ae_state *_state);
+void mlpimporttunableparameters(multilayerperceptron* network,
+     /* Real    */ ae_vector* p,
+     ae_state *_state);
 void mlpserializeold(multilayerperceptron* network,
      /* Real    */ ae_vector* ra,
      ae_int_t* rlen,
@@ -3839,11 +6564,28 @@ void mlpinitpreprocessor(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t ssize,
      ae_state *_state);
+void mlpinitpreprocessorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t ssize,
+     ae_state *_state);
+void mlpinitpreprocessorsubset(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subsetsize,
+     ae_state *_state);
+void mlpinitpreprocessorsparsesubset(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subsetsize,
+     ae_state *_state);
 void mlpproperties(multilayerperceptron* network,
      ae_int_t* nin,
      ae_int_t* nout,
      ae_int_t* wcount,
      ae_state *_state);
+ae_int_t mlpntotal(multilayerperceptron* network, ae_state *_state);
 ae_int_t mlpgetinputscount(multilayerperceptron* network,
      ae_state *_state);
 ae_int_t mlpgetoutputscount(multilayerperceptron* network,
@@ -3917,36 +6659,99 @@ void mlpprocessi(multilayerperceptron* network,
      ae_state *_state);
 double mlperror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
-     ae_int_t ssize,
+     ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlperror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlperrorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlperrorsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlperrorn(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t ssize,
      ae_state *_state);
 ae_int_t mlpclserror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
-     ae_int_t ssize,
+     ae_int_t npoints,
      ae_state *_state);
+ae_int_t _pexec_mlpclserror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlprelclserror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlprelclserror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlprelclserrorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlprelclserrorsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlpavgce(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlpavgce(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlpavgcesparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlpavgcesparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlprmserror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlprmserror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlprmserrorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlprmserrorsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlpavgerror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlpavgerror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlpavgerrorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlpavgerrorsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 double mlpavgrelerror(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+double _pexec_mlpavgrelerror(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t npoints, ae_state *_state);
+double mlpavgrelerrorsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+double _pexec_mlpavgrelerrorsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t npoints, ae_state *_state);
 void mlpgrad(multilayerperceptron* network,
      /* Real    */ ae_vector* x,
      /* Real    */ ae_vector* desiredy,
@@ -3964,6 +6769,64 @@ void mlpgradbatch(multilayerperceptron* network,
      ae_int_t ssize,
      double* e,
      /* Real    */ ae_vector* grad,
+     ae_state *_state);
+void _pexec_mlpgradbatch(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t ssize,
+    double* e,
+    /* Real    */ ae_vector* grad, ae_state *_state);
+void mlpgradbatchsparse(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t ssize,
+     double* e,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state);
+void _pexec_mlpgradbatchsparse(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t ssize,
+    double* e,
+    /* Real    */ ae_vector* grad, ae_state *_state);
+void mlpgradbatchsubset(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subsetsize,
+     double* e,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state);
+void _pexec_mlpgradbatchsubset(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* idx,
+    ae_int_t subsetsize,
+    double* e,
+    /* Real    */ ae_vector* grad, ae_state *_state);
+void mlpgradbatchsparsesubset(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subsetsize,
+     double* e,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state);
+void _pexec_mlpgradbatchsparsesubset(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* idx,
+    ae_int_t subsetsize,
+    double* e,
+    /* Real    */ ae_vector* grad, ae_state *_state);
+void mlpgradbatchx(multilayerperceptron* network,
+     /* Real    */ ae_matrix* densexy,
+     sparsematrix* sparsexy,
+     ae_int_t datasetsize,
+     ae_int_t datasettype,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subset0,
+     ae_int_t subset1,
+     ae_int_t subsettype,
+     ae_shared_pool* buf,
+     ae_shared_pool* gradbuf,
      ae_state *_state);
 void mlpgradnbatch(multilayerperceptron* network,
      /* Real    */ ae_matrix* xy,
@@ -4003,9 +6866,78 @@ void mlpserialize(ae_serializer* s,
 void mlpunserialize(ae_serializer* s,
      multilayerperceptron* network,
      ae_state *_state);
-ae_bool _multilayerperceptron_init(multilayerperceptron* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _multilayerperceptron_init_copy(multilayerperceptron* dst, multilayerperceptron* src, ae_state *_state, ae_bool make_automatic);
-void _multilayerperceptron_clear(multilayerperceptron* p);
+void mlpallerrorssubset(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* subset,
+     ae_int_t subsetsize,
+     modelerrors* rep,
+     ae_state *_state);
+void _pexec_mlpallerrorssubset(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* subset,
+    ae_int_t subsetsize,
+    modelerrors* rep, ae_state *_state);
+void mlpallerrorssparsesubset(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* subset,
+     ae_int_t subsetsize,
+     modelerrors* rep,
+     ae_state *_state);
+void _pexec_mlpallerrorssparsesubset(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* subset,
+    ae_int_t subsetsize,
+    modelerrors* rep, ae_state *_state);
+double mlperrorsubset(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* subset,
+     ae_int_t subsetsize,
+     ae_state *_state);
+double _pexec_mlperrorsubset(multilayerperceptron* network,
+    /* Real    */ ae_matrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* subset,
+    ae_int_t subsetsize, ae_state *_state);
+double mlperrorsparsesubset(multilayerperceptron* network,
+     sparsematrix* xy,
+     ae_int_t setsize,
+     /* Integer */ ae_vector* subset,
+     ae_int_t subsetsize,
+     ae_state *_state);
+double _pexec_mlperrorsparsesubset(multilayerperceptron* network,
+    sparsematrix* xy,
+    ae_int_t setsize,
+    /* Integer */ ae_vector* subset,
+    ae_int_t subsetsize, ae_state *_state);
+void mlpallerrorsx(multilayerperceptron* network,
+     /* Real    */ ae_matrix* densexy,
+     sparsematrix* sparsexy,
+     ae_int_t datasetsize,
+     ae_int_t datasettype,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subset0,
+     ae_int_t subset1,
+     ae_int_t subsettype,
+     ae_shared_pool* buf,
+     modelerrors* rep,
+     ae_state *_state);
+ae_bool _modelerrors_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _modelerrors_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _modelerrors_clear(void* _p);
+void _modelerrors_destroy(void* _p);
+ae_bool _smlpgrad_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _smlpgrad_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _smlpgrad_clear(void* _p);
+void _smlpgrad_destroy(void* _p);
+ae_bool _multilayerperceptron_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _multilayerperceptron_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _multilayerperceptron_clear(void* _p);
+void _multilayerperceptron_destroy(void* _p);
 void mnltrainh(/* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_int_t nvars,
@@ -4057,15 +6989,18 @@ ae_int_t mnlclserror(logitmodel* lm,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
-ae_bool _logitmodel_init(logitmodel* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _logitmodel_init_copy(logitmodel* dst, logitmodel* src, ae_state *_state, ae_bool make_automatic);
-void _logitmodel_clear(logitmodel* p);
-ae_bool _logitmcstate_init(logitmcstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _logitmcstate_init_copy(logitmcstate* dst, logitmcstate* src, ae_state *_state, ae_bool make_automatic);
-void _logitmcstate_clear(logitmcstate* p);
-ae_bool _mnlreport_init(mnlreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mnlreport_init_copy(mnlreport* dst, mnlreport* src, ae_state *_state, ae_bool make_automatic);
-void _mnlreport_clear(mnlreport* p);
+ae_bool _logitmodel_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _logitmodel_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _logitmodel_clear(void* _p);
+void _logitmodel_destroy(void* _p);
+ae_bool _logitmcstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _logitmcstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _logitmcstate_clear(void* _p);
+void _logitmcstate_destroy(void* _p);
+ae_bool _mnlreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mnlreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mnlreport_clear(void* _p);
+void _mnlreport_destroy(void* _p);
 void mcpdcreate(ae_int_t n, mcpdstate* s, ae_state *_state);
 void mcpdcreateentry(ae_int_t n,
      ae_int_t entrystate,
@@ -4119,68 +7054,14 @@ void mcpdresults(mcpdstate* s,
      /* Real    */ ae_matrix* p,
      mcpdreport* rep,
      ae_state *_state);
-ae_bool _mcpdstate_init(mcpdstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mcpdstate_init_copy(mcpdstate* dst, mcpdstate* src, ae_state *_state, ae_bool make_automatic);
-void _mcpdstate_clear(mcpdstate* p);
-ae_bool _mcpdreport_init(mcpdreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mcpdreport_init_copy(mcpdreport* dst, mcpdreport* src, ae_state *_state, ae_bool make_automatic);
-void _mcpdreport_clear(mcpdreport* p);
-void mlptrainlm(multilayerperceptron* network,
-     /* Real    */ ae_matrix* xy,
-     ae_int_t npoints,
-     double decay,
-     ae_int_t restarts,
-     ae_int_t* info,
-     mlpreport* rep,
-     ae_state *_state);
-void mlptrainlbfgs(multilayerperceptron* network,
-     /* Real    */ ae_matrix* xy,
-     ae_int_t npoints,
-     double decay,
-     ae_int_t restarts,
-     double wstep,
-     ae_int_t maxits,
-     ae_int_t* info,
-     mlpreport* rep,
-     ae_state *_state);
-void mlptraines(multilayerperceptron* network,
-     /* Real    */ ae_matrix* trnxy,
-     ae_int_t trnsize,
-     /* Real    */ ae_matrix* valxy,
-     ae_int_t valsize,
-     double decay,
-     ae_int_t restarts,
-     ae_int_t* info,
-     mlpreport* rep,
-     ae_state *_state);
-void mlpkfoldcvlbfgs(multilayerperceptron* network,
-     /* Real    */ ae_matrix* xy,
-     ae_int_t npoints,
-     double decay,
-     ae_int_t restarts,
-     double wstep,
-     ae_int_t maxits,
-     ae_int_t foldscount,
-     ae_int_t* info,
-     mlpreport* rep,
-     mlpcvreport* cvrep,
-     ae_state *_state);
-void mlpkfoldcvlm(multilayerperceptron* network,
-     /* Real    */ ae_matrix* xy,
-     ae_int_t npoints,
-     double decay,
-     ae_int_t restarts,
-     ae_int_t foldscount,
-     ae_int_t* info,
-     mlpreport* rep,
-     mlpcvreport* cvrep,
-     ae_state *_state);
-ae_bool _mlpreport_init(mlpreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mlpreport_init_copy(mlpreport* dst, mlpreport* src, ae_state *_state, ae_bool make_automatic);
-void _mlpreport_clear(mlpreport* p);
-ae_bool _mlpcvreport_init(mlpcvreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mlpcvreport_init_copy(mlpcvreport* dst, mlpcvreport* src, ae_state *_state, ae_bool make_automatic);
-void _mlpcvreport_clear(mlpcvreport* p);
+ae_bool _mcpdstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mcpdstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mcpdstate_clear(void* _p);
+void _mcpdstate_destroy(void* _p);
+ae_bool _mcpdreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mcpdreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mcpdreport_clear(void* _p);
+void _mcpdreport_destroy(void* _p);
 void mlpecreate0(ae_int_t nin,
      ae_int_t nout,
      ae_int_t ensemblesize,
@@ -4286,6 +7167,27 @@ void mlpeprocessi(mlpensemble* ensemble,
      /* Real    */ ae_vector* x,
      /* Real    */ ae_vector* y,
      ae_state *_state);
+void mlpeallerrorsx(mlpensemble* ensemble,
+     /* Real    */ ae_matrix* densexy,
+     sparsematrix* sparsexy,
+     ae_int_t datasetsize,
+     ae_int_t datasettype,
+     /* Integer */ ae_vector* idx,
+     ae_int_t subset0,
+     ae_int_t subset1,
+     ae_int_t subsettype,
+     ae_shared_pool* buf,
+     modelerrors* rep,
+     ae_state *_state);
+void mlpeallerrorssparse(mlpensemble* ensemble,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     double* relcls,
+     double* avgce,
+     double* rms,
+     double* avg,
+     double* avgrel,
+     ae_state *_state);
 double mlperelclserror(mlpensemble* ensemble,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
@@ -4306,6 +7208,118 @@ double mlpeavgrelerror(mlpensemble* ensemble,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
      ae_state *_state);
+void mlpealloc(ae_serializer* s, mlpensemble* ensemble, ae_state *_state);
+void mlpeserialize(ae_serializer* s,
+     mlpensemble* ensemble,
+     ae_state *_state);
+void mlpeunserialize(ae_serializer* s,
+     mlpensemble* ensemble,
+     ae_state *_state);
+ae_bool _mlpensemble_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpensemble_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpensemble_clear(void* _p);
+void _mlpensemble_destroy(void* _p);
+void mlptrainlm(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     double decay,
+     ae_int_t restarts,
+     ae_int_t* info,
+     mlpreport* rep,
+     ae_state *_state);
+void mlptrainlbfgs(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     double decay,
+     ae_int_t restarts,
+     double wstep,
+     ae_int_t maxits,
+     ae_int_t* info,
+     mlpreport* rep,
+     ae_state *_state);
+void mlptraines(multilayerperceptron* network,
+     /* Real    */ ae_matrix* trnxy,
+     ae_int_t trnsize,
+     /* Real    */ ae_matrix* valxy,
+     ae_int_t valsize,
+     double decay,
+     ae_int_t restarts,
+     ae_int_t* info,
+     mlpreport* rep,
+     ae_state *_state);
+void mlpkfoldcvlbfgs(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     double decay,
+     ae_int_t restarts,
+     double wstep,
+     ae_int_t maxits,
+     ae_int_t foldscount,
+     ae_int_t* info,
+     mlpreport* rep,
+     mlpcvreport* cvrep,
+     ae_state *_state);
+void mlpkfoldcvlm(multilayerperceptron* network,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     double decay,
+     ae_int_t restarts,
+     ae_int_t foldscount,
+     ae_int_t* info,
+     mlpreport* rep,
+     mlpcvreport* cvrep,
+     ae_state *_state);
+void mlpkfoldcv(mlptrainer* s,
+     multilayerperceptron* network,
+     ae_int_t nrestarts,
+     ae_int_t foldscount,
+     mlpreport* rep,
+     ae_state *_state);
+void _pexec_mlpkfoldcv(mlptrainer* s,
+    multilayerperceptron* network,
+    ae_int_t nrestarts,
+    ae_int_t foldscount,
+    mlpreport* rep, ae_state *_state);
+void mlpcreatetrainer(ae_int_t nin,
+     ae_int_t nout,
+     mlptrainer* s,
+     ae_state *_state);
+void mlpcreatetrainercls(ae_int_t nin,
+     ae_int_t nclasses,
+     mlptrainer* s,
+     ae_state *_state);
+void mlpsetdataset(mlptrainer* s,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+void mlpsetsparsedataset(mlptrainer* s,
+     sparsematrix* xy,
+     ae_int_t npoints,
+     ae_state *_state);
+void mlpsetdecay(mlptrainer* s, double decay, ae_state *_state);
+void mlpsetcond(mlptrainer* s,
+     double wstep,
+     ae_int_t maxits,
+     ae_state *_state);
+void mlpsetalgobatch(mlptrainer* s, ae_state *_state);
+void mlptrainnetwork(mlptrainer* s,
+     multilayerperceptron* network,
+     ae_int_t nrestarts,
+     mlpreport* rep,
+     ae_state *_state);
+void _pexec_mlptrainnetwork(mlptrainer* s,
+    multilayerperceptron* network,
+    ae_int_t nrestarts,
+    mlpreport* rep, ae_state *_state);
+void mlpstarttraining(mlptrainer* s,
+     multilayerperceptron* network,
+     ae_bool randomstart,
+     ae_state *_state);
+ae_bool mlpcontinuetraining(mlptrainer* s,
+     multilayerperceptron* network,
+     ae_state *_state);
+ae_bool _pexec_mlpcontinuetraining(mlptrainer* s,
+    multilayerperceptron* network, ae_state *_state);
 void mlpebagginglm(mlpensemble* ensemble,
      /* Real    */ ae_matrix* xy,
      ae_int_t npoints,
@@ -4334,16 +7348,39 @@ void mlpetraines(mlpensemble* ensemble,
      ae_int_t* info,
      mlpreport* rep,
      ae_state *_state);
-void mlpealloc(ae_serializer* s, mlpensemble* ensemble, ae_state *_state);
-void mlpeserialize(ae_serializer* s,
+void mlptrainensemblees(mlptrainer* s,
      mlpensemble* ensemble,
+     ae_int_t nrestarts,
+     mlpreport* rep,
      ae_state *_state);
-void mlpeunserialize(ae_serializer* s,
-     mlpensemble* ensemble,
-     ae_state *_state);
-ae_bool _mlpensemble_init(mlpensemble* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _mlpensemble_init_copy(mlpensemble* dst, mlpensemble* src, ae_state *_state, ae_bool make_automatic);
-void _mlpensemble_clear(mlpensemble* p);
+void _pexec_mlptrainensemblees(mlptrainer* s,
+    mlpensemble* ensemble,
+    ae_int_t nrestarts,
+    mlpreport* rep, ae_state *_state);
+ae_bool _mlpreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpreport_clear(void* _p);
+void _mlpreport_destroy(void* _p);
+ae_bool _mlpcvreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpcvreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpcvreport_clear(void* _p);
+void _mlpcvreport_destroy(void* _p);
+ae_bool _smlptrnsession_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _smlptrnsession_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _smlptrnsession_clear(void* _p);
+void _smlptrnsession_destroy(void* _p);
+ae_bool _mlpetrnsession_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpetrnsession_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpetrnsession_clear(void* _p);
+void _mlpetrnsession_destroy(void* _p);
+ae_bool _mlptrainer_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlptrainer_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlptrainer_clear(void* _p);
+void _mlptrainer_destroy(void* _p);
+ae_bool _mlpparallelizationcv_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _mlpparallelizationcv_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _mlpparallelizationcv_clear(void* _p);
+void _mlpparallelizationcv_destroy(void* _p);
 void pcabuildbasis(/* Real    */ ae_matrix* x,
      ae_int_t npoints,
      ae_int_t nvars,
