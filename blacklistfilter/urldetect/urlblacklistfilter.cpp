@@ -480,7 +480,7 @@ int main (int argc, char** argv)
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
                 cerr << "Expected: " << ur_rec_static_size(templ) << " ";
-                cerr << "Recieved: " << data_size - ur_get_dyn_size(templ, data, UR_URL) << " in static part." << endl;
+                cerr << "Recieved: " << data_size - ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST) << " in static part." << endl;
                 break;
             }
         }
