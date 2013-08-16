@@ -312,6 +312,8 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
         // ur_set(out, detect, /* UR_URL_BLACKLIST */, *bl);
+#ifdef DEBUG
+        cout << "URL \"" << url << "\" has been found in blacklist." << endl;
         return BLACKLISTED;
     }
 
