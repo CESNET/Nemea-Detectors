@@ -303,11 +303,11 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
 int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect)
 {
     // get pointer to URL
-    char* url = ur_get_dyn(in, record, UR_URL);
+    char* url = ur_get_dyn(in, record, UR_HTTP_REQUEST_HOST);
     uint8_t* bl = NULL;
 
     // try to find the URL in table.
-    bl = (uint8_t *) ht_get(&blacklist, url, ur_get_dyn_size(in, record, UR_URL));
+    bl = (uint8_t *) ht_get(&blacklist, url, ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST));
 
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
@@ -391,7 +391,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,URL");
+    ur_template_t* templ = ur_create_template("HTTP_REQUEST_HOST");
     ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>"); // will be extended with URL_BLACKLIST
 
     // zero dynamic size for now, may change in future if URL will be passed.
