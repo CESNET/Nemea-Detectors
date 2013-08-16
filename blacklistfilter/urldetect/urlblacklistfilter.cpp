@@ -474,7 +474,7 @@ int main (int argc, char** argv)
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
         // check the data size -- we can only check static part since URL is dynamic
-        if ((data_size - ur_get_dyn_size(templ, data, UR_URL)) != ur_rec_static_size(templ)) {
+        if ((data_size - ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST)) != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
