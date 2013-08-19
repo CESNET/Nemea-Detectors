@@ -72,9 +72,9 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP blacklist detection module", // Module name
+    (char *)"IP blacklist detection module", // Module name
     // Module description
-    "Module recieves the UniRec record and checks if the stored source address\n"
+    (char *)"Module recieves the UniRec record and checks if the stored source address\n"
     "or destination address isn't present in any blacklist that are available.\n"
     "If any of the addresses is blacklisted the record is changed by adding \n"
     "a number of the list which blacklisted the address. UniRec with this \n"

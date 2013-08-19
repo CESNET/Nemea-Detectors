@@ -68,9 +68,9 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "DNS blacklist detection module", // Module name
+    (char *)"DNS blacklist detection module", // Module name
     // Module description
-    "Interfaces:\n"
+    (char *)"Interfaces:\n"
     "   Inputs: 2 (UniRec record)\n"
     "   Outputs: 2 (UniRec record)\n", 
     2, // Number of input interfaces

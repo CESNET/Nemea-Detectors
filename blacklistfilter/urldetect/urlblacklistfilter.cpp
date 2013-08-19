@@ -68,9 +68,9 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "URL blacklist detection module", // Module name
+    (char *)"URL blacklist detection module", // Module name
     // Module description
-    "Module recieves the UniRec record and checks if the URL in record isn't\n"
+    (char *)"Module recieves the UniRec record and checks if the URL in record isn't\n"
     "present in any blacklist that are available. If so the module creates\n"
     "a detection report (UniRec) with blacklist where the URL was found.\n"
     "The report is the send to further processing.\n"
@@ -281,7 +281,6 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
         in.close();
         free(url_norm);
     }
-    
     closedir(dp);
     return ALL_OK;
 }
@@ -317,7 +316,6 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
 #endif
         return BLACKLISTED;
     }
-
     // URL was not found
     return URL_CLEAR;
 }
@@ -401,6 +399,7 @@ int main (int argc, char** argv)
         cerr << "ERROR: No memory available for detection record. Unable to continue." << endl;
         ur_free_template(templ);
         ur_free_template(det);
+        ht_destroy(&blacklist);
         return EXIT_FAILURE;
     }
     
@@ -410,11 +409,12 @@ int main (int argc, char** argv)
     // check if the directory with URLs is specified
     if (argc != 2) {
         cerr << "ERROR: Directory with sources not specified. Unable to continue." << endl;
+        trap_terminate();
+        trap_finalize();
         ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
         ur_free(detection);
-        trap_finalize();
         return EXIT_FAILURE;
     }
 
@@ -422,17 +422,17 @@ int main (int argc, char** argv)
     const char* source = argv[1];
 
     // set locale so we can use URL normalization library
-    // !!! NOT PRESENT ON NEMEA COLLECTOR !!!
     setlocale(LC_ALL, "");
     
     retval = load_url(blacklist, source);
 
     if (retval == BLIST_LOAD_ERROR) {
+        trap_terminate();
+        trap_finalize();
         ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
         ur_free(detection);
-        trap_finalize();
         return EXIT_FAILURE;
     }
 
@@ -450,11 +450,12 @@ int main (int argc, char** argv)
 
     if (ht_is_empty(&blacklist)) {
         cerr << "No addresses were loaded. Continuing makes no sense." << endl;
+        trap_terminate();
+        trap_finalize();
         ur_free_template(templ);
         ur_free_template(det);
         ur_free(detection);
         ht_destroy(&blacklist);
-        trap_finalize();
         return EXIT_FAILURE;
     }
    
@@ -497,7 +498,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             ++marked;
 #endif
-            //trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
+            trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
         }
 
         // should update?
@@ -530,7 +531,6 @@ int main (int argc, char** argv)
             add_update.clear();
             update = 0;       
         }
-
     }
 
     // send terminate message
