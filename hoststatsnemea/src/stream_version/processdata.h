@@ -31,13 +31,13 @@ void *data_process_trap(void *mutex_map); //for thread
  */
 inline hosts_record_t& get_record(Profile *ptr, const hosts_key_t& key)
 {
-   int index = ht_get_index(ptr->stat_table_to_check, (char*) key.bytes);
+   int index = ht_get_index_v2(ptr->stat_table_to_check, (char*) key.bytes);
 
    if (index < 0) { 
       // the item doesn't exist, create new empty one 
       hosts_record_t empty;
       void *kicked_data;
-      kicked_data = ht_insert(ptr->stat_table_to_check, (char*) key.bytes, (void*) &empty);
+      kicked_data = ht_insert_v2(ptr->stat_table_to_check, (char*) key.bytes, (void*) &empty);
       if (kicked_data != NULL) {
          // Another item was kicked out of the table
 
@@ -57,7 +57,7 @@ inline hosts_record_t& get_record(Profile *ptr, const hosts_key_t& key)
             }
          }
       }
-      index = ht_get_index(ptr->stat_table_to_check, (char*) key.bytes);
+      index = ht_get_index_v2(ptr->stat_table_to_check, (char*) key.bytes);
    }
 
    return *((hosts_record_t *)ptr->stat_table_to_check->data[index]);

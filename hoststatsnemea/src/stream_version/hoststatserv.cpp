@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
       else if (profiles[i]->name == "telnet") size = 1000;
       else size = 10000;
 
-      ht_init(profiles[i]->stat_table_to_check, size, sizeof(hosts_record_t), sizeof(hosts_key_t));
+      ht_init_v2(profiles[i]->stat_table_to_check, size, sizeof(hosts_record_t), sizeof(hosts_key_t));
    }
 
    // TODO: read this from configuration
@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
    for (int i = 0; i < profiles.size(); i++) {
       delete profiles[i]->bf_active;
       delete profiles[i]->bf_learn;
-      ht_destroy(profiles[i]->stat_table_to_check);
+      ht_destroy_v2(profiles[i]->stat_table_to_check);
       delete profiles[i];
    }
    
