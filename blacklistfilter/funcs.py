@@ -52,7 +52,7 @@ def error( err_str ):
 def create_directory( dir_path ):
    if not os.path.exists( dir_path ):
       try:
-         os.mkdir( dir_path )
+         os.makedirs( dir_path )
       except OSError:
          error( "Failed to create " + dir_path + " directory." )
          return False

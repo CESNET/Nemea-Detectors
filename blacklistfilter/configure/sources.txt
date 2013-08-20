@@ -22,3 +22,5 @@ warden_malware.16 https://warden.cesnet.cz:443/Warden
 warden_copyright.17 https://warden.cesnet.cz:443/Warden
 warden_webattack.18 https://warden.cesnet.cz:443/Warden
 warden_other.19 https://warden.cesnet.cz:443/Warden
+
+novy.20 /home/tom/Plocha/traffic-analysis/nemea/modules/blacklistfilter/novy

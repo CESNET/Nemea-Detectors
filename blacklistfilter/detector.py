@@ -49,6 +49,7 @@ from signal import SIGUSR1
 from funcs import error
 from funcs import read_config
 from funcs import open_file
+
 from get_lists import get_lists
 
 def get_pid(pid_name):
@@ -182,7 +183,8 @@ elif call_method == 'install':
    cron_file.close()
 
 elif call_method == 'download':
-   get_lists('update')
+   if not get_lists('update'):
+      exit( 1 ) 
 
    pid = get_pid(pid_name)
    if not pid:
