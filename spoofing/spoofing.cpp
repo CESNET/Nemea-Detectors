@@ -68,9 +68,9 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "IP spoofing detection module", // Module name
+    (char *)"IP spoofing detection module", // Module name
     // Module description
-    "This module checks ip addresses in data flows for possible IP spoofing.\n"
+    (char *)"This module checks ip addresses in data flows for possible IP spoofing.\n"
     "It uses four conditions to determine this:\n"
     "1. Testing for bogon prefixes\n"
     "2. Checking symetric routes\n"

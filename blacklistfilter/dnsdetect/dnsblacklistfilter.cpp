@@ -68,9 +68,9 @@ extern "C" {
 using namespace std;
 
 trap_module_info_t module_info = {
-    "DNS blacklist detection module", // Module name
+    (char *)"DNS blacklist detection module", // Module name
     // Module description
-    "Interfaces:\n"
+    (char *)"Interfaces:\n"
     "   Inputs: 2 (UniRec record)\n"
     "   Outputs: 2 (UniRec record)\n", 
     2, // Number of input interfaces
@@ -570,40 +570,28 @@ int main (int argc, char** argv)
     if (retval != TRAP_E_OK) {
         if (retval == TRAP_E_HELP) {
             trap_print_help(&module_info);
-            ur_free(ip_thread_params.detection);
-            ur_free(dns_thread_params.detection);
-            ur_free_template(ip_thread_params.input);
-            ur_free_template(dns_thread_params.input);
-            ur_free_template(ip_thread_params.output);
-            ur_free_template(dns_thread_params.output);
-            ht_destroy_v2(ip_thread_params.ip_table);
-            ht_destroy(dns_thread_params.dns_table);
-            return EXIT_SUCCESS;
+            DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                               dns_thread_params.input, dns_thread_params.output,
+                               ip_thread_params.input, ip_thread_params.output,
+                               dns_thread_params.detection, ip_thread_params.detection);
+             return EXIT_SUCCESS;
         }
         cerr << "ERROR: Cannot parse input parameters: " << trap_last_error_msg << endl;
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
-        return retval;
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
+         return retval;
     }
     
     // Initialize TRAP library (create and init all interfaces)     
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
         return retval;
     }
 
@@ -613,15 +601,12 @@ int main (int argc, char** argv)
     // check if the source folder for DNS thread was specified
     if (argc != 2) {
         cerr << "ERROR: Directory with DNS sources not specified. Unable to continue." << endl;
+        trap_terminate();
         trap_finalize();
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
         return EXIT_FAILURE;
     }
 
@@ -629,30 +614,25 @@ int main (int argc, char** argv)
     retval = load_dns(dns_thread_params.dns_table, (const char *) argv[1]);
     if (retval) {
         cerr << "ERROR: DNS table cannot be loaded. Unable to continue." << endl;
-        //trap_finalize();
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        trap_terminate();
+        trap_finalize();
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
+
         return EXIT_FAILURE;
     }
 
     // did we load anything?
     if (ht_is_empty(dns_thread_params.dns_table)) {
         cerr << "ERROR: DNS table is empty. Continuing makes no sense." << endl;
-        //trap_finalize();
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        trap_terminate();
+        trap_finalize();
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
         return EXIT_FAILURE;
     }
 
@@ -672,15 +652,12 @@ int main (int argc, char** argv)
     retval = pthread_create(&threads[0], &th_attr, check_dns, (void *) &dns_thread_params);
     if (retval) {
         cerr << "ERROR: Cannot create DNS checking thread. Terminating ..." << endl;
+        trap_terminate();
         trap_finalize();
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
         return EXIT_FAILURE;
     }
 
@@ -689,15 +666,12 @@ int main (int argc, char** argv)
     if (retval) {
         cerr << "ERROR: Cannot create IP checking thread. Terminating ..." << endl;
         pthread_cancel(threads[0]);
-        //trap_finalize();
-        ur_free(ip_thread_params.detection);
-        ur_free(dns_thread_params.detection);
-        ur_free_template(ip_thread_params.input);
-        ur_free_template(dns_thread_params.input);
-        ur_free_template(ip_thread_params.output);
-        ur_free_template(dns_thread_params.output);
-        ht_destroy_v2(ip_thread_params.ip_table);
-        ht_destroy(dns_thread_params.dns_table);
+        trap_terminate();
+        trap_finalize();
+        DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
         return EXIT_FAILURE;
     }
 
@@ -715,30 +689,24 @@ int main (int argc, char** argv)
             cerr << "ERROR: Problem when joining threads. Terminating ..." << endl;
             pthread_cancel(threads[0]);
             pthread_cancel(threads[1]);
-            //trap_finalize();
-            ur_free(ip_thread_params.detection);
-            ur_free(dns_thread_params.detection);
-            ur_free_template(ip_thread_params.input);
-            ur_free_template(dns_thread_params.input);
-            ur_free_template(ip_thread_params.output);
-            ur_free_template(dns_thread_params.output);
-            ht_destroy_v2(ip_thread_params.ip_table);
-            ht_destroy(dns_thread_params.dns_table);
+            trap_terminate();
+            trap_finalize();
+            DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
             exit(EXIT_FAILURE);
         }
 
         // Termination of any of the thread was not successful -- terminate
         if (thr_exit_state != NULL) {
             cerr << "ERROR: Thread returned FAILURE value. Terminating ..." << endl;
-            //trap_finalize();
-            ur_free(ip_thread_params.detection);
-            ur_free(dns_thread_params.detection);
-            ur_free_template(ip_thread_params.input);
-            ur_free_template(dns_thread_params.input);
-            ur_free_template(ip_thread_params.output);
-            ur_free_template(dns_thread_params.output);
-            ht_destroy_v2(ip_thread_params.ip_table);
-            ht_destroy(dns_thread_params.dns_table);
+            trap_terminate();
+            trap_finalize();
+            DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                           dns_thread_params.input, dns_thread_params.output,
+                           ip_thread_params.input, ip_thread_params.output,
+                           dns_thread_params.detection, ip_thread_params.detection);
             exit(EXIT_FAILURE);
         }
     }
@@ -748,7 +716,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
     cout << "Cleaning up..." << endl;
 #endif
-    // trap_finalize();
+    trap_finalize();
 #ifdef DEBUG
     cout << "TRAP Offline" << endl;
 #endif
