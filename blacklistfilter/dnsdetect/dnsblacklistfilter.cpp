@@ -383,19 +383,22 @@ void *check_dns(void *args)
 #ifdef DEBUG
             cout << "DNS: Match found. Sending report ..." << endl;
 #endif            
-            /* ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns); */
+//            ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
 #ifdef DEBUG
             cout << "DNS: Updating IP table for IP thread ..." << endl;
 #endif
-            /* update IP table */
+            /* 
+             * update IP table 
+             * IP will be extracted from recieved DNS data
+             */
 /*            if (ht_get_v2(params->ip_table, ur_get(params->input, UR_SRC_IP)) == NULL) {
                 ht_insert_v2(params->ip_table, ur_get(params->input, UR_SRC_IP), is_dns);
-            }*/
+            }
             if (ht_get_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes) == NULL) {
                 ht_insert_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes, is_dns);
-            }
+            }*/
         } else {
             // drop the record
         }
@@ -549,9 +552,9 @@ int main (int argc, char** argv)
     ur_template_t *dns_input, *ip_input, *dns_det, *ip_det;
 
     // link templates
-    dns_input = ur_create_template("<COLLECTOR_FLOW>"); // + DNS request items
+    dns_input = ur_create_template("<COLLECTOR_FLOW>,<DNS>"); // + DNS request items
     ip_input = ur_create_template("<COLLECTOR_FLOW>");
-    dns_det = ur_create_template("<BASIC_FLOW>"); // + DNS blacklist flag
+    dns_det = ur_create_template("<BASIC_FLOW>,DNS_BLACKLIST"); // + DNS blacklist flag
     ip_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
 
     dns_thread_params.input = dns_input;
