@@ -310,7 +310,7 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
 
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
-        // ur_set(out, detect, /* UR_URL_BLACKLIST */, *bl);
+        ur_set(out, detect, UR_URL_BLACKLIST, *bl);
 #ifdef DEBUG
         cout << "URL \"" << url << "\" has been found in blacklist." << endl;
 #endif
@@ -390,7 +390,7 @@ int main (int argc, char** argv)
     }
 
     ur_template_t* templ = ur_create_template("HTTP_REQUEST_HOST");
-    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>"); // will be extended with URL_BLACKLIST
+    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>,URL_BLACKLIST"); // will be extended with URL_BLACKLIST
 
     // zero dynamic size for now, may change in future if URL will be passed.
     void *detection = ur_create(det, 0);
