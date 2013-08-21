@@ -78,6 +78,9 @@ typedef struct {
     /*@}*/
 } upd_item_t;
 
+/**
+ * Macro for destroying all datastructures in DNSBlacklist filter.
+ */
 #define DESTROY_STRUCTURES(ip_table, dns_table, templ_dns_in, templ_dns_out, templ_ip_in, templ_ip_out, det_dns, det_ip)\
     {\
         ur_free(det_dns);\
