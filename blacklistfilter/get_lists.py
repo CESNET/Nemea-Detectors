@@ -95,9 +95,11 @@ def check_domain( address ):
    report( "Checking address for a domain." )
    return re.match(
    r'^'
-      r'(?:http(?:s)?://)?(?:www\.)?' # Address may start with (http(s)://)(www.)
+      r'(?!' # Address doesn't contain IPv4
+         r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+      r')'
       r'(?:'
-         r'(?:' # continues with
+         r'(?:' # Address starts with
             r'(?:[\w\d])|' # a single alphanumeric character as a subdomain, or
             r'(?:(?:[\w\d])(?:[\w\d-]){0,61}(?:[\w\d]))' # a sequence of alphanumeric characters (max 63.), that may contain dash between two alphanumeric characters.
          r')\.' # Then there is a single dot separator after each subdomain
@@ -167,8 +169,9 @@ def save_addr_into_dicts( addr_path ):
    if not addr_file:
       return False
 
-   exports = []
-   for i in range( len ( detectors ) ):
+   exports = [None] * len( detectors )
+
+   for i in range( len( detectors ) ):
       exports[i] = {}
 
    line_count = 1
@@ -180,9 +183,9 @@ def save_addr_into_dicts( addr_path ):
          line_count += 1
          continue
 
-
+      addr_line = addr_line.split( delimiter )
       if not check_cols( addr_line, cols ):
-         report( "Number of columns in a file \'" + file_path + "\' on a line " + str( line_count ) + " doesn\'t match with expected " + cols + ". Skipping." )
+         report( "Number of columns in a file \'" + addr_path + "\' on a line " + str( line_count ) + " doesn\'t match with expected " + str( cols ) + ". Skipping." )
          addr_line = addr_file.readline()
          line_count += 1
          continue
@@ -193,8 +196,7 @@ def save_addr_into_dicts( addr_path ):
       for i in range( len( detectors ) ):
          if detectors[i].check( addr ):
             report( "Saving valid \'" + detectors[i].name + "\' detector address.")
-            exports[i][addr] = None
-            break
+            exports[i].update({addr:None})
 
       addr_line = addr_file.readline()
       line_count += 1
@@ -251,13 +253,20 @@ def read_sources( source_path ):
 
    return sources
 
-def replace_old_version( old_file_path, new_file_path ):
-   if not os.path.exists( new_file_path ):
-      raise NameError( "File \'" + new_file_path + "\' doesn\'t exist." )
-      return False
-   if os.path.exists( old_file_path ):
-      os.remove( old_file_path )
-   os.rename( new_file_path, old_file_path )
+def replace_old_versions( new_raw_path, old_raw_path, order ):
+   if os.path.exists( old_raw_path ):
+      os.remove( old_raw_path )
+   os.rename( new_raw_path, old_raw_path )
+
+   for i in range( len( detectors ) ):
+      new_conv_path = sources_path + '.' + order + '.' + detectors[i].name
+      if not os.path.exists( new_conv_path ):
+         continue
+
+      old_conv_path = cwd + '/' + detectors[i].name + 'detect/update/' + order
+      if os.path.exists( old_conv_path ):
+         os.remove( old_conv_path )
+      os.rename( new_conv_path, old_conv_path )
 
 def save_conv_diffs( old_conv_path, new_conv_path, out_path ):
    if not os.path.exists( old_conv_path ) or not os.path.exists( new_conv_path ):
@@ -277,7 +286,7 @@ def save_conv_diffs( old_conv_path, new_conv_path, out_path ):
 
 def delete_converted( order ):
    for i in range( len( detectors ) ):
-      new_conv_path = sources_path + '.' + order + '.' detectors[i].name
+      new_conv_path = sources_path + '.' + order + '.' + detectors[i].name
       if os.path.exists( new_conv_path ):
          os.remove( new_conv_path )
 
@@ -293,10 +302,10 @@ def create_update_dirs():
 
 def getter_init():
    global detectors
-   detectors.append( detector( 'ip', check_ip() ) )
-   detectors.append( detector( 'dns', check_domain() ) )
-   detectors.append( detector( 'url', check_url() ) )
-   detectors.append( detector( 'hash', check_hash() ) )
+   detectors.append( detector( 'ip', check_ip ) )
+   detectors.append( detector( 'dns', check_domain ) )
+   detectors.append( detector( 'url', check_url ) )
+   detectors.append( detector( 'hash', check_hash ) )
 
 def compare_converted( converted, detector, order ):
    updates_path = cwd + '/' + detector.name + 'detect/update/'
@@ -307,7 +316,7 @@ def compare_converted( converted, detector, order ):
       replace_old_version( detector_path, converted.path )
       os.rename( converted.path, sources_path + order + '.' + detector.name )
    else:
-      if not save_conv_diffs( old_ips_path, converted.path, updates_ips_path + order ):
+      if not save_conv_diffs( old_ips_path, converted.path, detector_path ):
          return False
 
 def delete_updates( order ):
@@ -394,36 +403,31 @@ def get_lists( parameter = 'update' ):
             delete_converted( order )
             os.remove( new_raw_path )
 
-         for j in range( len( converted ) ):
-            if not create_update_dirs():
-               delete_converted( order )
-               os.remove( new_raw_path )
-               continue
+         if not create_update_dirs():
+            delete_converted( order )
+            os.remove( new_raw_path )
 
-            if not compare_converted( converted[j] ):
+         failed = False
+         for j in range( len( converted ) ):
+            if not compare_converted( converted[j], order ):
                delete_converted( order )
                os.remove( new_raw_path )
+               failed = True
+               break
+
+         if failed:
+            continue
 
    # Save new blacklist
       else:
          report( "Obtained \'" + old_raw_name + "\' for the first time." )
-         converted = convert_raw_file( new_raw_path, sources_path, order )
+         converted = convert_raw_file( new_raw_path, order )
          if not converted:
             os.remove ( new_raw_path )
             continue
 
-         mode = converted.mode
-      if mode == 'ips' or mode == 'both':
-         if create_directory( updates_ips_path ):
-            replace_old_version( updates_ips_path + order, converted.ip_file )
-         else:
+         if not create_update_dirs():
+            delete_converted( order )
             os.remove( new_raw_path )
-            os.remove( converted.ip_file )
-      if mode == 'urls' or mode == 'both':
-         if create_directory( updates_urls_path ):
-            replace_old_version( updates_urls_path + order, converted.url_file )
-         else:
-            os.remove( new_raw_path )
-            os.remove( converted.url_file )
 
-      replace_old_version( old_raw_path, new_raw_path )
+      replace_old_versions( new_raw_path, old_raw_path, order )

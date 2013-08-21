@@ -72,8 +72,12 @@ ip_detector = cwd + '/ipdetect/ipblacklistfilter'
 ip_sources = cwd + '/ipdetect/update/'
 url_detector = cwd + '/urldetect/urlblacklistfilter'
 url_sources = cwd + '/urldetect/update/'
+dns_detector = cwd + '/dnsdetect/dnsblacklistfilter'
+dns_sources = cwd + '/dnsdetect/update/'
+hash_detector = cwd + '/hashdetect/hashblacklistfilter'
+hash_sources = cwd + '/hashdetect/update/'
 
-usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url"
+usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url|dns|hash"
 
 if len( sys.argv ) != 3:
    error( "Bad argument count supplied.\n" + usage )
@@ -90,6 +94,14 @@ elif filter_type == 'url':
    main_program = url_detector
    sources = url_sources
    detector_name = "URL-Blacklist"
+elif filter_type == 'dns':
+   main_program = dns_detector
+   sources = dns_sources
+   detector_name = "DNS-Blacklist"
+elif filter_type == 'hash':
+   main_program = hash_detector
+   sources = hash_sources
+   detector_name = "HASH-Blacklist"
 else:
    error( "Bad arguments supplied.\n" + usage )
    exit( 1 )
@@ -184,7 +196,7 @@ elif call_method == 'install':
 
 elif call_method == 'download':
    if not get_lists('update'):
-      exit( 1 ) 
+      exit( 1 )
 
    pid = get_pid(pid_name)
    if not pid:
