@@ -30,7 +30,7 @@ using namespace std;
 
 #define D_ACTIVE_TIMEOUT   300   // default value (in seconds)
 #define D_INACTIVE_TIMEOUT 30    // default value (in seconds)
-#define D_DET_START_PAUSE  10    // default time between starts of detector (in seconds)
+#define D_DET_START_PAUSE  5     // default time between starts of detector (in seconds)
 
 //TODO: implement this
 const uint64_t MEMORY_LIMIT = 2LL*1024LL*1024LL*1024LL; // Maximum number of bytes consumed by host-stats (2GB)
@@ -245,7 +245,7 @@ void check_profile(Profile *profile, thread_share_t *share,
 
       // Get key and check validity of record
       const hosts_key_t &key = *(hosts_key_t*)ptr->keys[i];
-      if (ht_is_valid(ptr, (char*)key.bytes, i) == 0)
+      if (ht_is_valid_v2(ptr, (char*)key.bytes, i) == 0)
          continue;
 
       // Call the event detector
@@ -354,8 +354,8 @@ void *data_reader_trap(void *share_struct)
          pthread_mutex_lock(&share->remove_mutex);
 
          while(!share->remove_vector.empty()) {
-            remove_item_t &item = share->remove_vector.back();   
-            ht_remove_by_key(((Profile*)item.profile_ptr)->stat_table_to_check, 
+            remove_item_t &item = share->remove_vector.back();
+            ht_remove_by_key_v2(((Profile*)item.profile_ptr)->stat_table_to_check, 
                (char*) item.key.bytes);
             share->remove_vector.pop_back();
          }

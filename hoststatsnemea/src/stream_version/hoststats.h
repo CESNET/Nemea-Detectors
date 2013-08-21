@@ -111,7 +111,7 @@ typedef stat_map_t::iterator stat_map_iter;
 typedef stat_map_t::const_iterator stat_map_citer;
 
 // hash table
-typedef cc_hash_table_t stat_table_t;
+typedef cc_hash_table_v2_t stat_table_t;
 
 
 // Function for flow filtering (used by profiles)

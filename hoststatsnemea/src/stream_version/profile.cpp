@@ -49,7 +49,7 @@ int Profile::store() const
 int Profile::release()
 {
    current_timeslot = "";
-   ht_clear(stat_table_to_check);
+   ht_clear_v2(stat_table_to_check);
 }
 
 void Profile::change_timeslot(const std::string &new_timeslot)
