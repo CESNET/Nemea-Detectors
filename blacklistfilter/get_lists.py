@@ -300,7 +300,7 @@ def create_update_dirs():
          return False
    return True
 
-def getter_init():
+def get_init():
    global detectors
    detectors.append( detector( 'ip', check_ip ) )
    detectors.append( detector( 'dns', check_domain ) )
@@ -325,8 +325,25 @@ def delete_updates( order ):
       if os.path.exists( updates_path ):
          os.remove( updates_path )
 
+def assign_cfg_values( current_config ):
+   config = {}
+   if os.path.exists ( current_config ):
+      config = read_config( conf_name = current_config )
+   global cols
+   global delimiter
+   global addr_col
+   global warden
+   global warden_type
+   global local
+   cols = config.get( 'columns', 1 )
+   delimiter = config.get( 'delimiter', ' ' )
+   addr_col = config.get( 'addr_col', 1 )
+   warden = bool( config.get( 'warden', False ) )
+   warden_type = config.get( 'warden_type', None )
+   local = bool( config.get( 'local', False ) )
+
 def get_lists( parameter = 'update' ):
-   getter_init()
+   get_init()
 
    sources = read_sources( source_path )
 
@@ -346,27 +363,14 @@ def get_lists( parameter = 'update' ):
 
       # Get variables from config or assign implicit values
       current_config = cwd + '/configure/conf.' + old_raw_name
-      config = {}
-      if os.path.exists ( current_config ):
-         config = read_config( conf_name = current_config )
-      global cols
-      global delimiter
-      global addr_col
-      global warden
-      global warden_type
-      global local
-      cols = config.get( 'columns', 1 )
-      delimiter = config.get( 'delimiter', ' ' )
-      addr_col = config.get( 'addr_col', 1 )
-      warden = bool( config.get( 'warden', False ) )
-      warden_type = config.get( 'warden_type', None )
-      local = bool( config.get( 'local', False ) )
+
+      assign_cfg_values( current_config )
 
       if warden:
          if not warden_type:
             error( "Warden request type is not specified in a file \'" + current_config + "\'. Skipping." )
             continue
-         command = 'perl hostrecvwarden.pl'
+         command = 'perl hostrecvwarden.pl ' + warden_type ' > ' + new_raw_path
          cols = 13
          addr_col = 7
          delimiter = ','
@@ -410,12 +414,12 @@ def get_lists( parameter = 'update' ):
          failed = False
          for j in range( len( converted ) ):
             if not compare_converted( converted[j], order ):
-               delete_converted( order )
-               os.remove( new_raw_path )
                failed = True
                break
 
          if failed:
+            delete_converted( order )
+            os.remove( new_raw_path )
             continue
 
    # Save new blacklist
