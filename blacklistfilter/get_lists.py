@@ -395,7 +395,6 @@ def get_lists( parameter = 'update' ):
       assign_cfg_values( current_config )
 
       if warden:
-         continue
          if not warden_type:
             error( "Warden request type is not specified in a file \'" + current_config + "\'. Skipping." )
             continue
