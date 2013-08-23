@@ -776,6 +776,7 @@ int main (int argc, char** argv)
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
     // is directory with sources specified ? (should be in control script)
     if (argc != 2) {
         cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
@@ -871,7 +872,11 @@ int main (int argc, char** argv)
         }
         
         if (retval == BLACKLISTED) {
+#ifdef DEBUG
+            cout << "Sending report ..." << endl;
+#endif
             ur_set(tmpl_det, detection, UR_TIME_FIRST, ur_get(templ, data, UR_TIME_FIRST));
+            ur_set(tmpl_det, detection, UR_PROTOCOL, ur_get(templ, data, UR_PROTOCOL));
             ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
             ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
             ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));

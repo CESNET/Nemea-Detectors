@@ -110,6 +110,9 @@ if call_method != 'start' and call_method != 'stop' and call_method != 'install'
    error( "Bad arguments supplied.\n" + usage )
    exit( 1 )
 
+port = '7000'
+params = 'tb;localhost'
+
 # Get parameters from config or use implicit ones
 config = read_config()
 pid_name = config.get( 'pid_loc', '.pid_file' )
@@ -119,22 +122,29 @@ cron_path = config.get( 'cron_loc', '/etc/crontab' )
 user = config.get( 'user', getuser() )
 
 if call_method == 'start':
-   get_lists('new')
+   if not get_lists('new'):
+      exit( 1 )
 
    pid_file = open_file( pid_name, 'w' )
    if not pid_file:
       exit( 1 )
 
-   tmp = subprocess.Popen(
-      [main_program, '-i', 'tb;localhost,7000;', sources],
-      stdout = subprocess.PIPE,
-      stderr = subprocess.PIPE,
-      stdin = subprocess.PIPE
-   )
+   try:
+      tmp = subprocess.Popen(
+         [main_program, '-i', params + ',' + port + ';', sources],
+         stdout = subprocess.PIPE,
+         stderr = subprocess.PIPE,
+         stdin = subprocess.PIPE
+      )
+   except OSError:
+      error( "Couldn\'t start " + detector_name + " Detector. Application not found." )
+      pid_file.close()
+      os.remove( pid_name )
+      exit( 1 )
 
    tmp.poll()
    if tmp.returncode != None:
-      error( "Couldn\'t start " + detector_name + " Detector." )
+      error( detector_name + " Detector failed to start successfully. Return code: " + str( tmp.returncode ) )
       pid_file.close()
       os.remove( pid_name )
       exit( 1 )
