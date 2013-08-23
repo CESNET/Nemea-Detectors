@@ -63,7 +63,8 @@ extern "C" {
 
 #include "dnsblacklistfilter.h"
 
-#define DEBUG 1
+#define DEBUG
+//#undef DEBUG
 
 using namespace std;
 
@@ -139,9 +140,6 @@ int load_dns(cc_hash_table_t* blacklist, const char* path)
         // load file line by line
         while (!in.eof()) {
             getline(in, line);
-#ifdef DEBUG
-            cout << line << endl;
-#endif
 
             // don't add the remaining empty line
             if (!line.length()) {
@@ -164,9 +162,6 @@ int load_dns(cc_hash_table_t* blacklist, const char* path)
                 in.close();
                 break;
             }
-#ifdef DEBUG
-            cout << url_norm << endl;
-#endif
             // insert to table
             ht_insert(blacklist, url_norm, &bl, strlen(url_norm));
             free(url_norm);
@@ -345,60 +340,76 @@ void *check_dns(void *args)
     vector<upd_item_t> add_upd;
     vector<upd_item_t> rm_upd;
 
+    unsigned dets = 0, flows = 0;
+
     while (!stop) {
-#ifdef DEBUG
-        cout << "DNS: Waiting for data ..." << endl;
-#endif
         retval = trap_get_data(0x1, &record, &record_size, TRAP_WAIT);
-        if (retval == TRAP_E_TERMINATED) {
-            retval = EXIT_SUCCESS;
-            break;
-        } else {
-            cerr << "ERROR: DNS thread cannot recieve data. Unable to continue." << endl;
-            break;
+        if (retval != TRAP_E_OK) {
+            if (retval == TRAP_E_TERMINATED) {
+                retval = EXIT_SUCCESS;
+                break;
+            } else {
+                cerr << "ERROR: DNS thread cannot recieve data. Unable to continue." << endl;
+                break;
+            }
         }
-#ifdef DEBUG
-        cout << "DNS: Checking data ..." << endl;
-#endif
-        if (record_size /* minus the size of domain name */ != ur_rec_static_size(params->input)) {
+        if ((record_size - ur_rec_dynamic_size(params->input,record)) != ur_rec_static_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
                 break;
             } else {
                 cerr << "ERROR: Wrong data size. ";
                 cerr << "Expected: " << ur_rec_static_size(params->input) << " ";
-                cerr << "Recieved: " << record_size /* minus the size of domain name */ << " in static part." << endl;
+                cerr << "Recieved: " << record_size - ur_rec_dynamic_size(params->input,record) << " in static part." << endl;
                 retval = EXIT_FAILURE;
                 break;
             }
         }
 
+        flows++;
+
+        if (ur_get(params->input, record, UR_DNS_QTYPE) != 1 && ur_get(params->input, record, UR_DNS_QTYPE) != 28)
+            continue;
+
 #ifdef DEBUG
-        cout << "DNS: Checking obtained domain name ..." << endl;
+        char *dn = ur_get_dyn(params->input, record, UR_DNS_NAME);
+//        cout << "DNS: Checking obtained domain name " << dn << " ..." << endl;
 #endif
+
+	int s = ur_get_dyn_size(params->input, record, UR_DNS_NAME) - 1;
+        if (s < 0) {
+            s = 0;
+        }
         // check blacklist for recieved domain name
-        //is_dns = ht_get_index(params->dns_table, ur_get_dyn(params->input, record, DNS/URL), ur_get_dyn_size(params->input, record, DNS/URL));
+        is_dns = ht_get(params->dns_table, ur_get_dyn(params->input, record, UR_DNS_NAME), s);
         if (is_dns != NULL) {
 
 #ifdef DEBUG
-            cout << "DNS: Match found. Sending report ..." << endl;
-#endif            
+            cout << "DNS: Match found (" << dn << "). Sending report ..." << endl;
+            dets++;
+#endif
 //            ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
 #ifdef DEBUG
-            cout << "DNS: Updating IP table for IP thread ..." << endl;
-#endif
-            /* 
-             * update IP table 
-             * IP will be extracted from recieved DNS data
-             */
-/*            if (ht_get_v2(params->ip_table, ur_get(params->input, UR_SRC_IP)) == NULL) {
-                ht_insert_v2(params->ip_table, ur_get(params->input, UR_SRC_IP), is_dns);
+            if (ur_get(params->input, record, UR_DNS_RLENGTH) == 4) {
+                string resp = string(ur_get_dyn(params->input, record, UR_DNS_RDATA));
+                cout << "DNS: Updating IP table for IP thread " << resp << " ..." << endl;
             }
-            if (ht_get_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes) == NULL) {
-                ht_insert_v2(params->ip_table, (char *) ur_get(params->input, record, UR_DST_IP).bytes, is_dns);
-            }*/
+#endif
+             
+            if (ur_get(params->input, record, UR_DNS_RLENGTH) == 4 || ur_get(params->input, record, UR_DNS_RLENGTH) == 16) {
+                char *ip = ur_get_dyn(params->input, record, UR_DNS_RDATA);
+                void *bl = NULL;
+                ip_addr_t ip_conv;
+                if (ip_from_str(ip, &ip_conv)) {
+                    if ((bl = ht_get_v2(params->ip_table, (char *) ip_conv.bytes)) == NULL) {
+                        ht_insert_v2(params->ip_table, (char *) ip_conv.bytes, is_dns);
+                    } else {
+                        *(uint8_t *) bl = *(uint8_t *) is_dns;
+                    }
+                }
+            }
         } else {
             // drop the record
         }
@@ -417,11 +428,16 @@ void *check_dns(void *args)
             if (!add_upd.empty()) {
                 update_add(params->dns_table, add_upd);
             }
+
+            // clean update vectors for another use
+            rm_upd.clear();
+            add_upd.clear();
         }
     }
 
 #ifdef DEBUG
     cout << "DNS: Terminating ..." << endl;
+    cout << dets << "/" << flows << " blacklisted domains." << endl;
 #endif
 
     if (retval) {
@@ -454,22 +470,29 @@ void* check_ip(void *args)
     const void* record;
     uint16_t record_size;
 
-    while (!stop) {
 #ifdef DEBUG
-        cout << "IP: Waiting for data ..." << endl;
+    unsigned dets = 0, flows = 0;
+    char matched[INET6_ADDRSTRLEN];
 #endif
+
+    while (!stop) {
+/*#ifdef DEBUG
+        cout << "IP: Waiting for data ..." << endl;
+#endif*/
         // recieve data
         retval = trap_get_data(0x2, &record, &record_size, TRAP_WAIT);
-        if (retval == TRAP_E_TERMINATED) {
-            retval = EXIT_SUCCESS;
-            break;
-        } else {
-            cerr << "ERROR: IP thread cannot recieve data. Unable to continue." << endl;
-            break;
+        if (retval != TRAP_E_OK) {
+            if (retval == TRAP_E_TERMINATED) {
+                retval = EXIT_SUCCESS;
+                break;
+            } else {
+                cerr << "ERROR: IP thread cannot recieve data. Unable to continue." << endl;
+                break;
+            }
         }
-#ifdef DEBUG
+/*#ifdef DEBUG
         cout << "IP: Checking data ..." << endl;
-#endif
+#endif*/
         // check the recieved data size
         if (record_size != ur_rec_static_size(params->input)) {
             if (record_size <= 1) { // trap terminated
@@ -483,19 +506,25 @@ void* check_ip(void *args)
                 break;
             }
         }
+
+        flows++;
         
         ip = ur_get(params->input, record, UR_SRC_IP);    
 
         // try to match the blacklist for src IP
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
 
-#ifdef DEBUG
+/*#ifdef DEBUG
         cout << "IP: Checking obtained IP addresses ..." << endl;
-#endif
+#endif*/
 
         if (bl != NULL) {
             ur_set(params->output, params->detection, UR_SRC_BLACKLIST, *(uint8_t*) bl);
             marked = true;
+#ifdef DEBUG
+            ip_to_str(&ip, matched);
+            cout << "IP: Source " << matched << " found in blacklist." << endl;
+#endif
         }
 
         ip = ur_get(params->output, record, UR_DST_IP);
@@ -506,17 +535,24 @@ void* check_ip(void *args)
         if (bl != NULL) {
             ur_set(params->output, params->detection, UR_DST_BLACKLIST, *(uint8_t*) bl);
             marked = true;
+#ifdef DEBUG
+            ip_to_str(&ip, matched);
+            cout << "IP: Destination " << matched << " found in blacklist." << endl;
+#endif
         }
 
         if (marked) {
 #ifdef DEBUG
-            cout << "IP: Match found. Sending report ..." << endl;
+            cout << "IP: Sending report ..." << endl;
+            dets++;
 #endif            
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
+            marked = false;
         }
     }
 #ifdef DEBUG
     cout << "IP: Terminating ..." << endl;
+    cout << dets << "/" << flows << " blacklisted IPs." << endl;
 #endif
 
     if (retval != EXIT_SUCCESS) {
@@ -552,8 +588,8 @@ int main (int argc, char** argv)
     ur_template_t *dns_input, *ip_input, *dns_det, *ip_det;
 
     // link templates
-    dns_input = ur_create_template("<COLLECTOR_FLOW>,<DNS>"); // + DNS request items
-    ip_input = ur_create_template("<COLLECTOR_FLOW>");
+    dns_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<DNS>");
+    ip_input = ur_create_template("<COLLECTOR_FLOW>,SMTP_FLAGS");
     dns_det = ur_create_template("<BASIC_FLOW>,DNS_BLACKLIST"); // + DNS blacklist flag
     ip_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
 
@@ -720,26 +756,17 @@ int main (int argc, char** argv)
     cout << "Cleaning up..." << endl;
 #endif
     trap_finalize();
-#ifdef DEBUG
-    cout << "TRAP Offline" << endl;
-#endif
-    ur_free(ip_thread_params.detection);
+    DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
+                       dns_thread_params.input, dns_thread_params.output,
+                       ip_thread_params.input, ip_thread_params.output,
+                       dns_thread_params.detection, ip_thread_params.detection);
+/*    ur_free(ip_thread_params.detection);
     ur_free(dns_thread_params.detection);
-
-#ifdef DEBUG
-    cout << "Detection records destroyed" << endl;
-#endif
     ur_free_template(ip_thread_params.input);
     ur_free_template(dns_thread_params.input);
     ur_free_template(ip_thread_params.output);
     ur_free_template(dns_thread_params.output);
-#ifdef DEBUG
-    cout << "UR templates destroyed" << endl;
-#endif
     ht_destroy_v2(ip_thread_params.ip_table);
-    ht_destroy(dns_thread_params.dns_table);
-#ifdef DEBUG
-    cout << "Tables destroyed -- Terminating ..." << endl;
-#endif 
+    ht_destroy(dns_thread_params.dns_table);*/
     return EXIT_SUCCESS;
 }

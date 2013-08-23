@@ -146,10 +146,11 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
         // load file line by line
         while (!in.eof()) {
             getline(in, line);
+/*
 #ifdef DEBUG
             cout << line << endl;
 #endif
-
+*/
             // don't add the remaining empty line
             if (!line.length()) {
                 continue;
@@ -171,9 +172,11 @@ int load_url(cc_hash_table_t& blacklist, const char* path)
                 in.close();
                 break;
             }
+/*
 #ifdef DEBUG
             cout << url_norm << endl;
 #endif
+*/
             // insert to table
             ht_insert(&blacklist, url_norm, &bl, strlen(url_norm));
             free(url_norm);
@@ -306,13 +309,18 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
     uint8_t* bl = NULL;
 
     // try to find the URL in table.
+
+#ifdef DEBUG
+    int s = ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST);
+#endif
+
     bl = (uint8_t *) ht_get(&blacklist, url, ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST));
 
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
         ur_set(out, detect, UR_URL_BLACKLIST, *bl);
 #ifdef DEBUG
-        cout << "URL \"" << url << "\" has been found in blacklist." << endl;
+        cout << "URL \"" << string(url,s) << "\" has been found in blacklist." << endl;
 #endif
         return BLACKLISTED;
     }
@@ -389,7 +397,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    ur_template_t* templ = ur_create_template("HTTP_REQUEST_HOST");
+    ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<HTTP>");
     ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>,URL_BLACKLIST"); // will be extended with URL_BLACKLIST
 
     // zero dynamic size for now, may change in future if URL will be passed.
@@ -475,13 +483,13 @@ int main (int argc, char** argv)
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
         // check the data size -- we can only check static part since URL is dynamic
-        if ((data_size - ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST)) != ur_rec_static_size(templ)) {
+        if ((data_size - ur_rec_dynamic_size(templ,data)) != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
                 cerr << "Expected: " << ur_rec_static_size(templ) << " ";
-                cerr << "Recieved: " << data_size - ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST) << " in static part." << endl;
+                cerr << "Recieved: " << data_size - ur_rec_dynamic_size(templ,data) << " in static part." << endl;
                 break;
             }
         }
