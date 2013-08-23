@@ -776,6 +776,7 @@ int main (int argc, char** argv)
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
     // is directory with sources specified ? (should be in control script)
     if (argc != 2) {
         cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
