@@ -872,7 +872,11 @@ int main (int argc, char** argv)
         }
         
         if (retval == BLACKLISTED) {
+#ifdef DEBUG
+            cout << "Sending report ..." << endl;
+#endif
             ur_set(tmpl_det, detection, UR_TIME_FIRST, ur_get(templ, data, UR_TIME_FIRST));
+            ur_set(tmpl_det, detection, UR_PROTOCOL, ur_get(templ, data, UR_PROTOCOL));
             ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
             ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
             ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));
