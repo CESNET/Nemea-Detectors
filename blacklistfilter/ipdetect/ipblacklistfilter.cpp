@@ -474,14 +474,12 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        ur_set(ur_det, detected, UR_SRC_IP, ip);
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        ur_set(ur_det, detected, UR_DST_IP, ip);
         marked = true;
     }
  
@@ -523,7 +521,6 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        ur_set(ur_det, detected, UR_SRC_IP, ip);
         marked = true;
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
@@ -533,7 +530,6 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        ur_set(ur_det, detected, UR_DST_IP, ip);
         marked = true;
     }
  
@@ -875,6 +871,8 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Sending report ..." << endl;
 #endif
+            ur_set(tmpl_det, detection, UR_SRC_IP, ur_get(templ, data, UR_SRC_IP));
+            ur_set(tmpl_det, detection, UR_DST_IP, ur_get(templ, data, UR_DST_IP));
             ur_set(tmpl_det, detection, UR_TIME_FIRST, ur_get(templ, data, UR_TIME_FIRST));
             ur_set(tmpl_det, detection, UR_PROTOCOL, ur_get(templ, data, UR_PROTOCOL));
             ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
