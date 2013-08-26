@@ -736,8 +736,8 @@ int main (int argc, char** argv)
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
 //    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
-    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>,SMTP_FLAGS");
+    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST");
 
 
     // for use with prefixes (not implemented now)
