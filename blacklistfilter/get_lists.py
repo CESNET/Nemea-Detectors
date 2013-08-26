@@ -38,9 +38,6 @@
  *
 """
 
-# address = unicode(address, 'utf-8')
-# address = address.encode('idna')
-
 import os
 import re
 import subprocess
@@ -50,6 +47,7 @@ from shutil import copy
 from socket import AF_INET
 from socket import AF_INET6
 from socket import inet_pton
+from time import sleep
 
 from funcs import create_directory
 from funcs import error
@@ -59,7 +57,6 @@ from funcs import report
 from funcs import write_dict_data
 
 source = namedtuple( 'source', 'file_name address' )
-convertor = namedtuple( 'convertor', 'path name' )
 detector = namedtuple( 'detector', 'name check')
 
 detectors = []
@@ -74,6 +71,15 @@ addr_col = 1
 warden = False
 warden_type = None
 local = False
+
+def get_updates_path( detector_name ):
+   return cwd + '/' + detector_name + 'detect/update/'
+
+def get_new_conv_path( order, detector_name ):
+   return sources_path + '.' + order + '.' + detector_name
+
+def get_old_conv_path( order, detector_name ):
+   return sources_path + order + '.' + detector_name
 
 def diff( old, new ):
    command = 'grep -vhFxf ' + old + ' ' + new
@@ -92,7 +98,7 @@ def check_cols( line, expected_len ):
    return True
 
 def check_domain( address ):
-   report( "Checking address for a domain." )
+   #report( "Checking address for a domain." )
    return re.match(
    r'^'
       r'(?!' # Address doesn't contain IPv4
@@ -109,26 +115,29 @@ def check_domain( address ):
    r'$', address, re.IGNORECASE)
 
 def check_ip( address ):
-   report( "Checking address for an IP." )
+   #report( "Checking address for an IP." )
 
    if ':' in address:
-      report( "Assuming IPv6 address." )
+      #report( "Assuming IPv6 address." )
       family = AF_INET6
    else:
-      report( "Assuming IPv4 address." )
+      #report( "Assuming IPv4 address." )
       family = AF_INET
 
    try:
       inet_pton( family, address )
    except:
-      report( "Invalid address: \'" + address + "\'." )
+      #report( "Invalid address: \'" + address + "\'." )
       return False
    return True
 
 def check_url( address ):
-   report( "Checking address for an URL." )
+   #report( "Checking address for an URL." )
    return re.match(
    r'^'
+      r'(?!' # Address doesn't contain IPv4
+         r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+      r')'
       r'(?:http(?:s)?://)?(?:www\.)?' # Address may start with (http(s)://)(www.)
       r'(?:'
          r'(?:' # continues with
@@ -164,6 +173,10 @@ def check_url( address ):
 def check_hash( address ):
    return False
 
+def normalize_name( name ):
+   name = unicode(name, 'utf-8')
+   return name.encode('idna')
+
 def save_addr_into_dicts( addr_path ):
    addr_file = open_file( addr_path, 'r' )
    if not addr_file:
@@ -178,24 +191,39 @@ def save_addr_into_dicts( addr_path ):
    addr_line = addr_file.readline()
    while addr_line:
       if not check_line( addr_line ):
-         report( "Line " + str( line_count ) + " in a file \'" + addr_path + "\' doesn\'t start with an alpha-numeric character. Skipping." )
+         #report( "Line " + str( line_count ) + " in a file \'" + addr_path + "\' doesn\'t start with an alpha-numeric character. Skipping." )
          addr_line = addr_file.readline()
          line_count += 1
          continue
 
       addr_line = addr_line.split( delimiter )
       if not check_cols( addr_line, cols ):
-         report( "Number of columns in a file \'" + addr_path + "\' on a line " + str( line_count ) + " doesn\'t match with expected " + str( cols ) + ". Skipping." )
+         #report( "Number of columns in a file \'" + addr_path + "\' on a line " + str( line_count ) + " doesn\'t match with expected " + str( cols ) + ". Skipping." )
          addr_line = addr_file.readline()
          line_count += 1
          continue
 
       addr = addr_line[addr_col-1].lstrip().rstrip()
-      report( "Received address: \'" + addr + "\'." )
+      #report( "Received address: \'" + addr + "\'." )
 
       for i in range( len( detectors ) ):
          if detectors[i].check( addr ):
-            report( "Saving valid \'" + detectors[i].name + "\' detector address.")
+            #report( "Saving valid \'" + detectors[i].name + "\' detector address.")
+
+            if detectors[i].check.__name__ == 'check_domain':
+               addr = normalize_name( addr )
+
+            elif detectors[i].check.__name__ == 'check_url':
+               if '://' in addr:
+                  start_pos = addr.find('://') + 3
+                  end_pos = start_pos + addr[start_pos:].find('/')
+                  subaddr = normalize_name( addr[start_pos:end_pos] )
+                  addr = addr[:start_pos] + subaddr + addr[end_pos:]
+               else:
+                  pos = addr.find('/')
+                  subaddr = normalize_name( addr[:pos] )
+                  addr = subaddr + addr[pos:]
+
             exports[i].update({addr:None})
 
       addr_line = addr_file.readline()
@@ -210,14 +238,17 @@ def convert_raw_file( raw_path, order ):
       return False
 
    converted_list = []
-   for i in range( len( dicts ) ):
-      updates_name = '.' + str( order ) + '.' + detectors[i].name
-      updates_path = sources_path + updates_name
+   if len( detectors ) != len( dicts ):
+      error("Number of detectors is not the same as the number of saved dictionaries. Weird. 0_______o")
+      return False
+
+   for i in range( len( detectors ) ):
+      new_conv_path = get_new_conv_path( order, detectors[i].name )
 
       if dicts[i]:
-         if not write_dict_data( dicts[i], updates_path, 'keys' ):
+         if not write_dict_data( dicts[i], new_conv_path, 'keys' ):
             return False
-         converted_list.append( convertor( updates_path, updates_name ) )
+         converted_list.append( new_conv_path )
 
    return converted_list
 
@@ -253,71 +284,62 @@ def read_sources( source_path ):
 
    return sources
 
-def replace_old_versions( new_raw_path, old_raw_path, order ):
+def replace_old_versions( new_raw_path, old_raw_path, order, parameter ):
+   report("Replace old versions called.")
    if os.path.exists( old_raw_path ):
       os.remove( old_raw_path )
    os.rename( new_raw_path, old_raw_path )
 
    for i in range( len( detectors ) ):
-      new_conv_path = sources_path + '.' + order + '.' + detectors[i].name
+      new_conv_path = get_new_conv_path( order, detectors[i].name )
+      old_conv_path = get_old_conv_path( order, detectors[i].name )
+      update_path = get_updates_path( detectors[i].name ) + order
+
       if not os.path.exists( new_conv_path ):
+         report( "Newly converted file for \'" + new_conv_path + "\' doesn\'t exist." )
          continue
 
-      old_conv_path = cwd + '/' + detectors[i].name + 'detect/update/' + order
-      if os.path.exists( old_conv_path ):
-         os.remove( old_conv_path )
+      report( "Changing temporary converted file name to permanent." )
       os.rename( new_conv_path, old_conv_path )
 
-def save_conv_diffs( old_conv_path, new_conv_path, out_path ):
-   if not os.path.exists( old_conv_path ) or not os.path.exists( new_conv_path ):
-      raise NameError( "One of converted files doesn\'t exist." )
-      return False
-   add = diff( old_conv_path, new_conv_path )
-   rem = diff( new_conv_path, old_conv_path )
+def save_conv_diffs( order ):
+   for i in range( len( detectors ) ):
+      new_conv_path = get_new_conv_path( order, detectors[i].name )
+      old_conv_path = get_old_conv_path( order, detectors[i].name )
+      update_path = get_updates_path( detectors[i].name ) + order
+      if not os.path.exists( old_conv_path ) or not os.path.exists( new_conv_path ):
+         continue
 
-   if not add and not rem:
-      return False
+      add = diff( old_conv_path, new_conv_path )
+      rem = diff( new_conv_path, old_conv_path )
 
-   out_file = open_file( out_path, 'w' )
-   if not out_file:
-      return False
-   out_file.write( add + '# remove\n' + rem )
-   out_file.close()
+      if not add and not rem:
+         report( "Removing previous update file." )
+         if os.path.exists( update_path ):
+            os.remove( update_path )
+         continue
+
+      out_file = open_file( update_path, 'w' )
+      if not out_file:
+         return False
+      report( "Saving diff file." )
+      out_file.write( add + '# remove\n' + rem )
+      out_file.close()
+   return True
 
 def delete_converted( order ):
    for i in range( len( detectors ) ):
-      new_conv_path = sources_path + '.' + order + '.' + detectors[i].name
+      new_conv_path = get_new_conv_path( order, detectors[i].name )
       if os.path.exists( new_conv_path ):
          os.remove( new_conv_path )
 
 def create_update_dirs():
    for i in range( len( detectors ) ):
-      updates_path = cwd + '/' + detectors[i].name + 'detect/update/'
-      if not create_directory( updates_path ):
+      if not create_directory( get_updates_path( detectors[i].name ) ):
          for j in range( i ):
-            updates_path = cwd + '/' + detectors[j].name + 'detect/update/'
-            os.remove( updates_path )
+            os.remove( get_updates_path( detectors[j].name ) )
          return False
    return True
-
-def getter_init():
-   global detectors
-   detectors.append( detector( 'ip', check_ip ) )
-   detectors.append( detector( 'dns', check_domain ) )
-   detectors.append( detector( 'url', check_url ) )
-   detectors.append( detector( 'hash', check_hash ) )
-
-def compare_converted( converted, detector, order ):
-   updates_path = cwd + '/' + detector.name + 'detect/update/'
-   detector_path = updates_path + order
-
-   if not os.path.exists( detector_path ):
-      copy( converted.path, detector_path )
-      replace_old_version( detector_path, converted.path )
-      os.rename( converted.path, sources_path + order + '.' + detector.name )
-   else:
-      if not save_conv_diffs( old_ips_path, converted.path, detector_path ):
-         return False
 
 def delete_updates( order ):
    for i in range( len( detectors ) ):
@@ -325,8 +347,32 @@ def delete_updates( order ):
       if os.path.exists( updates_path ):
          os.remove( updates_path )
 
+def assign_cfg_values( current_config ):
+   config = {}
+   if os.path.exists ( current_config ):
+      config = read_config( conf_name = current_config )
+   global cols
+   global delimiter
+   global addr_col
+   global warden
+   global warden_type
+   global local
+   cols = config.get( 'columns', 1 )
+   delimiter = config.get( 'delimiter', ' ' )
+   addr_col = config.get( 'addr_col', 1 )
+   warden = bool( config.get( 'warden', False ) )
+   warden_type = config.get( 'warden_type', None )
+   local = bool( config.get( 'local', False ) )
+
+def get_init():
+   global detectors
+   detectors.append( detector( 'ip', check_ip ) )
+   detectors.append( detector( 'dns', check_domain ) )
+   detectors.append( detector( 'url', check_url ) )
+   detectors.append( detector( 'hash', check_hash ) )
+
 def get_lists( parameter = 'update' ):
-   getter_init()
+   get_init()
 
    sources = read_sources( source_path )
 
@@ -337,6 +383,7 @@ def get_lists( parameter = 'update' ):
       return False
 
    for i in range( 0, len( sources ) ):
+      report( "-----------------------------------------------------------------------------------------------" )
       order = sources[i].file_name.split( '.' )[1]
       address = sources[i].address
       old_raw_name = sources[i].file_name
@@ -344,29 +391,14 @@ def get_lists( parameter = 'update' ):
       old_raw_path = sources_path + old_raw_name
       new_raw_path = sources_path + new_raw_name
 
-      # Get variables from config or assign implicit values
       current_config = cwd + '/configure/conf.' + old_raw_name
-      config = {}
-      if os.path.exists ( current_config ):
-         config = read_config( conf_name = current_config )
-      global cols
-      global delimiter
-      global addr_col
-      global warden
-      global warden_type
-      global local
-      cols = config.get( 'columns', 1 )
-      delimiter = config.get( 'delimiter', ' ' )
-      addr_col = config.get( 'addr_col', 1 )
-      warden = bool( config.get( 'warden', False ) )
-      warden_type = config.get( 'warden_type', None )
-      local = bool( config.get( 'local', False ) )
+      assign_cfg_values( current_config )
 
       if warden:
          if not warden_type:
             error( "Warden request type is not specified in a file \'" + current_config + "\'. Skipping." )
             continue
-         command = 'perl hostrecvwarden.pl'
+         command = 'perl hostrecvwarden.pl ' + warden_type + ' > ' + new_raw_path
          cols = 13
          addr_col = 7
          delimiter = ','
@@ -378,15 +410,17 @@ def get_lists( parameter = 'update' ):
 
       report( "Obtaining \'" + old_raw_name + "\'." )
 
-      if not warden and not local:
-         os.system( command )
-      elif local:
+      if not local:
+         tmp = subprocess.Popen(['-c', command], shell = True )
+         tmp.wait()
+      else:
          copy( address, new_raw_path )
 
       if not os.path.exists( new_raw_path ):
-         error( "Obtaining \'" + old_raw_name + "\' has FAILED, skipping." )
+         error( "Obtaining \'" + old_raw_name + "\' has FAILED. Skipping." )
          continue
 
+      report( "I'm continuing hapilly :)" )
       # Update existing blacklist
       if os.path.exists( old_raw_path ) and parameter == 'update':
          report( "Obtained \'" + old_raw_name + "\' as \'" + new_raw_name + "\'." )
@@ -398,36 +432,46 @@ def get_lists( parameter = 'update' ):
             continue
 
          report( "Obtained file is newer." )
-         converted = convert_raw_file( new_raw_path, order )
-         if not converted:
+         if not convert_raw_file( new_raw_path, order ):
             delete_converted( order )
             os.remove( new_raw_path )
+            continue
+         report( "File successfully converted." )
 
          if not create_update_dirs():
             delete_converted( order )
             os.remove( new_raw_path )
-
-         failed = False
-         for j in range( len( converted ) ):
-            if not compare_converted( converted[j], order ):
-               delete_converted( order )
-               os.remove( new_raw_path )
-               failed = True
-               break
-
-         if failed:
             continue
+         report( "Update dirs created." )
 
-   # Save new blacklist
+         if not save_conv_diffs( order ):
+            delete_converted( order )
+            os.remove( new_raw_path )
+            continue
+         report( "Saved converted files diffs." )
+         replace_old_versions( new_raw_path, old_raw_path, order, parameter )
+
+      # Save new blacklist
       else:
          report( "Obtained \'" + old_raw_name + "\' for the first time." )
-         converted = convert_raw_file( new_raw_path, order )
-         if not converted:
-            os.remove ( new_raw_path )
+         if not convert_raw_file( new_raw_path, order ):
+            delete_converted( order )
+            os.remove( new_raw_path )
             continue
+         report( "File successfully converted." )
 
          if not create_update_dirs():
             delete_converted( order )
             os.remove( new_raw_path )
+            continue
+         report( "Update dirs created." )
+         replace_old_versions( new_raw_path, old_raw_path, order, parameter )
 
-      replace_old_versions( new_raw_path, old_raw_path, order )
+         for i in range( len( detectors ) ):
+            old_conv_path = get_old_conv_path( order, detectors[i].name )
+            update_path = get_updates_path( detectors[i].name ) + order
+            if os.path.exists( old_conv_path ):
+               report( "Copied converted file into update folder." )
+               copy( old_conv_path, update_path )
+
+   return True
