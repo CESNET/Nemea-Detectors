@@ -956,5 +956,5 @@ int main (int argc, char** argv)
     ht_destroy(&hash_blacklist);
     trap_finalize();
 
-    return retval;
+    return EXIT_SUCCESS;
 }
