@@ -880,6 +880,7 @@ int main (int argc, char** argv)
             ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
             ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
             ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));
+            ur_set(tmpl_det, detection, UR_DIR_BIT_FIELD, ur_get(templ, data, UR_DIR_BIT_FIELD));
             trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
 #ifdef DEBUG
             bl_count++;
