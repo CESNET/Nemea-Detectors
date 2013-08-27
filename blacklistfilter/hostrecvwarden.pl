@@ -25,7 +25,7 @@ require $warden_path . '/lib/WardenClientReceive.pm';
 
 # Definition of requested event type. This attributes is also set on server
 # and must not change.
-my $requested_type = "portscan";
+my $requested_type = $ARGV[0];
 
 # Download of new evetns from Warden server
 my @new_events = WardenClientReceive::getNewEvents($warden_path, $requested_type);

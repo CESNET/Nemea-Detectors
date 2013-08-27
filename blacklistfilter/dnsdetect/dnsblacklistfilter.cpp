@@ -416,9 +416,9 @@ void *check_dns(void *args)
 
         // recieved update signal?
         if (update) {
-/*#ifdef DEBUG
+#ifdef DEBUG
             cout << "DNS: Updating DNS table ..." << endl;
-#endif*/
+#endif
             update = 0;
             retval = load_update(add_upd, rm_upd, params->upd_path);
 
@@ -428,6 +428,10 @@ void *check_dns(void *args)
             if (!add_upd.empty()) {
                 update_add(params->dns_table, add_upd);
             }
+
+            // clean update vectors for another use
+            rm_upd.clear();
+            add_upd.clear();
         }
     }
 

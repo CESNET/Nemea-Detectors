@@ -475,12 +475,16 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
+    } else {
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
+    } else {
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
  
 // else
@@ -522,6 +526,8 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
+    } else {
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
     }
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
@@ -531,6 +537,8 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         marked = true;
+    } else {
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
  
     if (marked) {
@@ -732,9 +740,8 @@ int main (int argc, char** argv)
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
 //    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
-    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
-
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>,SMTP_FLAGS");
+    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST");
 
     // for use with prefixes (not implemented now)
     black_list_t v4_list; 
@@ -772,6 +779,7 @@ int main (int argc, char** argv)
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
     // is directory with sources specified ? (should be in control script)
     if (argc != 2) {
         cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
@@ -868,7 +876,20 @@ int main (int argc, char** argv)
         
         if (retval == BLACKLISTED) {
 #ifdef DEBUG
+            cout << "Sending report ..." << endl;
+#endif
+            ur_set(tmpl_det, detection, UR_SRC_IP, ur_get(templ, data, UR_SRC_IP));
+            ur_set(tmpl_det, detection, UR_DST_IP, ur_get(templ, data, UR_DST_IP));
+            ur_set(tmpl_det, detection, UR_SRC_PORT, ur_get(templ, data, UR_SRC_PORT));
+            ur_set(tmpl_det, detection, UR_DST_PORT, ur_get(templ, data, UR_DST_PORT));
+            ur_set(tmpl_det, detection, UR_TIME_FIRST, ur_get(templ, data, UR_TIME_FIRST));
+            ur_set(tmpl_det, detection, UR_PROTOCOL, ur_get(templ, data, UR_PROTOCOL));
+            ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
+            ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
+            ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));
+            ur_set(tmpl_det, detection, UR_DIR_BIT_FIELD, ur_get(templ, data, UR_DIR_BIT_FIELD));
             trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
+#ifdef DEBUG
             bl_count++;
 #endif
         }
@@ -942,5 +963,5 @@ int main (int argc, char** argv)
     ht_destroy(&hash_blacklist);
     trap_finalize();
 
-    return retval;
+    return EXIT_SUCCESS;
 }
