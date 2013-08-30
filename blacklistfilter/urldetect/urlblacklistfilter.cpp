@@ -398,19 +398,8 @@ int main (int argc, char** argv)
     }
 
     ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<HTTP>");
-    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>,URL_BLACKLIST"); // will be extended with URL_BLACKLIST
+    ur_template_t* det = ur_create_template("<BASIC_FLOW>,URL_BLACKLIST,HTTP_REQUEST_URL"); // + BLACKLIST_TYPE
 
-    // zero dynamic size for now, may change in future if URL will be passed.
-    void *detection = ur_create(det, 0);
-
-    if (detection == NULL) {
-        cerr << "ERROR: No memory available for detection record. Unable to continue." << endl;
-        ur_free_template(templ);
-        ur_free_template(det);
-        ht_destroy(&blacklist);
-        return EXIT_FAILURE;
-    }
-    
     // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
@@ -422,7 +411,6 @@ int main (int argc, char** argv)
         ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
-        ur_free(detection);
         return EXIT_FAILURE;
     }
 
@@ -440,7 +428,6 @@ int main (int argc, char** argv)
         ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
-        ur_free(detection);
         return EXIT_FAILURE;
     }
 
@@ -462,7 +449,6 @@ int main (int argc, char** argv)
         trap_finalize();
         ur_free_template(templ);
         ur_free_template(det);
-        ur_free(detection);
         ht_destroy(&blacklist);
         return EXIT_FAILURE;
     }
@@ -497,6 +483,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
         ++recieved;
 #endif
+        void *detection = ur_create(det, ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST) + ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_URL));
 
         // check for blacklist match
         retval = check_blacklist(blacklist, templ, det, data, detection);
@@ -506,8 +493,12 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             ++marked;
 #endif
+            string url = string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_HOST)) + string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_URL));
+            memcpy(ur_get_dyn(det, detection, UR_HTTP_REQUEST_URL), url.c_str(), url.length());
             trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
         }
+
+        ur_free(detection);
 
         // should update?
         if (update) {
@@ -547,7 +538,6 @@ int main (int argc, char** argv)
     // clean up before termination
     ur_free_template(templ);
     ur_free_template(det);
-    ur_free(detection);
     ht_destroy(&blacklist);
     trap_finalize();
 
