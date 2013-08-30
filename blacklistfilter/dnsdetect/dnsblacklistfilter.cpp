@@ -395,8 +395,8 @@ void *check_dns(void *args)
             ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
             
             // copy DNS NAME to detection record
-            memcpy(dn, ur_get_dyn(params->output, params->detection, UR_DNS_NAME), ur_get_dyn_size(params->input, record, UR_DNS_NAME));
-            *(uint16_t*)ur_get_ptr(params->output, params->detection, UR_DNS_NAME) = s + 1;
+            memcpy(ur_get_dyn(params->output, params->detection, UR_DNS_NAME), dn, ur_get_dyn_size(params->input, record, UR_DNS_NAME));
+            *(uint16_t*)ur_get_ptr(params->output, params->detection, UR_DNS_NAME) = ur_get_dyn_size(params->input, record, UR_DNS_NAME);
 #ifdef DEBUG
             dn = ur_get_dyn(params->output, params->detection, UR_DNS_NAME);
 #endif
