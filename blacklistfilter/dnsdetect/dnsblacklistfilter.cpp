@@ -630,15 +630,13 @@ int main (int argc, char** argv)
             trap_print_help(&module_info);
             DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                                dns_thread_params.input, dns_thread_params.output,
-                               ip_thread_params.input, ip_thread_params.output,
-                               dns_thread_params.detection, ip_thread_params.detection);
+                               ip_thread_params.input, ip_thread_params.output);
              return EXIT_SUCCESS;
         }
         cerr << "ERROR: Cannot parse input parameters: " << trap_last_error_msg << endl;
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
          return retval;
     }
     
@@ -648,8 +646,7 @@ int main (int argc, char** argv)
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
         return retval;
     }
 
@@ -663,8 +660,7 @@ int main (int argc, char** argv)
         trap_finalize();
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
         return EXIT_FAILURE;
     }
 
@@ -676,8 +672,7 @@ int main (int argc, char** argv)
         trap_finalize();
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
 
         return EXIT_FAILURE;
     }
@@ -689,8 +684,7 @@ int main (int argc, char** argv)
         trap_finalize();
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
         return EXIT_FAILURE;
     }
 
@@ -714,8 +708,7 @@ int main (int argc, char** argv)
         trap_finalize();
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
         return EXIT_FAILURE;
     }
 
@@ -728,8 +721,7 @@ int main (int argc, char** argv)
         trap_finalize();
         DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
         return EXIT_FAILURE;
     }
 
@@ -751,8 +743,7 @@ int main (int argc, char** argv)
             trap_finalize();
             DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
             exit(EXIT_FAILURE);
         }
 
@@ -763,8 +754,7 @@ int main (int argc, char** argv)
             trap_finalize();
             DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                            dns_thread_params.input, dns_thread_params.output,
-                           ip_thread_params.input, ip_thread_params.output,
-                           dns_thread_params.detection, ip_thread_params.detection);
+                           ip_thread_params.input, ip_thread_params.output);
             exit(EXIT_FAILURE);
         }
     }
@@ -777,15 +767,7 @@ int main (int argc, char** argv)
     trap_finalize();
     DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                        dns_thread_params.input, dns_thread_params.output,
-                       ip_thread_params.input, ip_thread_params.output,
-                       dns_thread_params.detection, ip_thread_params.detection);
-/*    ur_free(ip_thread_params.detection);
-    ur_free(dns_thread_params.detection);
-    ur_free_template(ip_thread_params.input);
-    ur_free_template(dns_thread_params.input);
-    ur_free_template(ip_thread_params.output);
-    ur_free_template(dns_thread_params.output);
-    ht_destroy_v2(ip_thread_params.ip_table);
-    ht_destroy(dns_thread_params.dns_table);*/
+                       ip_thread_params.input, ip_thread_params.output);
+    ur_free(ip_thread_params.detection);
     return EXIT_SUCCESS;
 }
