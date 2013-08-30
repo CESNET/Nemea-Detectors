@@ -394,8 +394,12 @@ void *check_dns(void *args)
             // set blacklist
             ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
             
-            // copy DNS NAME to detction record
+            // copy DNS NAME to detection record
             memcpy(dn, ur_get_dyn(params->output, params->detection, UR_DNS_NAME), ur_get_dyn_size(params->input, record, UR_DNS_NAME));
+            *(uint16_t*)ur_get_ptr(params->output, params->detection, UR_DNS_NAME) = s + 1;
+#ifdef DEBUG
+            dn = ur_get_dyn(params->output, params->detection, UR_DNS_NAME);
+#endif
             
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
