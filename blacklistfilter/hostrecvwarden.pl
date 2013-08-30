@@ -33,15 +33,10 @@ my @new_events = WardenClientReceive::getNewEvents($warden_path, $requested_type
 #------------------------------------------------------------------------------
 # Simple code that prints out new events obtained from Warden server.
 
-print "+------------------------------------------------------------------------------------------------------------------------------------------+\n";
-print "| id | hostname | service | detected | type | source_type | source | target_proto | target_port | attack_scale | note | priority | timeout |\n";
-print "+------------------------------------------------------------------------------------------------------------------------------------------+\n";
+no warnings 'uninitialized';
 
 foreach (@new_events) {
-  print "| " . join(' | ', @$_) . " |" . "\n";
+  print join(',', @$_) . "\n";
 }
-print "+------------------------------------------------------------------------------------------------------------------------------------------+";
-print "\n";
-print "Last events in: " . scalar(localtime(time)) . "\n";
 
 exit 0;

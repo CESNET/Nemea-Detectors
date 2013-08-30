@@ -2,12 +2,11 @@
 # Always append new sources, never use the same number for more than one source.
 # Comment out unused sources, rather than deleting them and replacing with another.
 
-spyeye_ips.5 https://spyeyetracker.abuse.ch/blocklist.php?download=ipblocklist
-spyeye_domains.4 https://spyeyetracker.abuse.ch/blocklist.php?download=domainblocklist
 malwaredomains_com.1 http://mirror2.malwaredomains.com/files/justdomains
 zeus_domains.2 https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist
 zeus_ips.3 https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist
-
+spyeye_domains.4 https://spyeyetracker.abuse.ch/blocklist.php?download=domainblocklist
+spyeye_ips.5 https://spyeyetracker.abuse.ch/blocklist.php?download=ipblocklist
 palevo.6 https://palevotracker.abuse.ch/blocklists.php?download=combinedblocklist
 spamhaus_org.7 http://www.spamhaus.org/drop/drop.txt
 
@@ -23,3 +22,5 @@ warden_malware.16 https://warden.cesnet.cz:443/Warden
 warden_copyright.17 https://warden.cesnet.cz:443/Warden
 warden_webattack.18 https://warden.cesnet.cz:443/Warden
 warden_other.19 https://warden.cesnet.cz:443/Warden
+
+phistank_com.20 http://data.phishtank.com/data/online-valid.csv
