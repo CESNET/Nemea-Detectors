@@ -23,4 +23,4 @@ warden_copyright.17 https://warden.cesnet.cz:443/Warden
 warden_webattack.18 https://warden.cesnet.cz:443/Warden
 warden_other.19 https://warden.cesnet.cz:443/Warden
 
-phistank_com.20 http://data.phishtank.com/data/online-valid.csv
+phishtank_com.20 http://data.phishtank.com/data/online-valid.csv
