@@ -314,7 +314,7 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
     int s = ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST);
 #endif
 
-    bl = (uint8_t *) ht_get(&blacklist, url, ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST));
+    bl = (uint8_t *) ht_get(&blacklist, url, (ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST) - 1));
 
     if (bl != NULL) {
         // we found this URL in blacklist -- fill the detection record
@@ -468,6 +468,10 @@ int main (int argc, char** argv)
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
+#ifdef DEBUG
+        int dyn_size = ur_rec_dynamic_size(templ, data);
+#endif
+
         // check the data size -- we can only check static part since URL is dynamic
         if ((data_size - ur_rec_dynamic_size(templ,data)) != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
@@ -493,8 +497,10 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             ++marked;
 #endif
-            string url = string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_HOST)) + string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_URL));
+            string url = string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_HOST)) 
+                         + string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_URL)).substr(0, ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_URL));
             memcpy(ur_get_dyn(det, detection, UR_HTTP_REQUEST_URL), url.c_str(), url.length());
+            *(uint16_t *) ur_get_ptr(det, detection, UR_HTTP_REQUEST_URL) = url.length();
             trap_send_data(0, data, ur_rec_size(det, detection), TRAP_HALFWAIT);
         }
 

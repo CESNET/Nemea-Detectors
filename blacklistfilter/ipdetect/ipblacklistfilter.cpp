@@ -739,8 +739,8 @@ int main (int argc, char** argv)
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
-//    ur_template_t *templ = ur_create_template("<BASIC_FLOW>");
-    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>,SMTP_FLAGS");
+    // UniRec templates for recieving data and reporting blacklisted IPs
+    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
     ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST");
 
     // for use with prefixes (not implemented now)
@@ -878,7 +878,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Sending report ..." << endl;
 #endif
-            ur_set(tmpl_det, detection, UR_SRC_IP, ur_get(templ, data, UR_SRC_IP));
+/*            ur_set(tmpl_det, detection, UR_SRC_IP, ur_get(templ, data, UR_SRC_IP));
             ur_set(tmpl_det, detection, UR_DST_IP, ur_get(templ, data, UR_DST_IP));
             ur_set(tmpl_det, detection, UR_SRC_PORT, ur_get(templ, data, UR_SRC_PORT));
             ur_set(tmpl_det, detection, UR_DST_PORT, ur_get(templ, data, UR_DST_PORT));
@@ -887,7 +887,8 @@ int main (int argc, char** argv)
             ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
             ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
             ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));
-            ur_set(tmpl_det, detection, UR_DIR_BIT_FIELD, ur_get(templ, data, UR_DIR_BIT_FIELD));
+            ur_set(tmpl_det, detection, UR_DIR_BIT_FIELD, ur_get(templ, data, UR_DIR_BIT_FIELD));*/
+            ur_transfer_static(templ, tmpl_det, data, detection);
             trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
 #ifdef DEBUG
             bl_count++;

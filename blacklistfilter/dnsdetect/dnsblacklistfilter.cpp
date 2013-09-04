@@ -562,14 +562,15 @@ void* check_ip(void *args)
             cout << "IP: Sending report ..." << endl;
             dets++;
 #endif            
-            ur_set(params->output, params->detection, UR_SRC_PORT, ur_get(params->input, record, UR_SRC_PORT));
+/*            ur_set(params->output, params->detection, UR_SRC_PORT, ur_get(params->input, record, UR_SRC_PORT));
             ur_set(params->output, params->detection, UR_DST_PORT, ur_get(params->input, record, UR_DST_PORT));
             ur_set(params->output, params->detection, UR_TIME_FIRST, ur_get(params->input, record, UR_TIME_FIRST));
             ur_set(params->output, params->detection, UR_PROTOCOL, ur_get(params->input, record, UR_PROTOCOL));
             ur_set(params->output, params->detection, UR_PACKETS, ur_get(params->input, record, UR_PACKETS));
             ur_set(params->output, params->detection, UR_BYTES, ur_get(params->input, record, UR_BYTES));
             ur_set(params->output, params->detection, UR_TCP_FLAGS, ur_get(params->input, record, UR_TCP_FLAGS));
-            ur_set(params->output, params->detection, UR_DIR_BIT_FIELD, ur_get(params->input, record, UR_DIR_BIT_FIELD)); 
+            ur_set(params->output, params->detection, UR_DIR_BIT_FIELD, ur_get(params->input, record, UR_DIR_BIT_FIELD)); */
+            ur_transfer_static(params->input, params->output, record, params->detection);
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
             marked = false;
         }
