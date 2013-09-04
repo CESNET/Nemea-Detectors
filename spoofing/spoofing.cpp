@@ -873,7 +873,7 @@ int main (int argc, char** argv)
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-
+    ur_template_t *det =  ur_create_template("<COLLECTOR_FLOW>,SPOOF_TYPE");
     // lists of bogon prefixes
     pref_list_t bogon_list_v4; 
     pref_list_t bogon_list_v6;
@@ -1039,6 +1039,8 @@ int main (int argc, char** argv)
 
     const void *data;
     uint16_t data_size;
+
+    void* detection = ur_create(det, 0);
     // ***** Main processing loop *****
     while (!stop) {
                 
@@ -1106,6 +1108,9 @@ int main (int argc, char** argv)
             ++bogons;
 #endif
             //for future use
+            ur_transfer_static(templ, det, data, detection);
+            ur_set(det, detection, UR_SPOOF_TYPE, 0x1);
+
             trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK; // reset return value
             continue;
@@ -1125,6 +1130,9 @@ int main (int argc, char** argv)
             ++syms;
 #endif
             //for future use
+            ur_transfer_static(templ, det, data, detection);
+            ur_set(det, detection, UR_SPOOF_TYPE, 0x2);
+
             trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
@@ -1146,6 +1154,9 @@ int main (int argc, char** argv)
             ++nflows;
 #endif
             //for future use
+            ur_transfer_static(templ, det, data, detection);
+            ur_set(det, detection, UR_SPOOF_TYPE, 0x4);
+
             trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
@@ -1156,9 +1167,9 @@ int main (int argc, char** argv)
     cout << "IPv4: " << v4 << endl;
     cout << "IPv6: " << v6 << endl;
     cout << "No. of possibly spoofed addresses: " << spoof_count << endl;
-    cout << "Caught by bogon filter: " << bogons << endl;
-    cout << "Caught by symetric routing filter: " << syms << endl;
-    cout << "Caught by using too many new flows: " << nflows << endl;
+    cout << "Reported by bogon filter: " << bogons << endl;
+    cout << "Reported by symetric routing filter: " << syms << endl;
+    cout << "Reported by using too many new flows: " << nflows << endl;
 #endif
 
     trap_send_data(0, data, 1, TRAP_HALFWAIT);
