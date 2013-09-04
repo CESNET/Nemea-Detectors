@@ -224,10 +224,6 @@ void rmatrixsolve(const real_2d_array &a, const ae_int_t n, const real_1d_array 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -275,10 +271,6 @@ void rmatrixsolvem(const real_2d_array &a, const ae_int_t n, const real_2d_array
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -323,10 +315,6 @@ void rmatrixlusolve(const real_2d_array &lua, const integer_1d_array &p, const a
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -374,10 +362,6 @@ void rmatrixlusolvem(const real_2d_array &lua, const integer_1d_array &p, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -421,10 +405,6 @@ void rmatrixmixedsolve(const real_2d_array &a, const real_2d_array &lua, const i
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -470,10 +450,6 @@ void rmatrixmixedsolvem(const real_2d_array &a, const real_2d_array &lua, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -518,10 +494,6 @@ void cmatrixsolvem(const complex_2d_array &a, const ae_int_t n, const complex_2d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -559,10 +531,6 @@ void cmatrixsolve(const complex_2d_array &a, const ae_int_t n, const complex_1d_
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -607,10 +575,6 @@ void cmatrixlusolvem(const complex_2d_array &lua, const integer_1d_array &p, con
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -653,10 +617,6 @@ void cmatrixlusolve(const complex_2d_array &lua, const integer_1d_array &p, cons
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -698,10 +658,6 @@ void cmatrixmixedsolvem(const complex_2d_array &a, const complex_2d_array &lua, 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -741,10 +697,6 @@ void cmatrixmixedsolve(const complex_2d_array &a, const complex_2d_array &lua, c
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -793,10 +745,6 @@ void spdmatrixsolvem(const real_2d_array &a, const ae_int_t n, const bool isuppe
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -841,10 +789,6 @@ void spdmatrixsolve(const real_2d_array &a, const ae_int_t n, const bool isupper
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -893,10 +837,6 @@ void spdmatrixcholeskysolvem(const real_2d_array &cha, const ae_int_t n, const b
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -942,10 +882,6 @@ void spdmatrixcholeskysolve(const real_2d_array &cha, const ae_int_t n, const bo
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -994,10 +930,6 @@ void hpdmatrixsolvem(const complex_2d_array &a, const ae_int_t n, const bool isu
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1043,10 +975,6 @@ void hpdmatrixsolve(const complex_2d_array &a, const ae_int_t n, const bool isup
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1095,10 +1023,6 @@ void hpdmatrixcholeskysolvem(const complex_2d_array &cha, const ae_int_t n, cons
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1145,10 +1069,6 @@ void hpdmatrixcholeskysolve(const complex_2d_array &cha, const ae_int_t n, const
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1157,10 +1077,10 @@ Dense solver.
 This subroutine finds solution of the linear system A*X=B with non-square,
 possibly degenerate A.  System  is  solved in the least squares sense, and
 general least squares solution  X = X0 + CX*y  which  minimizes |A*X-B| is
-returned. If A is non-degenerate, solution in the  usual sense is returned
+returned. If A is non-degenerate, solution in the usual sense is returned.
 
 Algorithm features:
-* automatic detection of degenerate cases
+* automatic detection (and correct handling!) of degenerate cases
 * iterative refinement
 * O(N^3) complexity
 
@@ -1181,10 +1101,8 @@ OUTPUT PARAMETERS
                 *  1    if task is solved
     Rep     -   solver report, see below for more info
     X       -   array[0..N-1,0..M-1], it contains:
-                * solution of A*X=B if A is non-singular (well-conditioned
-                  or ill-conditioned, but not very close to singular)
-                * zeros,  if  A  is  singular  or  VERY  close to singular
-                  (in this case Info=-3).
+                * solution of A*X=B (even for singular A)
+                * zeros, if SVD subroutine failed
 
 SOLVER REPORT
 
@@ -1211,10 +1129,6 @@ void rmatrixsolvels(const real_2d_array &a, const ae_int_t nrows, const ae_int_t
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1392,9 +1306,60 @@ void linlsqrcreate(const ae_int_t m, const ae_int_t n, linlsqrstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This  function  changes  preconditioning  settings of LinLSQQSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecunit(const linlsqrstate &state)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::linlsqrsetprecunit(const_cast<alglib_impl::linlsqrstate*>(state.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecdiag(const linlsqrstate &state)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::linlsqrsetprecdiag(const_cast<alglib_impl::linlsqrstate*>(state.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -1425,10 +1390,6 @@ void linlsqrsetlambdai(const linlsqrstate &state, const double lambdai)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1444,6 +1405,12 @@ INPUT PARAMETERS:
 RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
+
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinLSQRSetPrecUnit(). However, preconditioning cost is   low
+      and preconditioner is very important for solution  of  badly  scaled
+      problems.
 
   -- ALGLIB --
      Copyright 30.11.2011 by Bochkanov Sergey
@@ -1461,10 +1428,6 @@ void linlsqrsolvesparse(const linlsqrstate &state, const sparsematrix &a, const 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1499,10 +1462,6 @@ void linlsqrsetcond(const linlsqrstate &state, const double epsa, const double e
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1544,10 +1503,6 @@ void linlsqrresults(const linlsqrstate &state, real_1d_array &x, linlsqrreport &
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1576,10 +1531,6 @@ void linlsqrsetxrep(const linlsqrstate &state, const bool needxrep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1759,10 +1710,6 @@ void lincgcreate(const ae_int_t n, lincgstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1792,9 +1739,60 @@ void lincgsetstartingpoint(const lincgstate &state, const real_1d_array &x)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
+}
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecunit(const lincgstate &state)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
     {
-        throw;
+        alglib_impl::lincgsetprecunit(const_cast<alglib_impl::lincgstate*>(state.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
+    }
+}
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecdiag(const lincgstate &state)
+{
+    alglib_impl::ae_state _alglib_env_state;
+    alglib_impl::ae_state_init(&_alglib_env_state);
+    try
+    {
+        alglib_impl::lincgsetprecdiag(const_cast<alglib_impl::lincgstate*>(state.c_ptr()), &_alglib_env_state);
+        alglib_impl::ae_state_clear(&_alglib_env_state);
+        return;
+    }
+    catch(alglib_impl::ae_error_type)
+    {
+        throw ap_error(_alglib_env_state.error_msg);
     }
 }
 
@@ -1831,10 +1829,6 @@ void lincgsetcond(const lincgstate &state, const double epsf, const ae_int_t max
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1855,6 +1849,12 @@ RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
 
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinCGSetPrecUnit(). However, preconditioning cost is low and
+      preconditioner  is  very  important  for  solution  of  badly scaled
+      problems.
+
   -- ALGLIB --
      Copyright 14.11.2011 by Bochkanov Sergey
 *************************************************************************/
@@ -1871,10 +1871,6 @@ void lincgsolvesparse(const lincgstate &state, const sparsematrix &a, const bool
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1918,10 +1914,6 @@ void lincgresults(const lincgstate &state, real_1d_array &x, lincgreport &rep)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -1944,10 +1936,6 @@ void lincgsetrestartfreq(const lincgstate &state, const ae_int_t srf)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1983,10 +1971,6 @@ void lincgsetrupdatefreq(const lincgstate &state, const ae_int_t freq)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2015,10 +1999,6 @@ void lincgsetxrep(const lincgstate &state, const bool needxrep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2239,10 +2219,6 @@ void nleqcreatelm(const ae_int_t n, const ae_int_t m, const real_1d_array &x, nl
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2333,10 +2309,6 @@ void nleqcreatelm(const ae_int_t m, const real_1d_array &x, nleqstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2372,10 +2344,6 @@ void nleqsetcond(const nleqstate &state, const double epsf, const ae_int_t maxit
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2404,10 +2372,6 @@ void nleqsetxrep(const nleqstate &state, const bool needxrep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2442,10 +2406,6 @@ void nleqsetstpmax(const nleqstate &state, const double stpmax)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2466,10 +2426,6 @@ bool nleqiteration(const nleqstate &state)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2514,10 +2470,6 @@ void nleqsolve(nleqstate &state,
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 
@@ -2561,10 +2513,6 @@ void nleqresults(const nleqstate &state, real_1d_array &x, nleqreport &rep)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -2591,10 +2539,6 @@ void nleqresultsbuf(const nleqstate &state, real_1d_array &x, nleqreport &rep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -2628,10 +2572,6 @@ void nleqrestartfrom(const nleqstate &state, const real_1d_array &x)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 }
@@ -2738,7 +2678,6 @@ static void lincg_clearrfields(lincgstate* state, ae_state *_state);
 static void lincg_updateitersdata(lincgstate* state, ae_state *_state);
 
 
-static ae_int_t nleq_armijomaxfev = 20;
 static void nleq_clearrequestfields(nleqstate* state, ae_state *_state);
 static ae_bool nleq_increaselambda(double* lambdav,
      double* nu,
@@ -4388,10 +4327,10 @@ Dense solver.
 This subroutine finds solution of the linear system A*X=B with non-square,
 possibly degenerate A.  System  is  solved in the least squares sense, and
 general least squares solution  X = X0 + CX*y  which  minimizes |A*X-B| is
-returned. If A is non-degenerate, solution in the  usual sense is returned
+returned. If A is non-degenerate, solution in the usual sense is returned.
 
 Algorithm features:
-* automatic detection of degenerate cases
+* automatic detection (and correct handling!) of degenerate cases
 * iterative refinement
 * O(N^3) complexity
 
@@ -4412,10 +4351,8 @@ OUTPUT PARAMETERS
                 *  1    if task is solved
     Rep     -   solver report, see below for more info
     X       -   array[0..N-1,0..M-1], it contains:
-                * solution of A*X=B if A is non-singular (well-conditioned
-                  or ill-conditioned, but not very close to singular)
-                * zeros,  if  A  is  singular  or  VERY  close to singular
-                  (in this case Info=-3).
+                * solution of A*X=B (even for singular A)
+                * zeros, if SVD subroutine failed
 
 SOLVER REPORT
 
@@ -5641,35 +5578,52 @@ static void densesolver_hpdbasiccholeskysolve(/* Complex */ ae_matrix* cha,
 }
 
 
-ae_bool _densesolverreport_init(densesolverreport* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _densesolverreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    densesolverreport *p = (densesolverreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _densesolverreport_init_copy(densesolverreport* dst, densesolverreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _densesolverreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    densesolverreport *dst = (densesolverreport*)_dst;
+    densesolverreport *src = (densesolverreport*)_src;
     dst->r1 = src->r1;
     dst->rinf = src->rinf;
     return ae_true;
 }
 
 
-void _densesolverreport_clear(densesolverreport* p)
+void _densesolverreport_clear(void* _p)
 {
+    densesolverreport *p = (densesolverreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _densesolverlsreport_init(densesolverlsreport* p, ae_state *_state, ae_bool make_automatic)
+void _densesolverreport_destroy(void* _p)
 {
+    densesolverreport *p = (densesolverreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _densesolverlsreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    densesolverlsreport *p = (densesolverlsreport*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_matrix_init(&p->cx, 0, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-ae_bool _densesolverlsreport_init_copy(densesolverlsreport* dst, densesolverlsreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _densesolverlsreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    densesolverlsreport *dst = (densesolverlsreport*)_dst;
+    densesolverlsreport *src = (densesolverlsreport*)_src;
     dst->r2 = src->r2;
     if( !ae_matrix_init_copy(&dst->cx, &src->cx, _state, make_automatic) )
         return ae_false;
@@ -5679,9 +5633,19 @@ ae_bool _densesolverlsreport_init_copy(densesolverlsreport* dst, densesolverlsre
 }
 
 
-void _densesolverlsreport_clear(densesolverlsreport* p)
+void _densesolverlsreport_clear(void* _p)
 {
+    densesolverlsreport *p = (densesolverlsreport*)_p;
+    ae_touch_ptr((void*)p);
     ae_matrix_clear(&p->cx);
+}
+
+
+void _densesolverlsreport_destroy(void* _p)
+{
+    densesolverlsreport *p = (densesolverlsreport*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_destroy(&p->cx);
 }
 
 
@@ -5725,6 +5689,7 @@ void linlsqrcreate(ae_int_t m,
     ae_assert(n>0, "LinLSQRCreate: N<=0", _state);
     state->m = m;
     state->n = n;
+    state->prectype = 0;
     state->epsa = linlsqr_atol;
     state->epsb = linlsqr_btol;
     state->epsc = 1/ae_sqrt(ae_machineepsilon, _state);
@@ -5794,6 +5759,47 @@ void linlsqrsetb(linlsqrstate* state,
         state->b.ptr.p_double[i] = b->ptr.p_double[i];
         state->bnorm2 = state->bnorm2+b->ptr.p_double[i]*b->ptr.p_double[i];
     }
+}
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings of LinLSQQSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecunit(linlsqrstate* state, ae_state *_state)
+{
+
+
+    ae_assert(!state->running, "LinLSQRSetPrecUnit: you can not change preconditioner, because function LinLSQRIteration is running!", _state);
+    state->prectype = -1;
+}
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void linlsqrsetprecdiag(linlsqrstate* state, ae_state *_state)
+{
+
+
+    ae_assert(!state->running, "LinLSQRSetPrecDiag: you can not change preconditioner, because function LinCGIteration is running!", _state);
+    state->prectype = 0;
 }
 
 
@@ -6295,6 +6301,12 @@ INPUT PARAMETERS:
 RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
+    
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinLSQRSetPrecUnit(). However, preconditioning cost is   low
+      and preconditioner is very important for solution  of  badly  scaled
+      problems.
 
   -- ALGLIB --
      Copyright 30.11.2011 by Bochkanov Sergey
@@ -6304,23 +6316,100 @@ void linlsqrsolvesparse(linlsqrstate* state,
      /* Real    */ ae_vector* b,
      ae_state *_state)
 {
+    ae_int_t n;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t t0;
+    ae_int_t t1;
+    double v;
 
 
+    n = state->n;
     ae_assert(!state->running, "LinLSQRSolveSparse: you can not call this function when LinLSQRIteration is running", _state);
     ae_assert(b->cnt>=state->m, "LinLSQRSolveSparse: Length(B)<M", _state);
     ae_assert(isfinitevector(b, state->m, _state), "LinLSQRSolveSparse: B contains infinite or NaN values", _state);
+    
+    /*
+     * Allocate temporaries
+     */
+    rvectorsetlengthatleast(&state->tmpd, n, _state);
+    rvectorsetlengthatleast(&state->tmpx, n, _state);
+    
+    /*
+     * Compute diagonal scaling matrix D
+     */
+    if( state->prectype==0 )
+    {
+        
+        /*
+         * Default preconditioner - inverse of column norms
+         */
+        for(i=0; i<=n-1; i++)
+        {
+            state->tmpd.ptr.p_double[i] = 0;
+        }
+        t0 = 0;
+        t1 = 0;
+        while(sparseenumerate(a, &t0, &t1, &i, &j, &v, _state))
+        {
+            state->tmpd.ptr.p_double[j] = state->tmpd.ptr.p_double[j]+ae_sqr(v, _state);
+        }
+        for(i=0; i<=n-1; i++)
+        {
+            if( ae_fp_greater(state->tmpd.ptr.p_double[i],0) )
+            {
+                state->tmpd.ptr.p_double[i] = 1/ae_sqrt(state->tmpd.ptr.p_double[i], _state);
+            }
+            else
+            {
+                state->tmpd.ptr.p_double[i] = 1;
+            }
+        }
+    }
+    else
+    {
+        
+        /*
+         * No diagonal scaling
+         */
+        for(i=0; i<=n-1; i++)
+        {
+            state->tmpd.ptr.p_double[i] = 1;
+        }
+    }
+    
+    /*
+     * Solve.
+     *
+     * Instead of solving A*x=b we solve preconditioned system (A*D)*(inv(D)*x)=b.
+     * Transformed A is not calculated explicitly, we just modify multiplication
+     * by A or A'. After solution we modify State.RX so it will store untransformed
+     * variables
+     */
     linlsqrsetb(state, b, _state);
     linlsqrrestart(state, _state);
     while(linlsqriteration(state, _state))
     {
         if( state->needmv )
         {
-            sparsemv(a, &state->x, &state->mv, _state);
+            for(i=0; i<=n-1; i++)
+            {
+                state->tmpx.ptr.p_double[i] = state->tmpd.ptr.p_double[i]*state->x.ptr.p_double[i];
+            }
+            sparsemv(a, &state->tmpx, &state->mv, _state);
         }
         if( state->needmtv )
         {
             sparsemtv(a, &state->x, &state->mtv, _state);
+            for(i=0; i<=n-1; i++)
+            {
+                state->mtv.ptr.p_double[i] = state->tmpd.ptr.p_double[i]*state->mtv.ptr.p_double[i];
+            }
         }
+    }
+    for(i=0; i<=n-1; i++)
+    {
+        state->rx.ptr.p_double[i] = state->tmpd.ptr.p_double[i]*state->rx.ptr.p_double[i];
     }
 }
 
@@ -6471,8 +6560,10 @@ static void linlsqr_clearrfields(linlsqrstate* state, ae_state *_state)
 }
 
 
-ae_bool _linlsqrstate_init(linlsqrstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _linlsqrstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    linlsqrstate *p = (linlsqrstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !_normestimatorstate_init(&p->nes, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->rx, 0, DT_REAL, _state, make_automatic) )
@@ -6499,14 +6590,20 @@ ae_bool _linlsqrstate_init(linlsqrstate* p, ae_state *_state, ae_bool make_autom
         return ae_false;
     if( !ae_vector_init(&p->mtv, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
+    if( !ae_vector_init(&p->tmpd, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->tmpx, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
     if( !_rcommstate_init(&p->rstate, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-ae_bool _linlsqrstate_init_copy(linlsqrstate* dst, linlsqrstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _linlsqrstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    linlsqrstate *dst = (linlsqrstate*)_dst;
+    linlsqrstate *src = (linlsqrstate*)_src;
     if( !_normestimatorstate_init_copy(&dst->nes, &src->nes, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init_copy(&dst->rx, &src->rx, _state, make_automatic) )
@@ -6515,6 +6612,7 @@ ae_bool _linlsqrstate_init_copy(linlsqrstate* dst, linlsqrstate* src, ae_state *
         return ae_false;
     dst->n = src->n;
     dst->m = src->m;
+    dst->prectype = src->prectype;
     if( !ae_vector_init_copy(&dst->ui, &src->ui, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init_copy(&dst->uip1, &src->uip1, _state, make_automatic) )
@@ -6568,14 +6666,20 @@ ae_bool _linlsqrstate_init_copy(linlsqrstate* dst, linlsqrstate* src, ae_state *
     dst->repnmv = src->repnmv;
     dst->repterminationtype = src->repterminationtype;
     dst->running = src->running;
+    if( !ae_vector_init_copy(&dst->tmpd, &src->tmpd, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->tmpx, &src->tmpx, _state, make_automatic) )
+        return ae_false;
     if( !_rcommstate_init_copy(&dst->rstate, &src->rstate, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-void _linlsqrstate_clear(linlsqrstate* p)
+void _linlsqrstate_clear(void* _p)
 {
+    linlsqrstate *p = (linlsqrstate*)_p;
+    ae_touch_ptr((void*)p);
     _normestimatorstate_clear(&p->nes);
     ae_vector_clear(&p->rx);
     ae_vector_clear(&p->b);
@@ -6589,18 +6693,47 @@ void _linlsqrstate_clear(linlsqrstate* p)
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->mv);
     ae_vector_clear(&p->mtv);
+    ae_vector_clear(&p->tmpd);
+    ae_vector_clear(&p->tmpx);
     _rcommstate_clear(&p->rstate);
 }
 
 
-ae_bool _linlsqrreport_init(linlsqrreport* p, ae_state *_state, ae_bool make_automatic)
+void _linlsqrstate_destroy(void* _p)
 {
+    linlsqrstate *p = (linlsqrstate*)_p;
+    ae_touch_ptr((void*)p);
+    _normestimatorstate_destroy(&p->nes);
+    ae_vector_destroy(&p->rx);
+    ae_vector_destroy(&p->b);
+    ae_vector_destroy(&p->ui);
+    ae_vector_destroy(&p->uip1);
+    ae_vector_destroy(&p->vi);
+    ae_vector_destroy(&p->vip1);
+    ae_vector_destroy(&p->omegai);
+    ae_vector_destroy(&p->omegaip1);
+    ae_vector_destroy(&p->d);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->mv);
+    ae_vector_destroy(&p->mtv);
+    ae_vector_destroy(&p->tmpd);
+    ae_vector_destroy(&p->tmpx);
+    _rcommstate_destroy(&p->rstate);
+}
+
+
+ae_bool _linlsqrreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    linlsqrreport *p = (linlsqrreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _linlsqrreport_init_copy(linlsqrreport* dst, linlsqrreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _linlsqrreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    linlsqrreport *dst = (linlsqrreport*)_dst;
+    linlsqrreport *src = (linlsqrreport*)_src;
     dst->iterationscount = src->iterationscount;
     dst->nmv = src->nmv;
     dst->terminationtype = src->terminationtype;
@@ -6608,8 +6741,17 @@ ae_bool _linlsqrreport_init_copy(linlsqrreport* dst, linlsqrreport* src, ae_stat
 }
 
 
-void _linlsqrreport_clear(linlsqrreport* p)
+void _linlsqrreport_clear(void* _p)
 {
+    linlsqrreport *p = (linlsqrreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _linlsqrreport_destroy(void* _p)
+{
+    linlsqrreport *p = (linlsqrreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
@@ -6649,6 +6791,7 @@ void lincgcreate(ae_int_t n, lincgstate* state, ae_state *_state)
 
     ae_assert(n>0, "LinCGCreate: N<=0", _state);
     state->n = n;
+    state->prectype = 0;
     state->itsbeforerestart = n;
     state->itsbeforerupdate = 10;
     state->epsf = lincg_defaultprecision;
@@ -6738,6 +6881,47 @@ void lincgsetb(lincgstate* state,
     ae_assert(b->cnt>=state->n, "LinCGSetB: Length(B)<N", _state);
     ae_assert(isfinitevector(b, state->n, _state), "LinCGSetB: B contains infinite or NaN values!", _state);
     ae_v_move(&state->b.ptr.p_double[0], 1, &b->ptr.p_double[0], 1, ae_v_len(0,state->n-1));
+}
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function. By default, SolveSparse() uses diagonal preconditioner,  but  if
+you want to use solver without preconditioning, you can call this function
+which forces solver to use unit matrix for preconditioning.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecunit(lincgstate* state, ae_state *_state)
+{
+
+
+    ae_assert(!state->running, "LinCGSetPrecUnit: you can not change preconditioner, because function LinCGIteration is running!", _state);
+    state->prectype = -1;
+}
+
+
+/*************************************************************************
+This  function  changes  preconditioning  settings  of  LinCGSolveSparse()
+function.  LinCGSolveSparse() will use diagonal of the  system  matrix  as
+preconditioner. This preconditioning mode is active by default.
+
+INPUT PARAMETERS:
+    State   -   structure which stores algorithm state
+
+  -- ALGLIB --
+     Copyright 19.11.2012 by Bochkanov Sergey
+*************************************************************************/
+void lincgsetprecdiag(lincgstate* state, ae_state *_state)
+{
+
+
+    ae_assert(!state->running, "LinCGSetPrecDiag: you can not change preconditioner, because function LinCGIteration is running!", _state);
+    state->prectype = 0;
 }
 
 
@@ -7266,6 +7450,12 @@ INPUT PARAMETERS:
 RESULT:
     This function returns no result.
     You can get solution by calling LinCGResults()
+    
+NOTE: this function uses lightweight preconditioning -  multiplication  by
+      inverse of diag(A). If you want, you can turn preconditioning off by
+      calling LinCGSetPrecUnit(). However, preconditioning cost is low and
+      preconditioner  is  very  important  for  solution  of  badly scaled
+      problems.
 
   -- ALGLIB --
      Copyright 14.11.2011 by Bochkanov Sergey
@@ -7276,15 +7466,66 @@ void lincgsolvesparse(lincgstate* state,
      /* Real    */ ae_vector* b,
      ae_state *_state)
 {
+    ae_int_t n;
+    ae_int_t i;
+    double v;
     double vmv;
 
 
+    n = state->n;
     ae_assert(b->cnt>=state->n, "LinCGSetB: Length(B)<N", _state);
     ae_assert(isfinitevector(b, state->n, _state), "LinCGSetB: B contains infinite or NaN values!", _state);
+    
+    /*
+     * Allocate temporaries
+     */
+    rvectorsetlengthatleast(&state->tmpd, n, _state);
+    
+    /*
+     * Compute diagonal scaling matrix D
+     */
+    if( state->prectype==0 )
+    {
+        
+        /*
+         * Default preconditioner - inverse of matrix diagonal
+         */
+        for(i=0; i<=n-1; i++)
+        {
+            v = sparsegetdiagonal(a, i, _state);
+            if( ae_fp_greater(v,0) )
+            {
+                state->tmpd.ptr.p_double[i] = 1/ae_sqrt(v, _state);
+            }
+            else
+            {
+                state->tmpd.ptr.p_double[i] = 1;
+            }
+        }
+    }
+    else
+    {
+        
+        /*
+         * No diagonal scaling
+         */
+        for(i=0; i<=n-1; i++)
+        {
+            state->tmpd.ptr.p_double[i] = 1;
+        }
+    }
+    
+    /*
+     * Solve
+     */
     lincgrestart(state, _state);
     lincgsetb(state, b, _state);
     while(lincgiteration(state, _state))
     {
+        
+        /*
+         * Process different requests from optimizer
+         */
         if( state->needmv )
         {
             sparsesmv(a, isupper, &state->x, &state->mv, _state);
@@ -7297,7 +7538,10 @@ void lincgsolvesparse(lincgstate* state,
         }
         if( state->needprec )
         {
-            ae_v_move(&state->pv.ptr.p_double[0], 1, &state->x.ptr.p_double[0], 1, ae_v_len(0,state->n-1));
+            for(i=0; i<=n-1; i++)
+            {
+                state->pv.ptr.p_double[i] = state->x.ptr.p_double[i]*ae_sqr(state->tmpd.ptr.p_double[i], _state);
+            }
         }
     }
 }
@@ -7467,8 +7711,10 @@ static void lincg_updateitersdata(lincgstate* state, ae_state *_state)
 }
 
 
-ae_bool _lincgstate_init(lincgstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _lincgstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    lincgstate *p = (lincgstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->rx, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->b, 0, DT_REAL, _state, make_automatic) )
@@ -7493,19 +7739,24 @@ ae_bool _lincgstate_init(lincgstate* p, ae_state *_state, ae_bool make_automatic
         return ae_false;
     if( !ae_vector_init(&p->startx, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
+    if( !ae_vector_init(&p->tmpd, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
     if( !_rcommstate_init(&p->rstate, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-ae_bool _lincgstate_init_copy(lincgstate* dst, lincgstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _lincgstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    lincgstate *dst = (lincgstate*)_dst;
+    lincgstate *src = (lincgstate*)_src;
     if( !ae_vector_init_copy(&dst->rx, &src->rx, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init_copy(&dst->b, &src->b, _state, make_automatic) )
         return ae_false;
     dst->n = src->n;
+    dst->prectype = src->prectype;
     if( !ae_vector_init_copy(&dst->cx, &src->cx, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init_copy(&dst->cr, &src->cr, _state, make_automatic) )
@@ -7546,14 +7797,18 @@ ae_bool _lincgstate_init_copy(lincgstate* dst, lincgstate* src, ae_state *_state
     dst->repnmv = src->repnmv;
     dst->repterminationtype = src->repterminationtype;
     dst->running = src->running;
+    if( !ae_vector_init_copy(&dst->tmpd, &src->tmpd, _state, make_automatic) )
+        return ae_false;
     if( !_rcommstate_init_copy(&dst->rstate, &src->rstate, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-void _lincgstate_clear(lincgstate* p)
+void _lincgstate_clear(void* _p)
 {
+    lincgstate *p = (lincgstate*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->rx);
     ae_vector_clear(&p->b);
     ae_vector_clear(&p->cx);
@@ -7566,18 +7821,44 @@ void _lincgstate_clear(lincgstate* p)
     ae_vector_clear(&p->mv);
     ae_vector_clear(&p->pv);
     ae_vector_clear(&p->startx);
+    ae_vector_clear(&p->tmpd);
     _rcommstate_clear(&p->rstate);
 }
 
 
-ae_bool _lincgreport_init(lincgreport* p, ae_state *_state, ae_bool make_automatic)
+void _lincgstate_destroy(void* _p)
 {
+    lincgstate *p = (lincgstate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->rx);
+    ae_vector_destroy(&p->b);
+    ae_vector_destroy(&p->cx);
+    ae_vector_destroy(&p->cr);
+    ae_vector_destroy(&p->cz);
+    ae_vector_destroy(&p->p);
+    ae_vector_destroy(&p->r);
+    ae_vector_destroy(&p->z);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->mv);
+    ae_vector_destroy(&p->pv);
+    ae_vector_destroy(&p->startx);
+    ae_vector_destroy(&p->tmpd);
+    _rcommstate_destroy(&p->rstate);
+}
+
+
+ae_bool _lincgreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    lincgreport *p = (lincgreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _lincgreport_init_copy(lincgreport* dst, lincgreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _lincgreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    lincgreport *dst = (lincgreport*)_dst;
+    lincgreport *src = (lincgreport*)_src;
     dst->iterationscount = src->iterationscount;
     dst->nmv = src->nmv;
     dst->terminationtype = src->terminationtype;
@@ -7586,8 +7867,17 @@ ae_bool _lincgreport_init_copy(lincgreport* dst, lincgreport* src, ae_state *_st
 }
 
 
-void _lincgreport_clear(lincgreport* p)
+void _lincgreport_clear(void* _p)
 {
+    lincgreport *p = (lincgreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _lincgreport_destroy(void* _p)
+{
+    lincgreport *p = (lincgreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
@@ -8286,8 +8576,10 @@ static void nleq_decreaselambda(double* lambdav,
 }
 
 
-ae_bool _nleqstate_init(nleqstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _nleqstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    nleqstate *p = (nleqstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->fi, 0, DT_REAL, _state, make_automatic) )
@@ -8308,8 +8600,10 @@ ae_bool _nleqstate_init(nleqstate* p, ae_state *_state, ae_bool make_automatic)
 }
 
 
-ae_bool _nleqstate_init_copy(nleqstate* dst, nleqstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _nleqstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    nleqstate *dst = (nleqstate*)_dst;
+    nleqstate *src = (nleqstate*)_src;
     dst->n = src->n;
     dst->m = src->m;
     dst->epsf = src->epsf;
@@ -8346,8 +8640,10 @@ ae_bool _nleqstate_init_copy(nleqstate* dst, nleqstate* src, ae_state *_state, a
 }
 
 
-void _nleqstate_clear(nleqstate* p)
+void _nleqstate_clear(void* _p)
 {
+    nleqstate *p = (nleqstate*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->fi);
     ae_matrix_clear(&p->j);
@@ -8359,14 +8655,33 @@ void _nleqstate_clear(nleqstate* p)
 }
 
 
-ae_bool _nleqreport_init(nleqreport* p, ae_state *_state, ae_bool make_automatic)
+void _nleqstate_destroy(void* _p)
 {
+    nleqstate *p = (nleqstate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->fi);
+    ae_matrix_destroy(&p->j);
+    _rcommstate_destroy(&p->rstate);
+    ae_vector_destroy(&p->xbase);
+    ae_vector_destroy(&p->candstep);
+    ae_vector_destroy(&p->rightpart);
+    ae_vector_destroy(&p->cgbuf);
+}
+
+
+ae_bool _nleqreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    nleqreport *p = (nleqreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _nleqreport_init_copy(nleqreport* dst, nleqreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _nleqreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    nleqreport *dst = (nleqreport*)_dst;
+    nleqreport *src = (nleqreport*)_src;
     dst->iterationscount = src->iterationscount;
     dst->nfunc = src->nfunc;
     dst->njac = src->njac;
@@ -8375,8 +8690,17 @@ ae_bool _nleqreport_init_copy(nleqreport* dst, nleqreport* src, ae_state *_state
 }
 
 
-void _nleqreport_clear(nleqreport* p)
+void _nleqreport_clear(void* _p)
 {
+    nleqreport *p = (nleqreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _nleqreport_destroy(void* _p)
+{
+    nleqreport *p = (nleqreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 

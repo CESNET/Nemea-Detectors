@@ -87,6 +87,8 @@ static void tsort_tagsortfastrec(/* Real    */ ae_vector* a,
 
 
 
+
+
 static void hsschur_internalauxschur(ae_bool wantt,
      ae_bool wantz,
      ae_int_t n,
@@ -131,6 +133,16 @@ static ae_bool safesolve_cbasicsolveandupdate(ae_complex alpha,
      ae_state *_state);
 
 
+static ae_bool hpccores_hpcpreparechunkedgradientx(/* Real    */ ae_vector* weights,
+     ae_int_t wcount,
+     /* Real    */ ae_vector* hpcbuf,
+     ae_state *_state);
+static ae_bool hpccores_hpcfinalizechunkedgradientx(/* Real    */ ae_vector* buf,
+     ae_int_t wcount,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state);
+
+
 static void xblas_xsum(/* Real    */ ae_vector* w,
      double mx,
      ae_int_t n,
@@ -156,55 +168,168 @@ static void linmin_mcstep(double* stx,
      double fp,
      double dp,
      ae_bool* brackt,
-
      double stmin,
      double stmax,
      ae_int_t* info,
      ae_state *_state);
 
 
-static ae_int_t ftbase_ftbaseplanentrysize = 8;
-static ae_int_t ftbase_ftbasecffttask = 0;
-static ae_int_t ftbase_ftbaserfhttask = 1;
-static ae_int_t ftbase_ftbaserffttask = 2;
-static ae_int_t ftbase_fftcooleytukeyplan = 0;
-static ae_int_t ftbase_fftbluesteinplan = 1;
-static ae_int_t ftbase_fftcodeletplan = 2;
-static ae_int_t ftbase_fhtcooleytukeyplan = 3;
-static ae_int_t ftbase_fhtcodeletplan = 4;
-static ae_int_t ftbase_fftrealcooleytukeyplan = 5;
-static ae_int_t ftbase_fftemptyplan = 6;
-static ae_int_t ftbase_fhtn2plan = 999;
-static ae_int_t ftbase_ftbaseupdatetw = 4;
+static ae_bool ntheory_isprime(ae_int_t n, ae_state *_state);
+static ae_int_t ntheory_modmul(ae_int_t a,
+     ae_int_t b,
+     ae_int_t n,
+     ae_state *_state);
+static ae_int_t ntheory_modexp(ae_int_t a,
+     ae_int_t b,
+     ae_int_t n,
+     ae_state *_state);
+
+
+static ae_int_t ftbase_coltype = 0;
+static ae_int_t ftbase_coloperandscnt = 1;
+static ae_int_t ftbase_coloperandsize = 2;
+static ae_int_t ftbase_colmicrovectorsize = 3;
+static ae_int_t ftbase_colparam0 = 4;
+static ae_int_t ftbase_colparam1 = 5;
+static ae_int_t ftbase_colparam2 = 6;
+static ae_int_t ftbase_colparam3 = 7;
+static ae_int_t ftbase_colscnt = 8;
+static ae_int_t ftbase_opend = 0;
+static ae_int_t ftbase_opcomplexreffft = 1;
+static ae_int_t ftbase_opbluesteinsfft = 2;
+static ae_int_t ftbase_opcomplexcodeletfft = 3;
+static ae_int_t ftbase_opcomplexcodelettwfft = 4;
+static ae_int_t ftbase_opradersfft = 5;
+static ae_int_t ftbase_opcomplextranspose = -1;
+static ae_int_t ftbase_opcomplexfftfactors = -2;
+static ae_int_t ftbase_opstart = -3;
+static ae_int_t ftbase_opjmp = -4;
+static ae_int_t ftbase_opparallelcall = -5;
+static ae_int_t ftbase_maxradix = 6;
+static ae_int_t ftbase_updatetw = 16;
+static ae_int_t ftbase_recursivethreshold = 1024;
+static ae_int_t ftbase_raderthreshold = 19;
 static ae_int_t ftbase_ftbasecodeletrecommended = 5;
 static double ftbase_ftbaseinefficiencyfactor = 1.3;
 static ae_int_t ftbase_ftbasemaxsmoothfactor = 5;
-static void ftbase_ftbasegenerateplanrec(ae_int_t n,
-     ae_int_t tasktype,
-     ftplan* plan,
-     ae_int_t* plansize,
-     ae_int_t* precomputedsize,
-     ae_int_t* planarraysize,
-     ae_int_t* tmpmemsize,
-     ae_int_t* stackmemsize,
-     ae_int_t stackptr,
+static void ftbase_ftdeterminespacerequirements(ae_int_t n,
+     ae_int_t* precrsize,
+     ae_int_t* precisize,
      ae_state *_state);
-static void ftbase_ftbaseprecomputeplanrec(ftplan* plan,
-     ae_int_t entryoffset,
-     ae_int_t stackptr,
+static void ftbase_ftcomplexfftplanrec(ae_int_t n,
+     ae_int_t k,
+     ae_bool childplan,
+     ae_bool topmostplan,
+     ae_int_t* rowptr,
+     ae_int_t* bluesteinsize,
+     ae_int_t* precrptr,
+     ae_int_t* preciptr,
+     fasttransformplan* plan,
      ae_state *_state);
+static void ftbase_ftpushentry(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_state *_state);
+static void ftbase_ftpushentry2(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_int_t eparam1,
+     ae_state *_state);
+static void ftbase_ftpushentry4(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_int_t eparam1,
+     ae_int_t eparam2,
+     ae_int_t eparam3,
+     ae_state *_state);
+static void ftbase_ftapplysubplan(fasttransformplan* plan,
+     ae_int_t subplan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     /* Real    */ ae_vector* buf,
+     ae_int_t repcnt,
+     ae_state *_state);
+static void ftbase_ftapplycomplexreffft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     /* Real    */ ae_vector* buf,
+     ae_state *_state);
+static void ftbase_ftapplycomplexcodeletfft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     ae_state *_state);
+static void ftbase_ftapplycomplexcodelettwfft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     ae_state *_state);
+static void ftbase_ftprecomputebluesteinsfft(ae_int_t n,
+     ae_int_t m,
+     /* Real    */ ae_vector* precr,
+     ae_int_t offs,
+     ae_state *_state);
+static void ftbase_ftbluesteinsfft(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     ae_int_t operandscnt,
+     ae_int_t n,
+     ae_int_t m,
+     ae_int_t precoffs,
+     ae_int_t subplan,
+     /* Real    */ ae_vector* bufa,
+     /* Real    */ ae_vector* bufb,
+     /* Real    */ ae_vector* bufc,
+     /* Real    */ ae_vector* bufd,
+     ae_state *_state);
+static void ftbase_ftprecomputeradersfft(ae_int_t n,
+     ae_int_t rq,
+     ae_int_t riq,
+     /* Real    */ ae_vector* precr,
+     ae_int_t offs,
+     ae_state *_state);
+static void ftbase_ftradersfft(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     ae_int_t operandscnt,
+     ae_int_t n,
+     ae_int_t subplan,
+     ae_int_t rq,
+     ae_int_t riq,
+     ae_int_t precoffs,
+     /* Real    */ ae_vector* buf,
+     ae_state *_state);
+static void ftbase_ftfactorize(ae_int_t n,
+     ae_bool isroot,
+     ae_int_t* n1,
+     ae_int_t* n2,
+     ae_state *_state);
+static ae_int_t ftbase_ftoptimisticestimate(ae_int_t n, ae_state *_state);
 static void ftbase_ffttwcalc(/* Real    */ ae_vector* a,
      ae_int_t aoffset,
      ae_int_t n1,
      ae_int_t n2,
      ae_state *_state);
 static void ftbase_internalcomplexlintranspose(/* Real    */ ae_vector* a,
-     ae_int_t m,
-     ae_int_t n,
-     ae_int_t astart,
-     /* Real    */ ae_vector* buf,
-     ae_state *_state);
-static void ftbase_internalreallintranspose(/* Real    */ ae_vector* a,
      ae_int_t m,
      ae_int_t n,
      ae_int_t astart,
@@ -233,14 +358,6 @@ static void ftbase_ftbasefindsmoothrec(ae_int_t n,
      ae_int_t leastfactor,
      ae_int_t* best,
      ae_state *_state);
-static void ftbase_fftarrayresize(/* Integer */ ae_vector* a,
-     ae_int_t* asize,
-     ae_int_t newasize,
-     ae_state *_state);
-static void ftbase_reffht(/* Real    */ ae_vector* a,
-     ae_int_t n,
-     ae_int_t offs,
-     ae_state *_state);
 
 
 
@@ -250,56 +367,118 @@ static void ftbase_reffht(/* Real    */ ae_vector* a,
 
 
 
-ae_int_t getrdfserializationcode(ae_state *_state)
+/*************************************************************************
+This function is used to set error flags  during  unit  tests.  When  COND
+parameter is True, FLAG variable is  set  to  True.  When  COND is  False,
+FLAG is unchanged.
+
+The purpose of this function is to have single  point  where  failures  of
+unit tests can be detected.
+
+This function returns value of COND.
+*************************************************************************/
+ae_bool seterrorflag(ae_bool* flag, ae_bool cond, ae_state *_state)
 {
-    ae_int_t result;
+    ae_bool result;
 
 
-    result = 1;
+    if( cond )
+    {
+        *flag = ae_true;
+    }
+    result = cond;
     return result;
 }
 
 
-ae_int_t getkdtreeserializationcode(ae_state *_state)
+/*************************************************************************
+Internally calls SetErrorFlag() with condition:
+
+    Abs(Val-RefVal)>Tol*Max(Abs(RefVal),S)
+    
+This function is used to test relative error in Val against  RefVal,  with
+relative error being replaced by absolute when scale  of  RefVal  is  less
+than S.
+
+This function returns value of COND.
+*************************************************************************/
+ae_bool seterrorflagdiff(ae_bool* flag,
+     double val,
+     double refval,
+     double tol,
+     double s,
+     ae_state *_state)
 {
-    ae_int_t result;
+    ae_bool result;
 
 
-    result = 2;
+    result = seterrorflag(flag, ae_fp_greater(ae_fabs(val-refval, _state),tol*ae_maxreal(ae_fabs(refval, _state), s, _state)), _state);
     return result;
 }
 
 
-ae_int_t getmlpserializationcode(ae_state *_state)
+/*************************************************************************
+The function "touches" integer - it is used  to  avoid  compiler  messages
+about unused variables (in rare cases when we do NOT want to remove  these
+variables).
+
+  -- ALGLIB --
+     Copyright 17.09.2012 by Bochkanov Sergey
+*************************************************************************/
+void touchint(ae_int_t* a, ae_state *_state)
 {
-    ae_int_t result;
 
 
-    result = 3;
+}
+
+
+/*************************************************************************
+The function "touches" real   -  it is used  to  avoid  compiler  messages
+about unused variables (in rare cases when we do NOT want to remove  these
+variables).
+
+  -- ALGLIB --
+     Copyright 17.09.2012 by Bochkanov Sergey
+*************************************************************************/
+void touchreal(double* a, ae_state *_state)
+{
+
+
+}
+
+
+/*************************************************************************
+The function convert integer value to real value.
+
+  -- ALGLIB --
+     Copyright 17.09.2012 by Bochkanov Sergey
+*************************************************************************/
+double inttoreal(ae_int_t a, ae_state *_state)
+{
+    double result;
+
+
+    result = a;
     return result;
 }
 
 
-ae_int_t getmlpeserializationcode(ae_state *_state)
+/*************************************************************************
+The function calculates binary logarithm.
+
+NOTE: it costs twice as much as Ln(x)
+
+  -- ALGLIB --
+     Copyright 17.09.2012 by Bochkanov Sergey
+*************************************************************************/
+double log2(double x, ae_state *_state)
 {
-    ae_int_t result;
+    double result;
 
 
-    result = 4;
+    result = ae_log(x, _state)/ae_log(2, _state);
     return result;
 }
-
-
-ae_int_t getrbfserializationcode(ae_state *_state)
-{
-    ae_int_t result;
-
-
-    result = 5;
-    return result;
-}
-
-
 
 
 /*************************************************************************
@@ -713,7 +892,53 @@ void rmatrixresize(/* Real    */ ae_matrix* x,
 
 
 /*************************************************************************
-This function checks that all values from X[] are finite
+Resizes X and:
+* preserves old contents of X
+* fills new elements by zeros
+
+  -- ALGLIB --
+     Copyright 20.03.2009 by Bochkanov Sergey
+*************************************************************************/
+void imatrixresize(/* Integer */ ae_matrix* x,
+     ae_int_t m,
+     ae_int_t n,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_matrix oldx;
+    ae_int_t i;
+    ae_int_t j;
+    ae_int_t m2;
+    ae_int_t n2;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_matrix_init(&oldx, 0, 0, DT_INT, _state, ae_true);
+
+    m2 = x->rows;
+    n2 = x->cols;
+    ae_swap_matrices(x, &oldx);
+    ae_matrix_set_length(x, m, n, _state);
+    for(i=0; i<=m-1; i++)
+    {
+        for(j=0; j<=n-1; j++)
+        {
+            if( i<m2&&j<n2 )
+            {
+                x->ptr.pp_int[i][j] = oldx.ptr.pp_int[i][j];
+            }
+            else
+            {
+                x->ptr.pp_int[i][j] = 0;
+            }
+        }
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This function checks that length(X) is at least N and first N values  from
+X[] are finite
 
   -- ALGLIB --
      Copyright 18.06.2010 by Bochkanov Sergey
@@ -727,6 +952,16 @@ ae_bool isfinitevector(/* Real    */ ae_vector* x,
 
 
     ae_assert(n>=0, "APSERVIsFiniteVector: internal error (N<0)", _state);
+    if( n==0 )
+    {
+        result = ae_true;
+        return result;
+    }
+    if( x->cnt<n )
+    {
+        result = ae_false;
+        return result;
+    }
     for(i=0; i<=n-1; i++)
     {
         if( !ae_isfinite(x->ptr.p_double[i], _state) )
@@ -741,7 +976,7 @@ ae_bool isfinitevector(/* Real    */ ae_vector* x,
 
 
 /*************************************************************************
-This function checks that all values from X[] are finite
+This function checks that first N values from X[] are finite
 
   -- ALGLIB --
      Copyright 18.06.2010 by Bochkanov Sergey
@@ -769,7 +1004,8 @@ ae_bool isfinitecvector(/* Complex */ ae_vector* z,
 
 
 /*************************************************************************
-This function checks that all values from X[0..M-1,0..N-1] are finite
+This function checks that size of X is at least MxN and values from
+X[0..M-1,0..N-1] are finite.
 
   -- ALGLIB --
      Copyright 18.06.2010 by Bochkanov Sergey
@@ -786,6 +1022,16 @@ ae_bool apservisfinitematrix(/* Real    */ ae_matrix* x,
 
     ae_assert(n>=0, "APSERVIsFiniteMatrix: internal error (N<0)", _state);
     ae_assert(m>=0, "APSERVIsFiniteMatrix: internal error (M<0)", _state);
+    if( m==0||n==0 )
+    {
+        result = ae_true;
+        return result;
+    }
+    if( x->rows<m||x->cols<n )
+    {
+        result = ae_false;
+        return result;
+    }
     for(i=0; i<=m-1; i++)
     {
         for(j=0; j<=n-1; j++)
@@ -837,8 +1083,8 @@ ae_bool apservisfinitecmatrix(/* Complex */ ae_matrix* x,
 
 
 /*************************************************************************
-This function checks that all values from upper/lower triangle of
-X[0..N-1,0..N-1] are finite
+This function checks that size of X is at least NxN and all values from
+upper/lower triangle of X[0..N-1,0..N-1] are finite
 
   -- ALGLIB --
      Copyright 18.06.2010 by Bochkanov Sergey
@@ -856,6 +1102,16 @@ ae_bool isfinitertrmatrix(/* Real    */ ae_matrix* x,
 
 
     ae_assert(n>=0, "APSERVIsFiniteRTRMatrix: internal error (N<0)", _state);
+    if( n==0 )
+    {
+        result = ae_true;
+        return result;
+    }
+    if( x->rows<n||x->cols<n )
+    {
+        result = ae_false;
+        return result;
+    }
     for(i=0; i<=n-1; i++)
     {
         if( isupper )
@@ -1210,6 +1466,122 @@ void apperiodicmap(double* x,
     }
     *x = ae_maxreal(*x, a, _state);
     *x = ae_minreal(*x, b, _state);
+}
+
+
+/*************************************************************************
+Returns random normal number using low-quality system-provided generator
+
+  -- ALGLIB --
+     Copyright 20.03.2009 by Bochkanov Sergey
+*************************************************************************/
+double randomnormal(ae_state *_state)
+{
+    double u;
+    double v;
+    double s;
+    double result;
+
+
+    for(;;)
+    {
+        u = 2*ae_randomreal(_state)-1;
+        v = 2*ae_randomreal(_state)-1;
+        s = ae_sqr(u, _state)+ae_sqr(v, _state);
+        if( ae_fp_greater(s,0)&&ae_fp_less(s,1) )
+        {
+            
+            /*
+             * two Sqrt's instead of one to
+             * avoid overflow when S is too small
+             */
+            s = ae_sqrt(-2*ae_log(s, _state), _state)/ae_sqrt(s, _state);
+            result = u*s;
+            return result;
+        }
+    }
+    return result;
+}
+
+
+/*************************************************************************
+Generates random unit vector using low-quality system-provided generator.
+Reallocates array if its size is too short.
+
+  -- ALGLIB --
+     Copyright 20.03.2009 by Bochkanov Sergey
+*************************************************************************/
+void randomunit(ae_int_t n, /* Real    */ ae_vector* x, ae_state *_state)
+{
+    ae_int_t i;
+    double v;
+    double vv;
+
+
+    ae_assert(n>0, "RandomUnit: N<=0", _state);
+    if( x->cnt<n )
+    {
+        ae_vector_set_length(x, n, _state);
+    }
+    do
+    {
+        v = 0.0;
+        for(i=0; i<=n-1; i++)
+        {
+            vv = randomnormal(_state);
+            x->ptr.p_double[i] = vv;
+            v = v+vv*vv;
+        }
+    }
+    while(ae_fp_less_eq(v,0));
+    v = 1/ae_sqrt(v, _state);
+    for(i=0; i<=n-1; i++)
+    {
+        x->ptr.p_double[i] = x->ptr.p_double[i]*v;
+    }
+}
+
+
+/*************************************************************************
+This function is used to increment value of integer variable
+*************************************************************************/
+void inc(ae_int_t* v, ae_state *_state)
+{
+
+
+    *v = *v+1;
+}
+
+
+/*************************************************************************
+This function is used to decrement value of integer variable
+*************************************************************************/
+void dec(ae_int_t* v, ae_state *_state)
+{
+
+
+    *v = *v-1;
+}
+
+
+/*************************************************************************
+This function performs two operations:
+1. decrements value of integer variable, if it is positive
+2. explicitly sets variable to zero if it is non-positive
+It is used by some algorithms to decrease value of internal counters.
+*************************************************************************/
+void countdown(ae_int_t* v, ae_state *_state)
+{
+
+
+    if( *v>0 )
+    {
+        *v = *v-1;
+    }
+    else
+    {
+        *v = 0;
+    }
 }
 
 
@@ -1662,8 +2034,105 @@ ae_int_t recsearch(/* Integer */ ae_vector* a,
 }
 
 
-ae_bool _apbuffers_init(apbuffers* p, ae_state *_state, ae_bool make_automatic)
+/*************************************************************************
+This function is used in parallel functions for recurrent division of large
+task into two smaller tasks.
+
+It has following properties:
+* it works only for TaskSize>=2 (assertion is thrown otherwise)
+* for TaskSize=2, it returns Task0=1, Task1=1
+* in case TaskSize is odd,  Task0=TaskSize-1, Task1=1
+* in case TaskSize is even, Task0 and Task1 are approximately TaskSize/2
+  and both Task0 and Task1 are even, Task0>=Task1
+
+  -- ALGLIB --
+     Copyright 07.04.2013 by Bochkanov Sergey
+*************************************************************************/
+void splitlengtheven(ae_int_t tasksize,
+     ae_int_t* task0,
+     ae_int_t* task1,
+     ae_state *_state)
 {
+
+    *task0 = 0;
+    *task1 = 0;
+
+    ae_assert(tasksize>=2, "SplitLengthEven: TaskSize<2", _state);
+    if( tasksize==2 )
+    {
+        *task0 = 1;
+        *task1 = 1;
+        return;
+    }
+    if( tasksize%2==0 )
+    {
+        
+        /*
+         * Even division
+         */
+        *task0 = tasksize/2;
+        *task1 = tasksize/2;
+        if( *task0%2!=0 )
+        {
+            *task0 = *task0+1;
+            *task1 = *task1-1;
+        }
+    }
+    else
+    {
+        
+        /*
+         * Odd task size, split trailing odd part from it.
+         */
+        *task0 = tasksize-1;
+        *task1 = 1;
+    }
+    ae_assert(*task0>=1, "SplitLengthEven: internal error", _state);
+    ae_assert(*task1>=1, "SplitLengthEven: internal error", _state);
+}
+
+
+/*************************************************************************
+This function is used in parallel functions for recurrent division of large
+task into two smaller tasks.
+
+It has following properties:
+* it works only for TaskSize>=2 and ChunkSize>=2
+  (assertion is thrown otherwise)
+* Task0+Task1=TaskSize, Task0>0, Task1>0
+* Task0 and Task1 are close to each other
+* in case TaskSize>ChunkSize, Task0 is always divisible by ChunkSize
+
+  -- ALGLIB --
+     Copyright 07.04.2013 by Bochkanov Sergey
+*************************************************************************/
+void splitlength(ae_int_t tasksize,
+     ae_int_t chunksize,
+     ae_int_t* task0,
+     ae_int_t* task1,
+     ae_state *_state)
+{
+
+    *task0 = 0;
+    *task1 = 0;
+
+    ae_assert(chunksize>=2, "SplitLength: ChunkSize<2", _state);
+    ae_assert(tasksize>=2, "SplitLength: TaskSize<2", _state);
+    *task0 = tasksize/2;
+    if( *task0>chunksize&&*task0%chunksize!=0 )
+    {
+        *task0 = *task0-*task0%chunksize;
+    }
+    *task1 = tasksize-(*task0);
+    ae_assert(*task0>=1, "SplitLength: internal error", _state);
+    ae_assert(*task1>=1, "SplitLength: internal error", _state);
+}
+
+
+ae_bool _apbuffers_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    apbuffers *p = (apbuffers*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->ia0, 0, DT_INT, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->ia1, 0, DT_INT, _state, make_automatic) )
@@ -1684,8 +2153,10 @@ ae_bool _apbuffers_init(apbuffers* p, ae_state *_state, ae_bool make_automatic)
 }
 
 
-ae_bool _apbuffers_init_copy(apbuffers* dst, apbuffers* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _apbuffers_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    apbuffers *dst = (apbuffers*)_dst;
+    apbuffers *src = (apbuffers*)_src;
     if( !ae_vector_init_copy(&dst->ia0, &src->ia0, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init_copy(&dst->ia1, &src->ia1, _state, make_automatic) )
@@ -1706,8 +2177,10 @@ ae_bool _apbuffers_init_copy(apbuffers* dst, apbuffers* src, ae_state *_state, a
 }
 
 
-void _apbuffers_clear(apbuffers* p)
+void _apbuffers_clear(void* _p)
 {
+    apbuffers *p = (apbuffers*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->ia0);
     ae_vector_clear(&p->ia1);
     ae_vector_clear(&p->ia2);
@@ -1716,6 +2189,341 @@ void _apbuffers_clear(apbuffers* p)
     ae_vector_clear(&p->ra1);
     ae_vector_clear(&p->ra2);
     ae_vector_clear(&p->ra3);
+}
+
+
+void _apbuffers_destroy(void* _p)
+{
+    apbuffers *p = (apbuffers*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->ia0);
+    ae_vector_destroy(&p->ia1);
+    ae_vector_destroy(&p->ia2);
+    ae_vector_destroy(&p->ia3);
+    ae_vector_destroy(&p->ra0);
+    ae_vector_destroy(&p->ra1);
+    ae_vector_destroy(&p->ra2);
+    ae_vector_destroy(&p->ra3);
+}
+
+
+ae_bool _sboolean_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    sboolean *p = (sboolean*)_p;
+    ae_touch_ptr((void*)p);
+    return ae_true;
+}
+
+
+ae_bool _sboolean_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    sboolean *dst = (sboolean*)_dst;
+    sboolean *src = (sboolean*)_src;
+    dst->val = src->val;
+    return ae_true;
+}
+
+
+void _sboolean_clear(void* _p)
+{
+    sboolean *p = (sboolean*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _sboolean_destroy(void* _p)
+{
+    sboolean *p = (sboolean*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _sbooleanarray_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    sbooleanarray *p = (sbooleanarray*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->val, 0, DT_BOOL, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _sbooleanarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    sbooleanarray *dst = (sbooleanarray*)_dst;
+    sbooleanarray *src = (sbooleanarray*)_src;
+    if( !ae_vector_init_copy(&dst->val, &src->val, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _sbooleanarray_clear(void* _p)
+{
+    sbooleanarray *p = (sbooleanarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->val);
+}
+
+
+void _sbooleanarray_destroy(void* _p)
+{
+    sbooleanarray *p = (sbooleanarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->val);
+}
+
+
+ae_bool _sinteger_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    sinteger *p = (sinteger*)_p;
+    ae_touch_ptr((void*)p);
+    return ae_true;
+}
+
+
+ae_bool _sinteger_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    sinteger *dst = (sinteger*)_dst;
+    sinteger *src = (sinteger*)_src;
+    dst->val = src->val;
+    return ae_true;
+}
+
+
+void _sinteger_clear(void* _p)
+{
+    sinteger *p = (sinteger*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _sinteger_destroy(void* _p)
+{
+    sinteger *p = (sinteger*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _sintegerarray_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    sintegerarray *p = (sintegerarray*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->val, 0, DT_INT, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _sintegerarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    sintegerarray *dst = (sintegerarray*)_dst;
+    sintegerarray *src = (sintegerarray*)_src;
+    if( !ae_vector_init_copy(&dst->val, &src->val, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _sintegerarray_clear(void* _p)
+{
+    sintegerarray *p = (sintegerarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->val);
+}
+
+
+void _sintegerarray_destroy(void* _p)
+{
+    sintegerarray *p = (sintegerarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->val);
+}
+
+
+ae_bool _sreal_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    sreal *p = (sreal*)_p;
+    ae_touch_ptr((void*)p);
+    return ae_true;
+}
+
+
+ae_bool _sreal_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    sreal *dst = (sreal*)_dst;
+    sreal *src = (sreal*)_src;
+    dst->val = src->val;
+    return ae_true;
+}
+
+
+void _sreal_clear(void* _p)
+{
+    sreal *p = (sreal*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _sreal_destroy(void* _p)
+{
+    sreal *p = (sreal*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _srealarray_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    srealarray *p = (srealarray*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->val, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _srealarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    srealarray *dst = (srealarray*)_dst;
+    srealarray *src = (srealarray*)_src;
+    if( !ae_vector_init_copy(&dst->val, &src->val, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _srealarray_clear(void* _p)
+{
+    srealarray *p = (srealarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->val);
+}
+
+
+void _srealarray_destroy(void* _p)
+{
+    srealarray *p = (srealarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->val);
+}
+
+
+ae_bool _scomplex_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    scomplex *p = (scomplex*)_p;
+    ae_touch_ptr((void*)p);
+    return ae_true;
+}
+
+
+ae_bool _scomplex_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    scomplex *dst = (scomplex*)_dst;
+    scomplex *src = (scomplex*)_src;
+    dst->val = src->val;
+    return ae_true;
+}
+
+
+void _scomplex_clear(void* _p)
+{
+    scomplex *p = (scomplex*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _scomplex_destroy(void* _p)
+{
+    scomplex *p = (scomplex*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _scomplexarray_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    scomplexarray *p = (scomplexarray*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->val, 0, DT_COMPLEX, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _scomplexarray_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    scomplexarray *dst = (scomplexarray*)_dst;
+    scomplexarray *src = (scomplexarray*)_src;
+    if( !ae_vector_init_copy(&dst->val, &src->val, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _scomplexarray_clear(void* _p)
+{
+    scomplexarray *p = (scomplexarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->val);
+}
+
+
+void _scomplexarray_destroy(void* _p)
+{
+    scomplexarray *p = (scomplexarray*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->val);
+}
+
+
+
+
+ae_int_t getrdfserializationcode(ae_state *_state)
+{
+    ae_int_t result;
+
+
+    result = 1;
+    return result;
+}
+
+
+ae_int_t getkdtreeserializationcode(ae_state *_state)
+{
+    ae_int_t result;
+
+
+    result = 2;
+    return result;
+}
+
+
+ae_int_t getmlpserializationcode(ae_state *_state)
+{
+    ae_int_t result;
+
+
+    result = 3;
+    return result;
+}
+
+
+ae_int_t getmlpeserializationcode(ae_state *_state)
+{
+    ae_int_t result;
+
+
+    result = 4;
+    return result;
+}
+
+
+ae_int_t getrbfserializationcode(ae_state *_state)
+{
+    ae_int_t result;
+
+
+    result = 5;
+    return result;
 }
 
 
@@ -3126,19 +3934,32 @@ static void tsort_tagsortfastrec(/* Real    */ ae_vector* a,
 
 
 /*************************************************************************
-Internal ranking subroutine
+Internal ranking subroutine.
+
+INPUT PARAMETERS:
+    X       -   array to rank
+    N       -   array size
+    IsCentered- whether ranks are centered or not:
+                * True      -   ranks are centered in such way that  their
+                                sum is zero
+                * False     -   ranks are not centered
+    Buf     -   temporary buffers
+    
+NOTE: when IsCentered is True and all X[] are equal, this  function  fills
+      X by zeros (exact zeros are used, not sum which is only approximately
+      equal to zero).
 *************************************************************************/
 void rankx(/* Real    */ ae_vector* x,
      ae_int_t n,
+     ae_bool iscentered,
      apbuffers* buf,
      ae_state *_state)
 {
     ae_int_t i;
     ae_int_t j;
     ae_int_t k;
-    ae_int_t t;
     double tmp;
-    ae_int_t tmpi;
+    double voffs;
 
 
     
@@ -3151,7 +3972,7 @@ void rankx(/* Real    */ ae_vector* x,
     }
     if( n==1 )
     {
-        x->ptr.p_double[0] = 1;
+        x->ptr.p_double[0] = 0;
         return;
     }
     if( buf->ra1.cnt<n )
@@ -3167,82 +3988,26 @@ void rankx(/* Real    */ ae_vector* x,
         buf->ra1.ptr.p_double[i] = x->ptr.p_double[i];
         buf->ia1.ptr.p_int[i] = i;
     }
+    tagsortfasti(&buf->ra1, &buf->ia1, &buf->ra2, &buf->ia2, n, _state);
     
     /*
-     * sort {R, C}
+     * Special test for all values being equal
      */
-    if( n!=1 )
+    if( ae_fp_eq(buf->ra1.ptr.p_double[0],buf->ra1.ptr.p_double[n-1]) )
     {
-        i = 2;
-        do
+        if( iscentered )
         {
-            t = i;
-            while(t!=1)
-            {
-                k = t/2;
-                if( ae_fp_greater_eq(buf->ra1.ptr.p_double[k-1],buf->ra1.ptr.p_double[t-1]) )
-                {
-                    t = 1;
-                }
-                else
-                {
-                    tmp = buf->ra1.ptr.p_double[k-1];
-                    buf->ra1.ptr.p_double[k-1] = buf->ra1.ptr.p_double[t-1];
-                    buf->ra1.ptr.p_double[t-1] = tmp;
-                    tmpi = buf->ia1.ptr.p_int[k-1];
-                    buf->ia1.ptr.p_int[k-1] = buf->ia1.ptr.p_int[t-1];
-                    buf->ia1.ptr.p_int[t-1] = tmpi;
-                    t = k;
-                }
-            }
-            i = i+1;
+            tmp = 0.0;
         }
-        while(i<=n);
-        i = n-1;
-        do
+        else
         {
-            tmp = buf->ra1.ptr.p_double[i];
-            buf->ra1.ptr.p_double[i] = buf->ra1.ptr.p_double[0];
-            buf->ra1.ptr.p_double[0] = tmp;
-            tmpi = buf->ia1.ptr.p_int[i];
-            buf->ia1.ptr.p_int[i] = buf->ia1.ptr.p_int[0];
-            buf->ia1.ptr.p_int[0] = tmpi;
-            t = 1;
-            while(t!=0)
-            {
-                k = 2*t;
-                if( k>i )
-                {
-                    t = 0;
-                }
-                else
-                {
-                    if( k<i )
-                    {
-                        if( ae_fp_greater(buf->ra1.ptr.p_double[k],buf->ra1.ptr.p_double[k-1]) )
-                        {
-                            k = k+1;
-                        }
-                    }
-                    if( ae_fp_greater_eq(buf->ra1.ptr.p_double[t-1],buf->ra1.ptr.p_double[k-1]) )
-                    {
-                        t = 0;
-                    }
-                    else
-                    {
-                        tmp = buf->ra1.ptr.p_double[k-1];
-                        buf->ra1.ptr.p_double[k-1] = buf->ra1.ptr.p_double[t-1];
-                        buf->ra1.ptr.p_double[t-1] = tmp;
-                        tmpi = buf->ia1.ptr.p_int[k-1];
-                        buf->ia1.ptr.p_int[k-1] = buf->ia1.ptr.p_int[t-1];
-                        buf->ia1.ptr.p_int[t-1] = tmpi;
-                        t = k;
-                    }
-                }
-            }
-            i = i-1;
+            tmp = (double)(n-1)/(double)2;
         }
-        while(i>=1);
+        for(i=0; i<=n-1; i++)
+        {
+            x->ptr.p_double[i] = tmp;
+        }
+        return;
     }
     
     /*
@@ -3262,7 +4027,7 @@ void rankx(/* Real    */ ae_vector* x,
         }
         for(k=i; k<=j-1; k++)
         {
-            buf->ra1.ptr.p_double[k] = 1+(double)(i+j-1)/(double)2;
+            buf->ra1.ptr.p_double[k] = (double)(i+j-1)/(double)2;
         }
         i = j;
     }
@@ -3270,9 +4035,17 @@ void rankx(/* Real    */ ae_vector* x,
     /*
      * back to x
      */
+    if( iscentered )
+    {
+        voffs = (double)(n-1)/(double)2;
+    }
+    else
+    {
+        voffs = 0.0;
+    }
     for(i=0; i<=n-1; i++)
     {
-        x->ptr.p_double[buf->ia1.ptr.p_int[i]] = buf->ra1.ptr.p_double[i];
+        x->ptr.p_double[buf->ia1.ptr.p_int[i]] = buf->ra1.ptr.p_double[i]-voffs;
     }
 }
 
@@ -3661,853 +4434,1643 @@ ae_bool cmatrixgemmf(ae_int_t m,
 }
 
 
-
-
-void hermitianmatrixvectormultiply(/* Complex */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Complex */ ae_vector* x,
-     ae_complex alpha,
-     /* Complex */ ae_vector* y,
-     ae_state *_state)
-{
-    ae_int_t i;
-    ae_int_t ba1;
-    ae_int_t ba2;
-    ae_int_t by1;
-    ae_int_t by2;
-    ae_int_t bx1;
-    ae_int_t bx2;
-    ae_int_t n;
-    ae_complex v;
-
-
-    n = i2-i1+1;
-    if( n<=0 )
-    {
-        return;
-    }
-    
-    /*
-     * Let A = L + D + U, where
-     *  L is strictly lower triangular (main diagonal is zero)
-     *  D is diagonal
-     *  U is strictly upper triangular (main diagonal is zero)
-     *
-     * A*x = L*x + D*x + U*x
-     *
-     * Calculate D*x first
-     */
-    for(i=i1; i<=i2; i++)
-    {
-        y->ptr.p_complex[i-i1+1] = ae_c_mul(a->ptr.pp_complex[i][i],x->ptr.p_complex[i-i1+1]);
-    }
-    
-    /*
-     * Add L*x + U*x
-     */
-    if( isupper )
-    {
-        for(i=i1; i<=i2-1; i++)
-        {
-            
-            /*
-             * Add L*x to the result
-             */
-            v = x->ptr.p_complex[i-i1+1];
-            by1 = i-i1+2;
-            by2 = n;
-            ba1 = i+1;
-            ba2 = i2;
-            ae_v_caddc(&y->ptr.p_complex[by1], 1, &a->ptr.pp_complex[i][ba1], 1, "Conj", ae_v_len(by1,by2), v);
-            
-            /*
-             * Add U*x to the result
-             */
-            bx1 = i-i1+2;
-            bx2 = n;
-            ba1 = i+1;
-            ba2 = i2;
-            v = ae_v_cdotproduct(&x->ptr.p_complex[bx1], 1, "N", &a->ptr.pp_complex[i][ba1], 1, "N", ae_v_len(bx1,bx2));
-            y->ptr.p_complex[i-i1+1] = ae_c_add(y->ptr.p_complex[i-i1+1],v);
-        }
-    }
-    else
-    {
-        for(i=i1+1; i<=i2; i++)
-        {
-            
-            /*
-             * Add L*x to the result
-             */
-            bx1 = 1;
-            bx2 = i-i1;
-            ba1 = i1;
-            ba2 = i-1;
-            v = ae_v_cdotproduct(&x->ptr.p_complex[bx1], 1, "N", &a->ptr.pp_complex[i][ba1], 1, "N", ae_v_len(bx1,bx2));
-            y->ptr.p_complex[i-i1+1] = ae_c_add(y->ptr.p_complex[i-i1+1],v);
-            
-            /*
-             * Add U*x to the result
-             */
-            v = x->ptr.p_complex[i-i1+1];
-            by1 = 1;
-            by2 = i-i1;
-            ba1 = i1;
-            ba2 = i-1;
-            ae_v_caddc(&y->ptr.p_complex[by1], 1, &a->ptr.pp_complex[i][ba1], 1, "Conj", ae_v_len(by1,by2), v);
-        }
-    }
-    ae_v_cmulc(&y->ptr.p_complex[1], 1, ae_v_len(1,n), alpha);
-}
-
-
-void hermitianrank2update(/* Complex */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Complex */ ae_vector* x,
-     /* Complex */ ae_vector* y,
-     /* Complex */ ae_vector* t,
-     ae_complex alpha,
-     ae_state *_state)
-{
-    ae_int_t i;
-    ae_int_t tp1;
-    ae_int_t tp2;
-    ae_complex v;
-
-
-    if( isupper )
-    {
-        for(i=i1; i<=i2; i++)
-        {
-            tp1 = i+1-i1;
-            tp2 = i2-i1+1;
-            v = ae_c_mul(alpha,x->ptr.p_complex[i+1-i1]);
-            ae_v_cmovec(&t->ptr.p_complex[tp1], 1, &y->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
-            v = ae_c_mul(ae_c_conj(alpha, _state),y->ptr.p_complex[i+1-i1]);
-            ae_v_caddc(&t->ptr.p_complex[tp1], 1, &x->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
-            ae_v_cadd(&a->ptr.pp_complex[i][i], 1, &t->ptr.p_complex[tp1], 1, "N", ae_v_len(i,i2));
-        }
-    }
-    else
-    {
-        for(i=i1; i<=i2; i++)
-        {
-            tp1 = 1;
-            tp2 = i+1-i1;
-            v = ae_c_mul(alpha,x->ptr.p_complex[i+1-i1]);
-            ae_v_cmovec(&t->ptr.p_complex[tp1], 1, &y->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
-            v = ae_c_mul(ae_c_conj(alpha, _state),y->ptr.p_complex[i+1-i1]);
-            ae_v_caddc(&t->ptr.p_complex[tp1], 1, &x->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
-            ae_v_cadd(&a->ptr.pp_complex[i][i1], 1, &t->ptr.p_complex[tp1], 1, "N", ae_v_len(i1,i));
-        }
-    }
-}
-
-
-
-
 /*************************************************************************
-Generation of an elementary reflection transformation
+CMatrixGEMM kernel, basecase code for CMatrixGEMM.
 
-The subroutine generates elementary reflection H of order N, so that, for
-a given X, the following equality holds true:
+This subroutine calculates C = alpha*op1(A)*op2(B) +beta*C where:
+* C is MxN general matrix
+* op1(A) is MxK matrix
+* op2(B) is KxN matrix
+* "op" may be identity transformation, transposition, conjugate transposition
 
-    ( X(1) )   ( Beta )
-H * (  ..  ) = (  0   )
-    ( X(n) )   (  0   )
+Additional info:
+* multiplication result replaces C. If Beta=0, C elements are not used in
+  calculations (not multiplied by zero - just not referenced)
+* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
+* if both Beta and Alpha are zero, C is filled by zeros.
 
-where
-              ( V(1) )
-H = 1 - Tau * (  ..  ) * ( V(1), ..., V(n) )
-              ( V(n) )
+IMPORTANT:
 
-where the first component of vector V equals 1.
+This function does NOT preallocate output matrix C, it MUST be preallocated
+by caller prior to calling this function. In case C does not have  enough
+space to store result, exception will be generated.
 
-Input parameters:
-    X   -   vector. Array whose index ranges within [1..N].
-    N   -   reflection order.
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    OpTypeA -   transformation type:
+                * 0 - no transformation
+                * 1 - transposition
+                * 2 - conjugate transposition
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    OpTypeB -   transformation type:
+                * 0 - no transformation
+                * 1 - transposition
+                * 2 - conjugate transposition
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
 
-Output parameters:
-    X   -   components from 2 to N are replaced with vector V.
-            The first component is replaced with parameter Beta.
-    Tau -   scalar value Tau. If X is a null vector, Tau equals 0,
-            otherwise 1 <= Tau <= 2.
-
-This subroutine is the modification of the DLARFG subroutines from
-the LAPACK library.
-
-MODIFICATIONS:
-    24.12.2005 sign(Alpha) was replaced with an analogous to the Fortran SIGN code.
-
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
 *************************************************************************/
-void generatereflection(/* Real    */ ae_vector* x,
+void cmatrixgemmk(ae_int_t m,
      ae_int_t n,
-     double* tau,
+     ae_int_t k,
+     ae_complex alpha,
+     /* Complex */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Complex */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     ae_complex beta,
+     /* Complex */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state)
 {
+    ae_int_t i;
     ae_int_t j;
-    double alpha;
-    double xnorm;
-    double v;
-    double beta;
-    double mx;
-    double s;
+    ae_complex v;
+    ae_complex v00;
+    ae_complex v01;
+    ae_complex v10;
+    ae_complex v11;
+    double v00x;
+    double v00y;
+    double v01x;
+    double v01y;
+    double v10x;
+    double v10y;
+    double v11x;
+    double v11y;
+    double a0x;
+    double a0y;
+    double a1x;
+    double a1y;
+    double b0x;
+    double b0y;
+    double b1x;
+    double b1y;
+    ae_int_t idxa0;
+    ae_int_t idxa1;
+    ae_int_t idxb0;
+    ae_int_t idxb1;
+    ae_int_t i0;
+    ae_int_t i1;
+    ae_int_t ik;
+    ae_int_t j0;
+    ae_int_t j1;
+    ae_int_t jk;
+    ae_int_t t;
+    ae_int_t offsa;
+    ae_int_t offsb;
 
-    *tau = 0;
 
-    if( n<=1 )
+    
+    /*
+     * if matrix size is zero
+     */
+    if( m==0||n==0 )
     {
-        *tau = 0;
         return;
     }
     
     /*
-     * Scale if needed (to avoid overflow/underflow during intermediate
-     * calculations).
+     * Try optimized code
      */
-    mx = 0;
-    for(j=1; j<=n; j++)
+    if( cmatrixgemmf(m, n, k, alpha, a, ia, ja, optypea, b, ib, jb, optypeb, beta, c, ic, jc, _state) )
     {
-        mx = ae_maxreal(ae_fabs(x->ptr.p_double[j], _state), mx, _state);
+        return;
     }
-    s = 1;
-    if( ae_fp_neq(mx,0) )
+    
+    /*
+     * if K=0, then C=Beta*C
+     */
+    if( k==0 )
     {
-        if( ae_fp_less_eq(mx,ae_minrealnumber/ae_machineepsilon) )
+        if( ae_c_neq_d(beta,1) )
         {
-            s = ae_minrealnumber/ae_machineepsilon;
-            v = 1/s;
-            ae_v_muld(&x->ptr.p_double[1], 1, ae_v_len(1,n), v);
-            mx = mx*v;
-        }
-        else
-        {
-            if( ae_fp_greater_eq(mx,ae_maxrealnumber*ae_machineepsilon) )
+            if( ae_c_neq_d(beta,0) )
             {
-                s = ae_maxrealnumber*ae_machineepsilon;
-                v = 1/s;
-                ae_v_muld(&x->ptr.p_double[1], 1, ae_v_len(1,n), v);
-                mx = mx*v;
+                for(i=0; i<=m-1; i++)
+                {
+                    for(j=0; j<=n-1; j++)
+                    {
+                        c->ptr.pp_complex[ic+i][jc+j] = ae_c_mul(beta,c->ptr.pp_complex[ic+i][jc+j]);
+                    }
+                }
+            }
+            else
+            {
+                for(i=0; i<=m-1; i++)
+                {
+                    for(j=0; j<=n-1; j++)
+                    {
+                        c->ptr.pp_complex[ic+i][jc+j] = ae_complex_from_d(0);
+                    }
+                }
             }
         }
+        return;
     }
     
     /*
-     * XNORM = DNRM2( N-1, X, INCX )
+     * This phase is not really necessary, but compiler complains
+     * about "possibly uninitialized variables"
      */
-    alpha = x->ptr.p_double[1];
-    xnorm = 0;
-    if( ae_fp_neq(mx,0) )
+    a0x = 0;
+    a0y = 0;
+    a1x = 0;
+    a1y = 0;
+    b0x = 0;
+    b0y = 0;
+    b1x = 0;
+    b1y = 0;
+    
+    /*
+     * General case
+     */
+    i = 0;
+    while(i<m)
     {
-        for(j=2; j<=n; j++)
+        j = 0;
+        while(j<n)
         {
-            xnorm = xnorm+ae_sqr(x->ptr.p_double[j]/mx, _state);
+            
+            /*
+             * Choose between specialized 4x4 code and general code
+             */
+            if( i+2<=m&&j+2<=n )
+            {
+                
+                /*
+                 * Specialized 4x4 code for [I..I+3]x[J..J+3] submatrix of C.
+                 *
+                 * This submatrix is calculated as sum of K rank-1 products,
+                 * with operands cached in local variables in order to speed
+                 * up operations with arrays.
+                 */
+                v00x = 0.0;
+                v00y = 0.0;
+                v01x = 0.0;
+                v01y = 0.0;
+                v10x = 0.0;
+                v10y = 0.0;
+                v11x = 0.0;
+                v11y = 0.0;
+                if( optypea==0 )
+                {
+                    idxa0 = ia+i+0;
+                    idxa1 = ia+i+1;
+                    offsa = ja;
+                }
+                else
+                {
+                    idxa0 = ja+i+0;
+                    idxa1 = ja+i+1;
+                    offsa = ia;
+                }
+                if( optypeb==0 )
+                {
+                    idxb0 = jb+j+0;
+                    idxb1 = jb+j+1;
+                    offsb = ib;
+                }
+                else
+                {
+                    idxb0 = ib+j+0;
+                    idxb1 = ib+j+1;
+                    offsb = jb;
+                }
+                for(t=0; t<=k-1; t++)
+                {
+                    if( optypea==0 )
+                    {
+                        a0x = a->ptr.pp_complex[idxa0][offsa].x;
+                        a0y = a->ptr.pp_complex[idxa0][offsa].y;
+                        a1x = a->ptr.pp_complex[idxa1][offsa].x;
+                        a1y = a->ptr.pp_complex[idxa1][offsa].y;
+                    }
+                    if( optypea==1 )
+                    {
+                        a0x = a->ptr.pp_complex[offsa][idxa0].x;
+                        a0y = a->ptr.pp_complex[offsa][idxa0].y;
+                        a1x = a->ptr.pp_complex[offsa][idxa1].x;
+                        a1y = a->ptr.pp_complex[offsa][idxa1].y;
+                    }
+                    if( optypea==2 )
+                    {
+                        a0x = a->ptr.pp_complex[offsa][idxa0].x;
+                        a0y = -a->ptr.pp_complex[offsa][idxa0].y;
+                        a1x = a->ptr.pp_complex[offsa][idxa1].x;
+                        a1y = -a->ptr.pp_complex[offsa][idxa1].y;
+                    }
+                    if( optypeb==0 )
+                    {
+                        b0x = b->ptr.pp_complex[offsb][idxb0].x;
+                        b0y = b->ptr.pp_complex[offsb][idxb0].y;
+                        b1x = b->ptr.pp_complex[offsb][idxb1].x;
+                        b1y = b->ptr.pp_complex[offsb][idxb1].y;
+                    }
+                    if( optypeb==1 )
+                    {
+                        b0x = b->ptr.pp_complex[idxb0][offsb].x;
+                        b0y = b->ptr.pp_complex[idxb0][offsb].y;
+                        b1x = b->ptr.pp_complex[idxb1][offsb].x;
+                        b1y = b->ptr.pp_complex[idxb1][offsb].y;
+                    }
+                    if( optypeb==2 )
+                    {
+                        b0x = b->ptr.pp_complex[idxb0][offsb].x;
+                        b0y = -b->ptr.pp_complex[idxb0][offsb].y;
+                        b1x = b->ptr.pp_complex[idxb1][offsb].x;
+                        b1y = -b->ptr.pp_complex[idxb1][offsb].y;
+                    }
+                    v00x = v00x+a0x*b0x-a0y*b0y;
+                    v00y = v00y+a0x*b0y+a0y*b0x;
+                    v01x = v01x+a0x*b1x-a0y*b1y;
+                    v01y = v01y+a0x*b1y+a0y*b1x;
+                    v10x = v10x+a1x*b0x-a1y*b0y;
+                    v10y = v10y+a1x*b0y+a1y*b0x;
+                    v11x = v11x+a1x*b1x-a1y*b1y;
+                    v11y = v11y+a1x*b1y+a1y*b1x;
+                    offsa = offsa+1;
+                    offsb = offsb+1;
+                }
+                v00.x = v00x;
+                v00.y = v00y;
+                v10.x = v10x;
+                v10.y = v10y;
+                v01.x = v01x;
+                v01.y = v01y;
+                v11.x = v11x;
+                v11.y = v11y;
+                if( ae_c_eq_d(beta,0) )
+                {
+                    c->ptr.pp_complex[ic+i+0][jc+j+0] = ae_c_mul(alpha,v00);
+                    c->ptr.pp_complex[ic+i+0][jc+j+1] = ae_c_mul(alpha,v01);
+                    c->ptr.pp_complex[ic+i+1][jc+j+0] = ae_c_mul(alpha,v10);
+                    c->ptr.pp_complex[ic+i+1][jc+j+1] = ae_c_mul(alpha,v11);
+                }
+                else
+                {
+                    c->ptr.pp_complex[ic+i+0][jc+j+0] = ae_c_add(ae_c_mul(beta,c->ptr.pp_complex[ic+i+0][jc+j+0]),ae_c_mul(alpha,v00));
+                    c->ptr.pp_complex[ic+i+0][jc+j+1] = ae_c_add(ae_c_mul(beta,c->ptr.pp_complex[ic+i+0][jc+j+1]),ae_c_mul(alpha,v01));
+                    c->ptr.pp_complex[ic+i+1][jc+j+0] = ae_c_add(ae_c_mul(beta,c->ptr.pp_complex[ic+i+1][jc+j+0]),ae_c_mul(alpha,v10));
+                    c->ptr.pp_complex[ic+i+1][jc+j+1] = ae_c_add(ae_c_mul(beta,c->ptr.pp_complex[ic+i+1][jc+j+1]),ae_c_mul(alpha,v11));
+                }
+            }
+            else
+            {
+                
+                /*
+                 * Determine submatrix [I0..I1]x[J0..J1] to process
+                 */
+                i0 = i;
+                i1 = ae_minint(i+1, m-1, _state);
+                j0 = j;
+                j1 = ae_minint(j+1, n-1, _state);
+                
+                /*
+                 * Process submatrix
+                 */
+                for(ik=i0; ik<=i1; ik++)
+                {
+                    for(jk=j0; jk<=j1; jk++)
+                    {
+                        if( k==0||ae_c_eq_d(alpha,0) )
+                        {
+                            v = ae_complex_from_d(0);
+                        }
+                        else
+                        {
+                            v = ae_complex_from_d(0.0);
+                            if( optypea==0&&optypeb==0 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia+ik][ja], 1, "N", &b->ptr.pp_complex[ib][jb+jk], b->stride, "N", ae_v_len(ja,ja+k-1));
+                            }
+                            if( optypea==0&&optypeb==1 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia+ik][ja], 1, "N", &b->ptr.pp_complex[ib+jk][jb], 1, "N", ae_v_len(ja,ja+k-1));
+                            }
+                            if( optypea==0&&optypeb==2 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia+ik][ja], 1, "N", &b->ptr.pp_complex[ib+jk][jb], 1, "Conj", ae_v_len(ja,ja+k-1));
+                            }
+                            if( optypea==1&&optypeb==0 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "N", &b->ptr.pp_complex[ib][jb+jk], b->stride, "N", ae_v_len(ia,ia+k-1));
+                            }
+                            if( optypea==1&&optypeb==1 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "N", &b->ptr.pp_complex[ib+jk][jb], 1, "N", ae_v_len(ia,ia+k-1));
+                            }
+                            if( optypea==1&&optypeb==2 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "N", &b->ptr.pp_complex[ib+jk][jb], 1, "Conj", ae_v_len(ia,ia+k-1));
+                            }
+                            if( optypea==2&&optypeb==0 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "Conj", &b->ptr.pp_complex[ib][jb+jk], b->stride, "N", ae_v_len(ia,ia+k-1));
+                            }
+                            if( optypea==2&&optypeb==1 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "Conj", &b->ptr.pp_complex[ib+jk][jb], 1, "N", ae_v_len(ia,ia+k-1));
+                            }
+                            if( optypea==2&&optypeb==2 )
+                            {
+                                v = ae_v_cdotproduct(&a->ptr.pp_complex[ia][ja+ik], a->stride, "Conj", &b->ptr.pp_complex[ib+jk][jb], 1, "Conj", ae_v_len(ia,ia+k-1));
+                            }
+                        }
+                        if( ae_c_eq_d(beta,0) )
+                        {
+                            c->ptr.pp_complex[ic+ik][jc+jk] = ae_c_mul(alpha,v);
+                        }
+                        else
+                        {
+                            c->ptr.pp_complex[ic+ik][jc+jk] = ae_c_add(ae_c_mul(beta,c->ptr.pp_complex[ic+ik][jc+jk]),ae_c_mul(alpha,v));
+                        }
+                    }
+                }
+            }
+            j = j+2;
         }
-        xnorm = ae_sqrt(xnorm, _state)*mx;
-    }
-    if( ae_fp_eq(xnorm,0) )
-    {
-        
-        /*
-         * H  =  I
-         */
-        *tau = 0;
-        x->ptr.p_double[1] = x->ptr.p_double[1]*s;
-        return;
-    }
-    
-    /*
-     * general case
-     */
-    mx = ae_maxreal(ae_fabs(alpha, _state), ae_fabs(xnorm, _state), _state);
-    beta = -mx*ae_sqrt(ae_sqr(alpha/mx, _state)+ae_sqr(xnorm/mx, _state), _state);
-    if( ae_fp_less(alpha,0) )
-    {
-        beta = -beta;
-    }
-    *tau = (beta-alpha)/beta;
-    v = 1/(alpha-beta);
-    ae_v_muld(&x->ptr.p_double[2], 1, ae_v_len(2,n), v);
-    x->ptr.p_double[1] = beta;
-    
-    /*
-     * Scale back outputs
-     */
-    x->ptr.p_double[1] = x->ptr.p_double[1]*s;
-}
-
-
-/*************************************************************************
-Application of an elementary reflection to a rectangular matrix of size MxN
-
-The algorithm pre-multiplies the matrix by an elementary reflection transformation
-which is given by column V and scalar Tau (see the description of the
-GenerateReflection procedure). Not the whole matrix but only a part of it
-is transformed (rows from M1 to M2, columns from N1 to N2). Only the elements
-of this submatrix are changed.
-
-Input parameters:
-    C       -   matrix to be transformed.
-    Tau     -   scalar defining the transformation.
-    V       -   column defining the transformation.
-                Array whose index ranges within [1..M2-M1+1].
-    M1, M2  -   range of rows to be transformed.
-    N1, N2  -   range of columns to be transformed.
-    WORK    -   working array whose indexes goes from N1 to N2.
-
-Output parameters:
-    C       -   the result of multiplying the input matrix C by the
-                transformation matrix which is given by Tau and V.
-                If N1>N2 or M1>M2, C is not modified.
-
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
-*************************************************************************/
-void applyreflectionfromtheleft(/* Real    */ ae_matrix* c,
-     double tau,
-     /* Real    */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Real    */ ae_vector* work,
-     ae_state *_state)
-{
-    double t;
-    ae_int_t i;
-    ae_int_t vm;
-
-
-    if( (ae_fp_eq(tau,0)||n1>n2)||m1>m2 )
-    {
-        return;
-    }
-    
-    /*
-     * w := C' * v
-     */
-    vm = m2-m1+1;
-    for(i=n1; i<=n2; i++)
-    {
-        work->ptr.p_double[i] = 0;
-    }
-    for(i=m1; i<=m2; i++)
-    {
-        t = v->ptr.p_double[i+1-m1];
-        ae_v_addd(&work->ptr.p_double[n1], 1, &c->ptr.pp_double[i][n1], 1, ae_v_len(n1,n2), t);
-    }
-    
-    /*
-     * C := C - tau * v * w'
-     */
-    for(i=m1; i<=m2; i++)
-    {
-        t = v->ptr.p_double[i-m1+1]*tau;
-        ae_v_subd(&c->ptr.pp_double[i][n1], 1, &work->ptr.p_double[n1], 1, ae_v_len(n1,n2), t);
+        i = i+2;
     }
 }
 
 
 /*************************************************************************
-Application of an elementary reflection to a rectangular matrix of size MxN
+RMatrixGEMM kernel, basecase code for RMatrixGEMM.
 
-The algorithm post-multiplies the matrix by an elementary reflection transformation
-which is given by column V and scalar Tau (see the description of the
-GenerateReflection procedure). Not the whole matrix but only a part of it
-is transformed (rows from M1 to M2, columns from N1 to N2). Only the
-elements of this submatrix are changed.
+This subroutine calculates C = alpha*op1(A)*op2(B) +beta*C where:
+* C is MxN general matrix
+* op1(A) is MxK matrix
+* op2(B) is KxN matrix
+* "op" may be identity transformation, transposition
 
-Input parameters:
-    C       -   matrix to be transformed.
-    Tau     -   scalar defining the transformation.
-    V       -   column defining the transformation.
-                Array whose index ranges within [1..N2-N1+1].
-    M1, M2  -   range of rows to be transformed.
-    N1, N2  -   range of columns to be transformed.
-    WORK    -   working array whose indexes goes from M1 to M2.
+Additional info:
+* multiplication result replaces C. If Beta=0, C elements are not used in
+  calculations (not multiplied by zero - just not referenced)
+* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
+* if both Beta and Alpha are zero, C is filled by zeros.
 
-Output parameters:
-    C       -   the result of multiplying the input matrix C by the
-                transformation matrix which is given by Tau and V.
-                If N1>N2 or M1>M2, C is not modified.
+IMPORTANT:
 
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
+This function does NOT preallocate output matrix C, it MUST be preallocated
+by caller prior to calling this function. In case C does not have  enough
+space to store result, exception will be generated.
+
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    OpTypeA -   transformation type:
+                * 0 - no transformation
+                * 1 - transposition
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    OpTypeB -   transformation type:
+                * 0 - no transformation
+                * 1 - transposition
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
+
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
 *************************************************************************/
-void applyreflectionfromtheright(/* Real    */ ae_matrix* c,
-     double tau,
-     /* Real    */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Real    */ ae_vector* work,
-     ae_state *_state)
-{
-    double t;
-    ae_int_t i;
-    ae_int_t vm;
-
-
-    if( (ae_fp_eq(tau,0)||n1>n2)||m1>m2 )
-    {
-        return;
-    }
-    vm = n2-n1+1;
-    for(i=m1; i<=m2; i++)
-    {
-        t = ae_v_dotproduct(&c->ptr.pp_double[i][n1], 1, &v->ptr.p_double[1], 1, ae_v_len(n1,n2));
-        t = t*tau;
-        ae_v_subd(&c->ptr.pp_double[i][n1], 1, &v->ptr.p_double[1], 1, ae_v_len(n1,n2), t);
-    }
-}
-
-
-
-
-/*************************************************************************
-Generation of an elementary complex reflection transformation
-
-The subroutine generates elementary complex reflection H of  order  N,  so
-that, for a given X, the following equality holds true:
-
-     ( X(1) )   ( Beta )
-H' * (  ..  ) = (  0   ),   H'*H = I,   Beta is a real number
-     ( X(n) )   (  0   )
-
-where
-
-              ( V(1) )
-H = 1 - Tau * (  ..  ) * ( conj(V(1)), ..., conj(V(n)) )
-              ( V(n) )
-
-where the first component of vector V equals 1.
-
-Input parameters:
-    X   -   vector. Array with elements [1..N].
-    N   -   reflection order.
-
-Output parameters:
-    X   -   components from 2 to N are replaced by vector V.
-            The first component is replaced with parameter Beta.
-    Tau -   scalar value Tau.
-
-This subroutine is the modification of CLARFG subroutines  from the LAPACK
-library. It has similar functionality except for the fact that it  doesn’t
-handle errors when intermediate results cause an overflow.
-
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
-*************************************************************************/
-void complexgeneratereflection(/* Complex */ ae_vector* x,
+void rmatrixgemmk(ae_int_t m,
      ae_int_t n,
-     ae_complex* tau,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state)
 {
+    ae_int_t i;
     ae_int_t j;
-    ae_complex alpha;
-    double alphi;
-    double alphr;
-    double beta;
-    double xnorm;
-    double mx;
-    ae_complex t;
-    double s;
-    ae_complex v;
 
-    tau->x = 0;
-    tau->y = 0;
 
-    if( n<=0 )
-    {
-        *tau = ae_complex_from_d(0);
-        return;
-    }
     
     /*
-     * Scale if needed (to avoid overflow/underflow during intermediate
-     * calculations).
+     * if matrix size is zero
      */
-    mx = 0;
-    for(j=1; j<=n; j++)
-    {
-        mx = ae_maxreal(ae_c_abs(x->ptr.p_complex[j], _state), mx, _state);
-    }
-    s = 1;
-    if( ae_fp_neq(mx,0) )
-    {
-        if( ae_fp_less(mx,1) )
-        {
-            s = ae_sqrt(ae_minrealnumber, _state);
-            v = ae_complex_from_d(1/s);
-            ae_v_cmulc(&x->ptr.p_complex[1], 1, ae_v_len(1,n), v);
-        }
-        else
-        {
-            s = ae_sqrt(ae_maxrealnumber, _state);
-            v = ae_complex_from_d(1/s);
-            ae_v_cmulc(&x->ptr.p_complex[1], 1, ae_v_len(1,n), v);
-        }
-    }
-    
-    /*
-     * calculate
-     */
-    alpha = x->ptr.p_complex[1];
-    mx = 0;
-    for(j=2; j<=n; j++)
-    {
-        mx = ae_maxreal(ae_c_abs(x->ptr.p_complex[j], _state), mx, _state);
-    }
-    xnorm = 0;
-    if( ae_fp_neq(mx,0) )
-    {
-        for(j=2; j<=n; j++)
-        {
-            t = ae_c_div_d(x->ptr.p_complex[j],mx);
-            xnorm = xnorm+ae_c_mul(t,ae_c_conj(t, _state)).x;
-        }
-        xnorm = ae_sqrt(xnorm, _state)*mx;
-    }
-    alphr = alpha.x;
-    alphi = alpha.y;
-    if( ae_fp_eq(xnorm,0)&&ae_fp_eq(alphi,0) )
-    {
-        *tau = ae_complex_from_d(0);
-        x->ptr.p_complex[1] = ae_c_mul_d(x->ptr.p_complex[1],s);
-        return;
-    }
-    mx = ae_maxreal(ae_fabs(alphr, _state), ae_fabs(alphi, _state), _state);
-    mx = ae_maxreal(mx, ae_fabs(xnorm, _state), _state);
-    beta = -mx*ae_sqrt(ae_sqr(alphr/mx, _state)+ae_sqr(alphi/mx, _state)+ae_sqr(xnorm/mx, _state), _state);
-    if( ae_fp_less(alphr,0) )
-    {
-        beta = -beta;
-    }
-    tau->x = (beta-alphr)/beta;
-    tau->y = -alphi/beta;
-    alpha = ae_c_d_div(1,ae_c_sub_d(alpha,beta));
-    if( n>1 )
-    {
-        ae_v_cmulc(&x->ptr.p_complex[2], 1, ae_v_len(2,n), alpha);
-    }
-    alpha = ae_complex_from_d(beta);
-    x->ptr.p_complex[1] = alpha;
-    
-    /*
-     * Scale back
-     */
-    x->ptr.p_complex[1] = ae_c_mul_d(x->ptr.p_complex[1],s);
-}
-
-
-/*************************************************************************
-Application of an elementary reflection to a rectangular matrix of size MxN
-
-The  algorithm  pre-multiplies  the  matrix  by  an  elementary reflection
-transformation  which  is  given  by  column  V  and  scalar  Tau (see the
-description of the GenerateReflection). Not the whole matrix  but  only  a
-part of it is transformed (rows from M1 to M2, columns from N1 to N2). Only
-the elements of this submatrix are changed.
-
-Note: the matrix is multiplied by H, not by H'.   If  it  is  required  to
-multiply the matrix by H', it is necessary to pass Conj(Tau) instead of Tau.
-
-Input parameters:
-    C       -   matrix to be transformed.
-    Tau     -   scalar defining transformation.
-    V       -   column defining transformation.
-                Array whose index ranges within [1..M2-M1+1]
-    M1, M2  -   range of rows to be transformed.
-    N1, N2  -   range of columns to be transformed.
-    WORK    -   working array whose index goes from N1 to N2.
-
-Output parameters:
-    C       -   the result of multiplying the input matrix C by the
-                transformation matrix which is given by Tau and V.
-                If N1>N2 or M1>M2, C is not modified.
-
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
-*************************************************************************/
-void complexapplyreflectionfromtheleft(/* Complex */ ae_matrix* c,
-     ae_complex tau,
-     /* Complex */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Complex */ ae_vector* work,
-     ae_state *_state)
-{
-    ae_complex t;
-    ae_int_t i;
-    ae_int_t vm;
-
-
-    if( (ae_c_eq_d(tau,0)||n1>n2)||m1>m2 )
+    if( m==0||n==0 )
     {
         return;
     }
     
     /*
-     * w := C^T * conj(v)
+     * Try optimized code
      */
-    vm = m2-m1+1;
-    for(i=n1; i<=n2; i++)
+    if( rmatrixgemmf(m, n, k, alpha, a, ia, ja, optypea, b, ib, jb, optypeb, beta, c, ic, jc, _state) )
     {
-        work->ptr.p_complex[i] = ae_complex_from_d(0);
-    }
-    for(i=m1; i<=m2; i++)
-    {
-        t = ae_c_conj(v->ptr.p_complex[i+1-m1], _state);
-        ae_v_caddc(&work->ptr.p_complex[n1], 1, &c->ptr.pp_complex[i][n1], 1, "N", ae_v_len(n1,n2), t);
+        return;
     }
     
     /*
-     * C := C - tau * v * w^T
+     * if K=0, then C=Beta*C
      */
-    for(i=m1; i<=m2; i++)
+    if( k==0||ae_fp_eq(alpha,0) )
     {
-        t = ae_c_mul(v->ptr.p_complex[i-m1+1],tau);
-        ae_v_csubc(&c->ptr.pp_complex[i][n1], 1, &work->ptr.p_complex[n1], 1, "N", ae_v_len(n1,n2), t);
+        if( ae_fp_neq(beta,1) )
+        {
+            if( ae_fp_neq(beta,0) )
+            {
+                for(i=0; i<=m-1; i++)
+                {
+                    for(j=0; j<=n-1; j++)
+                    {
+                        c->ptr.pp_double[ic+i][jc+j] = beta*c->ptr.pp_double[ic+i][jc+j];
+                    }
+                }
+            }
+            else
+            {
+                for(i=0; i<=m-1; i++)
+                {
+                    for(j=0; j<=n-1; j++)
+                    {
+                        c->ptr.pp_double[ic+i][jc+j] = 0;
+                    }
+                }
+            }
+        }
+        return;
+    }
+    
+    /*
+     * Call specialized code.
+     *
+     * NOTE: specialized code was moved to separate function because of strange
+     *       issues with instructions cache on some systems; Having too long
+     *       functions significantly slows down internal loop of the algorithm.
+     */
+    if( optypea==0&&optypeb==0 )
+    {
+        rmatrixgemmk44v00(m, n, k, alpha, a, ia, ja, b, ib, jb, beta, c, ic, jc, _state);
+    }
+    if( optypea==0&&optypeb!=0 )
+    {
+        rmatrixgemmk44v01(m, n, k, alpha, a, ia, ja, b, ib, jb, beta, c, ic, jc, _state);
+    }
+    if( optypea!=0&&optypeb==0 )
+    {
+        rmatrixgemmk44v10(m, n, k, alpha, a, ia, ja, b, ib, jb, beta, c, ic, jc, _state);
+    }
+    if( optypea!=0&&optypeb!=0 )
+    {
+        rmatrixgemmk44v11(m, n, k, alpha, a, ia, ja, b, ib, jb, beta, c, ic, jc, _state);
     }
 }
 
 
 /*************************************************************************
-Application of an elementary reflection to a rectangular matrix of size MxN
+RMatrixGEMM kernel, basecase code for RMatrixGEMM, specialized for sitation
+with OpTypeA=0 and OpTypeB=0.
 
-The  algorithm  post-multiplies  the  matrix  by  an elementary reflection
-transformation  which  is  given  by  column  V  and  scalar  Tau (see the
-description  of  the  GenerateReflection). Not the whole matrix but only a
-part  of  it  is  transformed (rows from M1 to M2, columns from N1 to N2).
-Only the elements of this submatrix are changed.
+Additional info:
+* this function requires that Alpha<>0 (assertion is thrown otherwise)
 
-Input parameters:
-    C       -   matrix to be transformed.
-    Tau     -   scalar defining transformation.
-    V       -   column defining transformation.
-                Array whose index ranges within [1..N2-N1+1]
-    M1, M2  -   range of rows to be transformed.
-    N1, N2  -   range of columns to be transformed.
-    WORK    -   working array whose index goes from M1 to M2.
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
 
-Output parameters:
-    C       -   the result of multiplying the input matrix C by the
-                transformation matrix which is given by Tau and V.
-                If N1>N2 or M1>M2, C is not modified.
-
-  -- LAPACK auxiliary routine (version 3.0) --
-     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
-     Courant Institute, Argonne National Lab, and Rice University
-     September 30, 1994
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
 *************************************************************************/
-void complexapplyreflectionfromtheright(/* Complex */ ae_matrix* c,
-     ae_complex tau,
-     /* Complex */ ae_vector* v,
-     ae_int_t m1,
-     ae_int_t m2,
-     ae_int_t n1,
-     ae_int_t n2,
-     /* Complex */ ae_vector* work,
+void rmatrixgemmk44v00(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state)
 {
-    ae_complex t;
     ae_int_t i;
-    ae_int_t vm;
+    ae_int_t j;
+    double v;
+    double v00;
+    double v01;
+    double v02;
+    double v03;
+    double v10;
+    double v11;
+    double v12;
+    double v13;
+    double v20;
+    double v21;
+    double v22;
+    double v23;
+    double v30;
+    double v31;
+    double v32;
+    double v33;
+    double a0;
+    double a1;
+    double a2;
+    double a3;
+    double b0;
+    double b1;
+    double b2;
+    double b3;
+    ae_int_t idxa0;
+    ae_int_t idxa1;
+    ae_int_t idxa2;
+    ae_int_t idxa3;
+    ae_int_t idxb0;
+    ae_int_t idxb1;
+    ae_int_t idxb2;
+    ae_int_t idxb3;
+    ae_int_t i0;
+    ae_int_t i1;
+    ae_int_t ik;
+    ae_int_t j0;
+    ae_int_t j1;
+    ae_int_t jk;
+    ae_int_t t;
+    ae_int_t offsa;
+    ae_int_t offsb;
 
 
-    if( (ae_c_eq_d(tau,0)||n1>n2)||m1>m2 )
+    ae_assert(ae_fp_neq(alpha,0), "RMatrixGEMMK44V00: internal error (Alpha=0)", _state);
+    
+    /*
+     * if matrix size is zero
+     */
+    if( m==0||n==0 )
     {
         return;
     }
     
     /*
-     * w := C * v
+     * A*B
      */
-    vm = n2-n1+1;
-    for(i=m1; i<=m2; i++)
+    i = 0;
+    while(i<m)
     {
-        t = ae_v_cdotproduct(&c->ptr.pp_complex[i][n1], 1, "N", &v->ptr.p_complex[1], 1, "N", ae_v_len(n1,n2));
-        work->ptr.p_complex[i] = t;
+        j = 0;
+        while(j<n)
+        {
+            
+            /*
+             * Choose between specialized 4x4 code and general code
+             */
+            if( i+4<=m&&j+4<=n )
+            {
+                
+                /*
+                 * Specialized 4x4 code for [I..I+3]x[J..J+3] submatrix of C.
+                 *
+                 * This submatrix is calculated as sum of K rank-1 products,
+                 * with operands cached in local variables in order to speed
+                 * up operations with arrays.
+                 */
+                idxa0 = ia+i+0;
+                idxa1 = ia+i+1;
+                idxa2 = ia+i+2;
+                idxa3 = ia+i+3;
+                offsa = ja;
+                idxb0 = jb+j+0;
+                idxb1 = jb+j+1;
+                idxb2 = jb+j+2;
+                idxb3 = jb+j+3;
+                offsb = ib;
+                v00 = 0.0;
+                v01 = 0.0;
+                v02 = 0.0;
+                v03 = 0.0;
+                v10 = 0.0;
+                v11 = 0.0;
+                v12 = 0.0;
+                v13 = 0.0;
+                v20 = 0.0;
+                v21 = 0.0;
+                v22 = 0.0;
+                v23 = 0.0;
+                v30 = 0.0;
+                v31 = 0.0;
+                v32 = 0.0;
+                v33 = 0.0;
+                
+                /*
+                 * Different variants of internal loop
+                 */
+                for(t=0; t<=k-1; t++)
+                {
+                    a0 = a->ptr.pp_double[idxa0][offsa];
+                    a1 = a->ptr.pp_double[idxa1][offsa];
+                    b0 = b->ptr.pp_double[offsb][idxb0];
+                    b1 = b->ptr.pp_double[offsb][idxb1];
+                    v00 = v00+a0*b0;
+                    v01 = v01+a0*b1;
+                    v10 = v10+a1*b0;
+                    v11 = v11+a1*b1;
+                    a2 = a->ptr.pp_double[idxa2][offsa];
+                    a3 = a->ptr.pp_double[idxa3][offsa];
+                    v20 = v20+a2*b0;
+                    v21 = v21+a2*b1;
+                    v30 = v30+a3*b0;
+                    v31 = v31+a3*b1;
+                    b2 = b->ptr.pp_double[offsb][idxb2];
+                    b3 = b->ptr.pp_double[offsb][idxb3];
+                    v22 = v22+a2*b2;
+                    v23 = v23+a2*b3;
+                    v32 = v32+a3*b2;
+                    v33 = v33+a3*b3;
+                    v02 = v02+a0*b2;
+                    v03 = v03+a0*b3;
+                    v12 = v12+a1*b2;
+                    v13 = v13+a1*b3;
+                    offsa = offsa+1;
+                    offsb = offsb+1;
+                }
+                if( ae_fp_eq(beta,0) )
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = alpha*v33;
+                }
+                else
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = beta*c->ptr.pp_double[ic+i+0][jc+j+0]+alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = beta*c->ptr.pp_double[ic+i+0][jc+j+1]+alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = beta*c->ptr.pp_double[ic+i+0][jc+j+2]+alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = beta*c->ptr.pp_double[ic+i+0][jc+j+3]+alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = beta*c->ptr.pp_double[ic+i+1][jc+j+0]+alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = beta*c->ptr.pp_double[ic+i+1][jc+j+1]+alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = beta*c->ptr.pp_double[ic+i+1][jc+j+2]+alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = beta*c->ptr.pp_double[ic+i+1][jc+j+3]+alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = beta*c->ptr.pp_double[ic+i+2][jc+j+0]+alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = beta*c->ptr.pp_double[ic+i+2][jc+j+1]+alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = beta*c->ptr.pp_double[ic+i+2][jc+j+2]+alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = beta*c->ptr.pp_double[ic+i+2][jc+j+3]+alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = beta*c->ptr.pp_double[ic+i+3][jc+j+0]+alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = beta*c->ptr.pp_double[ic+i+3][jc+j+1]+alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = beta*c->ptr.pp_double[ic+i+3][jc+j+2]+alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = beta*c->ptr.pp_double[ic+i+3][jc+j+3]+alpha*v33;
+                }
+            }
+            else
+            {
+                
+                /*
+                 * Determine submatrix [I0..I1]x[J0..J1] to process
+                 */
+                i0 = i;
+                i1 = ae_minint(i+3, m-1, _state);
+                j0 = j;
+                j1 = ae_minint(j+3, n-1, _state);
+                
+                /*
+                 * Process submatrix
+                 */
+                for(ik=i0; ik<=i1; ik++)
+                {
+                    for(jk=j0; jk<=j1; jk++)
+                    {
+                        if( k==0||ae_fp_eq(alpha,0) )
+                        {
+                            v = 0;
+                        }
+                        else
+                        {
+                            v = ae_v_dotproduct(&a->ptr.pp_double[ia+ik][ja], 1, &b->ptr.pp_double[ib][jb+jk], b->stride, ae_v_len(ja,ja+k-1));
+                        }
+                        if( ae_fp_eq(beta,0) )
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = alpha*v;
+                        }
+                        else
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = beta*c->ptr.pp_double[ic+ik][jc+jk]+alpha*v;
+                        }
+                    }
+                }
+            }
+            j = j+4;
+        }
+        i = i+4;
     }
-    
-    /*
-     * C := C - w * conj(v^T)
-     */
-    ae_v_cmove(&v->ptr.p_complex[1], 1, &v->ptr.p_complex[1], 1, "Conj", ae_v_len(1,vm));
-    for(i=m1; i<=m2; i++)
-    {
-        t = ae_c_mul(work->ptr.p_complex[i],tau);
-        ae_v_csubc(&c->ptr.pp_complex[i][n1], 1, &v->ptr.p_complex[1], 1, "N", ae_v_len(n1,n2), t);
-    }
-    ae_v_cmove(&v->ptr.p_complex[1], 1, &v->ptr.p_complex[1], 1, "Conj", ae_v_len(1,vm));
 }
 
 
+/*************************************************************************
+RMatrixGEMM kernel, basecase code for RMatrixGEMM, specialized for sitation
+with OpTypeA=0 and OpTypeB=1.
 
+Additional info:
+* this function requires that Alpha<>0 (assertion is thrown otherwise)
 
-void symmetricmatrixvectormultiply(/* Real    */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Real    */ ae_vector* x,
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
+
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
+*************************************************************************/
+void rmatrixgemmk44v01(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
      double alpha,
-     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state)
 {
     ae_int_t i;
-    ae_int_t ba1;
-    ae_int_t ba2;
-    ae_int_t by1;
-    ae_int_t by2;
-    ae_int_t bx1;
-    ae_int_t bx2;
-    ae_int_t n;
+    ae_int_t j;
     double v;
+    double v00;
+    double v01;
+    double v02;
+    double v03;
+    double v10;
+    double v11;
+    double v12;
+    double v13;
+    double v20;
+    double v21;
+    double v22;
+    double v23;
+    double v30;
+    double v31;
+    double v32;
+    double v33;
+    double a0;
+    double a1;
+    double a2;
+    double a3;
+    double b0;
+    double b1;
+    double b2;
+    double b3;
+    ae_int_t idxa0;
+    ae_int_t idxa1;
+    ae_int_t idxa2;
+    ae_int_t idxa3;
+    ae_int_t idxb0;
+    ae_int_t idxb1;
+    ae_int_t idxb2;
+    ae_int_t idxb3;
+    ae_int_t i0;
+    ae_int_t i1;
+    ae_int_t ik;
+    ae_int_t j0;
+    ae_int_t j1;
+    ae_int_t jk;
+    ae_int_t t;
+    ae_int_t offsa;
+    ae_int_t offsb;
 
 
-    n = i2-i1+1;
-    if( n<=0 )
+    ae_assert(ae_fp_neq(alpha,0), "RMatrixGEMMK44V00: internal error (Alpha=0)", _state);
+    
+    /*
+     * if matrix size is zero
+     */
+    if( m==0||n==0 )
     {
         return;
     }
     
     /*
-     * Let A = L + D + U, where
-     *  L is strictly lower triangular (main diagonal is zero)
-     *  D is diagonal
-     *  U is strictly upper triangular (main diagonal is zero)
-     *
-     * A*x = L*x + D*x + U*x
-     *
-     * Calculate D*x first
+     * A*B'
      */
-    for(i=i1; i<=i2; i++)
+    i = 0;
+    while(i<m)
     {
-        y->ptr.p_double[i-i1+1] = a->ptr.pp_double[i][i]*x->ptr.p_double[i-i1+1];
-    }
-    
-    /*
-     * Add L*x + U*x
-     */
-    if( isupper )
-    {
-        for(i=i1; i<=i2-1; i++)
+        j = 0;
+        while(j<n)
         {
             
             /*
-             * Add L*x to the result
+             * Choose between specialized 4x4 code and general code
              */
-            v = x->ptr.p_double[i-i1+1];
-            by1 = i-i1+2;
-            by2 = n;
-            ba1 = i+1;
-            ba2 = i2;
-            ae_v_addd(&y->ptr.p_double[by1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(by1,by2), v);
-            
-            /*
-             * Add U*x to the result
-             */
-            bx1 = i-i1+2;
-            bx2 = n;
-            ba1 = i+1;
-            ba2 = i2;
-            v = ae_v_dotproduct(&x->ptr.p_double[bx1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(bx1,bx2));
-            y->ptr.p_double[i-i1+1] = y->ptr.p_double[i-i1+1]+v;
+            if( i+4<=m&&j+4<=n )
+            {
+                
+                /*
+                 * Specialized 4x4 code for [I..I+3]x[J..J+3] submatrix of C.
+                 *
+                 * This submatrix is calculated as sum of K rank-1 products,
+                 * with operands cached in local variables in order to speed
+                 * up operations with arrays.
+                 */
+                idxa0 = ia+i+0;
+                idxa1 = ia+i+1;
+                idxa2 = ia+i+2;
+                idxa3 = ia+i+3;
+                offsa = ja;
+                idxb0 = ib+j+0;
+                idxb1 = ib+j+1;
+                idxb2 = ib+j+2;
+                idxb3 = ib+j+3;
+                offsb = jb;
+                v00 = 0.0;
+                v01 = 0.0;
+                v02 = 0.0;
+                v03 = 0.0;
+                v10 = 0.0;
+                v11 = 0.0;
+                v12 = 0.0;
+                v13 = 0.0;
+                v20 = 0.0;
+                v21 = 0.0;
+                v22 = 0.0;
+                v23 = 0.0;
+                v30 = 0.0;
+                v31 = 0.0;
+                v32 = 0.0;
+                v33 = 0.0;
+                for(t=0; t<=k-1; t++)
+                {
+                    a0 = a->ptr.pp_double[idxa0][offsa];
+                    a1 = a->ptr.pp_double[idxa1][offsa];
+                    b0 = b->ptr.pp_double[idxb0][offsb];
+                    b1 = b->ptr.pp_double[idxb1][offsb];
+                    v00 = v00+a0*b0;
+                    v01 = v01+a0*b1;
+                    v10 = v10+a1*b0;
+                    v11 = v11+a1*b1;
+                    a2 = a->ptr.pp_double[idxa2][offsa];
+                    a3 = a->ptr.pp_double[idxa3][offsa];
+                    v20 = v20+a2*b0;
+                    v21 = v21+a2*b1;
+                    v30 = v30+a3*b0;
+                    v31 = v31+a3*b1;
+                    b2 = b->ptr.pp_double[idxb2][offsb];
+                    b3 = b->ptr.pp_double[idxb3][offsb];
+                    v22 = v22+a2*b2;
+                    v23 = v23+a2*b3;
+                    v32 = v32+a3*b2;
+                    v33 = v33+a3*b3;
+                    v02 = v02+a0*b2;
+                    v03 = v03+a0*b3;
+                    v12 = v12+a1*b2;
+                    v13 = v13+a1*b3;
+                    offsa = offsa+1;
+                    offsb = offsb+1;
+                }
+                if( ae_fp_eq(beta,0) )
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = alpha*v33;
+                }
+                else
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = beta*c->ptr.pp_double[ic+i+0][jc+j+0]+alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = beta*c->ptr.pp_double[ic+i+0][jc+j+1]+alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = beta*c->ptr.pp_double[ic+i+0][jc+j+2]+alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = beta*c->ptr.pp_double[ic+i+0][jc+j+3]+alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = beta*c->ptr.pp_double[ic+i+1][jc+j+0]+alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = beta*c->ptr.pp_double[ic+i+1][jc+j+1]+alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = beta*c->ptr.pp_double[ic+i+1][jc+j+2]+alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = beta*c->ptr.pp_double[ic+i+1][jc+j+3]+alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = beta*c->ptr.pp_double[ic+i+2][jc+j+0]+alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = beta*c->ptr.pp_double[ic+i+2][jc+j+1]+alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = beta*c->ptr.pp_double[ic+i+2][jc+j+2]+alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = beta*c->ptr.pp_double[ic+i+2][jc+j+3]+alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = beta*c->ptr.pp_double[ic+i+3][jc+j+0]+alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = beta*c->ptr.pp_double[ic+i+3][jc+j+1]+alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = beta*c->ptr.pp_double[ic+i+3][jc+j+2]+alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = beta*c->ptr.pp_double[ic+i+3][jc+j+3]+alpha*v33;
+                }
+            }
+            else
+            {
+                
+                /*
+                 * Determine submatrix [I0..I1]x[J0..J1] to process
+                 */
+                i0 = i;
+                i1 = ae_minint(i+3, m-1, _state);
+                j0 = j;
+                j1 = ae_minint(j+3, n-1, _state);
+                
+                /*
+                 * Process submatrix
+                 */
+                for(ik=i0; ik<=i1; ik++)
+                {
+                    for(jk=j0; jk<=j1; jk++)
+                    {
+                        if( k==0||ae_fp_eq(alpha,0) )
+                        {
+                            v = 0;
+                        }
+                        else
+                        {
+                            v = ae_v_dotproduct(&a->ptr.pp_double[ia+ik][ja], 1, &b->ptr.pp_double[ib+jk][jb], 1, ae_v_len(ja,ja+k-1));
+                        }
+                        if( ae_fp_eq(beta,0) )
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = alpha*v;
+                        }
+                        else
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = beta*c->ptr.pp_double[ic+ik][jc+jk]+alpha*v;
+                        }
+                    }
+                }
+            }
+            j = j+4;
         }
+        i = i+4;
     }
-    else
-    {
-        for(i=i1+1; i<=i2; i++)
-        {
-            
-            /*
-             * Add L*x to the result
-             */
-            bx1 = 1;
-            bx2 = i-i1;
-            ba1 = i1;
-            ba2 = i-1;
-            v = ae_v_dotproduct(&x->ptr.p_double[bx1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(bx1,bx2));
-            y->ptr.p_double[i-i1+1] = y->ptr.p_double[i-i1+1]+v;
-            
-            /*
-             * Add U*x to the result
-             */
-            v = x->ptr.p_double[i-i1+1];
-            by1 = 1;
-            by2 = i-i1;
-            ba1 = i1;
-            ba2 = i-1;
-            ae_v_addd(&y->ptr.p_double[by1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(by1,by2), v);
-        }
-    }
-    ae_v_muld(&y->ptr.p_double[1], 1, ae_v_len(1,n), alpha);
 }
 
 
-void symmetricrank2update(/* Real    */ ae_matrix* a,
-     ae_bool isupper,
-     ae_int_t i1,
-     ae_int_t i2,
-     /* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_vector* t,
+/*************************************************************************
+RMatrixGEMM kernel, basecase code for RMatrixGEMM, specialized for sitation
+with OpTypeA=1 and OpTypeB=0.
+
+Additional info:
+* this function requires that Alpha<>0 (assertion is thrown otherwise)
+
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
+
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
+*************************************************************************/
+void rmatrixgemmk44v10(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
      double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
      ae_state *_state)
 {
     ae_int_t i;
-    ae_int_t tp1;
-    ae_int_t tp2;
+    ae_int_t j;
     double v;
+    double v00;
+    double v01;
+    double v02;
+    double v03;
+    double v10;
+    double v11;
+    double v12;
+    double v13;
+    double v20;
+    double v21;
+    double v22;
+    double v23;
+    double v30;
+    double v31;
+    double v32;
+    double v33;
+    double a0;
+    double a1;
+    double a2;
+    double a3;
+    double b0;
+    double b1;
+    double b2;
+    double b3;
+    ae_int_t idxa0;
+    ae_int_t idxa1;
+    ae_int_t idxa2;
+    ae_int_t idxa3;
+    ae_int_t idxb0;
+    ae_int_t idxb1;
+    ae_int_t idxb2;
+    ae_int_t idxb3;
+    ae_int_t i0;
+    ae_int_t i1;
+    ae_int_t ik;
+    ae_int_t j0;
+    ae_int_t j1;
+    ae_int_t jk;
+    ae_int_t t;
+    ae_int_t offsa;
+    ae_int_t offsb;
 
 
-    if( isupper )
+    ae_assert(ae_fp_neq(alpha,0), "RMatrixGEMMK44V00: internal error (Alpha=0)", _state);
+    
+    /*
+     * if matrix size is zero
+     */
+    if( m==0||n==0 )
     {
-        for(i=i1; i<=i2; i++)
-        {
-            tp1 = i+1-i1;
-            tp2 = i2-i1+1;
-            v = x->ptr.p_double[i+1-i1];
-            ae_v_moved(&t->ptr.p_double[tp1], 1, &y->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
-            v = y->ptr.p_double[i+1-i1];
-            ae_v_addd(&t->ptr.p_double[tp1], 1, &x->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
-            ae_v_muld(&t->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), alpha);
-            ae_v_add(&a->ptr.pp_double[i][i], 1, &t->ptr.p_double[tp1], 1, ae_v_len(i,i2));
-        }
+        return;
     }
-    else
+    
+    /*
+     * A'*B
+     */
+    i = 0;
+    while(i<m)
     {
-        for(i=i1; i<=i2; i++)
+        j = 0;
+        while(j<n)
         {
-            tp1 = 1;
-            tp2 = i+1-i1;
-            v = x->ptr.p_double[i+1-i1];
-            ae_v_moved(&t->ptr.p_double[tp1], 1, &y->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
-            v = y->ptr.p_double[i+1-i1];
-            ae_v_addd(&t->ptr.p_double[tp1], 1, &x->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
-            ae_v_muld(&t->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), alpha);
-            ae_v_add(&a->ptr.pp_double[i][i1], 1, &t->ptr.p_double[tp1], 1, ae_v_len(i1,i));
+            
+            /*
+             * Choose between specialized 4x4 code and general code
+             */
+            if( i+4<=m&&j+4<=n )
+            {
+                
+                /*
+                 * Specialized 4x4 code for [I..I+3]x[J..J+3] submatrix of C.
+                 *
+                 * This submatrix is calculated as sum of K rank-1 products,
+                 * with operands cached in local variables in order to speed
+                 * up operations with arrays.
+                 */
+                idxa0 = ja+i+0;
+                idxa1 = ja+i+1;
+                idxa2 = ja+i+2;
+                idxa3 = ja+i+3;
+                offsa = ia;
+                idxb0 = jb+j+0;
+                idxb1 = jb+j+1;
+                idxb2 = jb+j+2;
+                idxb3 = jb+j+3;
+                offsb = ib;
+                v00 = 0.0;
+                v01 = 0.0;
+                v02 = 0.0;
+                v03 = 0.0;
+                v10 = 0.0;
+                v11 = 0.0;
+                v12 = 0.0;
+                v13 = 0.0;
+                v20 = 0.0;
+                v21 = 0.0;
+                v22 = 0.0;
+                v23 = 0.0;
+                v30 = 0.0;
+                v31 = 0.0;
+                v32 = 0.0;
+                v33 = 0.0;
+                for(t=0; t<=k-1; t++)
+                {
+                    a0 = a->ptr.pp_double[offsa][idxa0];
+                    a1 = a->ptr.pp_double[offsa][idxa1];
+                    b0 = b->ptr.pp_double[offsb][idxb0];
+                    b1 = b->ptr.pp_double[offsb][idxb1];
+                    v00 = v00+a0*b0;
+                    v01 = v01+a0*b1;
+                    v10 = v10+a1*b0;
+                    v11 = v11+a1*b1;
+                    a2 = a->ptr.pp_double[offsa][idxa2];
+                    a3 = a->ptr.pp_double[offsa][idxa3];
+                    v20 = v20+a2*b0;
+                    v21 = v21+a2*b1;
+                    v30 = v30+a3*b0;
+                    v31 = v31+a3*b1;
+                    b2 = b->ptr.pp_double[offsb][idxb2];
+                    b3 = b->ptr.pp_double[offsb][idxb3];
+                    v22 = v22+a2*b2;
+                    v23 = v23+a2*b3;
+                    v32 = v32+a3*b2;
+                    v33 = v33+a3*b3;
+                    v02 = v02+a0*b2;
+                    v03 = v03+a0*b3;
+                    v12 = v12+a1*b2;
+                    v13 = v13+a1*b3;
+                    offsa = offsa+1;
+                    offsb = offsb+1;
+                }
+                if( ae_fp_eq(beta,0) )
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = alpha*v33;
+                }
+                else
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = beta*c->ptr.pp_double[ic+i+0][jc+j+0]+alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = beta*c->ptr.pp_double[ic+i+0][jc+j+1]+alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = beta*c->ptr.pp_double[ic+i+0][jc+j+2]+alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = beta*c->ptr.pp_double[ic+i+0][jc+j+3]+alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = beta*c->ptr.pp_double[ic+i+1][jc+j+0]+alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = beta*c->ptr.pp_double[ic+i+1][jc+j+1]+alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = beta*c->ptr.pp_double[ic+i+1][jc+j+2]+alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = beta*c->ptr.pp_double[ic+i+1][jc+j+3]+alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = beta*c->ptr.pp_double[ic+i+2][jc+j+0]+alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = beta*c->ptr.pp_double[ic+i+2][jc+j+1]+alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = beta*c->ptr.pp_double[ic+i+2][jc+j+2]+alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = beta*c->ptr.pp_double[ic+i+2][jc+j+3]+alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = beta*c->ptr.pp_double[ic+i+3][jc+j+0]+alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = beta*c->ptr.pp_double[ic+i+3][jc+j+1]+alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = beta*c->ptr.pp_double[ic+i+3][jc+j+2]+alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = beta*c->ptr.pp_double[ic+i+3][jc+j+3]+alpha*v33;
+                }
+            }
+            else
+            {
+                
+                /*
+                 * Determine submatrix [I0..I1]x[J0..J1] to process
+                 */
+                i0 = i;
+                i1 = ae_minint(i+3, m-1, _state);
+                j0 = j;
+                j1 = ae_minint(j+3, n-1, _state);
+                
+                /*
+                 * Process submatrix
+                 */
+                for(ik=i0; ik<=i1; ik++)
+                {
+                    for(jk=j0; jk<=j1; jk++)
+                    {
+                        if( k==0||ae_fp_eq(alpha,0) )
+                        {
+                            v = 0;
+                        }
+                        else
+                        {
+                            v = 0.0;
+                            v = ae_v_dotproduct(&a->ptr.pp_double[ia][ja+ik], a->stride, &b->ptr.pp_double[ib][jb+jk], b->stride, ae_v_len(ia,ia+k-1));
+                        }
+                        if( ae_fp_eq(beta,0) )
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = alpha*v;
+                        }
+                        else
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = beta*c->ptr.pp_double[ic+ik][jc+jk]+alpha*v;
+                        }
+                    }
+                }
+            }
+            j = j+4;
         }
+        i = i+4;
     }
+}
+
+
+/*************************************************************************
+RMatrixGEMM kernel, basecase code for RMatrixGEMM, specialized for sitation
+with OpTypeA=1 and OpTypeB=1.
+
+Additional info:
+* this function requires that Alpha<>0 (assertion is thrown otherwise)
+
+INPUT PARAMETERS
+    M       -   matrix size, M>0
+    N       -   matrix size, N>0
+    K       -   matrix size, K>0
+    Alpha   -   coefficient
+    A       -   matrix
+    IA      -   submatrix offset
+    JA      -   submatrix offset
+    B       -   matrix
+    IB      -   submatrix offset
+    JB      -   submatrix offset
+    Beta    -   coefficient
+    C       -   PREALLOCATED output matrix
+    IC      -   submatrix offset
+    JC      -   submatrix offset
+
+  -- ALGLIB routine --
+     27.03.2013
+     Bochkanov Sergey
+*************************************************************************/
+void rmatrixgemmk44v11(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t j;
+    double v;
+    double v00;
+    double v01;
+    double v02;
+    double v03;
+    double v10;
+    double v11;
+    double v12;
+    double v13;
+    double v20;
+    double v21;
+    double v22;
+    double v23;
+    double v30;
+    double v31;
+    double v32;
+    double v33;
+    double a0;
+    double a1;
+    double a2;
+    double a3;
+    double b0;
+    double b1;
+    double b2;
+    double b3;
+    ae_int_t idxa0;
+    ae_int_t idxa1;
+    ae_int_t idxa2;
+    ae_int_t idxa3;
+    ae_int_t idxb0;
+    ae_int_t idxb1;
+    ae_int_t idxb2;
+    ae_int_t idxb3;
+    ae_int_t i0;
+    ae_int_t i1;
+    ae_int_t ik;
+    ae_int_t j0;
+    ae_int_t j1;
+    ae_int_t jk;
+    ae_int_t t;
+    ae_int_t offsa;
+    ae_int_t offsb;
+
+
+    ae_assert(ae_fp_neq(alpha,0), "RMatrixGEMMK44V00: internal error (Alpha=0)", _state);
+    
+    /*
+     * if matrix size is zero
+     */
+    if( m==0||n==0 )
+    {
+        return;
+    }
+    
+    /*
+     * A'*B'
+     */
+    i = 0;
+    while(i<m)
+    {
+        j = 0;
+        while(j<n)
+        {
+            
+            /*
+             * Choose between specialized 4x4 code and general code
+             */
+            if( i+4<=m&&j+4<=n )
+            {
+                
+                /*
+                 * Specialized 4x4 code for [I..I+3]x[J..J+3] submatrix of C.
+                 *
+                 * This submatrix is calculated as sum of K rank-1 products,
+                 * with operands cached in local variables in order to speed
+                 * up operations with arrays.
+                 */
+                idxa0 = ja+i+0;
+                idxa1 = ja+i+1;
+                idxa2 = ja+i+2;
+                idxa3 = ja+i+3;
+                offsa = ia;
+                idxb0 = ib+j+0;
+                idxb1 = ib+j+1;
+                idxb2 = ib+j+2;
+                idxb3 = ib+j+3;
+                offsb = jb;
+                v00 = 0.0;
+                v01 = 0.0;
+                v02 = 0.0;
+                v03 = 0.0;
+                v10 = 0.0;
+                v11 = 0.0;
+                v12 = 0.0;
+                v13 = 0.0;
+                v20 = 0.0;
+                v21 = 0.0;
+                v22 = 0.0;
+                v23 = 0.0;
+                v30 = 0.0;
+                v31 = 0.0;
+                v32 = 0.0;
+                v33 = 0.0;
+                for(t=0; t<=k-1; t++)
+                {
+                    a0 = a->ptr.pp_double[offsa][idxa0];
+                    a1 = a->ptr.pp_double[offsa][idxa1];
+                    b0 = b->ptr.pp_double[idxb0][offsb];
+                    b1 = b->ptr.pp_double[idxb1][offsb];
+                    v00 = v00+a0*b0;
+                    v01 = v01+a0*b1;
+                    v10 = v10+a1*b0;
+                    v11 = v11+a1*b1;
+                    a2 = a->ptr.pp_double[offsa][idxa2];
+                    a3 = a->ptr.pp_double[offsa][idxa3];
+                    v20 = v20+a2*b0;
+                    v21 = v21+a2*b1;
+                    v30 = v30+a3*b0;
+                    v31 = v31+a3*b1;
+                    b2 = b->ptr.pp_double[idxb2][offsb];
+                    b3 = b->ptr.pp_double[idxb3][offsb];
+                    v22 = v22+a2*b2;
+                    v23 = v23+a2*b3;
+                    v32 = v32+a3*b2;
+                    v33 = v33+a3*b3;
+                    v02 = v02+a0*b2;
+                    v03 = v03+a0*b3;
+                    v12 = v12+a1*b2;
+                    v13 = v13+a1*b3;
+                    offsa = offsa+1;
+                    offsb = offsb+1;
+                }
+                if( ae_fp_eq(beta,0) )
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = alpha*v33;
+                }
+                else
+                {
+                    c->ptr.pp_double[ic+i+0][jc+j+0] = beta*c->ptr.pp_double[ic+i+0][jc+j+0]+alpha*v00;
+                    c->ptr.pp_double[ic+i+0][jc+j+1] = beta*c->ptr.pp_double[ic+i+0][jc+j+1]+alpha*v01;
+                    c->ptr.pp_double[ic+i+0][jc+j+2] = beta*c->ptr.pp_double[ic+i+0][jc+j+2]+alpha*v02;
+                    c->ptr.pp_double[ic+i+0][jc+j+3] = beta*c->ptr.pp_double[ic+i+0][jc+j+3]+alpha*v03;
+                    c->ptr.pp_double[ic+i+1][jc+j+0] = beta*c->ptr.pp_double[ic+i+1][jc+j+0]+alpha*v10;
+                    c->ptr.pp_double[ic+i+1][jc+j+1] = beta*c->ptr.pp_double[ic+i+1][jc+j+1]+alpha*v11;
+                    c->ptr.pp_double[ic+i+1][jc+j+2] = beta*c->ptr.pp_double[ic+i+1][jc+j+2]+alpha*v12;
+                    c->ptr.pp_double[ic+i+1][jc+j+3] = beta*c->ptr.pp_double[ic+i+1][jc+j+3]+alpha*v13;
+                    c->ptr.pp_double[ic+i+2][jc+j+0] = beta*c->ptr.pp_double[ic+i+2][jc+j+0]+alpha*v20;
+                    c->ptr.pp_double[ic+i+2][jc+j+1] = beta*c->ptr.pp_double[ic+i+2][jc+j+1]+alpha*v21;
+                    c->ptr.pp_double[ic+i+2][jc+j+2] = beta*c->ptr.pp_double[ic+i+2][jc+j+2]+alpha*v22;
+                    c->ptr.pp_double[ic+i+2][jc+j+3] = beta*c->ptr.pp_double[ic+i+2][jc+j+3]+alpha*v23;
+                    c->ptr.pp_double[ic+i+3][jc+j+0] = beta*c->ptr.pp_double[ic+i+3][jc+j+0]+alpha*v30;
+                    c->ptr.pp_double[ic+i+3][jc+j+1] = beta*c->ptr.pp_double[ic+i+3][jc+j+1]+alpha*v31;
+                    c->ptr.pp_double[ic+i+3][jc+j+2] = beta*c->ptr.pp_double[ic+i+3][jc+j+2]+alpha*v32;
+                    c->ptr.pp_double[ic+i+3][jc+j+3] = beta*c->ptr.pp_double[ic+i+3][jc+j+3]+alpha*v33;
+                }
+            }
+            else
+            {
+                
+                /*
+                 * Determine submatrix [I0..I1]x[J0..J1] to process
+                 */
+                i0 = i;
+                i1 = ae_minint(i+3, m-1, _state);
+                j0 = j;
+                j1 = ae_minint(j+3, n-1, _state);
+                
+                /*
+                 * Process submatrix
+                 */
+                for(ik=i0; ik<=i1; ik++)
+                {
+                    for(jk=j0; jk<=j1; jk++)
+                    {
+                        if( k==0||ae_fp_eq(alpha,0) )
+                        {
+                            v = 0;
+                        }
+                        else
+                        {
+                            v = 0.0;
+                            v = ae_v_dotproduct(&a->ptr.pp_double[ia][ja+ik], a->stride, &b->ptr.pp_double[ib+jk][jb], 1, ae_v_len(ia,ia+k-1));
+                        }
+                        if( ae_fp_eq(beta,0) )
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = alpha*v;
+                        }
+                        else
+                        {
+                            c->ptr.pp_double[ic+ik][jc+jk] = beta*c->ptr.pp_double[ic+ik][jc+jk]+alpha*v;
+                        }
+                    }
+                }
+            }
+            j = j+4;
+        }
+        i = i+4;
+    }
+}
+
+
+
+
+/*************************************************************************
+MKL-based kernel
+
+  -- ALGLIB routine --
+     19.01.2010
+     Bochkanov Sergey
+*************************************************************************/
+ae_bool rmatrixsyrkmkl(ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_bool isupper,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_MKL
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_rmatrixsyrkmkl(n, k, alpha, a, ia, ja, optypea, beta, c, ic, jc, isupper);
+#endif
+}
+
+
+/*************************************************************************
+MKL-based kernel
+
+  -- ALGLIB routine --
+     19.01.2010
+     Bochkanov Sergey
+*************************************************************************/
+ae_bool rmatrixgemmmkl(ae_int_t m,
+     ae_int_t n,
+     ae_int_t k,
+     double alpha,
+     /* Real    */ ae_matrix* a,
+     ae_int_t ia,
+     ae_int_t ja,
+     ae_int_t optypea,
+     /* Real    */ ae_matrix* b,
+     ae_int_t ib,
+     ae_int_t jb,
+     ae_int_t optypeb,
+     double beta,
+     /* Real    */ ae_matrix* c,
+     ae_int_t ic,
+     ae_int_t jc,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_MKL
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_rmatrixgemmmkl(m, n, k, alpha, a, ia, ja, optypea, b, ib, jb, optypeb, beta, c, ic, jc);
+#endif
 }
 
 
@@ -4566,12 +6129,10 @@ ae_int_t vectoridxabsmax(/* Real    */ ae_vector* x,
      ae_state *_state)
 {
     ae_int_t i;
-    double a;
     ae_int_t result;
 
 
     result = i1;
-    a = ae_fabs(x->ptr.p_double[result], _state);
     for(i=i1+1; i<=i2; i++)
     {
         if( ae_fp_greater(ae_fabs(x->ptr.p_double[i], _state),ae_fabs(x->ptr.p_double[result], _state)) )
@@ -4590,12 +6151,10 @@ ae_int_t columnidxabsmax(/* Real    */ ae_matrix* x,
      ae_state *_state)
 {
     ae_int_t i;
-    double a;
     ae_int_t result;
 
 
     result = i1;
-    a = ae_fabs(x->ptr.pp_double[result][j], _state);
     for(i=i1+1; i<=i2; i++)
     {
         if( ae_fp_greater(ae_fabs(x->ptr.pp_double[i][j], _state),ae_fabs(x->ptr.pp_double[result][j], _state)) )
@@ -4614,12 +6173,10 @@ ae_int_t rowidxabsmax(/* Real    */ ae_matrix* x,
      ae_state *_state)
 {
     ae_int_t j;
-    double a;
     ae_int_t result;
 
 
     result = j1;
-    a = ae_fabs(x->ptr.pp_double[i][result], _state);
     for(j=j1+1; j<=j2; j++)
     {
         if( ae_fp_greater(ae_fabs(x->ptr.pp_double[i][j], _state),ae_fabs(x->ptr.pp_double[i][result], _state)) )
@@ -4907,7 +6464,6 @@ void matrixmatrixmultiply(/* Real    */ ae_matrix* a,
     ae_int_t brows;
     ae_int_t bcols;
     ae_int_t crows;
-    ae_int_t ccols;
     ae_int_t i;
     ae_int_t j;
     ae_int_t k;
@@ -4925,7 +6481,6 @@ void matrixmatrixmultiply(/* Real    */ ae_matrix* a,
         arows = ai2-ai1+1;
         acols = aj2-aj1+1;
     }
-
     else
     {
         arows = aj2-aj1+1;
@@ -4947,7 +6502,6 @@ void matrixmatrixmultiply(/* Real    */ ae_matrix* a,
         return;
     }
     crows = arows;
-    ccols = bcols;
     
     /*
      * Test WORK
@@ -5080,6 +6634,853 @@ void matrixmatrixmultiply(/* Real    */ ae_matrix* a,
                 }
             }
             return;
+        }
+    }
+}
+
+
+
+
+void hermitianmatrixvectormultiply(/* Complex */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Complex */ ae_vector* x,
+     ae_complex alpha,
+     /* Complex */ ae_vector* y,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t ba1;
+    ae_int_t by1;
+    ae_int_t by2;
+    ae_int_t bx1;
+    ae_int_t bx2;
+    ae_int_t n;
+    ae_complex v;
+
+
+    n = i2-i1+1;
+    if( n<=0 )
+    {
+        return;
+    }
+    
+    /*
+     * Let A = L + D + U, where
+     *  L is strictly lower triangular (main diagonal is zero)
+     *  D is diagonal
+     *  U is strictly upper triangular (main diagonal is zero)
+     *
+     * A*x = L*x + D*x + U*x
+     *
+     * Calculate D*x first
+     */
+    for(i=i1; i<=i2; i++)
+    {
+        y->ptr.p_complex[i-i1+1] = ae_c_mul(a->ptr.pp_complex[i][i],x->ptr.p_complex[i-i1+1]);
+    }
+    
+    /*
+     * Add L*x + U*x
+     */
+    if( isupper )
+    {
+        for(i=i1; i<=i2-1; i++)
+        {
+            
+            /*
+             * Add L*x to the result
+             */
+            v = x->ptr.p_complex[i-i1+1];
+            by1 = i-i1+2;
+            by2 = n;
+            ba1 = i+1;
+            ae_v_caddc(&y->ptr.p_complex[by1], 1, &a->ptr.pp_complex[i][ba1], 1, "Conj", ae_v_len(by1,by2), v);
+            
+            /*
+             * Add U*x to the result
+             */
+            bx1 = i-i1+2;
+            bx2 = n;
+            ba1 = i+1;
+            v = ae_v_cdotproduct(&x->ptr.p_complex[bx1], 1, "N", &a->ptr.pp_complex[i][ba1], 1, "N", ae_v_len(bx1,bx2));
+            y->ptr.p_complex[i-i1+1] = ae_c_add(y->ptr.p_complex[i-i1+1],v);
+        }
+    }
+    else
+    {
+        for(i=i1+1; i<=i2; i++)
+        {
+            
+            /*
+             * Add L*x to the result
+             */
+            bx1 = 1;
+            bx2 = i-i1;
+            ba1 = i1;
+            v = ae_v_cdotproduct(&x->ptr.p_complex[bx1], 1, "N", &a->ptr.pp_complex[i][ba1], 1, "N", ae_v_len(bx1,bx2));
+            y->ptr.p_complex[i-i1+1] = ae_c_add(y->ptr.p_complex[i-i1+1],v);
+            
+            /*
+             * Add U*x to the result
+             */
+            v = x->ptr.p_complex[i-i1+1];
+            by1 = 1;
+            by2 = i-i1;
+            ba1 = i1;
+            ae_v_caddc(&y->ptr.p_complex[by1], 1, &a->ptr.pp_complex[i][ba1], 1, "Conj", ae_v_len(by1,by2), v);
+        }
+    }
+    ae_v_cmulc(&y->ptr.p_complex[1], 1, ae_v_len(1,n), alpha);
+}
+
+
+void hermitianrank2update(/* Complex */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Complex */ ae_vector* x,
+     /* Complex */ ae_vector* y,
+     /* Complex */ ae_vector* t,
+     ae_complex alpha,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t tp1;
+    ae_int_t tp2;
+    ae_complex v;
+
+
+    if( isupper )
+    {
+        for(i=i1; i<=i2; i++)
+        {
+            tp1 = i+1-i1;
+            tp2 = i2-i1+1;
+            v = ae_c_mul(alpha,x->ptr.p_complex[i+1-i1]);
+            ae_v_cmovec(&t->ptr.p_complex[tp1], 1, &y->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
+            v = ae_c_mul(ae_c_conj(alpha, _state),y->ptr.p_complex[i+1-i1]);
+            ae_v_caddc(&t->ptr.p_complex[tp1], 1, &x->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
+            ae_v_cadd(&a->ptr.pp_complex[i][i], 1, &t->ptr.p_complex[tp1], 1, "N", ae_v_len(i,i2));
+        }
+    }
+    else
+    {
+        for(i=i1; i<=i2; i++)
+        {
+            tp1 = 1;
+            tp2 = i+1-i1;
+            v = ae_c_mul(alpha,x->ptr.p_complex[i+1-i1]);
+            ae_v_cmovec(&t->ptr.p_complex[tp1], 1, &y->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
+            v = ae_c_mul(ae_c_conj(alpha, _state),y->ptr.p_complex[i+1-i1]);
+            ae_v_caddc(&t->ptr.p_complex[tp1], 1, &x->ptr.p_complex[tp1], 1, "Conj", ae_v_len(tp1,tp2), v);
+            ae_v_cadd(&a->ptr.pp_complex[i][i1], 1, &t->ptr.p_complex[tp1], 1, "N", ae_v_len(i1,i));
+        }
+    }
+}
+
+
+
+
+/*************************************************************************
+Generation of an elementary reflection transformation
+
+The subroutine generates elementary reflection H of order N, so that, for
+a given X, the following equality holds true:
+
+    ( X(1) )   ( Beta )
+H * (  ..  ) = (  0   )
+    ( X(n) )   (  0   )
+
+where
+              ( V(1) )
+H = 1 - Tau * (  ..  ) * ( V(1), ..., V(n) )
+              ( V(n) )
+
+where the first component of vector V equals 1.
+
+Input parameters:
+    X   -   vector. Array whose index ranges within [1..N].
+    N   -   reflection order.
+
+Output parameters:
+    X   -   components from 2 to N are replaced with vector V.
+            The first component is replaced with parameter Beta.
+    Tau -   scalar value Tau. If X is a null vector, Tau equals 0,
+            otherwise 1 <= Tau <= 2.
+
+This subroutine is the modification of the DLARFG subroutines from
+the LAPACK library.
+
+MODIFICATIONS:
+    24.12.2005 sign(Alpha) was replaced with an analogous to the Fortran SIGN code.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void generatereflection(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     double* tau,
+     ae_state *_state)
+{
+    ae_int_t j;
+    double alpha;
+    double xnorm;
+    double v;
+    double beta;
+    double mx;
+    double s;
+
+    *tau = 0;
+
+    if( n<=1 )
+    {
+        *tau = 0;
+        return;
+    }
+    
+    /*
+     * Scale if needed (to avoid overflow/underflow during intermediate
+     * calculations).
+     */
+    mx = 0;
+    for(j=1; j<=n; j++)
+    {
+        mx = ae_maxreal(ae_fabs(x->ptr.p_double[j], _state), mx, _state);
+    }
+    s = 1;
+    if( ae_fp_neq(mx,0) )
+    {
+        if( ae_fp_less_eq(mx,ae_minrealnumber/ae_machineepsilon) )
+        {
+            s = ae_minrealnumber/ae_machineepsilon;
+            v = 1/s;
+            ae_v_muld(&x->ptr.p_double[1], 1, ae_v_len(1,n), v);
+            mx = mx*v;
+        }
+        else
+        {
+            if( ae_fp_greater_eq(mx,ae_maxrealnumber*ae_machineepsilon) )
+            {
+                s = ae_maxrealnumber*ae_machineepsilon;
+                v = 1/s;
+                ae_v_muld(&x->ptr.p_double[1], 1, ae_v_len(1,n), v);
+                mx = mx*v;
+            }
+        }
+    }
+    
+    /*
+     * XNORM = DNRM2( N-1, X, INCX )
+     */
+    alpha = x->ptr.p_double[1];
+    xnorm = 0;
+    if( ae_fp_neq(mx,0) )
+    {
+        for(j=2; j<=n; j++)
+        {
+            xnorm = xnorm+ae_sqr(x->ptr.p_double[j]/mx, _state);
+        }
+        xnorm = ae_sqrt(xnorm, _state)*mx;
+    }
+    if( ae_fp_eq(xnorm,0) )
+    {
+        
+        /*
+         * H  =  I
+         */
+        *tau = 0;
+        x->ptr.p_double[1] = x->ptr.p_double[1]*s;
+        return;
+    }
+    
+    /*
+     * general case
+     */
+    mx = ae_maxreal(ae_fabs(alpha, _state), ae_fabs(xnorm, _state), _state);
+    beta = -mx*ae_sqrt(ae_sqr(alpha/mx, _state)+ae_sqr(xnorm/mx, _state), _state);
+    if( ae_fp_less(alpha,0) )
+    {
+        beta = -beta;
+    }
+    *tau = (beta-alpha)/beta;
+    v = 1/(alpha-beta);
+    ae_v_muld(&x->ptr.p_double[2], 1, ae_v_len(2,n), v);
+    x->ptr.p_double[1] = beta;
+    
+    /*
+     * Scale back outputs
+     */
+    x->ptr.p_double[1] = x->ptr.p_double[1]*s;
+}
+
+
+/*************************************************************************
+Application of an elementary reflection to a rectangular matrix of size MxN
+
+The algorithm pre-multiplies the matrix by an elementary reflection transformation
+which is given by column V and scalar Tau (see the description of the
+GenerateReflection procedure). Not the whole matrix but only a part of it
+is transformed (rows from M1 to M2, columns from N1 to N2). Only the elements
+of this submatrix are changed.
+
+Input parameters:
+    C       -   matrix to be transformed.
+    Tau     -   scalar defining the transformation.
+    V       -   column defining the transformation.
+                Array whose index ranges within [1..M2-M1+1].
+    M1, M2  -   range of rows to be transformed.
+    N1, N2  -   range of columns to be transformed.
+    WORK    -   working array whose indexes goes from N1 to N2.
+
+Output parameters:
+    C       -   the result of multiplying the input matrix C by the
+                transformation matrix which is given by Tau and V.
+                If N1>N2 or M1>M2, C is not modified.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void applyreflectionfromtheleft(/* Real    */ ae_matrix* c,
+     double tau,
+     /* Real    */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Real    */ ae_vector* work,
+     ae_state *_state)
+{
+    double t;
+    ae_int_t i;
+
+
+    if( (ae_fp_eq(tau,0)||n1>n2)||m1>m2 )
+    {
+        return;
+    }
+    
+    /*
+     * w := C' * v
+     */
+    for(i=n1; i<=n2; i++)
+    {
+        work->ptr.p_double[i] = 0;
+    }
+    for(i=m1; i<=m2; i++)
+    {
+        t = v->ptr.p_double[i+1-m1];
+        ae_v_addd(&work->ptr.p_double[n1], 1, &c->ptr.pp_double[i][n1], 1, ae_v_len(n1,n2), t);
+    }
+    
+    /*
+     * C := C - tau * v * w'
+     */
+    for(i=m1; i<=m2; i++)
+    {
+        t = v->ptr.p_double[i-m1+1]*tau;
+        ae_v_subd(&c->ptr.pp_double[i][n1], 1, &work->ptr.p_double[n1], 1, ae_v_len(n1,n2), t);
+    }
+}
+
+
+/*************************************************************************
+Application of an elementary reflection to a rectangular matrix of size MxN
+
+The algorithm post-multiplies the matrix by an elementary reflection transformation
+which is given by column V and scalar Tau (see the description of the
+GenerateReflection procedure). Not the whole matrix but only a part of it
+is transformed (rows from M1 to M2, columns from N1 to N2). Only the
+elements of this submatrix are changed.
+
+Input parameters:
+    C       -   matrix to be transformed.
+    Tau     -   scalar defining the transformation.
+    V       -   column defining the transformation.
+                Array whose index ranges within [1..N2-N1+1].
+    M1, M2  -   range of rows to be transformed.
+    N1, N2  -   range of columns to be transformed.
+    WORK    -   working array whose indexes goes from M1 to M2.
+
+Output parameters:
+    C       -   the result of multiplying the input matrix C by the
+                transformation matrix which is given by Tau and V.
+                If N1>N2 or M1>M2, C is not modified.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void applyreflectionfromtheright(/* Real    */ ae_matrix* c,
+     double tau,
+     /* Real    */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Real    */ ae_vector* work,
+     ae_state *_state)
+{
+    double t;
+    ae_int_t i;
+    ae_int_t vm;
+
+
+    if( (ae_fp_eq(tau,0)||n1>n2)||m1>m2 )
+    {
+        return;
+    }
+    vm = n2-n1+1;
+    for(i=m1; i<=m2; i++)
+    {
+        t = ae_v_dotproduct(&c->ptr.pp_double[i][n1], 1, &v->ptr.p_double[1], 1, ae_v_len(n1,n2));
+        t = t*tau;
+        ae_v_subd(&c->ptr.pp_double[i][n1], 1, &v->ptr.p_double[1], 1, ae_v_len(n1,n2), t);
+    }
+    
+    /*
+     * This line is necessary to avoid spurious compiler warnings
+     */
+    touchint(&vm, _state);
+}
+
+
+
+
+/*************************************************************************
+Generation of an elementary complex reflection transformation
+
+The subroutine generates elementary complex reflection H of  order  N,  so
+that, for a given X, the following equality holds true:
+
+     ( X(1) )   ( Beta )
+H' * (  ..  ) = (  0   ),   H'*H = I,   Beta is a real number
+     ( X(n) )   (  0   )
+
+where
+
+              ( V(1) )
+H = 1 - Tau * (  ..  ) * ( conj(V(1)), ..., conj(V(n)) )
+              ( V(n) )
+
+where the first component of vector V equals 1.
+
+Input parameters:
+    X   -   vector. Array with elements [1..N].
+    N   -   reflection order.
+
+Output parameters:
+    X   -   components from 2 to N are replaced by vector V.
+            The first component is replaced with parameter Beta.
+    Tau -   scalar value Tau.
+
+This subroutine is the modification of CLARFG subroutines  from the LAPACK
+library. It has similar functionality except for the fact that it  doesn’t
+handle errors when intermediate results cause an overflow.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void complexgeneratereflection(/* Complex */ ae_vector* x,
+     ae_int_t n,
+     ae_complex* tau,
+     ae_state *_state)
+{
+    ae_int_t j;
+    ae_complex alpha;
+    double alphi;
+    double alphr;
+    double beta;
+    double xnorm;
+    double mx;
+    ae_complex t;
+    double s;
+    ae_complex v;
+
+    tau->x = 0;
+    tau->y = 0;
+
+    if( n<=0 )
+    {
+        *tau = ae_complex_from_d(0);
+        return;
+    }
+    
+    /*
+     * Scale if needed (to avoid overflow/underflow during intermediate
+     * calculations).
+     */
+    mx = 0;
+    for(j=1; j<=n; j++)
+    {
+        mx = ae_maxreal(ae_c_abs(x->ptr.p_complex[j], _state), mx, _state);
+    }
+    s = 1;
+    if( ae_fp_neq(mx,0) )
+    {
+        if( ae_fp_less(mx,1) )
+        {
+            s = ae_sqrt(ae_minrealnumber, _state);
+            v = ae_complex_from_d(1/s);
+            ae_v_cmulc(&x->ptr.p_complex[1], 1, ae_v_len(1,n), v);
+        }
+        else
+        {
+            s = ae_sqrt(ae_maxrealnumber, _state);
+            v = ae_complex_from_d(1/s);
+            ae_v_cmulc(&x->ptr.p_complex[1], 1, ae_v_len(1,n), v);
+        }
+    }
+    
+    /*
+     * calculate
+     */
+    alpha = x->ptr.p_complex[1];
+    mx = 0;
+    for(j=2; j<=n; j++)
+    {
+        mx = ae_maxreal(ae_c_abs(x->ptr.p_complex[j], _state), mx, _state);
+    }
+    xnorm = 0;
+    if( ae_fp_neq(mx,0) )
+    {
+        for(j=2; j<=n; j++)
+        {
+            t = ae_c_div_d(x->ptr.p_complex[j],mx);
+            xnorm = xnorm+ae_c_mul(t,ae_c_conj(t, _state)).x;
+        }
+        xnorm = ae_sqrt(xnorm, _state)*mx;
+    }
+    alphr = alpha.x;
+    alphi = alpha.y;
+    if( ae_fp_eq(xnorm,0)&&ae_fp_eq(alphi,0) )
+    {
+        *tau = ae_complex_from_d(0);
+        x->ptr.p_complex[1] = ae_c_mul_d(x->ptr.p_complex[1],s);
+        return;
+    }
+    mx = ae_maxreal(ae_fabs(alphr, _state), ae_fabs(alphi, _state), _state);
+    mx = ae_maxreal(mx, ae_fabs(xnorm, _state), _state);
+    beta = -mx*ae_sqrt(ae_sqr(alphr/mx, _state)+ae_sqr(alphi/mx, _state)+ae_sqr(xnorm/mx, _state), _state);
+    if( ae_fp_less(alphr,0) )
+    {
+        beta = -beta;
+    }
+    tau->x = (beta-alphr)/beta;
+    tau->y = -alphi/beta;
+    alpha = ae_c_d_div(1,ae_c_sub_d(alpha,beta));
+    if( n>1 )
+    {
+        ae_v_cmulc(&x->ptr.p_complex[2], 1, ae_v_len(2,n), alpha);
+    }
+    alpha = ae_complex_from_d(beta);
+    x->ptr.p_complex[1] = alpha;
+    
+    /*
+     * Scale back
+     */
+    x->ptr.p_complex[1] = ae_c_mul_d(x->ptr.p_complex[1],s);
+}
+
+
+/*************************************************************************
+Application of an elementary reflection to a rectangular matrix of size MxN
+
+The  algorithm  pre-multiplies  the  matrix  by  an  elementary reflection
+transformation  which  is  given  by  column  V  and  scalar  Tau (see the
+description of the GenerateReflection). Not the whole matrix  but  only  a
+part of it is transformed (rows from M1 to M2, columns from N1 to N2). Only
+the elements of this submatrix are changed.
+
+Note: the matrix is multiplied by H, not by H'.   If  it  is  required  to
+multiply the matrix by H', it is necessary to pass Conj(Tau) instead of Tau.
+
+Input parameters:
+    C       -   matrix to be transformed.
+    Tau     -   scalar defining transformation.
+    V       -   column defining transformation.
+                Array whose index ranges within [1..M2-M1+1]
+    M1, M2  -   range of rows to be transformed.
+    N1, N2  -   range of columns to be transformed.
+    WORK    -   working array whose index goes from N1 to N2.
+
+Output parameters:
+    C       -   the result of multiplying the input matrix C by the
+                transformation matrix which is given by Tau and V.
+                If N1>N2 or M1>M2, C is not modified.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void complexapplyreflectionfromtheleft(/* Complex */ ae_matrix* c,
+     ae_complex tau,
+     /* Complex */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Complex */ ae_vector* work,
+     ae_state *_state)
+{
+    ae_complex t;
+    ae_int_t i;
+
+
+    if( (ae_c_eq_d(tau,0)||n1>n2)||m1>m2 )
+    {
+        return;
+    }
+    
+    /*
+     * w := C^T * conj(v)
+     */
+    for(i=n1; i<=n2; i++)
+    {
+        work->ptr.p_complex[i] = ae_complex_from_d(0);
+    }
+    for(i=m1; i<=m2; i++)
+    {
+        t = ae_c_conj(v->ptr.p_complex[i+1-m1], _state);
+        ae_v_caddc(&work->ptr.p_complex[n1], 1, &c->ptr.pp_complex[i][n1], 1, "N", ae_v_len(n1,n2), t);
+    }
+    
+    /*
+     * C := C - tau * v * w^T
+     */
+    for(i=m1; i<=m2; i++)
+    {
+        t = ae_c_mul(v->ptr.p_complex[i-m1+1],tau);
+        ae_v_csubc(&c->ptr.pp_complex[i][n1], 1, &work->ptr.p_complex[n1], 1, "N", ae_v_len(n1,n2), t);
+    }
+}
+
+
+/*************************************************************************
+Application of an elementary reflection to a rectangular matrix of size MxN
+
+The  algorithm  post-multiplies  the  matrix  by  an elementary reflection
+transformation  which  is  given  by  column  V  and  scalar  Tau (see the
+description  of  the  GenerateReflection). Not the whole matrix but only a
+part  of  it  is  transformed (rows from M1 to M2, columns from N1 to N2).
+Only the elements of this submatrix are changed.
+
+Input parameters:
+    C       -   matrix to be transformed.
+    Tau     -   scalar defining transformation.
+    V       -   column defining transformation.
+                Array whose index ranges within [1..N2-N1+1]
+    M1, M2  -   range of rows to be transformed.
+    N1, N2  -   range of columns to be transformed.
+    WORK    -   working array whose index goes from M1 to M2.
+
+Output parameters:
+    C       -   the result of multiplying the input matrix C by the
+                transformation matrix which is given by Tau and V.
+                If N1>N2 or M1>M2, C is not modified.
+
+  -- LAPACK auxiliary routine (version 3.0) --
+     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
+     Courant Institute, Argonne National Lab, and Rice University
+     September 30, 1994
+*************************************************************************/
+void complexapplyreflectionfromtheright(/* Complex */ ae_matrix* c,
+     ae_complex tau,
+     /* Complex */ ae_vector* v,
+     ae_int_t m1,
+     ae_int_t m2,
+     ae_int_t n1,
+     ae_int_t n2,
+     /* Complex */ ae_vector* work,
+     ae_state *_state)
+{
+    ae_complex t;
+    ae_int_t i;
+    ae_int_t vm;
+
+
+    if( (ae_c_eq_d(tau,0)||n1>n2)||m1>m2 )
+    {
+        return;
+    }
+    
+    /*
+     * w := C * v
+     */
+    vm = n2-n1+1;
+    for(i=m1; i<=m2; i++)
+    {
+        t = ae_v_cdotproduct(&c->ptr.pp_complex[i][n1], 1, "N", &v->ptr.p_complex[1], 1, "N", ae_v_len(n1,n2));
+        work->ptr.p_complex[i] = t;
+    }
+    
+    /*
+     * C := C - w * conj(v^T)
+     */
+    ae_v_cmove(&v->ptr.p_complex[1], 1, &v->ptr.p_complex[1], 1, "Conj", ae_v_len(1,vm));
+    for(i=m1; i<=m2; i++)
+    {
+        t = ae_c_mul(work->ptr.p_complex[i],tau);
+        ae_v_csubc(&c->ptr.pp_complex[i][n1], 1, &v->ptr.p_complex[1], 1, "N", ae_v_len(n1,n2), t);
+    }
+    ae_v_cmove(&v->ptr.p_complex[1], 1, &v->ptr.p_complex[1], 1, "Conj", ae_v_len(1,vm));
+}
+
+
+
+
+void symmetricmatrixvectormultiply(/* Real    */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Real    */ ae_vector* x,
+     double alpha,
+     /* Real    */ ae_vector* y,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t ba1;
+    ae_int_t ba2;
+    ae_int_t by1;
+    ae_int_t by2;
+    ae_int_t bx1;
+    ae_int_t bx2;
+    ae_int_t n;
+    double v;
+
+
+    n = i2-i1+1;
+    if( n<=0 )
+    {
+        return;
+    }
+    
+    /*
+     * Let A = L + D + U, where
+     *  L is strictly lower triangular (main diagonal is zero)
+     *  D is diagonal
+     *  U is strictly upper triangular (main diagonal is zero)
+     *
+     * A*x = L*x + D*x + U*x
+     *
+     * Calculate D*x first
+     */
+    for(i=i1; i<=i2; i++)
+    {
+        y->ptr.p_double[i-i1+1] = a->ptr.pp_double[i][i]*x->ptr.p_double[i-i1+1];
+    }
+    
+    /*
+     * Add L*x + U*x
+     */
+    if( isupper )
+    {
+        for(i=i1; i<=i2-1; i++)
+        {
+            
+            /*
+             * Add L*x to the result
+             */
+            v = x->ptr.p_double[i-i1+1];
+            by1 = i-i1+2;
+            by2 = n;
+            ba1 = i+1;
+            ba2 = i2;
+            ae_v_addd(&y->ptr.p_double[by1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(by1,by2), v);
+            
+            /*
+             * Add U*x to the result
+             */
+            bx1 = i-i1+2;
+            bx2 = n;
+            ba1 = i+1;
+            ba2 = i2;
+            v = ae_v_dotproduct(&x->ptr.p_double[bx1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(bx1,bx2));
+            y->ptr.p_double[i-i1+1] = y->ptr.p_double[i-i1+1]+v;
+        }
+    }
+    else
+    {
+        for(i=i1+1; i<=i2; i++)
+        {
+            
+            /*
+             * Add L*x to the result
+             */
+            bx1 = 1;
+            bx2 = i-i1;
+            ba1 = i1;
+            ba2 = i-1;
+            v = ae_v_dotproduct(&x->ptr.p_double[bx1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(bx1,bx2));
+            y->ptr.p_double[i-i1+1] = y->ptr.p_double[i-i1+1]+v;
+            
+            /*
+             * Add U*x to the result
+             */
+            v = x->ptr.p_double[i-i1+1];
+            by1 = 1;
+            by2 = i-i1;
+            ba1 = i1;
+            ba2 = i-1;
+            ae_v_addd(&y->ptr.p_double[by1], 1, &a->ptr.pp_double[i][ba1], 1, ae_v_len(by1,by2), v);
+        }
+    }
+    ae_v_muld(&y->ptr.p_double[1], 1, ae_v_len(1,n), alpha);
+    touchint(&ba2, _state);
+}
+
+
+void symmetricrank2update(/* Real    */ ae_matrix* a,
+     ae_bool isupper,
+     ae_int_t i1,
+     ae_int_t i2,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_vector* t,
+     double alpha,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t tp1;
+    ae_int_t tp2;
+    double v;
+
+
+    if( isupper )
+    {
+        for(i=i1; i<=i2; i++)
+        {
+            tp1 = i+1-i1;
+            tp2 = i2-i1+1;
+            v = x->ptr.p_double[i+1-i1];
+            ae_v_moved(&t->ptr.p_double[tp1], 1, &y->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
+            v = y->ptr.p_double[i+1-i1];
+            ae_v_addd(&t->ptr.p_double[tp1], 1, &x->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
+            ae_v_muld(&t->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), alpha);
+            ae_v_add(&a->ptr.pp_double[i][i], 1, &t->ptr.p_double[tp1], 1, ae_v_len(i,i2));
+        }
+    }
+    else
+    {
+        for(i=i1; i<=i2; i++)
+        {
+            tp1 = 1;
+            tp2 = i+1-i1;
+            v = x->ptr.p_double[i+1-i1];
+            ae_v_moved(&t->ptr.p_double[tp1], 1, &y->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
+            v = y->ptr.p_double[i+1-i1];
+            ae_v_addd(&t->ptr.p_double[tp1], 1, &x->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), v);
+            ae_v_muld(&t->ptr.p_double[tp1], 1, ae_v_len(tp1,tp2), alpha);
+            ae_v_add(&a->ptr.pp_double[i][i1], 1, &t->ptr.p_double[tp1], 1, ae_v_len(i1,i));
         }
     }
 }
@@ -5516,7 +7917,6 @@ void internalschurdecomposition(/* Real    */ ae_matrix* h,
     ae_int_t ns;
     ae_int_t nv;
     double absw;
-    double ovfl;
     double smlnum;
     double tau;
     double temp;
@@ -5683,7 +8083,6 @@ void internalschurdecomposition(/* Real    */ ae_matrix* h,
         return;
     }
     unfl = ae_minrealnumber;
-    ovfl = 1/unfl;
     ulp = 2*ae_machineepsilon;
     smlnum = unfl*(n/ulp);
     
@@ -5931,6 +8330,7 @@ void internalschurdecomposition(/* Real    */ ae_matrix* h,
                     p1 = k-1;
                     p2 = k+nr-1;
                     ae_v_move(&v.ptr.p_double[1], 1, &h->ptr.pp_double[k][p1], h->stride, ae_v_len(1,nr));
+                    touchint(&p2, _state);
                 }
                 generatereflection(&v, nr, &tau, _state);
                 if( k>l )
@@ -6041,7 +8441,6 @@ static void hsschur_internalauxschur(ae_bool wantt,
     double h43h34;
     double h44;
     double h44s;
-    double ovfl;
     double s;
     double smlnum;
     double sn;
@@ -6093,10 +8492,9 @@ static void hsschur_internalauxschur(ae_bool wantt,
     
     /*
      * Set machine-dependent constants for the stopping criterion.
-     * If norm(H) <= sqrt(OVFL), overflow should not occur.
+     * If norm(H) <= sqrt(MaxRealNumber), overflow should not occur.
      */
     unfl = ae_minrealnumber;
-    ovfl = 1/unfl;
     smlnum = unfl*(nh/ulp);
     
     /*
@@ -8314,6 +10712,317 @@ static ae_bool safesolve_cbasicsolveandupdate(ae_complex alpha,
 
 
 /*************************************************************************
+Prepares HPC compuations  of  chunked  gradient with HPCChunkedGradient().
+You  have to call this function  before  calling  HPCChunkedGradient() for
+a new set of weights. You have to call it only once, see example below:
+
+HOW TO PROCESS DATASET WITH THIS FUNCTION:
+    Grad:=0
+    HPCPrepareChunkedGradient(Weights, WCount, NTotal, NOut, Buf)
+    foreach chunk-of-dataset do
+        HPCChunkedGradient(...)
+    HPCFinalizeChunkedGradient(Buf, Grad)
+
+*************************************************************************/
+void hpcpreparechunkedgradient(/* Real    */ ae_vector* weights,
+     ae_int_t wcount,
+     ae_int_t ntotal,
+     ae_int_t nin,
+     ae_int_t nout,
+     mlpbuffers* buf,
+     ae_state *_state)
+{
+    ae_int_t i;
+    ae_int_t batch4size;
+    ae_int_t chunksize;
+
+
+    chunksize = 4;
+    batch4size = 3*chunksize*ntotal+chunksize*(2*nout+1);
+    if( buf->xy.rows<chunksize||buf->xy.cols<nin+nout )
+    {
+        ae_matrix_set_length(&buf->xy, chunksize, nin+nout, _state);
+    }
+    if( buf->xy2.rows<chunksize||buf->xy2.cols<nin+nout )
+    {
+        ae_matrix_set_length(&buf->xy2, chunksize, nin+nout, _state);
+    }
+    if( buf->xyrow.cnt<nin+nout )
+    {
+        ae_vector_set_length(&buf->xyrow, nin+nout, _state);
+    }
+    if( buf->x.cnt<nin )
+    {
+        ae_vector_set_length(&buf->x, nin, _state);
+    }
+    if( buf->y.cnt<nout )
+    {
+        ae_vector_set_length(&buf->y, nout, _state);
+    }
+    if( buf->desiredy.cnt<nout )
+    {
+        ae_vector_set_length(&buf->desiredy, nout, _state);
+    }
+    if( buf->batch4buf.cnt<batch4size )
+    {
+        ae_vector_set_length(&buf->batch4buf, batch4size, _state);
+    }
+    if( buf->hpcbuf.cnt<wcount )
+    {
+        ae_vector_set_length(&buf->hpcbuf, wcount, _state);
+    }
+    if( buf->g.cnt<wcount )
+    {
+        ae_vector_set_length(&buf->g, wcount, _state);
+    }
+    if( !hpccores_hpcpreparechunkedgradientx(weights, wcount, &buf->hpcbuf, _state) )
+    {
+        for(i=0; i<=wcount-1; i++)
+        {
+            buf->hpcbuf.ptr.p_double[i] = 0.0;
+        }
+    }
+    buf->wcount = wcount;
+    buf->ntotal = ntotal;
+    buf->nin = nin;
+    buf->nout = nout;
+    buf->chunksize = chunksize;
+}
+
+
+/*************************************************************************
+Finalizes HPC compuations  of  chunked gradient with HPCChunkedGradient().
+You  have to call this function  after  calling  HPCChunkedGradient()  for
+a new set of weights. You have to call it only once, see example below:
+
+HOW TO PROCESS DATASET WITH THIS FUNCTION:
+    Grad:=0
+    HPCPrepareChunkedGradient(Weights, WCount, NTotal, NOut, Buf)
+    foreach chunk-of-dataset do
+        HPCChunkedGradient(...)
+    HPCFinalizeChunkedGradient(Buf, Grad)
+
+*************************************************************************/
+void hpcfinalizechunkedgradient(mlpbuffers* buf,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state)
+{
+    ae_int_t i;
+
+
+    if( !hpccores_hpcfinalizechunkedgradientx(&buf->hpcbuf, buf->wcount, grad, _state) )
+    {
+        for(i=0; i<=buf->wcount-1; i++)
+        {
+            grad->ptr.p_double[i] = grad->ptr.p_double[i]+buf->hpcbuf.ptr.p_double[i];
+        }
+    }
+}
+
+
+/*************************************************************************
+Fast kernel for chunked gradient.
+
+*************************************************************************/
+ae_bool hpcchunkedgradient(/* Real    */ ae_vector* weights,
+     /* Integer */ ae_vector* structinfo,
+     /* Real    */ ae_vector* columnmeans,
+     /* Real    */ ae_vector* columnsigmas,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t cstart,
+     ae_int_t csize,
+     /* Real    */ ae_vector* batch4buf,
+     /* Real    */ ae_vector* hpcbuf,
+     double* e,
+     ae_bool naturalerrorfunc,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_SSE2
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_hpcchunkedgradient(weights, structinfo, columnmeans, columnsigmas, xy, cstart, csize, batch4buf, hpcbuf, e, naturalerrorfunc);
+#endif
+}
+
+
+/*************************************************************************
+Fast kernel for chunked processing.
+
+*************************************************************************/
+ae_bool hpcchunkedprocess(/* Real    */ ae_vector* weights,
+     /* Integer */ ae_vector* structinfo,
+     /* Real    */ ae_vector* columnmeans,
+     /* Real    */ ae_vector* columnsigmas,
+     /* Real    */ ae_matrix* xy,
+     ae_int_t cstart,
+     ae_int_t csize,
+     /* Real    */ ae_vector* batch4buf,
+     /* Real    */ ae_vector* hpcbuf,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_SSE2
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_hpcchunkedprocess(weights, structinfo, columnmeans, columnsigmas, xy, cstart, csize, batch4buf, hpcbuf);
+#endif
+}
+
+
+/*************************************************************************
+Stub function.
+
+  -- ALGLIB routine --
+     14.06.2013
+     Bochkanov Sergey
+*************************************************************************/
+static ae_bool hpccores_hpcpreparechunkedgradientx(/* Real    */ ae_vector* weights,
+     ae_int_t wcount,
+     /* Real    */ ae_vector* hpcbuf,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_SSE2
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_hpcpreparechunkedgradientx(weights, wcount, hpcbuf);
+#endif
+}
+
+
+/*************************************************************************
+Stub function.
+
+  -- ALGLIB routine --
+     14.06.2013
+     Bochkanov Sergey
+*************************************************************************/
+static ae_bool hpccores_hpcfinalizechunkedgradientx(/* Real    */ ae_vector* buf,
+     ae_int_t wcount,
+     /* Real    */ ae_vector* grad,
+     ae_state *_state)
+{
+#ifndef ALGLIB_INTERCEPTS_SSE2
+    ae_bool result;
+
+
+    result = ae_false;
+    return result;
+#else
+    return _ialglib_i_hpcfinalizechunkedgradientx(buf, wcount, grad);
+#endif
+}
+
+
+ae_bool _mlpbuffers_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    mlpbuffers *p = (mlpbuffers*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_vector_init(&p->batch4buf, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->hpcbuf, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init(&p->xy, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init(&p->xy2, 0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->xyrow, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->y, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->desiredy, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->g, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init(&p->tmp0, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+ae_bool _mlpbuffers_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
+{
+    mlpbuffers *dst = (mlpbuffers*)_dst;
+    mlpbuffers *src = (mlpbuffers*)_src;
+    dst->chunksize = src->chunksize;
+    dst->ntotal = src->ntotal;
+    dst->nin = src->nin;
+    dst->nout = src->nout;
+    dst->wcount = src->wcount;
+    if( !ae_vector_init_copy(&dst->batch4buf, &src->batch4buf, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->hpcbuf, &src->hpcbuf, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init_copy(&dst->xy, &src->xy, _state, make_automatic) )
+        return ae_false;
+    if( !ae_matrix_init_copy(&dst->xy2, &src->xy2, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->xyrow, &src->xyrow, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->x, &src->x, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->y, &src->y, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->desiredy, &src->desiredy, _state, make_automatic) )
+        return ae_false;
+    dst->e = src->e;
+    if( !ae_vector_init_copy(&dst->g, &src->g, _state, make_automatic) )
+        return ae_false;
+    if( !ae_vector_init_copy(&dst->tmp0, &src->tmp0, _state, make_automatic) )
+        return ae_false;
+    return ae_true;
+}
+
+
+void _mlpbuffers_clear(void* _p)
+{
+    mlpbuffers *p = (mlpbuffers*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_clear(&p->batch4buf);
+    ae_vector_clear(&p->hpcbuf);
+    ae_matrix_clear(&p->xy);
+    ae_matrix_clear(&p->xy2);
+    ae_vector_clear(&p->xyrow);
+    ae_vector_clear(&p->x);
+    ae_vector_clear(&p->y);
+    ae_vector_clear(&p->desiredy);
+    ae_vector_clear(&p->g);
+    ae_vector_clear(&p->tmp0);
+}
+
+
+void _mlpbuffers_destroy(void* _p)
+{
+    mlpbuffers *p = (mlpbuffers*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->batch4buf);
+    ae_vector_destroy(&p->hpcbuf);
+    ae_matrix_destroy(&p->xy);
+    ae_matrix_destroy(&p->xy2);
+    ae_vector_destroy(&p->xyrow);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->y);
+    ae_vector_destroy(&p->desiredy);
+    ae_vector_destroy(&p->g);
+    ae_vector_destroy(&p->tmp0);
+}
+
+
+
+
+/*************************************************************************
 More precise dot-product. Absolute error of  subroutine  result  is  about
 1 ulp of max(MX,V), where:
     MX = max( |a[i]*b[i]| )
@@ -8970,7 +11679,6 @@ void mcsrch(ae_int_t n,
             
             /*
              *        IF AN UNUSUAL TERMINATION IS TO OCCUR THEN LET
-
              *        STP BE THE LOWEST POINT OBTAINED SO FAR.
              */
             if( (((state->brackt&&(ae_fp_less_eq(*stp,state->stmin)||ae_fp_greater_eq(*stp,state->stmax)))||*nfev>=linmin_maxfev-1)||state->infoc==0)||(state->brackt&&ae_fp_less_eq(state->stmax-state->stmin,linmin_xtol*state->stmax)) )
@@ -9713,14 +12421,18 @@ static void linmin_mcstep(double* stx,
 }
 
 
-ae_bool _linminstate_init(linminstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _linminstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    linminstate *p = (linminstate*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _linminstate_init_copy(linminstate* dst, linminstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _linminstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    linminstate *dst = (linminstate*)_dst;
+    linminstate *src = (linminstate*)_src;
     dst->brackt = src->brackt;
     dst->stage1 = src->stage1;
     dst->infoc = src->infoc;
@@ -9750,13 +12462,24 @@ ae_bool _linminstate_init_copy(linminstate* dst, linminstate* src, ae_state *_st
 }
 
 
-void _linminstate_clear(linminstate* p)
+void _linminstate_clear(void* _p)
 {
+    linminstate *p = (linminstate*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _armijostate_init(armijostate* p, ae_state *_state, ae_bool make_automatic)
+void _linminstate_destroy(void* _p)
 {
+    linminstate *p = (linminstate*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _armijostate_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    armijostate *p = (armijostate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->x, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->xbase, 0, DT_REAL, _state, make_automatic) )
@@ -9769,8 +12492,10 @@ ae_bool _armijostate_init(armijostate* p, ae_state *_state, ae_bool make_automat
 }
 
 
-ae_bool _armijostate_init_copy(armijostate* dst, armijostate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _armijostate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    armijostate *dst = (armijostate*)_dst;
+    armijostate *src = (armijostate*)_src;
     dst->needf = src->needf;
     if( !ae_vector_init_copy(&dst->x, &src->x, _state, make_automatic) )
         return ae_false;
@@ -9792,8 +12517,10 @@ ae_bool _armijostate_init_copy(armijostate* dst, armijostate* src, ae_state *_st
 }
 
 
-void _armijostate_clear(armijostate* p)
+void _armijostate_clear(void* _p)
 {
+    armijostate *p = (armijostate*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->x);
     ae_vector_clear(&p->xbase);
     ae_vector_clear(&p->s);
@@ -9801,714 +12528,427 @@ void _armijostate_clear(armijostate* p)
 }
 
 
+void _armijostate_destroy(void* _p)
+{
+    armijostate *p = (armijostate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->x);
+    ae_vector_destroy(&p->xbase);
+    ae_vector_destroy(&p->s);
+    _rcommstate_destroy(&p->rstate);
+}
 
 
-/*************************************************************************
-This subroutine generates FFT plan - a decomposition of a N-length FFT to
-the more simpler operations. Plan consists of the root entry and the child
-entries.
 
-Subroutine parameters:
-    N               task size
+
+void findprimitiverootandinverse(ae_int_t n,
+     ae_int_t* proot,
+     ae_int_t* invproot,
+     ae_state *_state)
+{
+    ae_int_t candroot;
+    ae_int_t phin;
+    ae_int_t q;
+    ae_int_t f;
+    ae_bool allnonone;
+    ae_int_t x;
+    ae_int_t lastx;
+    ae_int_t y;
+    ae_int_t lasty;
+    ae_int_t a;
+    ae_int_t b;
+    ae_int_t t;
+    ae_int_t n2;
+
+    *proot = 0;
+    *invproot = 0;
+
+    ae_assert(n>=3, "FindPrimitiveRootAndInverse: N<3", _state);
+    *proot = 0;
+    *invproot = 0;
     
-Output parameters:
-    Plan            plan
-
-  -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
-*************************************************************************/
-void ftbasegeneratecomplexfftplan(ae_int_t n,
-     ftplan* plan,
-     ae_state *_state)
-{
-    ae_int_t planarraysize;
-    ae_int_t plansize;
-    ae_int_t precomputedsize;
-    ae_int_t tmpmemsize;
-    ae_int_t stackmemsize;
-    ae_int_t stackptr;
-
-    _ftplan_clear(plan);
-
-    planarraysize = 1;
-    plansize = 0;
-    precomputedsize = 0;
-    stackmemsize = 0;
-    stackptr = 0;
-    tmpmemsize = 2*n;
-    ae_vector_set_length(&plan->plan, planarraysize, _state);
-    ftbase_ftbasegenerateplanrec(n, ftbase_ftbasecffttask, plan, &plansize, &precomputedsize, &planarraysize, &tmpmemsize, &stackmemsize, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateComplexFFTPlan: stack ptr!", _state);
-    ae_vector_set_length(&plan->stackbuf, ae_maxint(stackmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->tmpbuf, ae_maxint(tmpmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->precomputed, ae_maxint(precomputedsize, 1, _state), _state);
-    stackptr = 0;
-    ftbase_ftbaseprecomputeplanrec(plan, 0, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateComplexFFTPlan: stack ptr!", _state);
+    /*
+     * check that N is prime
+     */
+    ae_assert(ntheory_isprime(n, _state), "FindPrimitiveRoot: N is not prime", _state);
+    
+    /*
+     * Because N is prime, Euler totient function is equal to N-1
+     */
+    phin = n-1;
+    
+    /*
+     * Test different values of PRoot - from 2 to N-1.
+     * One of these values MUST be primitive root.
+     *
+     * For testing we use algorithm from Wiki (Primitive root modulo n):
+     * * compute phi(N)
+     * * determine the different prime factors of phi(N), say p1, ..., pk
+     * * for every element m of Zn*, compute m^(phi(N)/pi) mod N for i=1..k
+     *   using a fast algorithm for modular exponentiation.
+     * * a number m for which these k results are all different from 1 is a
+     *   primitive root.
+     */
+    for(candroot=2; candroot<=n-1; candroot++)
+    {
+        
+        /*
+         * We have current candidate root in CandRoot.
+         *
+         * Scan different prime factors of PhiN. Here:
+         * * F is a current candidate factor
+         * * Q is a current quotient - amount which was left after dividing PhiN
+         *   by all previous factors
+         *
+         * For each factor, perform test mentioned above.
+         */
+        q = phin;
+        f = 2;
+        allnonone = ae_true;
+        while(q>1)
+        {
+            if( q%f==0 )
+            {
+                t = ntheory_modexp(candroot, phin/f, n, _state);
+                if( t==1 )
+                {
+                    allnonone = ae_false;
+                    break;
+                }
+                while(q%f==0)
+                {
+                    q = q/f;
+                }
+            }
+            f = f+1;
+        }
+        if( allnonone )
+        {
+            *proot = candroot;
+            break;
+        }
+    }
+    ae_assert(*proot>=2, "FindPrimitiveRoot: internal error (root not found)", _state);
+    
+    /*
+     * Use extended Euclidean algorithm to find multiplicative inverse of primitive root
+     */
+    x = 0;
+    lastx = 1;
+    y = 1;
+    lasty = 0;
+    a = *proot;
+    b = n;
+    while(b!=0)
+    {
+        q = a/b;
+        t = a%b;
+        a = b;
+        b = t;
+        t = lastx-q*x;
+        lastx = x;
+        x = t;
+        t = lasty-q*y;
+        lasty = y;
+        y = t;
+    }
+    while(lastx<0)
+    {
+        lastx = lastx+n;
+    }
+    *invproot = lastx;
+    
+    /*
+     * Check that it is safe to perform multiplication modulo N.
+     * Check results for consistency.
+     */
+    n2 = (n-1)*(n-1);
+    ae_assert(n2/(n-1)==n-1, "FindPrimitiveRoot: internal error", _state);
+    ae_assert(*proot*(*invproot)/(*proot)==(*invproot), "FindPrimitiveRoot: internal error", _state);
+    ae_assert(*proot*(*invproot)/(*invproot)==(*proot), "FindPrimitiveRoot: internal error", _state);
+    ae_assert(*proot*(*invproot)%n==1, "FindPrimitiveRoot: internal error", _state);
 }
 
 
-/*************************************************************************
-Generates real FFT plan
-*************************************************************************/
-void ftbasegeneraterealfftplan(ae_int_t n, ftplan* plan, ae_state *_state)
+static ae_bool ntheory_isprime(ae_int_t n, ae_state *_state)
 {
-    ae_int_t planarraysize;
-    ae_int_t plansize;
-    ae_int_t precomputedsize;
-    ae_int_t tmpmemsize;
-    ae_int_t stackmemsize;
-    ae_int_t stackptr;
+    ae_int_t p;
+    ae_bool result;
 
-    _ftplan_clear(plan);
 
-    planarraysize = 1;
-    plansize = 0;
-    precomputedsize = 0;
-    stackmemsize = 0;
-    stackptr = 0;
-    tmpmemsize = 2*n;
-    ae_vector_set_length(&plan->plan, planarraysize, _state);
-    ftbase_ftbasegenerateplanrec(n, ftbase_ftbaserffttask, plan, &plansize, &precomputedsize, &planarraysize, &tmpmemsize, &stackmemsize, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateRealFFTPlan: stack ptr!", _state);
-    ae_vector_set_length(&plan->stackbuf, ae_maxint(stackmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->tmpbuf, ae_maxint(tmpmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->precomputed, ae_maxint(precomputedsize, 1, _state), _state);
-    stackptr = 0;
-    ftbase_ftbaseprecomputeplanrec(plan, 0, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateRealFFTPlan: stack ptr!", _state);
+    result = ae_false;
+    p = 2;
+    while(p*p<=n)
+    {
+        if( n%p==0 )
+        {
+            return result;
+        }
+        p = p+1;
+    }
+    result = ae_true;
+    return result;
 }
 
 
-/*************************************************************************
-Generates real FHT plan
-*************************************************************************/
-void ftbasegeneraterealfhtplan(ae_int_t n, ftplan* plan, ae_state *_state)
-{
-    ae_int_t planarraysize;
-    ae_int_t plansize;
-    ae_int_t precomputedsize;
-    ae_int_t tmpmemsize;
-    ae_int_t stackmemsize;
-    ae_int_t stackptr;
-
-    _ftplan_clear(plan);
-
-    planarraysize = 1;
-    plansize = 0;
-    precomputedsize = 0;
-    stackmemsize = 0;
-    stackptr = 0;
-    tmpmemsize = n;
-    ae_vector_set_length(&plan->plan, planarraysize, _state);
-    ftbase_ftbasegenerateplanrec(n, ftbase_ftbaserfhttask, plan, &plansize, &precomputedsize, &planarraysize, &tmpmemsize, &stackmemsize, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateRealFHTPlan: stack ptr!", _state);
-    ae_vector_set_length(&plan->stackbuf, ae_maxint(stackmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->tmpbuf, ae_maxint(tmpmemsize, 1, _state), _state);
-    ae_vector_set_length(&plan->precomputed, ae_maxint(precomputedsize, 1, _state), _state);
-    stackptr = 0;
-    ftbase_ftbaseprecomputeplanrec(plan, 0, stackptr, _state);
-    ae_assert(stackptr==0, "Internal error in FTBaseGenerateRealFHTPlan: stack ptr!", _state);
-}
-
-
-/*************************************************************************
-This subroutine executes FFT/FHT plan.
-
-If Plan is a:
-* complex FFT plan  -   sizeof(A)=2*N,
-                        A contains interleaved real/imaginary values
-* real FFT plan     -   sizeof(A)=2*N,
-                        A contains real values interleaved with zeros
-* real FHT plan     -   sizeof(A)=2*N,
-                        A contains real values interleaved with zeros
-
-  -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
-*************************************************************************/
-void ftbaseexecuteplan(/* Real    */ ae_vector* a,
-     ae_int_t aoffset,
+static ae_int_t ntheory_modmul(ae_int_t a,
+     ae_int_t b,
      ae_int_t n,
-     ftplan* plan,
      ae_state *_state)
 {
-    ae_int_t stackptr;
+    ae_int_t t;
+    double ra;
+    double rb;
+    ae_int_t result;
 
 
-    stackptr = 0;
-    ftbaseexecuteplanrec(a, aoffset, plan, 0, stackptr, _state);
+    ae_assert(a>=0&&a<n, "ModMul: A<0 or A>=N", _state);
+    ae_assert(b>=0&&b<n, "ModMul: B<0 or B>=N", _state);
+    
+    /*
+     * Base cases
+     */
+    ra = a;
+    rb = b;
+    if( b==0||a==0 )
+    {
+        result = 0;
+        return result;
+    }
+    if( b==1||a==1 )
+    {
+        result = a*b;
+        return result;
+    }
+    if( ae_fp_eq(ra*rb,a*b) )
+    {
+        result = a*b%n;
+        return result;
+    }
+    
+    /*
+     * Non-base cases
+     */
+    if( b%2==0 )
+    {
+        
+        /*
+         * A*B = (A*(B/2)) * 2
+         *
+         * Product T=A*(B/2) is calculated recursively, product T*2 is
+         * calculated as follows:
+         * * result:=T-N
+         * * result:=result+T
+         * * if result<0 then result:=result+N
+         *
+         * In case integer result overflows, we generate exception
+         */
+        t = ntheory_modmul(a, b/2, n, _state);
+        result = t-n;
+        result = result+t;
+        if( result<0 )
+        {
+            result = result+n;
+        }
+    }
+    else
+    {
+        
+        /*
+         * A*B = (A*(B div 2)) * 2 + A
+         *
+         * Product T=A*(B/2) is calculated recursively, product T*2 is
+         * calculated as follows:
+         * * result:=T-N
+         * * result:=result+T
+         * * if result<0 then result:=result+N
+         *
+         * In case integer result overflows, we generate exception
+         */
+        t = ntheory_modmul(a, b/2, n, _state);
+        result = t-n;
+        result = result+t;
+        if( result<0 )
+        {
+            result = result+n;
+        }
+        result = result-n;
+        result = result+a;
+        if( result<0 )
+        {
+            result = result+n;
+        }
+    }
+    return result;
 }
 
 
-/*************************************************************************
-Recurrent subroutine for the FTBaseExecutePlan
+static ae_int_t ntheory_modexp(ae_int_t a,
+     ae_int_t b,
+     ae_int_t n,
+     ae_state *_state)
+{
+    ae_int_t t;
+    ae_int_t result;
 
-Parameters:
-    A           FFT'ed array
-    AOffset     offset of the FFT'ed part (distance is measured in doubles)
+
+    ae_assert(a>=0&&a<n, "ModExp: A<0 or A>=N", _state);
+    ae_assert(b>=0, "ModExp: B<0", _state);
+    
+    /*
+     * Base cases
+     */
+    if( b==0 )
+    {
+        result = 1;
+        return result;
+    }
+    if( b==1 )
+    {
+        result = a;
+        return result;
+    }
+    
+    /*
+     * Non-base cases
+     */
+    if( b%2==0 )
+    {
+        t = ntheory_modmul(a, a, n, _state);
+        result = ntheory_modexp(t, b/2, n, _state);
+    }
+    else
+    {
+        t = ntheory_modmul(a, a, n, _state);
+        result = ntheory_modexp(t, b/2, n, _state);
+        result = ntheory_modmul(result, a, n, _state);
+    }
+    return result;
+}
+
+
+
+
+/*************************************************************************
+This subroutine generates FFT plan for K complex FFT's with length N each.
+
+INPUT PARAMETERS:
+    N           -   FFT length (in complex numbers), N>=1
+    K           -   number of repetitions, K>=1
+    
+OUTPUT PARAMETERS:
+    Plan        -   plan
 
   -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
+     Copyright 05.04.2013 by Bochkanov Sergey
 *************************************************************************/
-void ftbaseexecuteplanrec(/* Real    */ ae_vector* a,
-     ae_int_t aoffset,
-     ftplan* plan,
-     ae_int_t entryoffset,
-     ae_int_t stackptr,
+void ftcomplexfftplan(ae_int_t n,
+     ae_int_t k,
+     fasttransformplan* plan,
      ae_state *_state)
 {
     ae_frame _frame_block;
-    ae_int_t i;
-    ae_int_t j;
-    ae_int_t k;
-    ae_int_t n1;
-    ae_int_t n2;
-    ae_int_t n;
-    ae_int_t m;
-    ae_int_t offs;
-    ae_int_t offs1;
-    ae_int_t offs2;
-    ae_int_t offsa;
-    ae_int_t offsb;
-    ae_int_t offsp;
-    double hk;
-    double hnk;
-    double x;
-    double y;
-    double bx;
-    double by;
-    ae_vector emptyarray;
-    double a0x;
-    double a0y;
-    double a1x;
-    double a1y;
-    double a2x;
-    double a2y;
-    double a3x;
-    double a3y;
-    double v0;
-    double v1;
-    double v2;
-    double v3;
-    double t1x;
-    double t1y;
-    double t2x;
-    double t2y;
-    double t3x;
-    double t3y;
-    double t4x;
-    double t4y;
-    double t5x;
-    double t5y;
-    double m1x;
-    double m1y;
-    double m2x;
-    double m2y;
-    double m3x;
-    double m3y;
-    double m4x;
-    double m4y;
-    double m5x;
-    double m5y;
-    double s1x;
-    double s1y;
-    double s2x;
-    double s2y;
-    double s3x;
-    double s3y;
-    double s4x;
-    double s4y;
-    double s5x;
-    double s5y;
-    double c1;
-    double c2;
-    double c3;
-    double c4;
-    double c5;
-    ae_vector tmp;
+    srealarray bluesteinbuf;
+    ae_int_t rowptr;
+    ae_int_t bluesteinsize;
+    ae_int_t precrptr;
+    ae_int_t preciptr;
+    ae_int_t precrsize;
+    ae_int_t precisize;
 
     ae_frame_make(_state, &_frame_block);
-    ae_vector_init(&emptyarray, 0, DT_REAL, _state, ae_true);
-    ae_vector_init(&tmp, 0, DT_REAL, _state, ae_true);
+    _fasttransformplan_clear(plan);
+    _srealarray_init(&bluesteinbuf, _state, ae_true);
 
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftemptyplan )
+    
+    /*
+     * Initial check for parameters
+     */
+    ae_assert(n>0, "FTComplexFFTPlan: N<=0", _state);
+    ae_assert(k>0, "FTComplexFFTPlan: K<=0", _state);
+    
+    /*
+     * Determine required sizes of precomputed real and integer
+     * buffers. This stage of code is highly dependent on internals
+     * of FTComplexFFTPlanRec() and must be kept synchronized with
+     * possible changes in internals of plan generation function.
+     *
+     * Buffer size is determined as follows:
+     * * N is factorized
+     * * we factor out anything which is less or equal to MaxRadix
+     * * prime factor F>RaderThreshold requires 4*FTBaseFindSmooth(2*F-1)
+     *   real entries to store precomputed Quantities for Bluestein's
+     *   transformation
+     * * prime factor F<=RaderThreshold does NOT require
+     *   precomputed storage
+     */
+    precrsize = 0;
+    precisize = 0;
+    ftbase_ftdeterminespacerequirements(n, &precrsize, &precisize, _state);
+    if( precrsize>0 )
     {
-        ae_frame_leave(_state);
-        return;
+        ae_vector_set_length(&plan->precr, precrsize, _state);
     }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftcooleytukeyplan )
+    if( precisize>0 )
     {
-        
-        /*
-         * Cooley-Tukey plan
-         * * transposition
-         * * row-wise FFT
-         * * twiddle factors:
-         *   - TwBase is a basis twiddle factor for I=1, J=1
-         *   - TwRow is a twiddle factor for a second element in a row (J=1)
-         *   - Tw is a twiddle factor for a current element
-         * * transposition again
-         * * row-wise FFT again
-         */
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        ftbase_internalcomplexlintranspose(a, n1, n2, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n2-1; i++)
-        {
-            ftbaseexecuteplanrec(a, aoffset+i*n1*2, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        }
-        ftbase_ffttwcalc(a, aoffset, n1, n2, _state);
-        ftbase_internalcomplexlintranspose(a, n2, n1, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n1-1; i++)
-        {
-            ftbaseexecuteplanrec(a, aoffset+i*n2*2, plan, plan->plan.ptr.p_int[entryoffset+6], stackptr, _state);
-        }
-        ftbase_internalcomplexlintranspose(a, n1, n2, aoffset, &plan->tmpbuf, _state);
-        ae_frame_leave(_state);
-        return;
+        ae_vector_set_length(&plan->preci, precisize, _state);
     }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftrealcooleytukeyplan )
-    {
-        
-        /*
-         * Cooley-Tukey plan
-         * * transposition
-         * * row-wise FFT
-         * * twiddle factors:
-         *   - TwBase is a basis twiddle factor for I=1, J=1
-         *   - TwRow is a twiddle factor for a second element in a row (J=1)
-         *   - Tw is a twiddle factor for a current element
-         * * transposition again
-         * * row-wise FFT again
-         */
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        ftbase_internalcomplexlintranspose(a, n2, n1, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n1/2-1; i++)
-        {
-            
-            /*
-             * pack two adjacent smaller real FFT's together,
-             * make one complex FFT,
-             * unpack result
-             */
-            offs = aoffset+2*i*n2*2;
-            for(k=0; k<=n2-1; k++)
-            {
-                a->ptr.p_double[offs+2*k+1] = a->ptr.p_double[offs+2*n2+2*k+0];
-            }
-            ftbaseexecuteplanrec(a, offs, plan, plan->plan.ptr.p_int[entryoffset+6], stackptr, _state);
-            plan->tmpbuf.ptr.p_double[0] = a->ptr.p_double[offs+0];
-            plan->tmpbuf.ptr.p_double[1] = 0;
-            plan->tmpbuf.ptr.p_double[2*n2+0] = a->ptr.p_double[offs+1];
-            plan->tmpbuf.ptr.p_double[2*n2+1] = 0;
-            for(k=1; k<=n2-1; k++)
-            {
-                offs1 = 2*k;
-                offs2 = 2*n2+2*k;
-                hk = a->ptr.p_double[offs+2*k+0];
-                hnk = a->ptr.p_double[offs+2*(n2-k)+0];
-                plan->tmpbuf.ptr.p_double[offs1+0] = 0.5*(hk+hnk);
-                plan->tmpbuf.ptr.p_double[offs2+1] = -0.5*(hk-hnk);
-                hk = a->ptr.p_double[offs+2*k+1];
-                hnk = a->ptr.p_double[offs+2*(n2-k)+1];
-                plan->tmpbuf.ptr.p_double[offs2+0] = 0.5*(hk+hnk);
-                plan->tmpbuf.ptr.p_double[offs1+1] = 0.5*(hk-hnk);
-            }
-            ae_v_move(&a->ptr.p_double[offs], 1, &plan->tmpbuf.ptr.p_double[0], 1, ae_v_len(offs,offs+2*n2*2-1));
-        }
-        if( n1%2!=0 )
-        {
-            ftbaseexecuteplanrec(a, aoffset+(n1-1)*n2*2, plan, plan->plan.ptr.p_int[entryoffset+6], stackptr, _state);
-        }
-        ftbase_ffttwcalc(a, aoffset, n2, n1, _state);
-        ftbase_internalcomplexlintranspose(a, n1, n2, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n2-1; i++)
-        {
-            ftbaseexecuteplanrec(a, aoffset+i*n1*2, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        }
-        ftbase_internalcomplexlintranspose(a, n2, n1, aoffset, &plan->tmpbuf, _state);
-        ae_frame_leave(_state);
-        return;
-    }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fhtcooleytukeyplan )
-    {
-        
-        /*
-         * Cooley-Tukey FHT plan:
-         * * transpose                    \
-         * * smaller FHT's                |
-         * * pre-process                  |
-         * * multiply by twiddle factors  | corresponds to multiplication by H1
-         * * post-process                 |
-         * * transpose again              /
-         * * multiply by H2 (smaller FHT's)
-         * * final transposition
-         *
-         * For more details see Vitezslav Vesely, "Fast algorithms
-         * of Fourier and Hartley transform and their implementation in MATLAB",
-         * page 31.
-         */
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        n = n1*n2;
-        ftbase_internalreallintranspose(a, n1, n2, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n2-1; i++)
-        {
-            ftbaseexecuteplanrec(a, aoffset+i*n1, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        }
-        for(i=0; i<=n2-1; i++)
-        {
-            for(j=0; j<=n1-1; j++)
-            {
-                offsa = aoffset+i*n1;
-                hk = a->ptr.p_double[offsa+j];
-                hnk = a->ptr.p_double[offsa+(n1-j)%n1];
-                offs = 2*(i*n1+j);
-                plan->tmpbuf.ptr.p_double[offs+0] = -0.5*(hnk-hk);
-                plan->tmpbuf.ptr.p_double[offs+1] = 0.5*(hk+hnk);
-            }
-        }
-        ftbase_ffttwcalc(&plan->tmpbuf, 0, n1, n2, _state);
-        for(j=0; j<=n1-1; j++)
-        {
-            a->ptr.p_double[aoffset+j] = plan->tmpbuf.ptr.p_double[2*j+0]+plan->tmpbuf.ptr.p_double[2*j+1];
-        }
-        if( n2%2==0 )
-        {
-            offs = 2*(n2/2)*n1;
-            offsa = aoffset+n2/2*n1;
-            for(j=0; j<=n1-1; j++)
-            {
-                a->ptr.p_double[offsa+j] = plan->tmpbuf.ptr.p_double[offs+2*j+0]+plan->tmpbuf.ptr.p_double[offs+2*j+1];
-            }
-        }
-        for(i=1; i<=(n2+1)/2-1; i++)
-        {
-            offs = 2*i*n1;
-            offs2 = 2*(n2-i)*n1;
-            offsa = aoffset+i*n1;
-            for(j=0; j<=n1-1; j++)
-            {
-                a->ptr.p_double[offsa+j] = plan->tmpbuf.ptr.p_double[offs+2*j+1]+plan->tmpbuf.ptr.p_double[offs2+2*j+0];
-            }
-            offsa = aoffset+(n2-i)*n1;
-            for(j=0; j<=n1-1; j++)
-            {
-                a->ptr.p_double[offsa+j] = plan->tmpbuf.ptr.p_double[offs+2*j+0]+plan->tmpbuf.ptr.p_double[offs2+2*j+1];
-            }
-        }
-        ftbase_internalreallintranspose(a, n2, n1, aoffset, &plan->tmpbuf, _state);
-        for(i=0; i<=n1-1; i++)
-        {
-            ftbaseexecuteplanrec(a, aoffset+i*n2, plan, plan->plan.ptr.p_int[entryoffset+6], stackptr, _state);
-        }
-        ftbase_internalreallintranspose(a, n1, n2, aoffset, &plan->tmpbuf, _state);
-        ae_frame_leave(_state);
-        return;
-    }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fhtn2plan )
-    {
-        
-        /*
-         * Cooley-Tukey FHT plan
-         */
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        n = n1*n2;
-        ftbase_reffht(a, n, aoffset, _state);
-        ae_frame_leave(_state);
-        return;
-    }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftcodeletplan )
-    {
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        n = n1*n2;
-        if( n==2 )
-        {
-            a0x = a->ptr.p_double[aoffset+0];
-            a0y = a->ptr.p_double[aoffset+1];
-            a1x = a->ptr.p_double[aoffset+2];
-            a1y = a->ptr.p_double[aoffset+3];
-            v0 = a0x+a1x;
-            v1 = a0y+a1y;
-            v2 = a0x-a1x;
-            v3 = a0y-a1y;
-            a->ptr.p_double[aoffset+0] = v0;
-            a->ptr.p_double[aoffset+1] = v1;
-            a->ptr.p_double[aoffset+2] = v2;
-            a->ptr.p_double[aoffset+3] = v3;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==3 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            c1 = plan->precomputed.ptr.p_double[offs+0];
-            c2 = plan->precomputed.ptr.p_double[offs+1];
-            a0x = a->ptr.p_double[aoffset+0];
-            a0y = a->ptr.p_double[aoffset+1];
-            a1x = a->ptr.p_double[aoffset+2];
-            a1y = a->ptr.p_double[aoffset+3];
-            a2x = a->ptr.p_double[aoffset+4];
-            a2y = a->ptr.p_double[aoffset+5];
-            t1x = a1x+a2x;
-            t1y = a1y+a2y;
-            a0x = a0x+t1x;
-            a0y = a0y+t1y;
-            m1x = c1*t1x;
-            m1y = c1*t1y;
-            m2x = c2*(a1y-a2y);
-            m2y = c2*(a2x-a1x);
-            s1x = a0x+m1x;
-            s1y = a0y+m1y;
-            a1x = s1x+m2x;
-            a1y = s1y+m2y;
-            a2x = s1x-m2x;
-            a2y = s1y-m2y;
-            a->ptr.p_double[aoffset+0] = a0x;
-            a->ptr.p_double[aoffset+1] = a0y;
-            a->ptr.p_double[aoffset+2] = a1x;
-            a->ptr.p_double[aoffset+3] = a1y;
-            a->ptr.p_double[aoffset+4] = a2x;
-            a->ptr.p_double[aoffset+5] = a2y;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==4 )
-        {
-            a0x = a->ptr.p_double[aoffset+0];
-            a0y = a->ptr.p_double[aoffset+1];
-            a1x = a->ptr.p_double[aoffset+2];
-            a1y = a->ptr.p_double[aoffset+3];
-            a2x = a->ptr.p_double[aoffset+4];
-            a2y = a->ptr.p_double[aoffset+5];
-            a3x = a->ptr.p_double[aoffset+6];
-            a3y = a->ptr.p_double[aoffset+7];
-            t1x = a0x+a2x;
-            t1y = a0y+a2y;
-            t2x = a1x+a3x;
-            t2y = a1y+a3y;
-            m2x = a0x-a2x;
-            m2y = a0y-a2y;
-            m3x = a1y-a3y;
-            m3y = a3x-a1x;
-            a->ptr.p_double[aoffset+0] = t1x+t2x;
-            a->ptr.p_double[aoffset+1] = t1y+t2y;
-            a->ptr.p_double[aoffset+4] = t1x-t2x;
-            a->ptr.p_double[aoffset+5] = t1y-t2y;
-            a->ptr.p_double[aoffset+2] = m2x+m3x;
-            a->ptr.p_double[aoffset+3] = m2y+m3y;
-            a->ptr.p_double[aoffset+6] = m2x-m3x;
-            a->ptr.p_double[aoffset+7] = m2y-m3y;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==5 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            c1 = plan->precomputed.ptr.p_double[offs+0];
-            c2 = plan->precomputed.ptr.p_double[offs+1];
-            c3 = plan->precomputed.ptr.p_double[offs+2];
-            c4 = plan->precomputed.ptr.p_double[offs+3];
-            c5 = plan->precomputed.ptr.p_double[offs+4];
-            t1x = a->ptr.p_double[aoffset+2]+a->ptr.p_double[aoffset+8];
-            t1y = a->ptr.p_double[aoffset+3]+a->ptr.p_double[aoffset+9];
-            t2x = a->ptr.p_double[aoffset+4]+a->ptr.p_double[aoffset+6];
-            t2y = a->ptr.p_double[aoffset+5]+a->ptr.p_double[aoffset+7];
-            t3x = a->ptr.p_double[aoffset+2]-a->ptr.p_double[aoffset+8];
-            t3y = a->ptr.p_double[aoffset+3]-a->ptr.p_double[aoffset+9];
-            t4x = a->ptr.p_double[aoffset+6]-a->ptr.p_double[aoffset+4];
-            t4y = a->ptr.p_double[aoffset+7]-a->ptr.p_double[aoffset+5];
-            t5x = t1x+t2x;
-            t5y = t1y+t2y;
-            a->ptr.p_double[aoffset+0] = a->ptr.p_double[aoffset+0]+t5x;
-            a->ptr.p_double[aoffset+1] = a->ptr.p_double[aoffset+1]+t5y;
-            m1x = c1*t5x;
-            m1y = c1*t5y;
-            m2x = c2*(t1x-t2x);
-            m2y = c2*(t1y-t2y);
-            m3x = -c3*(t3y+t4y);
-            m3y = c3*(t3x+t4x);
-            m4x = -c4*t4y;
-            m4y = c4*t4x;
-            m5x = -c5*t3y;
-            m5y = c5*t3x;
-            s3x = m3x-m4x;
-            s3y = m3y-m4y;
-            s5x = m3x+m5x;
-            s5y = m3y+m5y;
-            s1x = a->ptr.p_double[aoffset+0]+m1x;
-            s1y = a->ptr.p_double[aoffset+1]+m1y;
-            s2x = s1x+m2x;
-            s2y = s1y+m2y;
-            s4x = s1x-m2x;
-            s4y = s1y-m2y;
-            a->ptr.p_double[aoffset+2] = s2x+s3x;
-            a->ptr.p_double[aoffset+3] = s2y+s3y;
-            a->ptr.p_double[aoffset+4] = s4x+s5x;
-            a->ptr.p_double[aoffset+5] = s4y+s5y;
-            a->ptr.p_double[aoffset+6] = s4x-s5x;
-            a->ptr.p_double[aoffset+7] = s4y-s5y;
-            a->ptr.p_double[aoffset+8] = s2x-s3x;
-            a->ptr.p_double[aoffset+9] = s2y-s3y;
-            ae_frame_leave(_state);
-            return;
-        }
-    }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fhtcodeletplan )
-    {
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        n = n1*n2;
-        if( n==2 )
-        {
-            a0x = a->ptr.p_double[aoffset+0];
-            a1x = a->ptr.p_double[aoffset+1];
-            a->ptr.p_double[aoffset+0] = a0x+a1x;
-            a->ptr.p_double[aoffset+1] = a0x-a1x;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==3 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            c1 = plan->precomputed.ptr.p_double[offs+0];
-            c2 = plan->precomputed.ptr.p_double[offs+1];
-            a0x = a->ptr.p_double[aoffset+0];
-            a1x = a->ptr.p_double[aoffset+1];
-            a2x = a->ptr.p_double[aoffset+2];
-            t1x = a1x+a2x;
-            a0x = a0x+t1x;
-            m1x = c1*t1x;
-            m2y = c2*(a2x-a1x);
-            s1x = a0x+m1x;
-            a->ptr.p_double[aoffset+0] = a0x;
-            a->ptr.p_double[aoffset+1] = s1x-m2y;
-            a->ptr.p_double[aoffset+2] = s1x+m2y;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==4 )
-        {
-            a0x = a->ptr.p_double[aoffset+0];
-            a1x = a->ptr.p_double[aoffset+1];
-            a2x = a->ptr.p_double[aoffset+2];
-            a3x = a->ptr.p_double[aoffset+3];
-            t1x = a0x+a2x;
-            t2x = a1x+a3x;
-            m2x = a0x-a2x;
-            m3y = a3x-a1x;
-            a->ptr.p_double[aoffset+0] = t1x+t2x;
-            a->ptr.p_double[aoffset+1] = m2x-m3y;
-            a->ptr.p_double[aoffset+2] = t1x-t2x;
-            a->ptr.p_double[aoffset+3] = m2x+m3y;
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==5 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            c1 = plan->precomputed.ptr.p_double[offs+0];
-            c2 = plan->precomputed.ptr.p_double[offs+1];
-            c3 = plan->precomputed.ptr.p_double[offs+2];
-            c4 = plan->precomputed.ptr.p_double[offs+3];
-            c5 = plan->precomputed.ptr.p_double[offs+4];
-            t1x = a->ptr.p_double[aoffset+1]+a->ptr.p_double[aoffset+4];
-            t2x = a->ptr.p_double[aoffset+2]+a->ptr.p_double[aoffset+3];
-            t3x = a->ptr.p_double[aoffset+1]-a->ptr.p_double[aoffset+4];
-            t4x = a->ptr.p_double[aoffset+3]-a->ptr.p_double[aoffset+2];
-            t5x = t1x+t2x;
-            v0 = a->ptr.p_double[aoffset+0]+t5x;
-            a->ptr.p_double[aoffset+0] = v0;
-            m2x = c2*(t1x-t2x);
-            m3y = c3*(t3x+t4x);
-            s3y = m3y-c4*t4x;
-            s5y = m3y+c5*t3x;
-            s1x = v0+c1*t5x;
-            s2x = s1x+m2x;
-            s4x = s1x-m2x;
-            a->ptr.p_double[aoffset+1] = s2x-s3y;
-            a->ptr.p_double[aoffset+2] = s4x-s5y;
-            a->ptr.p_double[aoffset+3] = s4x+s5y;
-            a->ptr.p_double[aoffset+4] = s2x+s3y;
-            ae_frame_leave(_state);
-            return;
-        }
-    }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftbluesteinplan )
-    {
-        
-        /*
-         * Bluestein plan:
-         * 1. multiply by precomputed coefficients
-         * 2. make convolution: forward FFT, multiplication by precomputed FFT
-         *    and backward FFT. backward FFT is represented as
-         *
-         *        invfft(x) = fft(x')'/M
-         *
-         *    for performance reasons reduction of inverse FFT to
-         *    forward FFT is merged with multiplication of FFT components
-         *    and last stage of Bluestein's transformation.
-         * 3. post-multiplication by Bluestein factors
-         */
-        n = plan->plan.ptr.p_int[entryoffset+1];
-        m = plan->plan.ptr.p_int[entryoffset+4];
-        offs = plan->plan.ptr.p_int[entryoffset+7];
-        for(i=stackptr+2*n; i<=stackptr+2*m-1; i++)
-        {
-            plan->stackbuf.ptr.p_double[i] = 0;
-        }
-        offsp = offs+2*m;
-        offsa = aoffset;
-        offsb = stackptr;
-        for(i=0; i<=n-1; i++)
-        {
-            bx = plan->precomputed.ptr.p_double[offsp+0];
-            by = plan->precomputed.ptr.p_double[offsp+1];
-            x = a->ptr.p_double[offsa+0];
-            y = a->ptr.p_double[offsa+1];
-            plan->stackbuf.ptr.p_double[offsb+0] = x*bx-y*(-by);
-            plan->stackbuf.ptr.p_double[offsb+1] = x*(-by)+y*bx;
-            offsp = offsp+2;
-            offsa = offsa+2;
-            offsb = offsb+2;
-        }
-        ftbaseexecuteplanrec(&plan->stackbuf, stackptr, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr+2*2*m, _state);
-        offsb = stackptr;
-        offsp = offs;
-        for(i=0; i<=m-1; i++)
-        {
-            x = plan->stackbuf.ptr.p_double[offsb+0];
-            y = plan->stackbuf.ptr.p_double[offsb+1];
-            bx = plan->precomputed.ptr.p_double[offsp+0];
-            by = plan->precomputed.ptr.p_double[offsp+1];
-            plan->stackbuf.ptr.p_double[offsb+0] = x*bx-y*by;
-            plan->stackbuf.ptr.p_double[offsb+1] = -(x*by+y*bx);
-            offsb = offsb+2;
-            offsp = offsp+2;
-        }
-        ftbaseexecuteplanrec(&plan->stackbuf, stackptr, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr+2*2*m, _state);
-        offsb = stackptr;
-        offsp = offs+2*m;
-        offsa = aoffset;
-        for(i=0; i<=n-1; i++)
-        {
-            x = plan->stackbuf.ptr.p_double[offsb+0]/m;
-            y = -plan->stackbuf.ptr.p_double[offsb+1]/m;
-            bx = plan->precomputed.ptr.p_double[offsp+0];
-            by = plan->precomputed.ptr.p_double[offsp+1];
-            a->ptr.p_double[offsa+0] = x*bx-y*(-by);
-            a->ptr.p_double[offsa+1] = x*(-by)+y*bx;
-            offsp = offsp+2;
-            offsa = offsa+2;
-            offsb = offsb+2;
-        }
-        ae_frame_leave(_state);
-        return;
-    }
+    
+    /*
+     * Generate plan
+     */
+    rowptr = 0;
+    precrptr = 0;
+    preciptr = 0;
+    bluesteinsize = 1;
+    ae_vector_set_length(&plan->buffer, 2*n*k, _state);
+    ftbase_ftcomplexfftplanrec(n, k, ae_true, ae_true, &rowptr, &bluesteinsize, &precrptr, &preciptr, plan, _state);
+    ae_vector_set_length(&bluesteinbuf.val, bluesteinsize, _state);
+    ae_shared_pool_set_seed(&plan->bluesteinpool, &bluesteinbuf, sizeof(bluesteinbuf), _srealarray_init, _srealarray_init_copy, _srealarray_destroy, _state);
+    
+    /*
+     * Check that actual amount of precomputed space used by transformation
+     * plan is EXACTLY equal to amount of space allocated by us.
+     */
+    ae_assert(precrptr==precrsize, "FTComplexFFTPlan: internal error (PrecRPtr<>PrecRSize)", _state);
+    ae_assert(preciptr==precisize, "FTComplexFFTPlan: internal error (PrecRPtr<>PrecRSize)", _state);
     ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine applies transformation plan to input/output array A.
+
+INPUT PARAMETERS:
+    Plan        -   transformation plan
+    A           -   array, must be large enough for plan to work
+    OffsA       -   offset of the subarray to process
+    RepCnt      -   repetition count (transformation is repeatedly applied
+                    to subsequent subarrays)
+    
+OUTPUT PARAMETERS:
+    Plan        -   plan (temporary buffers can be modified, plan itself
+                    is unchanged and can be reused)
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+void ftapplyplan(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t offsa,
+     ae_int_t repcnt,
+     ae_state *_state)
+{
+    ae_int_t plansize;
+    ae_int_t i;
+
+
+    plansize = plan->entries.ptr.pp_int[0][ftbase_coloperandscnt]*plan->entries.ptr.pp_int[0][ftbase_coloperandsize]*plan->entries.ptr.pp_int[0][ftbase_colmicrovectorsize];
+    for(i=0; i<=repcnt-1; i++)
+    {
+        ftbase_ftapplysubplan(plan, 0, a, offsa+plansize*i, 0, &plan->buffer, 1, _state);
+    }
 }
 
 
@@ -10683,326 +13123,2226 @@ double ftbasegetflopestimate(ae_int_t n, ae_state *_state)
 
 
 /*************************************************************************
-Recurrent subroutine for the FFTGeneratePlan:
+This function returns EXACT estimate of the space requirements for N-point
+FFT. Internals of this function are highly dependent on details of different
+FFTs employed by this unit, so every time algorithm is changed this function
+has to be rewritten.
 
-PARAMETERS:
-    N                   plan size
-    IsReal              whether input is real or not.
-                        subroutine MUST NOT ignore this flag because real
-                        inputs comes with non-initialized imaginary parts,
-                        so ignoring this flag will result in corrupted output
-    HalfOut             whether full output or only half of it from 0 to
-                        floor(N/2) is needed. This flag may be ignored if
-                        doing so will simplify calculations
-    Plan                plan array
-    PlanSize            size of used part (in integers)
-    PrecomputedSize     size of precomputed array allocated yet
-    PlanArraySize       plan array size (actual)
-    TmpMemSize          temporary memory required size
-    BluesteinMemSize    temporary memory required size
+INPUT PARAMETERS:
+    N           -   transform length
+    PrecRSize   -   must be set to zero
+    PrecISize   -   must be set to zero
+    
+OUTPUT PARAMETERS:
+    PrecRSize   -   number of real temporaries required for transformation
+    PrecISize   -   number of integer temporaries required for transformation
 
+    
   -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
+     Copyright 05.04.2013 by Bochkanov Sergey
 *************************************************************************/
-static void ftbase_ftbasegenerateplanrec(ae_int_t n,
-     ae_int_t tasktype,
-     ftplan* plan,
-     ae_int_t* plansize,
-     ae_int_t* precomputedsize,
-     ae_int_t* planarraysize,
-     ae_int_t* tmpmemsize,
-     ae_int_t* stackmemsize,
-     ae_int_t stackptr,
+static void ftbase_ftdeterminespacerequirements(ae_int_t n,
+     ae_int_t* precrsize,
+     ae_int_t* precisize,
      ae_state *_state)
 {
-    ae_int_t k;
+    ae_int_t ncur;
+    ae_int_t f;
+    ae_int_t i;
+
+
+    
+    /*
+     * Determine required sizes of precomputed real and integer
+     * buffers. This stage of code is highly dependent on internals
+     * of FTComplexFFTPlanRec() and must be kept synchronized with
+     * possible changes in internals of plan generation function.
+     *
+     * Buffer size is determined as follows:
+     * * N is factorized
+     * * we factor out anything which is less or equal to MaxRadix
+     * * prime factor F>RaderThreshold requires 4*FTBaseFindSmooth(2*F-1)
+     *   real entries to store precomputed Quantities for Bluestein's
+     *   transformation
+     * * prime factor F<=RaderThreshold requires 2*(F-1)+ESTIMATE(F-1)
+     *   precomputed storage
+     */
+    ncur = n;
+    for(i=2; i<=ftbase_maxradix; i++)
+    {
+        while(ncur%i==0)
+        {
+            ncur = ncur/i;
+        }
+    }
+    f = 2;
+    while(f<=ncur)
+    {
+        while(ncur%f==0)
+        {
+            if( f>ftbase_raderthreshold )
+            {
+                *precrsize = *precrsize+4*ftbasefindsmooth(2*f-1, _state);
+            }
+            else
+            {
+                *precrsize = *precrsize+2*(f-1);
+                ftbase_ftdeterminespacerequirements(f-1, precrsize, precisize, _state);
+            }
+            ncur = ncur/f;
+        }
+        f = f+1;
+    }
+}
+
+
+/*************************************************************************
+Recurrent function called by FTComplexFFTPlan() and other functions. It
+recursively builds transformation plan
+
+INPUT PARAMETERS:
+    N           -   FFT length (in complex numbers), N>=1
+    K           -   number of repetitions, K>=1
+    ChildPlan   -   if True, plan generator inserts OpStart/opEnd in the
+                    plan header/footer.
+    TopmostPlan -   if True, plan generator assumes that it is topmost plan:
+                    * it may use global buffer for transpositions
+                    and there is no other plan which executes in parallel
+    RowPtr      -   index which points to past-the-last entry generated so far
+    BluesteinSize-  amount of storage (in real numbers) required for Bluestein buffer
+    PrecRPtr    -   pointer to unused part of precomputed real buffer (Plan.PrecR):
+                    * when this function stores some data to precomputed buffer,
+                      it advances pointer.
+                    * it is responsibility of the function to assert that
+                      Plan.PrecR has enough space to store data before actually
+                      writing to buffer.
+                    * it is responsibility of the caller to allocate enough
+                      space before calling this function
+    PrecIPtr    -   pointer to unused part of precomputed integer buffer (Plan.PrecI):
+                    * when this function stores some data to precomputed buffer,
+                      it advances pointer.
+                    * it is responsibility of the function to assert that
+                      Plan.PrecR has enough space to store data before actually
+                      writing to buffer.
+                    * it is responsibility of the caller to allocate enough
+                      space before calling this function
+    Plan        -   plan (generated so far)
+    
+OUTPUT PARAMETERS:
+    RowPtr      -   updated pointer (advanced by number of entries generated
+                    by function)
+    BluesteinSize-  updated amount
+                    (may be increased, but may never be decreased)
+        
+NOTE: in case TopmostPlan is True, ChildPlan is also must be True.
+    
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftcomplexfftplanrec(ae_int_t n,
+     ae_int_t k,
+     ae_bool childplan,
+     ae_bool topmostplan,
+     ae_int_t* rowptr,
+     ae_int_t* bluesteinsize,
+     ae_int_t* precrptr,
+     ae_int_t* preciptr,
+     fasttransformplan* plan,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    srealarray localbuf;
     ae_int_t m;
     ae_int_t n1;
     ae_int_t n2;
-    ae_int_t esize;
-    ae_int_t entryoffset;
+    ae_int_t gq;
+    ae_int_t giq;
+    ae_int_t row0;
+    ae_int_t row1;
+    ae_int_t row2;
+    ae_int_t row3;
 
+    ae_frame_make(_state, &_frame_block);
+    _srealarray_init(&localbuf, _state, ae_true);
 
+    ae_assert(n>0, "FTComplexFFTPlan: N<=0", _state);
+    ae_assert(k>0, "FTComplexFFTPlan: K<=0", _state);
+    ae_assert(!topmostplan||childplan, "FTComplexFFTPlan: ChildPlan is inconsistent with TopmostPlan", _state);
     
     /*
-     * prepare
+     * Try to generate "topmost" plan
      */
-    if( *plansize+ftbase_ftbaseplanentrysize>(*planarraysize) )
+    if( topmostplan&&n>ftbase_recursivethreshold )
     {
-        ftbase_fftarrayresize(&plan->plan, planarraysize, 8*(*planarraysize), _state);
-    }
-    entryoffset = *plansize;
-    esize = ftbase_ftbaseplanentrysize;
-    *plansize = *plansize+esize;
-    
-    /*
-     * if N=1, generate empty plan and exit
-     */
-    if( n==1 )
-    {
-        plan->plan.ptr.p_int[entryoffset+0] = esize;
-        plan->plan.ptr.p_int[entryoffset+1] = -1;
-        plan->plan.ptr.p_int[entryoffset+2] = -1;
-        plan->plan.ptr.p_int[entryoffset+3] = ftbase_fftemptyplan;
-        plan->plan.ptr.p_int[entryoffset+4] = -1;
-        plan->plan.ptr.p_int[entryoffset+5] = -1;
-        plan->plan.ptr.p_int[entryoffset+6] = -1;
-        plan->plan.ptr.p_int[entryoffset+7] = -1;
+        ftbase_ftfactorize(n, ae_false, &n1, &n2, _state);
+        if( n1*n2==0 )
+        {
+            
+            /*
+             * Handle prime-factor FFT with Bluestein's FFT.
+             * Determine size of Bluestein's buffer.
+             */
+            m = ftbasefindsmooth(2*n-1, _state);
+            *bluesteinsize = ae_maxint(2*m, *bluesteinsize, _state);
+            
+            /*
+             * Generate plan
+             */
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
+            ftbase_ftpushentry4(plan, rowptr, ftbase_opbluesteinsfft, k, n, 2, m, 2, *precrptr, 0, _state);
+            row0 = *rowptr;
+            ftbase_ftpushentry(plan, rowptr, ftbase_opjmp, 0, 0, 0, 0, _state);
+            ftbase_ftcomplexfftplanrec(m, 1, ae_true, ae_true, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+            row1 = *rowptr;
+            plan->entries.ptr.pp_int[row0][ftbase_colparam0] = row1-row0;
+            ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
+            
+            /*
+             * Fill precomputed buffer
+             */
+            ftbase_ftprecomputebluesteinsfft(n, m, &plan->precr, *precrptr, _state);
+            
+            /*
+             * Update pointer to the precomputed area
+             */
+            *precrptr = *precrptr+4*m;
+        }
+        else
+        {
+            
+            /*
+             * Handle composite FFT with recursive Cooley-Tukey which
+             * uses global buffer instead of local one.
+             */
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
+            ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+            row0 = *rowptr;
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opparallelcall, k*n2, n1, 2, 0, ftbase_ftoptimisticestimate(n, _state), _state);
+            ftbase_ftpushentry(plan, rowptr, ftbase_opcomplexfftfactors, k, n, 2, n1, _state);
+            ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n2, _state);
+            row2 = *rowptr;
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opparallelcall, k*n1, n2, 2, 0, ftbase_ftoptimisticestimate(n, _state), _state);
+            ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+            ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
+            row1 = *rowptr;
+            ftbase_ftcomplexfftplanrec(n1, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+            plan->entries.ptr.pp_int[row0][ftbase_colparam0] = row1-row0;
+            row3 = *rowptr;
+            ftbase_ftcomplexfftplanrec(n2, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+            plan->entries.ptr.pp_int[row2][ftbase_colparam0] = row3-row2;
+        }
+        ae_frame_leave(_state);
         return;
     }
     
     /*
-     * generate plans
+     * Prepare "non-topmost" plan:
+     * * calculate factorization
+     * * use local (shared) buffer
+     * * update buffer size - ANY plan will need at least
+     *   2*N temporaries, additional requirements can be
+     *   applied later
      */
-    ftbasefactorize(n, tasktype, &n1, &n2, _state);
-    if( tasktype==ftbase_ftbasecffttask||tasktype==ftbase_ftbaserffttask )
+    ftbase_ftfactorize(n, ae_false, &n1, &n2, _state);
+    
+    /*
+     * Handle FFT's with N1*N2=0: either small-N or prime-factor
+     */
+    if( n1*n2==0 )
     {
-        
-        /*
-         * complex FFT plans
-         */
-        if( n1!=1 )
+        if( n<=ftbase_maxradix )
         {
             
             /*
-             * Cooley-Tukey plan (real or complex)
-             *
-             * Note that child plans are COMPLEX
-             * (whether plan itself is complex or not).
+             * Small-N FFT
              */
-            *tmpmemsize = ae_maxint(*tmpmemsize, 2*n1*n2, _state);
-            plan->plan.ptr.p_int[entryoffset+0] = esize;
-            plan->plan.ptr.p_int[entryoffset+1] = n1;
-            plan->plan.ptr.p_int[entryoffset+2] = n2;
-            if( tasktype==ftbase_ftbasecffttask )
+            if( childplan )
             {
-                plan->plan.ptr.p_int[entryoffset+3] = ftbase_fftcooleytukeyplan;
+                ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
             }
-            else
+            ftbase_ftpushentry(plan, rowptr, ftbase_opcomplexcodeletfft, k, n, 2, 0, _state);
+            if( childplan )
             {
-                plan->plan.ptr.p_int[entryoffset+3] = ftbase_fftrealcooleytukeyplan;
+                ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
             }
-            plan->plan.ptr.p_int[entryoffset+4] = 0;
-            plan->plan.ptr.p_int[entryoffset+5] = *plansize;
-            ftbase_ftbasegenerateplanrec(n1, ftbase_ftbasecffttask, plan, plansize, precomputedsize, planarraysize, tmpmemsize, stackmemsize, stackptr, _state);
-            plan->plan.ptr.p_int[entryoffset+6] = *plansize;
-            ftbase_ftbasegenerateplanrec(n2, ftbase_ftbasecffttask, plan, plansize, precomputedsize, planarraysize, tmpmemsize, stackmemsize, stackptr, _state);
-            plan->plan.ptr.p_int[entryoffset+7] = -1;
+            ae_frame_leave(_state);
             return;
+        }
+        if( n<=ftbase_raderthreshold )
+        {
+            
+            /*
+             * Handle prime-factor FFT's with Rader's FFT
+             */
+            m = n-1;
+            if( childplan )
+            {
+                ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
+            }
+            findprimitiverootandinverse(n, &gq, &giq, _state);
+            ftbase_ftpushentry4(plan, rowptr, ftbase_opradersfft, k, n, 2, 2, gq, giq, *precrptr, _state);
+            ftbase_ftprecomputeradersfft(n, gq, giq, &plan->precr, *precrptr, _state);
+            *precrptr = *precrptr+2*(n-1);
+            row0 = *rowptr;
+            ftbase_ftpushentry(plan, rowptr, ftbase_opjmp, 0, 0, 0, 0, _state);
+            ftbase_ftcomplexfftplanrec(m, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+            row1 = *rowptr;
+            plan->entries.ptr.pp_int[row0][ftbase_colparam0] = row1-row0;
+            if( childplan )
+            {
+                ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
+            }
         }
         else
         {
-            if( ((n==2||n==3)||n==4)||n==5 )
+            
+            /*
+             * Handle prime-factor FFT's with Bluestein's FFT
+             */
+            m = ftbasefindsmooth(2*n-1, _state);
+            *bluesteinsize = ae_maxint(2*m, *bluesteinsize, _state);
+            if( childplan )
             {
-                
-                /*
-                 * hard-coded plan
-                 */
-                plan->plan.ptr.p_int[entryoffset+0] = esize;
-                plan->plan.ptr.p_int[entryoffset+1] = n1;
-                plan->plan.ptr.p_int[entryoffset+2] = n2;
-                plan->plan.ptr.p_int[entryoffset+3] = ftbase_fftcodeletplan;
-                plan->plan.ptr.p_int[entryoffset+4] = 0;
-                plan->plan.ptr.p_int[entryoffset+5] = -1;
-                plan->plan.ptr.p_int[entryoffset+6] = -1;
-                plan->plan.ptr.p_int[entryoffset+7] = *precomputedsize;
-                if( n==3 )
-                {
-                    *precomputedsize = *precomputedsize+2;
-                }
-                if( n==5 )
-                {
-                    *precomputedsize = *precomputedsize+5;
-                }
-                return;
+                ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
             }
-            else
+            ftbase_ftpushentry4(plan, rowptr, ftbase_opbluesteinsfft, k, n, 2, m, 2, *precrptr, 0, _state);
+            ftbase_ftprecomputebluesteinsfft(n, m, &plan->precr, *precrptr, _state);
+            *precrptr = *precrptr+4*m;
+            row0 = *rowptr;
+            ftbase_ftpushentry(plan, rowptr, ftbase_opjmp, 0, 0, 0, 0, _state);
+            ftbase_ftcomplexfftplanrec(m, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+            row1 = *rowptr;
+            plan->entries.ptr.pp_int[row0][ftbase_colparam0] = row1-row0;
+            if( childplan )
             {
-                
-                /*
-                 * Bluestein's plan
-                 *
-                 * Select such M that M>=2*N-1, M is composite, and M's
-                 * factors are 2, 3, 5
-                 */
-                k = 2*n2-1;
-                m = ftbasefindsmooth(k, _state);
-                *tmpmemsize = ae_maxint(*tmpmemsize, 2*m, _state);
-                plan->plan.ptr.p_int[entryoffset+0] = esize;
-                plan->plan.ptr.p_int[entryoffset+1] = n2;
-                plan->plan.ptr.p_int[entryoffset+2] = -1;
-                plan->plan.ptr.p_int[entryoffset+3] = ftbase_fftbluesteinplan;
-                plan->plan.ptr.p_int[entryoffset+4] = m;
-                plan->plan.ptr.p_int[entryoffset+5] = *plansize;
-                stackptr = stackptr+2*2*m;
-                *stackmemsize = ae_maxint(*stackmemsize, stackptr, _state);
-                ftbase_ftbasegenerateplanrec(m, ftbase_ftbasecffttask, plan, plansize, precomputedsize, planarraysize, tmpmemsize, stackmemsize, stackptr, _state);
-                stackptr = stackptr-2*2*m;
-                plan->plan.ptr.p_int[entryoffset+6] = -1;
-                plan->plan.ptr.p_int[entryoffset+7] = *precomputedsize;
-                *precomputedsize = *precomputedsize+2*m+2*n;
-                return;
+                ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
             }
+        }
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Handle Cooley-Tukey FFT with small N1
+     */
+    if( n1<=ftbase_maxradix )
+    {
+        
+        /*
+         * Specialized transformation for small N1:
+         * * N2 short inplace FFT's, each N1-point, with integrated twiddle factors
+         * * N1 long FFT's
+         * * final transposition
+         */
+        if( childplan )
+        {
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
+        }
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplexcodelettwfft, k, n1, 2*n2, 0, _state);
+        ftbase_ftcomplexfftplanrec(n2, k*n1, ae_false, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+        if( childplan )
+        {
+            ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
+        }
+        ae_frame_leave(_state);
+        return;
+    }
+    
+    /*
+     * Handle general Cooley-Tukey FFT, either "flat" or "recursive"
+     */
+    if( n<=ftbase_recursivethreshold )
+    {
+        
+        /*
+         * General code for large N1/N2, "flat" version without explicit recurrence
+         * (nested subplans are inserted directly into the body of the plan)
+         */
+        if( childplan )
+        {
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
+        }
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+        ftbase_ftcomplexfftplanrec(n1, k*n2, ae_false, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplexfftfactors, k, n, 2, n1, _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n2, _state);
+        ftbase_ftcomplexfftplanrec(n2, k*n1, ae_false, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+        if( childplan )
+        {
+            ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
         }
     }
-    if( tasktype==ftbase_ftbaserfhttask )
+    else
     {
         
         /*
-         * real FHT plans
+         * General code for large N1/N2, "recursive" version - nested subplans
+         * are separated from the plan body.
+         *
+         * Generate parent plan.
          */
-        if( n1!=1 )
+        if( childplan )
         {
-            
-            /*
-             * Cooley-Tukey plan
-             *
-             */
-            *tmpmemsize = ae_maxint(*tmpmemsize, 2*n1*n2, _state);
-            plan->plan.ptr.p_int[entryoffset+0] = esize;
-            plan->plan.ptr.p_int[entryoffset+1] = n1;
-            plan->plan.ptr.p_int[entryoffset+2] = n2;
-            plan->plan.ptr.p_int[entryoffset+3] = ftbase_fhtcooleytukeyplan;
-            plan->plan.ptr.p_int[entryoffset+4] = 0;
-            plan->plan.ptr.p_int[entryoffset+5] = *plansize;
-            ftbase_ftbasegenerateplanrec(n1, tasktype, plan, plansize, precomputedsize, planarraysize, tmpmemsize, stackmemsize, stackptr, _state);
-            plan->plan.ptr.p_int[entryoffset+6] = *plansize;
-            ftbase_ftbasegenerateplanrec(n2, tasktype, plan, plansize, precomputedsize, planarraysize, tmpmemsize, stackmemsize, stackptr, _state);
-            plan->plan.ptr.p_int[entryoffset+7] = -1;
-            return;
+            ftbase_ftpushentry2(plan, rowptr, ftbase_opstart, k, n, 2, -1, ftbase_ftoptimisticestimate(n, _state), _state);
         }
-        else
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+        row0 = *rowptr;
+        ftbase_ftpushentry2(plan, rowptr, ftbase_opparallelcall, k*n2, n1, 2, 0, ftbase_ftoptimisticestimate(n, _state), _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplexfftfactors, k, n, 2, n1, _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n2, _state);
+        row2 = *rowptr;
+        ftbase_ftpushentry2(plan, rowptr, ftbase_opparallelcall, k*n1, n2, 2, 0, ftbase_ftoptimisticestimate(n, _state), _state);
+        ftbase_ftpushentry(plan, rowptr, ftbase_opcomplextranspose, k, n, 2, n1, _state);
+        if( childplan )
         {
-            
-            /*
-             * N2 plan
-             */
-            plan->plan.ptr.p_int[entryoffset+0] = esize;
-            plan->plan.ptr.p_int[entryoffset+1] = n1;
-            plan->plan.ptr.p_int[entryoffset+2] = n2;
-            plan->plan.ptr.p_int[entryoffset+3] = ftbase_fhtn2plan;
-            plan->plan.ptr.p_int[entryoffset+4] = 0;
-            plan->plan.ptr.p_int[entryoffset+5] = -1;
-            plan->plan.ptr.p_int[entryoffset+6] = -1;
-            plan->plan.ptr.p_int[entryoffset+7] = -1;
-            if( ((n==2||n==3)||n==4)||n==5 )
+            ftbase_ftpushentry(plan, rowptr, ftbase_opend, k, n, 2, 0, _state);
+        }
+        
+        /*
+         * Generate child subplans, insert refence to parent plans
+         */
+        row1 = *rowptr;
+        ftbase_ftcomplexfftplanrec(n1, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+        plan->entries.ptr.pp_int[row0][ftbase_colparam0] = row1-row0;
+        row3 = *rowptr;
+        ftbase_ftcomplexfftplanrec(n2, 1, ae_true, ae_false, rowptr, bluesteinsize, precrptr, preciptr, plan, _state);
+        plan->entries.ptr.pp_int[row2][ftbase_colparam0] = row3-row2;
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This function pushes one more entry to the plan. It resizes Entries matrix
+if needed.
+
+INPUT PARAMETERS:
+    Plan        -   plan (generated so far)
+    RowPtr      -   index which points to past-the-last entry generated so far
+    EType       -   entry type
+    EOpCnt      -   operands count
+    EOpSize     -   operand size
+    EMcvSize    -   microvector size
+    EParam0     -   parameter 0
+    
+OUTPUT PARAMETERS:
+    Plan        -   updated plan    
+    RowPtr      -   updated pointer
+
+NOTE: Param1 is set to -1.
+    
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftpushentry(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_state *_state)
+{
+
+
+    ftbase_ftpushentry2(plan, rowptr, etype, eopcnt, eopsize, emcvsize, eparam0, -1, _state);
+}
+
+
+/*************************************************************************
+Same as FTPushEntry(), but sets Param0 AND Param1.
+This function pushes one more entry to the plan. It resized Entries matrix
+if needed.
+
+INPUT PARAMETERS:
+    Plan        -   plan (generated so far)
+    RowPtr      -   index which points to past-the-last entry generated so far
+    EType       -   entry type
+    EOpCnt      -   operands count
+    EOpSize     -   operand size
+    EMcvSize    -   microvector size
+    EParam0     -   parameter 0
+    EParam1     -   parameter 1
+    
+OUTPUT PARAMETERS:
+    Plan        -   updated plan    
+    RowPtr      -   updated pointer
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftpushentry2(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_int_t eparam1,
+     ae_state *_state)
+{
+
+
+    if( *rowptr>=plan->entries.rows )
+    {
+        imatrixresize(&plan->entries, ae_maxint(2*plan->entries.rows, 1, _state), ftbase_colscnt, _state);
+    }
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coltype] = etype;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coloperandscnt] = eopcnt;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coloperandsize] = eopsize;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colmicrovectorsize] = emcvsize;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam0] = eparam0;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam1] = eparam1;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam2] = 0;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam3] = 0;
+    *rowptr = *rowptr+1;
+}
+
+
+/*************************************************************************
+Same as FTPushEntry(), but sets Param0, Param1, Param2 and Param3.
+This function pushes one more entry to the plan. It resized Entries matrix
+if needed.
+
+INPUT PARAMETERS:
+    Plan        -   plan (generated so far)
+    RowPtr      -   index which points to past-the-last entry generated so far
+    EType       -   entry type
+    EOpCnt      -   operands count
+    EOpSize     -   operand size
+    EMcvSize    -   microvector size
+    EParam0     -   parameter 0
+    EParam1     -   parameter 1
+    EParam2     -   parameter 2
+    EParam3     -   parameter 3
+    
+OUTPUT PARAMETERS:
+    Plan        -   updated plan    
+    RowPtr      -   updated pointer
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftpushentry4(fasttransformplan* plan,
+     ae_int_t* rowptr,
+     ae_int_t etype,
+     ae_int_t eopcnt,
+     ae_int_t eopsize,
+     ae_int_t emcvsize,
+     ae_int_t eparam0,
+     ae_int_t eparam1,
+     ae_int_t eparam2,
+     ae_int_t eparam3,
+     ae_state *_state)
+{
+
+
+    if( *rowptr>=plan->entries.rows )
+    {
+        imatrixresize(&plan->entries, ae_maxint(2*plan->entries.rows, 1, _state), ftbase_colscnt, _state);
+    }
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coltype] = etype;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coloperandscnt] = eopcnt;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_coloperandsize] = eopsize;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colmicrovectorsize] = emcvsize;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam0] = eparam0;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam1] = eparam1;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam2] = eparam2;
+    plan->entries.ptr.pp_int[*rowptr][ftbase_colparam3] = eparam3;
+    *rowptr = *rowptr+1;
+}
+
+
+/*************************************************************************
+This subroutine applies subplan to input/output array A.
+
+INPUT PARAMETERS:
+    Plan        -   transformation plan
+    SubPlan     -   subplan index
+    A           -   array, must be large enough for plan to work
+    ABase       -   base offset in array A, this value points to start of
+                    subarray whose length is equal to length of the plan
+    AOffset     -   offset with respect to ABase, 0<=AOffset<PlanLength.
+                    This is an offset within large PlanLength-subarray of
+                    the chunk to process.
+    Buf         -   temporary buffer whose length is equal to plan length
+                    (without taking into account RepCnt) or larger.
+    OffsBuf     -   offset in the buffer array
+    RepCnt      -   repetition count (transformation is repeatedly applied
+                    to subsequent subarrays)
+    
+OUTPUT PARAMETERS:
+    Plan        -   plan (temporary buffers can be modified, plan itself
+                    is unchanged and can be reused)
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftapplysubplan(fasttransformplan* plan,
+     ae_int_t subplan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     /* Real    */ ae_vector* buf,
+     ae_int_t repcnt,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_int_t rowidx;
+    ae_int_t i;
+    ae_int_t n1;
+    ae_int_t n2;
+    ae_int_t operation;
+    ae_int_t operandscnt;
+    ae_int_t operandsize;
+    ae_int_t microvectorsize;
+    ae_int_t param0;
+    ae_int_t param1;
+    ae_int_t parentsize;
+    ae_int_t childsize;
+    ae_int_t chunksize;
+    ae_int_t lastchunksize;
+    srealarray *bufa;
+    ae_smart_ptr _bufa;
+    srealarray *bufb;
+    ae_smart_ptr _bufb;
+    srealarray *bufc;
+    ae_smart_ptr _bufc;
+    srealarray *bufd;
+    ae_smart_ptr _bufd;
+
+    ae_frame_make(_state, &_frame_block);
+    ae_smart_ptr_init(&_bufa, (void**)&bufa, _state, ae_true);
+    ae_smart_ptr_init(&_bufb, (void**)&bufb, _state, ae_true);
+    ae_smart_ptr_init(&_bufc, (void**)&bufc, _state, ae_true);
+    ae_smart_ptr_init(&_bufd, (void**)&bufd, _state, ae_true);
+
+    ae_assert(plan->entries.ptr.pp_int[subplan][ftbase_coltype]==ftbase_opstart, "FTApplySubPlan: incorrect subplan header", _state);
+    rowidx = subplan+1;
+    while(plan->entries.ptr.pp_int[rowidx][ftbase_coltype]!=ftbase_opend)
+    {
+        operation = plan->entries.ptr.pp_int[rowidx][ftbase_coltype];
+        operandscnt = repcnt*plan->entries.ptr.pp_int[rowidx][ftbase_coloperandscnt];
+        operandsize = plan->entries.ptr.pp_int[rowidx][ftbase_coloperandsize];
+        microvectorsize = plan->entries.ptr.pp_int[rowidx][ftbase_colmicrovectorsize];
+        param0 = plan->entries.ptr.pp_int[rowidx][ftbase_colparam0];
+        param1 = plan->entries.ptr.pp_int[rowidx][ftbase_colparam1];
+        touchint(&param1, _state);
+        
+        /*
+         * Process "jump" operation
+         */
+        if( operation==ftbase_opjmp )
+        {
+            rowidx = rowidx+plan->entries.ptr.pp_int[rowidx][ftbase_colparam0];
+            continue;
+        }
+        
+        /*
+         * Process "parallel call" operation:
+         * * we perform initial check for consistency between parent and child plans
+         * * we call FTSplitAndApplyParallelPlan(), which splits parallel plan into
+         *   several parallel tasks
+         */
+        if( operation==ftbase_opparallelcall )
+        {
+            parentsize = operandsize*microvectorsize;
+            childsize = plan->entries.ptr.pp_int[rowidx+param0][ftbase_coloperandscnt]*plan->entries.ptr.pp_int[rowidx+param0][ftbase_coloperandsize]*plan->entries.ptr.pp_int[rowidx+param0][ftbase_colmicrovectorsize];
+            ae_assert(plan->entries.ptr.pp_int[rowidx+param0][ftbase_coltype]==ftbase_opstart, "FTApplySubPlan: incorrect child subplan header", _state);
+            ae_assert(parentsize==childsize, "FTApplySubPlan: incorrect child subplan header", _state);
+            chunksize = ae_maxint(ftbase_recursivethreshold/childsize, 1, _state);
+            lastchunksize = operandscnt%chunksize;
+            if( lastchunksize==0 )
             {
-                
-                /*
-                 * hard-coded plan
-                 */
-                plan->plan.ptr.p_int[entryoffset+0] = esize;
-                plan->plan.ptr.p_int[entryoffset+1] = n1;
-                plan->plan.ptr.p_int[entryoffset+2] = n2;
-                plan->plan.ptr.p_int[entryoffset+3] = ftbase_fhtcodeletplan;
-                plan->plan.ptr.p_int[entryoffset+4] = 0;
-                plan->plan.ptr.p_int[entryoffset+5] = -1;
-                plan->plan.ptr.p_int[entryoffset+6] = -1;
-                plan->plan.ptr.p_int[entryoffset+7] = *precomputedsize;
-                if( n==3 )
-                {
-                    *precomputedsize = *precomputedsize+2;
-                }
-                if( n==5 )
-                {
-                    *precomputedsize = *precomputedsize+5;
-                }
-                return;
+                lastchunksize = chunksize;
             }
-            return;
+            i = 0;
+            while(i<operandscnt)
+            {
+                chunksize = ae_minint(chunksize, operandscnt-i, _state);
+                ftbase_ftapplysubplan(plan, rowidx+param0, a, abase, aoffset+i*childsize, buf, chunksize, _state);
+                i = i+chunksize;
+            }
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process "reference complex FFT" operation
+         */
+        if( operation==ftbase_opcomplexreffft )
+        {
+            ftbase_ftapplycomplexreffft(a, abase+aoffset, operandscnt, operandsize, microvectorsize, buf, _state);
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process "codelet FFT" operation
+         */
+        if( operation==ftbase_opcomplexcodeletfft )
+        {
+            ftbase_ftapplycomplexcodeletfft(a, abase+aoffset, operandscnt, operandsize, microvectorsize, _state);
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process "integrated codelet FFT" operation
+         */
+        if( operation==ftbase_opcomplexcodelettwfft )
+        {
+            ftbase_ftapplycomplexcodelettwfft(a, abase+aoffset, operandscnt, operandsize, microvectorsize, _state);
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process Bluestein's FFT operation
+         */
+        if( operation==ftbase_opbluesteinsfft )
+        {
+            ae_assert(microvectorsize==2, "FTApplySubPlan: microvectorsize!=2 for Bluesteins FFT", _state);
+            ae_shared_pool_retrieve(&plan->bluesteinpool, &_bufa, _state);
+            ae_shared_pool_retrieve(&plan->bluesteinpool, &_bufb, _state);
+            ae_shared_pool_retrieve(&plan->bluesteinpool, &_bufc, _state);
+            ae_shared_pool_retrieve(&plan->bluesteinpool, &_bufd, _state);
+            ftbase_ftbluesteinsfft(plan, a, abase, aoffset, operandscnt, operandsize, plan->entries.ptr.pp_int[rowidx][ftbase_colparam0], plan->entries.ptr.pp_int[rowidx][ftbase_colparam2], rowidx+plan->entries.ptr.pp_int[rowidx][ftbase_colparam1], &bufa->val, &bufb->val, &bufc->val, &bufd->val, _state);
+            ae_shared_pool_recycle(&plan->bluesteinpool, &_bufa, _state);
+            ae_shared_pool_recycle(&plan->bluesteinpool, &_bufb, _state);
+            ae_shared_pool_recycle(&plan->bluesteinpool, &_bufc, _state);
+            ae_shared_pool_recycle(&plan->bluesteinpool, &_bufd, _state);
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process Rader's FFT
+         */
+        if( operation==ftbase_opradersfft )
+        {
+            ftbase_ftradersfft(plan, a, abase, aoffset, operandscnt, operandsize, rowidx+plan->entries.ptr.pp_int[rowidx][ftbase_colparam0], plan->entries.ptr.pp_int[rowidx][ftbase_colparam1], plan->entries.ptr.pp_int[rowidx][ftbase_colparam2], plan->entries.ptr.pp_int[rowidx][ftbase_colparam3], buf, _state);
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process "complex twiddle factors" operation
+         */
+        if( operation==ftbase_opcomplexfftfactors )
+        {
+            ae_assert(microvectorsize==2, "FTApplySubPlan: MicrovectorSize<>1", _state);
+            n1 = plan->entries.ptr.pp_int[rowidx][ftbase_colparam0];
+            n2 = operandsize/n1;
+            for(i=0; i<=operandscnt-1; i++)
+            {
+                ftbase_ffttwcalc(a, abase+aoffset+i*operandsize*2, n1, n2, _state);
+            }
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Process "complex transposition" operation
+         */
+        if( operation==ftbase_opcomplextranspose )
+        {
+            ae_assert(microvectorsize==2, "FTApplySubPlan: MicrovectorSize<>1", _state);
+            n1 = plan->entries.ptr.pp_int[rowidx][ftbase_colparam0];
+            n2 = operandsize/n1;
+            for(i=0; i<=operandscnt-1; i++)
+            {
+                ftbase_internalcomplexlintranspose(a, n1, n2, abase+aoffset+i*operandsize*2, buf, _state);
+            }
+            rowidx = rowidx+1;
+            continue;
+        }
+        
+        /*
+         * Error
+         */
+        ae_assert(ae_false, "FTApplySubPlan: unexpected plan type", _state);
+    }
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine applies complex reference FFT to input/output array A.
+
+VERY SLOW OPERATION, do not use it in real life plans :)
+
+INPUT PARAMETERS:
+    A           -   array, must be large enough for plan to work
+    Offs        -   offset of the subarray to process
+    OperandsCnt -   operands count (see description of FastTransformPlan)
+    OperandSize -   operand size (see description of FastTransformPlan)
+    MicrovectorSize-microvector size (see description of FastTransformPlan)
+    Buf         -   temporary array, must be at least OperandsCnt*OperandSize*MicrovectorSize
+    
+OUTPUT PARAMETERS:
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftapplycomplexreffft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     /* Real    */ ae_vector* buf,
+     ae_state *_state)
+{
+    ae_int_t opidx;
+    ae_int_t i;
+    ae_int_t k;
+    double hre;
+    double him;
+    double c;
+    double s;
+    double re;
+    double im;
+    ae_int_t n;
+
+
+    ae_assert(operandscnt>=1, "FTApplyComplexRefFFT: OperandsCnt<1", _state);
+    ae_assert(operandsize>=1, "FTApplyComplexRefFFT: OperandSize<1", _state);
+    ae_assert(microvectorsize==2, "FTApplyComplexRefFFT: MicrovectorSize<>2", _state);
+    n = operandsize;
+    for(opidx=0; opidx<=operandscnt-1; opidx++)
+    {
+        for(i=0; i<=n-1; i++)
+        {
+            hre = 0;
+            him = 0;
+            for(k=0; k<=n-1; k++)
+            {
+                re = a->ptr.p_double[offs+opidx*operandsize*2+2*k+0];
+                im = a->ptr.p_double[offs+opidx*operandsize*2+2*k+1];
+                c = ae_cos(-2*ae_pi*k*i/n, _state);
+                s = ae_sin(-2*ae_pi*k*i/n, _state);
+                hre = hre+c*re-s*im;
+                him = him+c*im+s*re;
+            }
+            buf->ptr.p_double[2*i+0] = hre;
+            buf->ptr.p_double[2*i+1] = him;
+        }
+        for(i=0; i<=operandsize*2-1; i++)
+        {
+            a->ptr.p_double[offs+opidx*operandsize*2+i] = buf->ptr.p_double[i];
         }
     }
 }
 
 
 /*************************************************************************
-Recurrent subroutine for precomputing FFT plans
+This subroutine applies complex codelet FFT to input/output array A.
+
+INPUT PARAMETERS:
+    A           -   array, must be large enough for plan to work
+    Offs        -   offset of the subarray to process
+    OperandsCnt -   operands count (see description of FastTransformPlan)
+    OperandSize -   operand size (see description of FastTransformPlan)
+    MicrovectorSize-microvector size, must be 2
+    
+OUTPUT PARAMETERS:
+    A           -   transformed array
 
   -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
+     Copyright 05.04.2013 by Bochkanov Sergey
 *************************************************************************/
-static void ftbase_ftbaseprecomputeplanrec(ftplan* plan,
-     ae_int_t entryoffset,
-     ae_int_t stackptr,
+static void ftbase_ftapplycomplexcodeletfft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     ae_state *_state)
+{
+    ae_int_t opidx;
+    ae_int_t n;
+    ae_int_t aoffset;
+    double a0x;
+    double a0y;
+    double a1x;
+    double a1y;
+    double a2x;
+    double a2y;
+    double a3x;
+    double a3y;
+    double a4x;
+    double a4y;
+    double a5x;
+    double a5y;
+    double v0;
+    double v1;
+    double v2;
+    double v3;
+    double t1x;
+    double t1y;
+    double t2x;
+    double t2y;
+    double t3x;
+    double t3y;
+    double t4x;
+    double t4y;
+    double t5x;
+    double t5y;
+    double m1x;
+    double m1y;
+    double m2x;
+    double m2y;
+    double m3x;
+    double m3y;
+    double m4x;
+    double m4y;
+    double m5x;
+    double m5y;
+    double s1x;
+    double s1y;
+    double s2x;
+    double s2y;
+    double s3x;
+    double s3y;
+    double s4x;
+    double s4y;
+    double s5x;
+    double s5y;
+    double c1;
+    double c2;
+    double c3;
+    double c4;
+    double c5;
+    double v;
+
+
+    ae_assert(operandscnt>=1, "FTApplyComplexCodeletFFT: OperandsCnt<1", _state);
+    ae_assert(operandsize>=1, "FTApplyComplexCodeletFFT: OperandSize<1", _state);
+    ae_assert(microvectorsize==2, "FTApplyComplexCodeletFFT: MicrovectorSize<>2", _state);
+    n = operandsize;
+    
+    /*
+     * Hard-coded transforms for different N's
+     */
+    ae_assert(n<=ftbase_maxradix, "FTApplyComplexCodeletFFT: N>MaxRadix", _state);
+    if( n==2 )
+    {
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset = offs+opidx*operandsize*2;
+            a0x = a->ptr.p_double[aoffset+0];
+            a0y = a->ptr.p_double[aoffset+1];
+            a1x = a->ptr.p_double[aoffset+2];
+            a1y = a->ptr.p_double[aoffset+3];
+            v0 = a0x+a1x;
+            v1 = a0y+a1y;
+            v2 = a0x-a1x;
+            v3 = a0y-a1y;
+            a->ptr.p_double[aoffset+0] = v0;
+            a->ptr.p_double[aoffset+1] = v1;
+            a->ptr.p_double[aoffset+2] = v2;
+            a->ptr.p_double[aoffset+3] = v3;
+        }
+        return;
+    }
+    if( n==3 )
+    {
+        c1 = ae_cos(2*ae_pi/3, _state)-1;
+        c2 = ae_sin(2*ae_pi/3, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset = offs+opidx*operandsize*2;
+            a0x = a->ptr.p_double[aoffset+0];
+            a0y = a->ptr.p_double[aoffset+1];
+            a1x = a->ptr.p_double[aoffset+2];
+            a1y = a->ptr.p_double[aoffset+3];
+            a2x = a->ptr.p_double[aoffset+4];
+            a2y = a->ptr.p_double[aoffset+5];
+            t1x = a1x+a2x;
+            t1y = a1y+a2y;
+            a0x = a0x+t1x;
+            a0y = a0y+t1y;
+            m1x = c1*t1x;
+            m1y = c1*t1y;
+            m2x = c2*(a1y-a2y);
+            m2y = c2*(a2x-a1x);
+            s1x = a0x+m1x;
+            s1y = a0y+m1y;
+            a1x = s1x+m2x;
+            a1y = s1y+m2y;
+            a2x = s1x-m2x;
+            a2y = s1y-m2y;
+            a->ptr.p_double[aoffset+0] = a0x;
+            a->ptr.p_double[aoffset+1] = a0y;
+            a->ptr.p_double[aoffset+2] = a1x;
+            a->ptr.p_double[aoffset+3] = a1y;
+            a->ptr.p_double[aoffset+4] = a2x;
+            a->ptr.p_double[aoffset+5] = a2y;
+        }
+        return;
+    }
+    if( n==4 )
+    {
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset = offs+opidx*operandsize*2;
+            a0x = a->ptr.p_double[aoffset+0];
+            a0y = a->ptr.p_double[aoffset+1];
+            a1x = a->ptr.p_double[aoffset+2];
+            a1y = a->ptr.p_double[aoffset+3];
+            a2x = a->ptr.p_double[aoffset+4];
+            a2y = a->ptr.p_double[aoffset+5];
+            a3x = a->ptr.p_double[aoffset+6];
+            a3y = a->ptr.p_double[aoffset+7];
+            t1x = a0x+a2x;
+            t1y = a0y+a2y;
+            t2x = a1x+a3x;
+            t2y = a1y+a3y;
+            m2x = a0x-a2x;
+            m2y = a0y-a2y;
+            m3x = a1y-a3y;
+            m3y = a3x-a1x;
+            a->ptr.p_double[aoffset+0] = t1x+t2x;
+            a->ptr.p_double[aoffset+1] = t1y+t2y;
+            a->ptr.p_double[aoffset+4] = t1x-t2x;
+            a->ptr.p_double[aoffset+5] = t1y-t2y;
+            a->ptr.p_double[aoffset+2] = m2x+m3x;
+            a->ptr.p_double[aoffset+3] = m2y+m3y;
+            a->ptr.p_double[aoffset+6] = m2x-m3x;
+            a->ptr.p_double[aoffset+7] = m2y-m3y;
+        }
+        return;
+    }
+    if( n==5 )
+    {
+        v = 2*ae_pi/5;
+        c1 = (ae_cos(v, _state)+ae_cos(2*v, _state))/2-1;
+        c2 = (ae_cos(v, _state)-ae_cos(2*v, _state))/2;
+        c3 = -ae_sin(v, _state);
+        c4 = -(ae_sin(v, _state)+ae_sin(2*v, _state));
+        c5 = ae_sin(v, _state)-ae_sin(2*v, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset = offs+opidx*operandsize*2;
+            t1x = a->ptr.p_double[aoffset+2]+a->ptr.p_double[aoffset+8];
+            t1y = a->ptr.p_double[aoffset+3]+a->ptr.p_double[aoffset+9];
+            t2x = a->ptr.p_double[aoffset+4]+a->ptr.p_double[aoffset+6];
+            t2y = a->ptr.p_double[aoffset+5]+a->ptr.p_double[aoffset+7];
+            t3x = a->ptr.p_double[aoffset+2]-a->ptr.p_double[aoffset+8];
+            t3y = a->ptr.p_double[aoffset+3]-a->ptr.p_double[aoffset+9];
+            t4x = a->ptr.p_double[aoffset+6]-a->ptr.p_double[aoffset+4];
+            t4y = a->ptr.p_double[aoffset+7]-a->ptr.p_double[aoffset+5];
+            t5x = t1x+t2x;
+            t5y = t1y+t2y;
+            a->ptr.p_double[aoffset+0] = a->ptr.p_double[aoffset+0]+t5x;
+            a->ptr.p_double[aoffset+1] = a->ptr.p_double[aoffset+1]+t5y;
+            m1x = c1*t5x;
+            m1y = c1*t5y;
+            m2x = c2*(t1x-t2x);
+            m2y = c2*(t1y-t2y);
+            m3x = -c3*(t3y+t4y);
+            m3y = c3*(t3x+t4x);
+            m4x = -c4*t4y;
+            m4y = c4*t4x;
+            m5x = -c5*t3y;
+            m5y = c5*t3x;
+            s3x = m3x-m4x;
+            s3y = m3y-m4y;
+            s5x = m3x+m5x;
+            s5y = m3y+m5y;
+            s1x = a->ptr.p_double[aoffset+0]+m1x;
+            s1y = a->ptr.p_double[aoffset+1]+m1y;
+            s2x = s1x+m2x;
+            s2y = s1y+m2y;
+            s4x = s1x-m2x;
+            s4y = s1y-m2y;
+            a->ptr.p_double[aoffset+2] = s2x+s3x;
+            a->ptr.p_double[aoffset+3] = s2y+s3y;
+            a->ptr.p_double[aoffset+4] = s4x+s5x;
+            a->ptr.p_double[aoffset+5] = s4y+s5y;
+            a->ptr.p_double[aoffset+6] = s4x-s5x;
+            a->ptr.p_double[aoffset+7] = s4y-s5y;
+            a->ptr.p_double[aoffset+8] = s2x-s3x;
+            a->ptr.p_double[aoffset+9] = s2y-s3y;
+        }
+        return;
+    }
+    if( n==6 )
+    {
+        c1 = ae_cos(2*ae_pi/3, _state)-1;
+        c2 = ae_sin(2*ae_pi/3, _state);
+        c3 = ae_cos(-ae_pi/3, _state);
+        c4 = ae_sin(-ae_pi/3, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset = offs+opidx*operandsize*2;
+            a0x = a->ptr.p_double[aoffset+0];
+            a0y = a->ptr.p_double[aoffset+1];
+            a1x = a->ptr.p_double[aoffset+2];
+            a1y = a->ptr.p_double[aoffset+3];
+            a2x = a->ptr.p_double[aoffset+4];
+            a2y = a->ptr.p_double[aoffset+5];
+            a3x = a->ptr.p_double[aoffset+6];
+            a3y = a->ptr.p_double[aoffset+7];
+            a4x = a->ptr.p_double[aoffset+8];
+            a4y = a->ptr.p_double[aoffset+9];
+            a5x = a->ptr.p_double[aoffset+10];
+            a5y = a->ptr.p_double[aoffset+11];
+            v0 = a0x;
+            v1 = a0y;
+            a0x = a0x+a3x;
+            a0y = a0y+a3y;
+            a3x = v0-a3x;
+            a3y = v1-a3y;
+            v0 = a1x;
+            v1 = a1y;
+            a1x = a1x+a4x;
+            a1y = a1y+a4y;
+            a4x = v0-a4x;
+            a4y = v1-a4y;
+            v0 = a2x;
+            v1 = a2y;
+            a2x = a2x+a5x;
+            a2y = a2y+a5y;
+            a5x = v0-a5x;
+            a5y = v1-a5y;
+            t4x = a4x*c3-a4y*c4;
+            t4y = a4x*c4+a4y*c3;
+            a4x = t4x;
+            a4y = t4y;
+            t5x = -a5x*c3-a5y*c4;
+            t5y = a5x*c4-a5y*c3;
+            a5x = t5x;
+            a5y = t5y;
+            t1x = a1x+a2x;
+            t1y = a1y+a2y;
+            a0x = a0x+t1x;
+            a0y = a0y+t1y;
+            m1x = c1*t1x;
+            m1y = c1*t1y;
+            m2x = c2*(a1y-a2y);
+            m2y = c2*(a2x-a1x);
+            s1x = a0x+m1x;
+            s1y = a0y+m1y;
+            a1x = s1x+m2x;
+            a1y = s1y+m2y;
+            a2x = s1x-m2x;
+            a2y = s1y-m2y;
+            t1x = a4x+a5x;
+            t1y = a4y+a5y;
+            a3x = a3x+t1x;
+            a3y = a3y+t1y;
+            m1x = c1*t1x;
+            m1y = c1*t1y;
+            m2x = c2*(a4y-a5y);
+            m2y = c2*(a5x-a4x);
+            s1x = a3x+m1x;
+            s1y = a3y+m1y;
+            a4x = s1x+m2x;
+            a4y = s1y+m2y;
+            a5x = s1x-m2x;
+            a5y = s1y-m2y;
+            a->ptr.p_double[aoffset+0] = a0x;
+            a->ptr.p_double[aoffset+1] = a0y;
+            a->ptr.p_double[aoffset+2] = a3x;
+            a->ptr.p_double[aoffset+3] = a3y;
+            a->ptr.p_double[aoffset+4] = a1x;
+            a->ptr.p_double[aoffset+5] = a1y;
+            a->ptr.p_double[aoffset+6] = a4x;
+            a->ptr.p_double[aoffset+7] = a4y;
+            a->ptr.p_double[aoffset+8] = a2x;
+            a->ptr.p_double[aoffset+9] = a2y;
+            a->ptr.p_double[aoffset+10] = a5x;
+            a->ptr.p_double[aoffset+11] = a5y;
+        }
+        return;
+    }
+}
+
+
+/*************************************************************************
+This subroutine applies complex "integrated" codelet FFT  to  input/output
+array A. "Integrated" codelet differs from "normal" one in following ways:
+* it can work with MicrovectorSize>1
+* hence, it can be used in Cooley-Tukey FFT without transpositions
+* it performs inlined multiplication by twiddle factors of Cooley-Tukey
+  FFT with N2=MicrovectorSize/2.
+
+INPUT PARAMETERS:
+    A           -   array, must be large enough for plan to work
+    Offs        -   offset of the subarray to process
+    OperandsCnt -   operands count (see description of FastTransformPlan)
+    OperandSize -   operand size (see description of FastTransformPlan)
+    MicrovectorSize-microvector size, must be 1
+    
+OUTPUT PARAMETERS:
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftapplycomplexcodelettwfft(/* Real    */ ae_vector* a,
+     ae_int_t offs,
+     ae_int_t operandscnt,
+     ae_int_t operandsize,
+     ae_int_t microvectorsize,
+     ae_state *_state)
+{
+    ae_int_t opidx;
+    ae_int_t mvidx;
+    ae_int_t n;
+    ae_int_t m;
+    ae_int_t aoffset0;
+    ae_int_t aoffset2;
+    ae_int_t aoffset4;
+    ae_int_t aoffset6;
+    ae_int_t aoffset8;
+    ae_int_t aoffset10;
+    double a0x;
+    double a0y;
+    double a1x;
+    double a1y;
+    double a2x;
+    double a2y;
+    double a3x;
+    double a3y;
+    double a4x;
+    double a4y;
+    double a5x;
+    double a5y;
+    double v0;
+    double v1;
+    double v2;
+    double v3;
+    double q0x;
+    double q0y;
+    double t1x;
+    double t1y;
+    double t2x;
+    double t2y;
+    double t3x;
+    double t3y;
+    double t4x;
+    double t4y;
+    double t5x;
+    double t5y;
+    double m1x;
+    double m1y;
+    double m2x;
+    double m2y;
+    double m3x;
+    double m3y;
+    double m4x;
+    double m4y;
+    double m5x;
+    double m5y;
+    double s1x;
+    double s1y;
+    double s2x;
+    double s2y;
+    double s3x;
+    double s3y;
+    double s4x;
+    double s4y;
+    double s5x;
+    double s5y;
+    double c1;
+    double c2;
+    double c3;
+    double c4;
+    double c5;
+    double v;
+    double tw0;
+    double tw1;
+    double twx;
+    double twxm1;
+    double twy;
+    double tw2x;
+    double tw2y;
+    double tw3x;
+    double tw3y;
+    double tw4x;
+    double tw4y;
+    double tw5x;
+    double tw5y;
+
+
+    ae_assert(operandscnt>=1, "FTApplyComplexCodeletFFT: OperandsCnt<1", _state);
+    ae_assert(operandsize>=1, "FTApplyComplexCodeletFFT: OperandSize<1", _state);
+    ae_assert(microvectorsize>=1, "FTApplyComplexCodeletFFT: MicrovectorSize<>1", _state);
+    ae_assert(microvectorsize%2==0, "FTApplyComplexCodeletFFT: MicrovectorSize is not even", _state);
+    n = operandsize;
+    m = microvectorsize/2;
+    
+    /*
+     * Hard-coded transforms for different N's
+     */
+    ae_assert(n<=ftbase_maxradix, "FTApplyComplexCodeletTwFFT: N>MaxRadix", _state);
+    if( n==2 )
+    {
+        v = -2*ae_pi/(n*m);
+        tw0 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+        tw1 = ae_sin(v, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset0 = offs+opidx*operandsize*microvectorsize;
+            aoffset2 = aoffset0+microvectorsize;
+            twxm1 = 0.0;
+            twy = 0.0;
+            for(mvidx=0; mvidx<=m-1; mvidx++)
+            {
+                a0x = a->ptr.p_double[aoffset0];
+                a0y = a->ptr.p_double[aoffset0+1];
+                a1x = a->ptr.p_double[aoffset2];
+                a1y = a->ptr.p_double[aoffset2+1];
+                v0 = a0x+a1x;
+                v1 = a0y+a1y;
+                v2 = a0x-a1x;
+                v3 = a0y-a1y;
+                a->ptr.p_double[aoffset0] = v0;
+                a->ptr.p_double[aoffset0+1] = v1;
+                a->ptr.p_double[aoffset2] = v2*(1+twxm1)-v3*twy;
+                a->ptr.p_double[aoffset2+1] = v3*(1+twxm1)+v2*twy;
+                aoffset0 = aoffset0+2;
+                aoffset2 = aoffset2+2;
+                if( (mvidx+1)%ftbase_updatetw==0 )
+                {
+                    v = -2*ae_pi*(mvidx+1)/(n*m);
+                    twxm1 = ae_sin(0.5*v, _state);
+                    twxm1 = -2*twxm1*twxm1;
+                    twy = ae_sin(v, _state);
+                }
+                else
+                {
+                    v = twxm1+tw0+twxm1*tw0-twy*tw1;
+                    twy = twy+tw1+twxm1*tw1+twy*tw0;
+                    twxm1 = v;
+                }
+            }
+        }
+        return;
+    }
+    if( n==3 )
+    {
+        v = -2*ae_pi/(n*m);
+        tw0 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+        tw1 = ae_sin(v, _state);
+        c1 = ae_cos(2*ae_pi/3, _state)-1;
+        c2 = ae_sin(2*ae_pi/3, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset0 = offs+opidx*operandsize*microvectorsize;
+            aoffset2 = aoffset0+microvectorsize;
+            aoffset4 = aoffset2+microvectorsize;
+            twx = 1.0;
+            twxm1 = 0.0;
+            twy = 0.0;
+            for(mvidx=0; mvidx<=m-1; mvidx++)
+            {
+                a0x = a->ptr.p_double[aoffset0];
+                a0y = a->ptr.p_double[aoffset0+1];
+                a1x = a->ptr.p_double[aoffset2];
+                a1y = a->ptr.p_double[aoffset2+1];
+                a2x = a->ptr.p_double[aoffset4];
+                a2y = a->ptr.p_double[aoffset4+1];
+                t1x = a1x+a2x;
+                t1y = a1y+a2y;
+                a0x = a0x+t1x;
+                a0y = a0y+t1y;
+                m1x = c1*t1x;
+                m1y = c1*t1y;
+                m2x = c2*(a1y-a2y);
+                m2y = c2*(a2x-a1x);
+                s1x = a0x+m1x;
+                s1y = a0y+m1y;
+                a1x = s1x+m2x;
+                a1y = s1y+m2y;
+                a2x = s1x-m2x;
+                a2y = s1y-m2y;
+                tw2x = twx*twx-twy*twy;
+                tw2y = 2*twx*twy;
+                a->ptr.p_double[aoffset0] = a0x;
+                a->ptr.p_double[aoffset0+1] = a0y;
+                a->ptr.p_double[aoffset2] = a1x*twx-a1y*twy;
+                a->ptr.p_double[aoffset2+1] = a1y*twx+a1x*twy;
+                a->ptr.p_double[aoffset4] = a2x*tw2x-a2y*tw2y;
+                a->ptr.p_double[aoffset4+1] = a2y*tw2x+a2x*tw2y;
+                aoffset0 = aoffset0+2;
+                aoffset2 = aoffset2+2;
+                aoffset4 = aoffset4+2;
+                if( (mvidx+1)%ftbase_updatetw==0 )
+                {
+                    v = -2*ae_pi*(mvidx+1)/(n*m);
+                    twxm1 = ae_sin(0.5*v, _state);
+                    twxm1 = -2*twxm1*twxm1;
+                    twy = ae_sin(v, _state);
+                    twx = twxm1+1;
+                }
+                else
+                {
+                    v = twxm1+tw0+twxm1*tw0-twy*tw1;
+                    twy = twy+tw1+twxm1*tw1+twy*tw0;
+                    twxm1 = v;
+                    twx = v+1;
+                }
+            }
+        }
+        return;
+    }
+    if( n==4 )
+    {
+        v = -2*ae_pi/(n*m);
+        tw0 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+        tw1 = ae_sin(v, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset0 = offs+opidx*operandsize*microvectorsize;
+            aoffset2 = aoffset0+microvectorsize;
+            aoffset4 = aoffset2+microvectorsize;
+            aoffset6 = aoffset4+microvectorsize;
+            twx = 1.0;
+            twxm1 = 0.0;
+            twy = 0.0;
+            for(mvidx=0; mvidx<=m-1; mvidx++)
+            {
+                a0x = a->ptr.p_double[aoffset0];
+                a0y = a->ptr.p_double[aoffset0+1];
+                a1x = a->ptr.p_double[aoffset2];
+                a1y = a->ptr.p_double[aoffset2+1];
+                a2x = a->ptr.p_double[aoffset4];
+                a2y = a->ptr.p_double[aoffset4+1];
+                a3x = a->ptr.p_double[aoffset6];
+                a3y = a->ptr.p_double[aoffset6+1];
+                t1x = a0x+a2x;
+                t1y = a0y+a2y;
+                t2x = a1x+a3x;
+                t2y = a1y+a3y;
+                m2x = a0x-a2x;
+                m2y = a0y-a2y;
+                m3x = a1y-a3y;
+                m3y = a3x-a1x;
+                tw2x = twx*twx-twy*twy;
+                tw2y = 2*twx*twy;
+                tw3x = twx*tw2x-twy*tw2y;
+                tw3y = twx*tw2y+twy*tw2x;
+                a1x = m2x+m3x;
+                a1y = m2y+m3y;
+                a2x = t1x-t2x;
+                a2y = t1y-t2y;
+                a3x = m2x-m3x;
+                a3y = m2y-m3y;
+                a->ptr.p_double[aoffset0] = t1x+t2x;
+                a->ptr.p_double[aoffset0+1] = t1y+t2y;
+                a->ptr.p_double[aoffset2] = a1x*twx-a1y*twy;
+                a->ptr.p_double[aoffset2+1] = a1y*twx+a1x*twy;
+                a->ptr.p_double[aoffset4] = a2x*tw2x-a2y*tw2y;
+                a->ptr.p_double[aoffset4+1] = a2y*tw2x+a2x*tw2y;
+                a->ptr.p_double[aoffset6] = a3x*tw3x-a3y*tw3y;
+                a->ptr.p_double[aoffset6+1] = a3y*tw3x+a3x*tw3y;
+                aoffset0 = aoffset0+2;
+                aoffset2 = aoffset2+2;
+                aoffset4 = aoffset4+2;
+                aoffset6 = aoffset6+2;
+                if( (mvidx+1)%ftbase_updatetw==0 )
+                {
+                    v = -2*ae_pi*(mvidx+1)/(n*m);
+                    twxm1 = ae_sin(0.5*v, _state);
+                    twxm1 = -2*twxm1*twxm1;
+                    twy = ae_sin(v, _state);
+                    twx = twxm1+1;
+                }
+                else
+                {
+                    v = twxm1+tw0+twxm1*tw0-twy*tw1;
+                    twy = twy+tw1+twxm1*tw1+twy*tw0;
+                    twxm1 = v;
+                    twx = v+1;
+                }
+            }
+        }
+        return;
+    }
+    if( n==5 )
+    {
+        v = -2*ae_pi/(n*m);
+        tw0 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+        tw1 = ae_sin(v, _state);
+        v = 2*ae_pi/5;
+        c1 = (ae_cos(v, _state)+ae_cos(2*v, _state))/2-1;
+        c2 = (ae_cos(v, _state)-ae_cos(2*v, _state))/2;
+        c3 = -ae_sin(v, _state);
+        c4 = -(ae_sin(v, _state)+ae_sin(2*v, _state));
+        c5 = ae_sin(v, _state)-ae_sin(2*v, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset0 = offs+opidx*operandsize*microvectorsize;
+            aoffset2 = aoffset0+microvectorsize;
+            aoffset4 = aoffset2+microvectorsize;
+            aoffset6 = aoffset4+microvectorsize;
+            aoffset8 = aoffset6+microvectorsize;
+            twx = 1.0;
+            twxm1 = 0.0;
+            twy = 0.0;
+            for(mvidx=0; mvidx<=m-1; mvidx++)
+            {
+                a0x = a->ptr.p_double[aoffset0];
+                a0y = a->ptr.p_double[aoffset0+1];
+                a1x = a->ptr.p_double[aoffset2];
+                a1y = a->ptr.p_double[aoffset2+1];
+                a2x = a->ptr.p_double[aoffset4];
+                a2y = a->ptr.p_double[aoffset4+1];
+                a3x = a->ptr.p_double[aoffset6];
+                a3y = a->ptr.p_double[aoffset6+1];
+                a4x = a->ptr.p_double[aoffset8];
+                a4y = a->ptr.p_double[aoffset8+1];
+                t1x = a1x+a4x;
+                t1y = a1y+a4y;
+                t2x = a2x+a3x;
+                t2y = a2y+a3y;
+                t3x = a1x-a4x;
+                t3y = a1y-a4y;
+                t4x = a3x-a2x;
+                t4y = a3y-a2y;
+                t5x = t1x+t2x;
+                t5y = t1y+t2y;
+                q0x = a0x+t5x;
+                q0y = a0y+t5y;
+                m1x = c1*t5x;
+                m1y = c1*t5y;
+                m2x = c2*(t1x-t2x);
+                m2y = c2*(t1y-t2y);
+                m3x = -c3*(t3y+t4y);
+                m3y = c3*(t3x+t4x);
+                m4x = -c4*t4y;
+                m4y = c4*t4x;
+                m5x = -c5*t3y;
+                m5y = c5*t3x;
+                s3x = m3x-m4x;
+                s3y = m3y-m4y;
+                s5x = m3x+m5x;
+                s5y = m3y+m5y;
+                s1x = q0x+m1x;
+                s1y = q0y+m1y;
+                s2x = s1x+m2x;
+                s2y = s1y+m2y;
+                s4x = s1x-m2x;
+                s4y = s1y-m2y;
+                tw2x = twx*twx-twy*twy;
+                tw2y = 2*twx*twy;
+                tw3x = twx*tw2x-twy*tw2y;
+                tw3y = twx*tw2y+twy*tw2x;
+                tw4x = tw2x*tw2x-tw2y*tw2y;
+                tw4y = tw2x*tw2y+tw2y*tw2x;
+                a1x = s2x+s3x;
+                a1y = s2y+s3y;
+                a2x = s4x+s5x;
+                a2y = s4y+s5y;
+                a3x = s4x-s5x;
+                a3y = s4y-s5y;
+                a4x = s2x-s3x;
+                a4y = s2y-s3y;
+                a->ptr.p_double[aoffset0] = q0x;
+                a->ptr.p_double[aoffset0+1] = q0y;
+                a->ptr.p_double[aoffset2] = a1x*twx-a1y*twy;
+                a->ptr.p_double[aoffset2+1] = a1x*twy+a1y*twx;
+                a->ptr.p_double[aoffset4] = a2x*tw2x-a2y*tw2y;
+                a->ptr.p_double[aoffset4+1] = a2x*tw2y+a2y*tw2x;
+                a->ptr.p_double[aoffset6] = a3x*tw3x-a3y*tw3y;
+                a->ptr.p_double[aoffset6+1] = a3x*tw3y+a3y*tw3x;
+                a->ptr.p_double[aoffset8] = a4x*tw4x-a4y*tw4y;
+                a->ptr.p_double[aoffset8+1] = a4x*tw4y+a4y*tw4x;
+                aoffset0 = aoffset0+2;
+                aoffset2 = aoffset2+2;
+                aoffset4 = aoffset4+2;
+                aoffset6 = aoffset6+2;
+                aoffset8 = aoffset8+2;
+                if( (mvidx+1)%ftbase_updatetw==0 )
+                {
+                    v = -2*ae_pi*(mvidx+1)/(n*m);
+                    twxm1 = ae_sin(0.5*v, _state);
+                    twxm1 = -2*twxm1*twxm1;
+                    twy = ae_sin(v, _state);
+                    twx = twxm1+1;
+                }
+                else
+                {
+                    v = twxm1+tw0+twxm1*tw0-twy*tw1;
+                    twy = twy+tw1+twxm1*tw1+twy*tw0;
+                    twxm1 = v;
+                    twx = v+1;
+                }
+            }
+        }
+        return;
+    }
+    if( n==6 )
+    {
+        c1 = ae_cos(2*ae_pi/3, _state)-1;
+        c2 = ae_sin(2*ae_pi/3, _state);
+        c3 = ae_cos(-ae_pi/3, _state);
+        c4 = ae_sin(-ae_pi/3, _state);
+        v = -2*ae_pi/(n*m);
+        tw0 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+        tw1 = ae_sin(v, _state);
+        for(opidx=0; opidx<=operandscnt-1; opidx++)
+        {
+            aoffset0 = offs+opidx*operandsize*microvectorsize;
+            aoffset2 = aoffset0+microvectorsize;
+            aoffset4 = aoffset2+microvectorsize;
+            aoffset6 = aoffset4+microvectorsize;
+            aoffset8 = aoffset6+microvectorsize;
+            aoffset10 = aoffset8+microvectorsize;
+            twx = 1.0;
+            twxm1 = 0.0;
+            twy = 0.0;
+            for(mvidx=0; mvidx<=m-1; mvidx++)
+            {
+                a0x = a->ptr.p_double[aoffset0+0];
+                a0y = a->ptr.p_double[aoffset0+1];
+                a1x = a->ptr.p_double[aoffset2+0];
+                a1y = a->ptr.p_double[aoffset2+1];
+                a2x = a->ptr.p_double[aoffset4+0];
+                a2y = a->ptr.p_double[aoffset4+1];
+                a3x = a->ptr.p_double[aoffset6+0];
+                a3y = a->ptr.p_double[aoffset6+1];
+                a4x = a->ptr.p_double[aoffset8+0];
+                a4y = a->ptr.p_double[aoffset8+1];
+                a5x = a->ptr.p_double[aoffset10+0];
+                a5y = a->ptr.p_double[aoffset10+1];
+                v0 = a0x;
+                v1 = a0y;
+                a0x = a0x+a3x;
+                a0y = a0y+a3y;
+                a3x = v0-a3x;
+                a3y = v1-a3y;
+                v0 = a1x;
+                v1 = a1y;
+                a1x = a1x+a4x;
+                a1y = a1y+a4y;
+                a4x = v0-a4x;
+                a4y = v1-a4y;
+                v0 = a2x;
+                v1 = a2y;
+                a2x = a2x+a5x;
+                a2y = a2y+a5y;
+                a5x = v0-a5x;
+                a5y = v1-a5y;
+                t4x = a4x*c3-a4y*c4;
+                t4y = a4x*c4+a4y*c3;
+                a4x = t4x;
+                a4y = t4y;
+                t5x = -a5x*c3-a5y*c4;
+                t5y = a5x*c4-a5y*c3;
+                a5x = t5x;
+                a5y = t5y;
+                t1x = a1x+a2x;
+                t1y = a1y+a2y;
+                a0x = a0x+t1x;
+                a0y = a0y+t1y;
+                m1x = c1*t1x;
+                m1y = c1*t1y;
+                m2x = c2*(a1y-a2y);
+                m2y = c2*(a2x-a1x);
+                s1x = a0x+m1x;
+                s1y = a0y+m1y;
+                a1x = s1x+m2x;
+                a1y = s1y+m2y;
+                a2x = s1x-m2x;
+                a2y = s1y-m2y;
+                t1x = a4x+a5x;
+                t1y = a4y+a5y;
+                a3x = a3x+t1x;
+                a3y = a3y+t1y;
+                m1x = c1*t1x;
+                m1y = c1*t1y;
+                m2x = c2*(a4y-a5y);
+                m2y = c2*(a5x-a4x);
+                s1x = a3x+m1x;
+                s1y = a3y+m1y;
+                a4x = s1x+m2x;
+                a4y = s1y+m2y;
+                a5x = s1x-m2x;
+                a5y = s1y-m2y;
+                tw2x = twx*twx-twy*twy;
+                tw2y = 2*twx*twy;
+                tw3x = twx*tw2x-twy*tw2y;
+                tw3y = twx*tw2y+twy*tw2x;
+                tw4x = tw2x*tw2x-tw2y*tw2y;
+                tw4y = 2*tw2x*tw2y;
+                tw5x = tw3x*tw2x-tw3y*tw2y;
+                tw5y = tw3x*tw2y+tw3y*tw2x;
+                a->ptr.p_double[aoffset0+0] = a0x;
+                a->ptr.p_double[aoffset0+1] = a0y;
+                a->ptr.p_double[aoffset2+0] = a3x*twx-a3y*twy;
+                a->ptr.p_double[aoffset2+1] = a3y*twx+a3x*twy;
+                a->ptr.p_double[aoffset4+0] = a1x*tw2x-a1y*tw2y;
+                a->ptr.p_double[aoffset4+1] = a1y*tw2x+a1x*tw2y;
+                a->ptr.p_double[aoffset6+0] = a4x*tw3x-a4y*tw3y;
+                a->ptr.p_double[aoffset6+1] = a4y*tw3x+a4x*tw3y;
+                a->ptr.p_double[aoffset8+0] = a2x*tw4x-a2y*tw4y;
+                a->ptr.p_double[aoffset8+1] = a2y*tw4x+a2x*tw4y;
+                a->ptr.p_double[aoffset10+0] = a5x*tw5x-a5y*tw5y;
+                a->ptr.p_double[aoffset10+1] = a5y*tw5x+a5x*tw5y;
+                aoffset0 = aoffset0+2;
+                aoffset2 = aoffset2+2;
+                aoffset4 = aoffset4+2;
+                aoffset6 = aoffset6+2;
+                aoffset8 = aoffset8+2;
+                aoffset10 = aoffset10+2;
+                if( (mvidx+1)%ftbase_updatetw==0 )
+                {
+                    v = -2*ae_pi*(mvidx+1)/(n*m);
+                    twxm1 = ae_sin(0.5*v, _state);
+                    twxm1 = -2*twxm1*twxm1;
+                    twy = ae_sin(v, _state);
+                    twx = twxm1+1;
+                }
+                else
+                {
+                    v = twxm1+tw0+twxm1*tw0-twy*tw1;
+                    twy = twy+tw1+twxm1*tw1+twy*tw0;
+                    twxm1 = v;
+                    twx = v+1;
+                }
+            }
+        }
+        return;
+    }
+}
+
+
+/*************************************************************************
+This subroutine precomputes data for complex Bluestein's  FFT  and  writes
+them to array PrecR[] at specified offset. It  is  responsibility  of  the
+caller to make sure that PrecR[] is large enough.
+
+INPUT PARAMETERS:
+    N           -   original size of the transform
+    M           -   size of the "padded" Bluestein's transform
+    PrecR       -   preallocated array
+    Offs        -   offset
+    
+OUTPUT PARAMETERS:
+    PrecR       -   data at Offs:Offs+4*M-1 are modified:
+                    * PrecR[Offs:Offs+2*M-1] stores Z[k]=exp(i*pi*k^2/N)
+                    * PrecR[Offs+2*M:Offs+4*M-1] stores FFT of the Z
+                    Other parts of PrecR are unchanged.
+                    
+NOTE: this function performs internal M-point FFT. It allocates temporary
+      plan which is destroyed after leaving this function.
+
+  -- ALGLIB --
+     Copyright 08.05.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftprecomputebluesteinsfft(ae_int_t n,
+     ae_int_t m,
+     /* Real    */ ae_vector* precr,
+     ae_int_t offs,
      ae_state *_state)
 {
     ae_frame _frame_block;
     ae_int_t i;
-    ae_int_t n1;
-    ae_int_t n2;
-    ae_int_t n;
-    ae_int_t m;
-    ae_int_t offs;
-    double v;
-    ae_vector emptyarray;
     double bx;
     double by;
+    fasttransformplan plan;
 
     ae_frame_make(_state, &_frame_block);
-    ae_vector_init(&emptyarray, 0, DT_REAL, _state, ae_true);
+    _fasttransformplan_init(&plan, _state, ae_true);
 
-    if( (plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftcooleytukeyplan||plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftrealcooleytukeyplan)||plan->plan.ptr.p_int[entryoffset+3]==ftbase_fhtcooleytukeyplan )
+    
+    /*
+     * Fill first half of PrecR with b[k] = exp(i*pi*k^2/N)
+     */
+    for(i=0; i<=2*m-1; i++)
     {
-        ftbase_ftbaseprecomputeplanrec(plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        ftbase_ftbaseprecomputeplanrec(plan, plan->plan.ptr.p_int[entryoffset+6], stackptr, _state);
-        ae_frame_leave(_state);
-        return;
+        precr->ptr.p_double[offs+i] = 0;
     }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftcodeletplan||plan->plan.ptr.p_int[entryoffset+3]==ftbase_fhtcodeletplan )
+    for(i=0; i<=n-1; i++)
     {
-        n1 = plan->plan.ptr.p_int[entryoffset+1];
-        n2 = plan->plan.ptr.p_int[entryoffset+2];
-        n = n1*n2;
-        if( n==3 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            plan->precomputed.ptr.p_double[offs+0] = ae_cos(2*ae_pi/3, _state)-1;
-            plan->precomputed.ptr.p_double[offs+1] = ae_sin(2*ae_pi/3, _state);
-            ae_frame_leave(_state);
-            return;
-        }
-        if( n==5 )
-        {
-            offs = plan->plan.ptr.p_int[entryoffset+7];
-            v = 2*ae_pi/5;
-            plan->precomputed.ptr.p_double[offs+0] = (ae_cos(v, _state)+ae_cos(2*v, _state))/2-1;
-            plan->precomputed.ptr.p_double[offs+1] = (ae_cos(v, _state)-ae_cos(2*v, _state))/2;
-            plan->precomputed.ptr.p_double[offs+2] = -ae_sin(v, _state);
-            plan->precomputed.ptr.p_double[offs+3] = -(ae_sin(v, _state)+ae_sin(2*v, _state));
-            plan->precomputed.ptr.p_double[offs+4] = ae_sin(v, _state)-ae_sin(2*v, _state);
-            ae_frame_leave(_state);
-            return;
-        }
+        bx = ae_cos(ae_pi/n*i*i, _state);
+        by = ae_sin(ae_pi/n*i*i, _state);
+        precr->ptr.p_double[offs+2*i+0] = bx;
+        precr->ptr.p_double[offs+2*i+1] = by;
+        precr->ptr.p_double[offs+2*((m-i)%m)+0] = bx;
+        precr->ptr.p_double[offs+2*((m-i)%m)+1] = by;
     }
-    if( plan->plan.ptr.p_int[entryoffset+3]==ftbase_fftbluesteinplan )
+    
+    /*
+     * Precomputed FFT
+     */
+    ftcomplexfftplan(m, 1, &plan, _state);
+    for(i=0; i<=2*m-1; i++)
     {
-        ftbase_ftbaseprecomputeplanrec(plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        n = plan->plan.ptr.p_int[entryoffset+1];
-        m = plan->plan.ptr.p_int[entryoffset+4];
-        offs = plan->plan.ptr.p_int[entryoffset+7];
-        for(i=0; i<=2*m-1; i++)
-        {
-            plan->precomputed.ptr.p_double[offs+i] = 0;
-        }
+        precr->ptr.p_double[offs+2*m+i] = precr->ptr.p_double[offs+i];
+    }
+    ftbase_ftapplysubplan(&plan, 0, precr, offs+2*m, 0, &plan.buffer, 1, _state);
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine applies complex Bluestein's FFT to input/output array A.
+
+INPUT PARAMETERS:
+    Plan        -   transformation plan
+    A           -   array, must be large enough for plan to work
+    ABase       -   base offset in array A, this value points to start of
+                    subarray whose length is equal to length of the plan
+    AOffset     -   offset with respect to ABase, 0<=AOffset<PlanLength.
+                    This is an offset within large PlanLength-subarray of
+                    the chunk to process.
+    OperandsCnt -   number of repeated operands (length N each)
+    N           -   original data length (measured in complex numbers)
+    M           -   padded data length (measured in complex numbers)
+    PrecOffs    -   offset of the precomputed data for the plan
+    SubPlan     -   position of the length-M FFT subplan which is used by
+                    transformation
+    BufA        -   temporary buffer, at least 2*M elements
+    BufB        -   temporary buffer, at least 2*M elements
+    BufC        -   temporary buffer, at least 2*M elements
+    BufD        -   temporary buffer, at least 2*M elements
+    
+OUTPUT PARAMETERS:
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftbluesteinsfft(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     ae_int_t operandscnt,
+     ae_int_t n,
+     ae_int_t m,
+     ae_int_t precoffs,
+     ae_int_t subplan,
+     /* Real    */ ae_vector* bufa,
+     /* Real    */ ae_vector* bufb,
+     /* Real    */ ae_vector* bufc,
+     /* Real    */ ae_vector* bufd,
+     ae_state *_state)
+{
+    ae_int_t op;
+    ae_int_t i;
+    double x;
+    double y;
+    double bx;
+    double by;
+    double ax;
+    double ay;
+    double rx;
+    double ry;
+    ae_int_t p0;
+    ae_int_t p1;
+    ae_int_t p2;
+
+
+    for(op=0; op<=operandscnt-1; op++)
+    {
+        
+        /*
+         * Multiply A by conj(Z), store to buffer.
+         * Pad A by zeros.
+         *
+         * NOTE: Z[k]=exp(i*pi*k^2/N)
+         */
+        p0 = abase+aoffset+op*2*n;
+        p1 = precoffs;
         for(i=0; i<=n-1; i++)
         {
-            bx = ae_cos(ae_pi*ae_sqr(i, _state)/n, _state);
-            by = ae_sin(ae_pi*ae_sqr(i, _state)/n, _state);
-            plan->precomputed.ptr.p_double[offs+2*i+0] = bx;
-            plan->precomputed.ptr.p_double[offs+2*i+1] = by;
-            plan->precomputed.ptr.p_double[offs+2*m+2*i+0] = bx;
-            plan->precomputed.ptr.p_double[offs+2*m+2*i+1] = by;
-            if( i>0 )
-            {
-                plan->precomputed.ptr.p_double[offs+2*(m-i)+0] = bx;
-                plan->precomputed.ptr.p_double[offs+2*(m-i)+1] = by;
-            }
+            x = a->ptr.p_double[p0+0];
+            y = a->ptr.p_double[p0+1];
+            bx = plan->precr.ptr.p_double[p1+0];
+            by = -plan->precr.ptr.p_double[p1+1];
+            bufa->ptr.p_double[2*i+0] = x*bx-y*by;
+            bufa->ptr.p_double[2*i+1] = x*by+y*bx;
+            p0 = p0+2;
+            p1 = p1+2;
         }
-        ftbaseexecuteplanrec(&plan->precomputed, offs, plan, plan->plan.ptr.p_int[entryoffset+5], stackptr, _state);
-        ae_frame_leave(_state);
+        for(i=2*n; i<=2*m-1; i++)
+        {
+            bufa->ptr.p_double[i] = 0;
+        }
+        
+        /*
+         * Perform convolution of A and Z (using precomputed
+         * FFT of Z stored in Plan structure).
+         */
+        ftbase_ftapplysubplan(plan, subplan, bufa, 0, 0, bufc, 1, _state);
+        p0 = 0;
+        p1 = precoffs+2*m;
+        for(i=0; i<=m-1; i++)
+        {
+            ax = bufa->ptr.p_double[p0+0];
+            ay = bufa->ptr.p_double[p0+1];
+            bx = plan->precr.ptr.p_double[p1+0];
+            by = plan->precr.ptr.p_double[p1+1];
+            bufa->ptr.p_double[p0+0] = ax*bx-ay*by;
+            bufa->ptr.p_double[p0+1] = -(ax*by+ay*bx);
+            p0 = p0+2;
+            p1 = p1+2;
+        }
+        ftbase_ftapplysubplan(plan, subplan, bufa, 0, 0, bufc, 1, _state);
+        
+        /*
+         * Post processing:
+         *     A:=conj(Z)*conj(A)/M
+         * Here conj(A)/M corresponds to last stage of inverse DFT,
+         * and conj(Z) comes from Bluestein's FFT algorithm.
+         */
+        p0 = precoffs;
+        p1 = 0;
+        p2 = abase+aoffset+op*2*n;
+        for(i=0; i<=n-1; i++)
+        {
+            bx = plan->precr.ptr.p_double[p0+0];
+            by = plan->precr.ptr.p_double[p0+1];
+            rx = bufa->ptr.p_double[p1+0]/m;
+            ry = -bufa->ptr.p_double[p1+1]/m;
+            a->ptr.p_double[p2+0] = rx*bx-ry*(-by);
+            a->ptr.p_double[p2+1] = rx*(-by)+ry*bx;
+            p0 = p0+2;
+            p1 = p1+2;
+            p2 = p2+2;
+        }
+    }
+}
+
+
+/*************************************************************************
+This subroutine precomputes data for complex Rader's FFT and  writes  them
+to array PrecR[] at specified offset. It  is  responsibility of the caller
+to make sure that PrecR[] is large enough.
+
+INPUT PARAMETERS:
+    N           -   original size of the transform (before reduction to N-1)
+    RQ          -   primitive root modulo N
+    RIQ         -   inverse of primitive root modulo N
+    PrecR       -   preallocated array
+    Offs        -   offset
+    
+OUTPUT PARAMETERS:
+    PrecR       -   data at Offs:Offs+2*(N-1)-1 store FFT of Rader's factors,
+                    other parts of PrecR are unchanged.
+                    
+NOTE: this function performs internal (N-1)-point FFT. It allocates temporary
+      plan which is destroyed after leaving this function.
+
+  -- ALGLIB --
+     Copyright 08.05.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftprecomputeradersfft(ae_int_t n,
+     ae_int_t rq,
+     ae_int_t riq,
+     /* Real    */ ae_vector* precr,
+     ae_int_t offs,
+     ae_state *_state)
+{
+    ae_frame _frame_block;
+    ae_int_t q;
+    fasttransformplan plan;
+    ae_int_t kiq;
+    double v;
+
+    ae_frame_make(_state, &_frame_block);
+    _fasttransformplan_init(&plan, _state, ae_true);
+
+    
+    /*
+     * Fill PrecR with Rader factors, perform FFT
+     */
+    kiq = 1;
+    for(q=0; q<=n-2; q++)
+    {
+        v = -2*ae_pi*kiq/n;
+        precr->ptr.p_double[offs+2*q+0] = ae_cos(v, _state);
+        precr->ptr.p_double[offs+2*q+1] = ae_sin(v, _state);
+        kiq = kiq*riq%n;
+    }
+    ftcomplexfftplan(n-1, 1, &plan, _state);
+    ftbase_ftapplysubplan(&plan, 0, precr, offs, 0, &plan.buffer, 1, _state);
+    ae_frame_leave(_state);
+}
+
+
+/*************************************************************************
+This subroutine applies complex Rader's FFT to input/output array A.
+
+INPUT PARAMETERS:
+    A           -   array, must be large enough for plan to work
+    ABase       -   base offset in array A, this value points to start of
+                    subarray whose length is equal to length of the plan
+    AOffset     -   offset with respect to ABase, 0<=AOffset<PlanLength.
+                    This is an offset within large PlanLength-subarray of
+                    the chunk to process.
+    OperandsCnt -   number of repeated operands (length N each)
+    N           -   original data length (measured in complex numbers)
+    SubPlan     -   position of the (N-1)-point FFT subplan which is used
+                    by transformation
+    RQ          -   primitive root modulo N
+    RIQ         -   inverse of primitive root modulo N
+    PrecOffs    -   offset of the precomputed data for the plan
+    Buf         -   temporary array
+    
+OUTPUT PARAMETERS:
+    A           -   transformed array
+
+  -- ALGLIB --
+     Copyright 05.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftradersfft(fasttransformplan* plan,
+     /* Real    */ ae_vector* a,
+     ae_int_t abase,
+     ae_int_t aoffset,
+     ae_int_t operandscnt,
+     ae_int_t n,
+     ae_int_t subplan,
+     ae_int_t rq,
+     ae_int_t riq,
+     ae_int_t precoffs,
+     /* Real    */ ae_vector* buf,
+     ae_state *_state)
+{
+    ae_int_t opidx;
+    ae_int_t i;
+    ae_int_t q;
+    ae_int_t kq;
+    ae_int_t kiq;
+    double x0;
+    double y0;
+    ae_int_t p0;
+    ae_int_t p1;
+    double ax;
+    double ay;
+    double bx;
+    double by;
+    double rx;
+    double ry;
+
+
+    ae_assert(operandscnt>=1, "FTApplyComplexRefFFT: OperandsCnt<1", _state);
+    
+    /*
+     * Process operands
+     */
+    for(opidx=0; opidx<=operandscnt-1; opidx++)
+    {
+        
+        /*
+         * fill QA
+         */
+        kq = 1;
+        p0 = abase+aoffset+opidx*n*2;
+        p1 = aoffset+opidx*n*2;
+        rx = a->ptr.p_double[p0+0];
+        ry = a->ptr.p_double[p0+1];
+        x0 = rx;
+        y0 = ry;
+        for(q=0; q<=n-2; q++)
+        {
+            ax = a->ptr.p_double[p0+2*kq+0];
+            ay = a->ptr.p_double[p0+2*kq+1];
+            buf->ptr.p_double[p1+0] = ax;
+            buf->ptr.p_double[p1+1] = ay;
+            rx = rx+ax;
+            ry = ry+ay;
+            kq = kq*rq%n;
+            p1 = p1+2;
+        }
+        p0 = abase+aoffset+opidx*n*2;
+        p1 = aoffset+opidx*n*2;
+        for(q=0; q<=n-2; q++)
+        {
+            a->ptr.p_double[p0] = buf->ptr.p_double[p1];
+            a->ptr.p_double[p0+1] = buf->ptr.p_double[p1+1];
+            p0 = p0+2;
+            p1 = p1+2;
+        }
+        
+        /*
+         * Convolution
+         */
+        ftbase_ftapplysubplan(plan, subplan, a, abase, aoffset+opidx*n*2, buf, 1, _state);
+        p0 = abase+aoffset+opidx*n*2;
+        p1 = precoffs;
+        for(i=0; i<=n-2; i++)
+        {
+            ax = a->ptr.p_double[p0+0];
+            ay = a->ptr.p_double[p0+1];
+            bx = plan->precr.ptr.p_double[p1+0];
+            by = plan->precr.ptr.p_double[p1+1];
+            a->ptr.p_double[p0+0] = ax*bx-ay*by;
+            a->ptr.p_double[p0+1] = -(ax*by+ay*bx);
+            p0 = p0+2;
+            p1 = p1+2;
+        }
+        ftbase_ftapplysubplan(plan, subplan, a, abase, aoffset+opidx*n*2, buf, 1, _state);
+        p0 = abase+aoffset+opidx*n*2;
+        for(i=0; i<=n-2; i++)
+        {
+            a->ptr.p_double[p0+0] = a->ptr.p_double[p0+0]/(n-1);
+            a->ptr.p_double[p0+1] = -a->ptr.p_double[p0+1]/(n-1);
+            p0 = p0+2;
+        }
+        
+        /*
+         * Result
+         */
+        buf->ptr.p_double[aoffset+opidx*n*2+0] = rx;
+        buf->ptr.p_double[aoffset+opidx*n*2+1] = ry;
+        kiq = 1;
+        p0 = aoffset+opidx*n*2;
+        p1 = abase+aoffset+opidx*n*2;
+        for(q=0; q<=n-2; q++)
+        {
+            buf->ptr.p_double[p0+2*kiq+0] = x0+a->ptr.p_double[p1+0];
+            buf->ptr.p_double[p0+2*kiq+1] = y0+a->ptr.p_double[p1+1];
+            kiq = kiq*riq%n;
+            p1 = p1+2;
+        }
+        p0 = abase+aoffset+opidx*n*2;
+        p1 = aoffset+opidx*n*2;
+        for(q=0; q<=n-1; q++)
+        {
+            a->ptr.p_double[p0] = buf->ptr.p_double[p1];
+            a->ptr.p_double[p0+1] = buf->ptr.p_double[p1+1];
+            p0 = p0+2;
+            p1 = p1+2;
+        }
+    }
+}
+
+
+/*************************************************************************
+Factorizes task size N into product of two smaller sizes N1 and N2
+
+INPUT PARAMETERS:
+    N       -   task size, N>0
+    IsRoot  -   whether taks is root task (first one in a sequence)
+    
+OUTPUT PARAMETERS:
+    N1, N2  -   such numbers that:
+                * for prime N:                  N1=N2=0
+                * for composite N<=MaxRadix:    N1=N2=0
+                * for composite N>MaxRadix:     1<=N1<=N2, N1*N2=N
+
+  -- ALGLIB --
+     Copyright 08.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static void ftbase_ftfactorize(ae_int_t n,
+     ae_bool isroot,
+     ae_int_t* n1,
+     ae_int_t* n2,
+     ae_state *_state)
+{
+    ae_int_t j;
+    ae_int_t k;
+
+    *n1 = 0;
+    *n2 = 0;
+
+    ae_assert(n>0, "FTFactorize: N<=0", _state);
+    *n1 = 0;
+    *n2 = 0;
+    
+    /*
+     * Small N
+     */
+    if( n<=ftbase_maxradix )
+    {
         return;
     }
-    ae_frame_leave(_state);
+    
+    /*
+     * Large N, recursive split
+     */
+    if( n>ftbase_recursivethreshold )
+    {
+        k = ae_iceil(ae_sqrt(n, _state), _state)+1;
+        ae_assert(k*k>=n, "FTFactorize: internal error during recursive factorization", _state);
+        for(j=k; j>=2; j--)
+        {
+            if( n%j==0 )
+            {
+                *n1 = ae_minint(n/j, j, _state);
+                *n2 = ae_maxint(n/j, j, _state);
+                return;
+            }
+        }
+    }
+    
+    /*
+     * N>MaxRadix, try to find good codelet
+     */
+    for(j=ftbase_maxradix; j>=2; j--)
+    {
+        if( n%j==0 )
+        {
+            *n1 = j;
+            *n2 = n/j;
+            break;
+        }
+    }
+    
+    /*
+     * In case no good codelet was found,
+     * try to factorize N into product of ANY primes.
+     */
+    if( *n1*(*n2)!=n )
+    {
+        for(j=2; j<=n-1; j++)
+        {
+            if( n%j==0 )
+            {
+                *n1 = j;
+                *n2 = n/j;
+                break;
+            }
+            if( j*j>n )
+            {
+                break;
+            }
+        }
+    }
+    
+    /*
+     * normalize
+     */
+    if( *n1>(*n2) )
+    {
+        j = *n1;
+        *n1 = *n2;
+        *n2 = j;
+    }
+}
+
+
+/*************************************************************************
+Returns optimistic estimate of the FFT cost, in UNITs (1 UNIT = 100 KFLOPs)
+
+INPUT PARAMETERS:
+    N       -   task size, N>0
+    
+RESULU:
+    cost in UNITs, rounded down to nearest integer
+
+NOTE: If FFT cost is less than 1 UNIT, it will return 0 as result.
+
+  -- ALGLIB --
+     Copyright 08.04.2013 by Bochkanov Sergey
+*************************************************************************/
+static ae_int_t ftbase_ftoptimisticestimate(ae_int_t n, ae_state *_state)
+{
+    ae_int_t result;
+
+
+    ae_assert(n>0, "FTOptimisticEstimate: N<=0", _state);
+    result = ae_ifloor(1.0E-5*5*n*ae_log(n, _state)/ae_log(2, _state), _state);
+    return result;
 }
 
 
@@ -11019,9 +15359,9 @@ static void ftbase_ffttwcalc(/* Real    */ ae_vector* a,
      ae_state *_state)
 {
     ae_int_t i;
-    ae_int_t j;
+    ae_int_t j2;
     ae_int_t n;
-    ae_int_t idx;
+    ae_int_t halfn1;
     ae_int_t offs;
     double x;
     double y;
@@ -11034,48 +15374,137 @@ static void ftbase_ffttwcalc(/* Real    */ ae_vector* a,
     double tmpx;
     double tmpy;
     double v;
+    ae_int_t updatetw2;
 
 
+    
+    /*
+     * Multiplication by twiddle factors for complex Cooley-Tukey FFT
+     * with N factorized as N1*N2.
+     *
+     * Naive solution to this problem is given below:
+     *
+     *     > for K:=1 to N2-1 do
+     *     >     for J:=1 to N1-1 do
+     *     >     begin
+     *     >         Idx:=K*N1+J;
+     *     >         X:=A[AOffset+2*Idx+0];
+     *     >         Y:=A[AOffset+2*Idx+1];
+     *     >         TwX:=Cos(-2*Pi()*K*J/(N1*N2));
+     *     >         TwY:=Sin(-2*Pi()*K*J/(N1*N2));
+     *     >         A[AOffset+2*Idx+0]:=X*TwX-Y*TwY;
+     *     >         A[AOffset+2*Idx+1]:=X*TwY+Y*TwX;
+     *     >     end;
+     *
+     * However, there are exist more efficient solutions.
+     *
+     * Each pass of the inner cycle corresponds to multiplication of one
+     * entry of A by W[k,j]=exp(-I*2*pi*k*j/N). This factor can be rewritten
+     * as exp(-I*2*pi*k/N)^j. So we can replace costly exponentiation by
+     * repeated multiplication: W[k,j+1]=W[k,j]*exp(-I*2*pi*k/N), with
+     * second factor being computed once in the beginning of the iteration.
+     *
+     * Also, exp(-I*2*pi*k/N) can be represented as exp(-I*2*pi/N)^k, i.e.
+     * we have W[K+1,1]=W[K,1]*W[1,1].
+     *
+     * In our loop we use following variables:
+     * * [TwBaseXM1,TwBaseY] =   [cos(2*pi/N)-1,     sin(2*pi/N)]
+     * * [TwRowXM1, TwRowY]  =   [cos(2*pi*I/N)-1,   sin(2*pi*I/N)]
+     * * [TwXM1,    TwY]     =   [cos(2*pi*I*J/N)-1, sin(2*pi*I*J/N)]
+     *
+     * Meaning of the variables:
+     * * [TwXM1,TwY] is current twiddle factor W[I,J]
+     * * [TwRowXM1, TwRowY] is W[I,1]
+     * * [TwBaseXM1,TwBaseY] is W[1,1]
+     *
+     * During inner loop we multiply current twiddle factor by W[I,1],
+     * during outer loop we update W[I,1].
+     *
+     */
+    ae_assert(ftbase_updatetw>=2, "FFTTwCalc: internal error - UpdateTw<2", _state);
+    updatetw2 = ftbase_updatetw/2;
+    halfn1 = n1/2;
     n = n1*n2;
     v = -2*ae_pi/n;
     twbasexm1 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
     twbasey = ae_sin(v, _state);
     twrowxm1 = 0;
     twrowy = 0;
+    offs = aoffset;
     for(i=0; i<=n2-1; i++)
     {
+        
+        /*
+         * Initialize twiddle factor for current row
+         */
         twxm1 = 0;
         twy = 0;
-        for(j=0; j<=n1-1; j++)
+        
+        /*
+         * N1-point block is separated into 2-point chunks and residual 1-point chunk
+         * (in case N1 is odd). Unrolled loop is several times faster.
+         */
+        for(j2=0; j2<=halfn1-1; j2++)
         {
-            idx = i*n1+j;
-            offs = aoffset+2*idx;
-            x = a->ptr.p_double[offs+0];
-            y = a->ptr.p_double[offs+1];
-            tmpx = x*twxm1-y*twy;
-            tmpy = x*twy+y*twxm1;
-            a->ptr.p_double[offs+0] = x+tmpx;
-            a->ptr.p_double[offs+1] = y+tmpy;
             
             /*
-             * update Tw: Tw(new) = Tw(old)*TwRow
+             * Processing:
+             * * process first element in a chunk.
+             * * update twiddle factor (unconditional update)
+             * * process second element
+             * * conditional update of the twiddle factor
              */
-            if( j<n1-1 )
+            x = a->ptr.p_double[offs+0];
+            y = a->ptr.p_double[offs+1];
+            tmpx = x*(1+twxm1)-y*twy;
+            tmpy = x*twy+y*(1+twxm1);
+            a->ptr.p_double[offs+0] = tmpx;
+            a->ptr.p_double[offs+1] = tmpy;
+            tmpx = (1+twxm1)*twrowxm1-twy*twrowy;
+            twy = twy+(1+twxm1)*twrowy+twy*twrowxm1;
+            twxm1 = twxm1+tmpx;
+            x = a->ptr.p_double[offs+2];
+            y = a->ptr.p_double[offs+3];
+            tmpx = x*(1+twxm1)-y*twy;
+            tmpy = x*twy+y*(1+twxm1);
+            a->ptr.p_double[offs+2] = tmpx;
+            a->ptr.p_double[offs+3] = tmpy;
+            offs = offs+4;
+            if( (j2+1)%updatetw2==0&&j2<halfn1-1 )
             {
-                if( j%ftbase_ftbaseupdatetw==0 )
-                {
-                    v = -2*ae_pi*i*(j+1)/n;
-                    twxm1 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
-                    twy = ae_sin(v, _state);
-                }
-                else
-                {
-                    tmpx = twrowxm1+twxm1*twrowxm1-twy*twrowy;
-                    tmpy = twrowy+twxm1*twrowy+twy*twrowxm1;
-                    twxm1 = twxm1+tmpx;
-                    twy = twy+tmpy;
-                }
+                
+                /*
+                 * Recalculate twiddle factor
+                 */
+                v = -2*ae_pi*i*2*(j2+1)/n;
+                twxm1 = ae_sin(0.5*v, _state);
+                twxm1 = -2*twxm1*twxm1;
+                twy = ae_sin(v, _state);
             }
+            else
+            {
+                
+                /*
+                 * Update twiddle factor
+                 */
+                tmpx = (1+twxm1)*twrowxm1-twy*twrowy;
+                twy = twy+(1+twxm1)*twrowy+twy*twrowxm1;
+                twxm1 = twxm1+tmpx;
+            }
+        }
+        if( n1%2==1 )
+        {
+            
+            /*
+             * Handle residual chunk
+             */
+            x = a->ptr.p_double[offs+0];
+            y = a->ptr.p_double[offs+1];
+            tmpx = x*(1+twxm1)-y*twy;
+            tmpy = x*twy+y*(1+twxm1);
+            a->ptr.p_double[offs+0] = tmpx;
+            a->ptr.p_double[offs+1] = tmpy;
+            offs = offs+2;
         }
         
         /*
@@ -11083,10 +15512,11 @@ static void ftbase_ffttwcalc(/* Real    */ ae_vector* a,
          */
         if( i<n2-1 )
         {
-            if( j%ftbase_ftbaseupdatetw==0 )
+            if( (i+1)%ftbase_updatetw==0 )
             {
                 v = -2*ae_pi*(i+1)/n;
-                twrowxm1 = -2*ae_sqr(ae_sin(0.5*v, _state), _state);
+                twrowxm1 = ae_sin(0.5*v, _state);
+                twrowxm1 = -2*twrowxm1*twrowxm1;
                 twrowy = ae_sin(v, _state);
             }
             else
@@ -11118,26 +15548,6 @@ static void ftbase_internalcomplexlintranspose(/* Real    */ ae_vector* a,
 
     ftbase_ffticltrec(a, astart, n, buf, 0, m, m, n, _state);
     ae_v_move(&a->ptr.p_double[astart], 1, &buf->ptr.p_double[0], 1, ae_v_len(astart,astart+2*m*n-1));
-}
-
-
-/*************************************************************************
-Linear transpose: transpose real matrix stored in 1-dimensional array
-
-  -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
-*************************************************************************/
-static void ftbase_internalreallintranspose(/* Real    */ ae_vector* a,
-     ae_int_t m,
-     ae_int_t n,
-     ae_int_t astart,
-     /* Real    */ ae_vector* buf,
-     ae_state *_state)
-{
-
-
-    ftbase_fftirltrec(a, astart, n, buf, 0, m, m, n, _state);
-    ae_v_move(&a->ptr.p_double[astart], 1, &buf->ptr.p_double[0], 1, ae_v_len(astart,astart+m*n-1));
 }
 
 
@@ -11351,109 +15761,63 @@ static void ftbase_ftbasefindsmoothrec(ae_int_t n,
 }
 
 
-/*************************************************************************
-Internal subroutine: array resize
-
-  -- ALGLIB --
-     Copyright 01.05.2009 by Bochkanov Sergey
-*************************************************************************/
-static void ftbase_fftarrayresize(/* Integer */ ae_vector* a,
-     ae_int_t* asize,
-     ae_int_t newasize,
-     ae_state *_state)
+ae_bool _fasttransformplan_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
-    ae_frame _frame_block;
-    ae_vector tmp;
-    ae_int_t i;
-
-    ae_frame_make(_state, &_frame_block);
-    ae_vector_init(&tmp, 0, DT_INT, _state, ae_true);
-
-    ae_vector_set_length(&tmp, *asize, _state);
-    for(i=0; i<=*asize-1; i++)
-    {
-        tmp.ptr.p_int[i] = a->ptr.p_int[i];
-    }
-    ae_vector_set_length(a, newasize, _state);
-    for(i=0; i<=*asize-1; i++)
-    {
-        a->ptr.p_int[i] = tmp.ptr.p_int[i];
-    }
-    *asize = newasize;
-    ae_frame_leave(_state);
-}
-
-
-/*************************************************************************
-Reference FHT stub
-*************************************************************************/
-static void ftbase_reffht(/* Real    */ ae_vector* a,
-     ae_int_t n,
-     ae_int_t offs,
-     ae_state *_state)
-{
-    ae_frame _frame_block;
-    ae_vector buf;
-    ae_int_t i;
-    ae_int_t j;
-    double v;
-
-    ae_frame_make(_state, &_frame_block);
-    ae_vector_init(&buf, 0, DT_REAL, _state, ae_true);
-
-    ae_assert(n>0, "RefFHTR1D: incorrect N!", _state);
-    ae_vector_set_length(&buf, n, _state);
-    for(i=0; i<=n-1; i++)
-    {
-        v = 0;
-        for(j=0; j<=n-1; j++)
-        {
-            v = v+a->ptr.p_double[offs+j]*(ae_cos(2*ae_pi*i*j/n, _state)+ae_sin(2*ae_pi*i*j/n, _state));
-        }
-        buf.ptr.p_double[i] = v;
-    }
-    for(i=0; i<=n-1; i++)
-    {
-        a->ptr.p_double[offs+i] = buf.ptr.p_double[i];
-    }
-    ae_frame_leave(_state);
-}
-
-
-ae_bool _ftplan_init(ftplan* p, ae_state *_state, ae_bool make_automatic)
-{
-    if( !ae_vector_init(&p->plan, 0, DT_INT, _state, make_automatic) )
+    fasttransformplan *p = (fasttransformplan*)_p;
+    ae_touch_ptr((void*)p);
+    if( !ae_matrix_init(&p->entries, 0, 0, DT_INT, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init(&p->precomputed, 0, DT_REAL, _state, make_automatic) )
+    if( !ae_vector_init(&p->buffer, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init(&p->tmpbuf, 0, DT_REAL, _state, make_automatic) )
+    if( !ae_vector_init(&p->precr, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init(&p->stackbuf, 0, DT_REAL, _state, make_automatic) )
+    if( !ae_vector_init(&p->preci, 0, DT_REAL, _state, make_automatic) )
+        return ae_false;
+    if( !ae_shared_pool_init(&p->bluesteinpool, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-ae_bool _ftplan_init_copy(ftplan* dst, ftplan* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _fasttransformplan_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
-    if( !ae_vector_init_copy(&dst->plan, &src->plan, _state, make_automatic) )
+    fasttransformplan *dst = (fasttransformplan*)_dst;
+    fasttransformplan *src = (fasttransformplan*)_src;
+    if( !ae_matrix_init_copy(&dst->entries, &src->entries, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init_copy(&dst->precomputed, &src->precomputed, _state, make_automatic) )
+    if( !ae_vector_init_copy(&dst->buffer, &src->buffer, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init_copy(&dst->tmpbuf, &src->tmpbuf, _state, make_automatic) )
+    if( !ae_vector_init_copy(&dst->precr, &src->precr, _state, make_automatic) )
         return ae_false;
-    if( !ae_vector_init_copy(&dst->stackbuf, &src->stackbuf, _state, make_automatic) )
+    if( !ae_vector_init_copy(&dst->preci, &src->preci, _state, make_automatic) )
+        return ae_false;
+    if( !ae_shared_pool_init_copy(&dst->bluesteinpool, &src->bluesteinpool, _state, make_automatic) )
         return ae_false;
     return ae_true;
 }
 
 
-void _ftplan_clear(ftplan* p)
+void _fasttransformplan_clear(void* _p)
 {
-    ae_vector_clear(&p->plan);
-    ae_vector_clear(&p->precomputed);
-    ae_vector_clear(&p->tmpbuf);
-    ae_vector_clear(&p->stackbuf);
+    fasttransformplan *p = (fasttransformplan*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_clear(&p->entries);
+    ae_vector_clear(&p->buffer);
+    ae_vector_clear(&p->precr);
+    ae_vector_clear(&p->preci);
+    ae_shared_pool_clear(&p->bluesteinpool);
+}
+
+
+void _fasttransformplan_destroy(void* _p)
+{
+    fasttransformplan *p = (fasttransformplan*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_destroy(&p->entries);
+    ae_vector_destroy(&p->buffer);
+    ae_vector_destroy(&p->precr);
+    ae_vector_destroy(&p->preci);
+    ae_shared_pool_destroy(&p->bluesteinpool);
 }
 
 

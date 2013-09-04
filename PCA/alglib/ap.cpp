@@ -70,6 +70,10 @@ namespace alglib_impl
 #define AE_SM_FROM_STRING 20
 #define AE_SM_TO_CPPSTRING 11
 
+#define AE_LOCK_CYCLES 512
+#define AE_LOCK_TESTS_BEFORE_YIELD 16
+#define AE_CRITICAL_ASSERT(x) if( !(x) ) abort()
+
 
 /*
  * alloc counter (if used)
@@ -80,6 +84,11 @@ ae_int64_t _alloc_counter = 0;
 #ifdef AE_DEBUGRNG
 static ae_int_t _debug_rng_s0 = 11;
 static ae_int_t _debug_rng_s1 = 13;
+#endif
+#ifdef AE_SMP_DEBUGCOUNTERS
+__declspec(align(AE_LOCK_ALIGNMENT)) volatile ae_int64_t _ae_dbg_lock_acquisitions = 0;
+__declspec(align(AE_LOCK_ALIGNMENT)) volatile ae_int64_t _ae_dbg_lock_spinwaits = 0;
+__declspec(align(AE_LOCK_ALIGNMENT)) volatile ae_int64_t _ae_dbg_lock_yields = 0;
 #endif
 
 /*
@@ -93,6 +102,13 @@ static ae_int_t _debug_rng_s1 = 13;
 static char _ae_int32_t_must_be_32_bits_wide[1-2*((int)(sizeof(ae_int32_t))-4)*((int)(sizeof(ae_int32_t))-4)];
 static char _ae_int64_t_must_be_64_bits_wide[1-2*((int)(sizeof(ae_int64_t))-8)*((int)(sizeof(ae_int64_t))-8)];
 static char _ae_int_t_must_be_pointer_sized [1-2*((int)(sizeof(ae_int_t))-(int)sizeof(void*))*((int)(sizeof(ae_int_t))-(int)(sizeof(void*)))];  
+
+/*
+ * This variable is used to prevent some tricky optimizations which may degrade multithreaded performance.
+ * It is touched once in the ae_init_pool() function from smp.c in order to prevent optimizations.
+ *
+ */
+static volatile ae_int_t ae_never_change_it = 1;
 
 ae_int_t ae_misalignment(const void *ptr, size_t alignment)
 {
@@ -118,6 +134,8 @@ void ae_break(ae_state *state, ae_error_type error_type, const char *msg)
 #ifndef AE_USE_CPP_ERROR_HANDLING
     if( state!=NULL )
     {
+        if( state->thread_exception_handler!=NULL )
+            state->thread_exception_handler(state);
         ae_state_clear(state);
         state->last_error = error_type;
         state->error_msg = msg;
@@ -131,6 +149,8 @@ void ae_break(ae_state *state, ae_error_type error_type, const char *msg)
 #else
     if( state!=NULL )
     {
+        if( state->thread_exception_handler!=NULL )
+            state->thread_exception_handler(state);
         ae_state_clear(state);
         state->last_error = error_type;
         state->error_msg = msg;
@@ -262,6 +282,22 @@ ae_int_t ae_sizeof(ae_datatype datatype)
     }
 }
 
+
+/************************************************************************
+This  dummy  function  is  used to prevent compiler messages about unused
+locals in automatically generated code.
+
+It makes nothing - just accepts pointer, "touches" it - and that is  all.
+It performs several tricky operations without side effects which  confuse
+compiler so it does not compain about unused locals in THIS function.
+************************************************************************/
+void ae_touch_ptr(void *p)
+{
+    void * volatile fake_variable0 = p;
+    void * volatile fake_variable1 = fake_variable0;
+    fake_variable0 = fake_variable1;
+}
+
 /************************************************************************
 This function initializes ALGLIB environment state.
 
@@ -320,6 +356,13 @@ void ae_state_init(ae_state *state)
     }
     else
         abort();
+    
+    /*
+     * set threading information
+     */
+    state->worker_thread = NULL;
+    state->parent_task = NULL;
+    state->thread_exception_handler = NULL;
 }
 
 
@@ -633,7 +676,10 @@ ae_bool ae_vector_set_length(ae_vector *dst, ae_int_t newsize, ae_state *state)
 
 
 /************************************************************************
-This function clears vector contents (releases all dynamically  allocated
+This  function  provides  "CLEAR"  functionality  for vector (contents is
+cleared, but structure still left in valid state).
+
+The  function clears vector contents (releases all dynamically  allocated
 memory). Vector may be in automatic management list  -  in this  case  it
 will NOT be removed from list.
 
@@ -648,6 +694,19 @@ void ae_vector_clear(ae_vector *dst)
     dst->cnt = 0;
     ae_db_free(&dst->data);
     dst->ptr.p_ptr = 0;
+}
+
+
+/************************************************************************
+This  function  provides "DESTROY"  functionality for vector (contents is
+cleared, all internal structures are destroyed). For vectors it  is  same
+as CLEAR.
+
+dst                 destination vector
+************************************************************************/
+void ae_vector_destroy(ae_vector *dst)
+{
+    ae_vector_clear(dst);
 }
 
 
@@ -816,7 +875,10 @@ ae_bool ae_matrix_set_length(ae_matrix *dst, ae_int_t rows, ae_int_t cols, ae_st
 
 
 /************************************************************************
-This function clears matrix contents (releases all dynamically  allocated
+This  function  provides  "CLEAR"  functionality  for vector (contents is
+cleared, but structure still left in valid state).
+
+The  function clears matrix contents (releases all dynamically  allocated
 memory). Matrix may be in automatic management list  -  in this  case  it
 will NOT be removed from list.
 
@@ -833,6 +895,20 @@ void ae_matrix_clear(ae_matrix *dst)
     dst->stride = 0;
     ae_db_free(&dst->data);
     dst->ptr.p_ptr = 0;
+}
+
+
+/************************************************************************
+This  function  provides  "DESTROY" functionality for matrix (contents is
+cleared, but structure still left in valid state).
+
+For matrices it is same as CLEAR.
+
+dst                 destination matrix
+************************************************************************/
+void ae_matrix_destroy(ae_matrix *dst)
+{
+    ae_matrix_clear(dst);
 }
 
 
@@ -867,6 +943,142 @@ void ae_swap_matrices(ae_matrix *mat1, ae_matrix *mat2)
     mat2->stride = stride;
     mat2->datatype = datatype;
     mat2->ptr.p_ptr = p_ptr;
+}
+
+
+/************************************************************************
+This function creates smart pointer structure.
+
+dst                 destination smart pointer.
+                    already allocated, but not initialized.
+subscriber          pointer to pointer which receives updates in the
+                    internal object stored in ae_smart_ptr. Any update to
+                    dst->ptr is translated to subscriber. Can be NULL.
+state               ALGLIB environment state
+make_automatic      if true, smart pointer is added to the dynamic block list
+
+After initialization, smart pointer stores NULL pointer.
+
+Error handling:
+* if state is NULL, returns ae_false on allocation error
+* if state is not NULL, calls ae_break() on allocation error
+* returns ae_true on success
+************************************************************************/
+ae_bool ae_smart_ptr_init(ae_smart_ptr *dst, void **subscriber, ae_state *state, ae_bool make_automatic)
+{
+    dst->subscriber = subscriber;
+    dst->ptr = NULL;
+    if( dst->subscriber!=NULL )
+        *(dst->subscriber) = dst->ptr;
+    dst->is_owner = ae_false;
+    dst->is_dynamic = ae_false;
+    dst->frame_entry.deallocator = ae_smart_ptr_destroy;
+    dst->frame_entry.ptr = dst;
+    if( make_automatic && state!=NULL )
+        ae_db_attach(&dst->frame_entry, state);
+    return ae_true;
+}
+
+
+/************************************************************************
+This function clears smart pointer structure.
+
+dst                 destination smart pointer.
+
+After call to this function smart pointer contains NULL reference,  which
+is  propagated  to  its  subscriber  (in  cases  non-NULL  subscruber was
+specified during pointer creation).
+************************************************************************/
+void ae_smart_ptr_clear(void *_dst)
+{
+    ae_smart_ptr *dst = (ae_smart_ptr*)_dst;
+    if( dst->is_owner && dst->ptr!=NULL )
+    {
+        dst->destroy(dst->ptr);
+        if( dst->is_dynamic )
+            ae_free(dst->ptr);
+    }
+    dst->is_owner = ae_false;
+    dst->is_dynamic = ae_false;
+    dst->ptr = NULL;
+    dst->destroy = NULL;
+    if( dst->subscriber!=NULL )
+        *(dst->subscriber) = NULL;
+}
+
+
+/************************************************************************
+This function dstroys smart pointer structure (same as clearing it).
+
+dst                 destination smart pointer.
+************************************************************************/
+void ae_smart_ptr_destroy(void *_dst)
+{
+    ae_smart_ptr_clear(_dst);
+}
+
+
+/************************************************************************
+This function assigns pointer to ae_smart_ptr structure.
+
+dst                 destination smart pointer.
+new_ptr             new pointer to assign
+is_owner            whether smart pointer owns new_ptr
+is_dynamic          whether object is dynamic - clearing such object
+                    requires BOTH calling destructor function AND calling
+                    ae_free() for memory occupied by object.
+destroy             destructor function
+
+In case smart pointer already contains non-NULL value and owns this value,
+it is freed before assigning new pointer.
+
+Changes in pointer are propagated to its  subscriber  (in  case  non-NULL
+subscriber was specified during pointer creation).
+
+You can specify NULL new_ptr, in which case is_owner/destroy are ignored.
+************************************************************************/
+void ae_smart_ptr_assign(ae_smart_ptr *dst, void *new_ptr, ae_bool is_owner, ae_bool is_dynamic, void (*destroy)(void*))
+{
+    if( dst->is_owner && dst->ptr!=NULL )
+        dst->destroy(dst->ptr);
+    if( new_ptr!=NULL )
+    {
+        dst->ptr = new_ptr;
+        dst->is_owner = is_owner;
+        dst->is_dynamic = is_dynamic;
+        dst->destroy = destroy;
+    }
+    else
+    {
+        dst->ptr = NULL;
+        dst->is_owner = ae_false;
+        dst->is_dynamic = ae_false;
+        dst->destroy = NULL;
+    }
+    if( dst->subscriber!=NULL )
+        *(dst->subscriber) = dst->ptr;
+}
+
+
+/************************************************************************
+This function releases pointer owned by ae_smart_ptr structure:
+* all internal fields are set to NULL
+* destructor function for internal pointer is NOT called even when we own
+  this pointer. After this call ae_smart_ptr releases  ownership  of  its
+  pointer and passes it to caller.
+* changes in pointer are propagated to its subscriber (in  case  non-NULL
+  subscriber was specified during pointer creation).
+
+dst                 destination smart pointer.
+************************************************************************/
+void ae_smart_ptr_release(ae_smart_ptr *dst)
+{
+    dst->is_owner = ae_false;
+    dst->is_dynamic = ae_false;
+    dst->ptr = NULL;
+    dst->destroy = NULL;
+    if( dst->subscriber!=NULL )
+        *(dst->subscriber) = NULL;
 }
 
 /************************************************************************
@@ -2126,7 +2338,7 @@ static ae_int_t _ae_char2sixbits_tbl[] = {
     59, 60, 61, -1, -1, -1, -1, -1 };
 ae_int_t ae_char2sixbits(char c)
 {
-    return (c>=0 && c<127) ? _ae_char2sixbits_tbl[c] : -1;
+    return (c>=0 && c<127) ? _ae_char2sixbits_tbl[(int)c] : -1;
 }
 
 /************************************************************************
@@ -2257,7 +2469,7 @@ void ae_int2str(ae_int_t v, char *buf, ae_state *state)
     u.bytes[8] = 0;
     if( state->endianness==AE_BIG_ENDIAN )
     {
-        for(i=0; i<sizeof(ae_int_t)/2; i++)
+        for(i=0; i<(ae_int_t)(sizeof(ae_int_t)/2); i++)
         {
             unsigned char tc;
             tc = u.bytes[i];
@@ -2329,7 +2541,7 @@ ae_int_t ae_str2int(const char *buf, ae_state *state, const char **pasttheend)
     ae_foursixbits2threebytes(sixbits+8, u.bytes+6);
     if( state->endianness==AE_BIG_ENDIAN )
     {
-        for(i=0; i<sizeof(ae_int_t)/2; i++)
+        for(i=0; i<(ae_int_t)(sizeof(ae_int_t)/2); i++)
         {
             unsigned char tc;
             tc = u.bytes[i];
@@ -2394,7 +2606,7 @@ void ae_double2str(double v, char *buf, ae_state *state)
     u.bytes[8] = 0;
     if( state->endianness==AE_BIG_ENDIAN )
     {
-        for(i=0; i<sizeof(double)/2; i++)
+        for(i=0; i<(ae_int_t)(sizeof(double)/2); i++)
         {
             unsigned char tc;
             tc = u.bytes[i];
@@ -2492,7 +2704,7 @@ double ae_str2double(const char *buf, ae_state *state, const char **pasttheend)
     ae_foursixbits2threebytes(sixbits+8, u.bytes+6);
     if( state->endianness==AE_BIG_ENDIAN )
     {
-        for(i=0; i<sizeof(double)/2; i++)
+        for(i=0; i<(ae_int_t)(sizeof(double)/2); i++)
         {
             unsigned char tc;
             tc = u.bytes[i];
@@ -2502,6 +2714,678 @@ double ae_str2double(const char *buf, ae_state *state, const char **pasttheend)
     }
     return u.dval;
 }
+
+
+/************************************************************************
+This function performs given number of spin-wait iterations
+************************************************************************/
+void ae_spin_wait(ae_int_t cnt)
+{
+    /*
+     * these strange operations with ae_never_change_it are necessary to
+     * prevent compiler optimization of the loop.
+     */
+    volatile ae_int_t i;
+    
+    /* very unlikely because no one will wait for such amount of cycles */
+    if( cnt>0x12345678 )
+        ae_never_change_it = cnt%10;
+    
+    /* spin wait, test condition which will never be true */
+    for(i=0; i<cnt; i++)
+        if( ae_never_change_it>0 )
+            ae_never_change_it--;
+}
+
+
+/************************************************************************
+This function causes the calling thread to relinquish the CPU. The thread
+is moved to the end of the queue and some other thread gets to run.
+
+NOTE: this function should NOT be called when AE_OS is AE_UNKNOWN  -  the
+      whole program will be abnormally terminated.
+************************************************************************/
+void ae_yield()
+{
+#if AE_OS==AE_WINDOWS
+    if( !SwitchToThread() )
+        Sleep(0);
+#elif AE_OS==AE_POSIX
+    sched_yield();
+#else
+    abort();
+#endif
+}
+
+/************************************************************************
+This function initializes ae_lock structure and sets lock in a free mode.
+************************************************************************/
+void ae_init_lock(ae_lock *lock)
+{
+#if AE_OS==AE_WINDOWS
+    lock->p_lock = (ae_int_t*)ae_align((void*)(&lock->buf),AE_LOCK_ALIGNMENT);
+    lock->p_lock[0] = 0;
+#elif AE_OS==AE_POSIX
+    pthread_mutex_init(&lock->mutex, NULL);
+#else
+    lock->is_locked = ae_false;
+#endif
+}
+
+
+/************************************************************************
+This function acquires lock. In case lock is busy, we perform several
+iterations inside tight loop before trying again.
+************************************************************************/
+void ae_acquire_lock(ae_lock *lock)
+{
+#if AE_OS==AE_WINDOWS
+    ae_int_t cnt = 0;
+#ifdef AE_SMP_DEBUGCOUNTERS
+    InterlockedIncrement((LONG volatile *)&_ae_dbg_lock_acquisitions);
+#endif
+    for(;;)
+    {
+		if( InterlockedCompareExchange((LONG volatile *)lock->p_lock, 1, 0)==0 )
+		    return;
+        ae_spin_wait(AE_LOCK_CYCLES);
+#ifdef AE_SMP_DEBUGCOUNTERS
+        InterlockedIncrement((LONG volatile *)&_ae_dbg_lock_spinwaits);
+#endif
+        cnt++;
+        if( cnt%AE_LOCK_TESTS_BEFORE_YIELD==0 )
+        {
+#ifdef AE_SMP_DEBUGCOUNTERS
+            InterlockedIncrement((LONG volatile *)&_ae_dbg_lock_yields);
+#endif
+            ae_yield();
+        }
+    }
+#elif AE_OS==AE_POSIX
+    ae_int_t cnt = 0;
+    for(;;)
+    {
+		if(  pthread_mutex_trylock(&lock->mutex)==0 )
+		    return;
+        ae_spin_wait(AE_LOCK_CYCLES);
+        cnt++;
+        if( cnt%AE_LOCK_TESTS_BEFORE_YIELD==0 )
+            ae_yield();
+    }
+   ;
+#else
+    AE_CRITICAL_ASSERT(!lock->is_locked);
+    lock->is_locked = ae_true;
+#endif
+}
+
+
+/************************************************************************
+This function releases lock.
+************************************************************************/
+void ae_release_lock(ae_lock *lock)
+{
+#if AE_OS==AE_WINDOWS
+    InterlockedExchange((LONG volatile *)lock->p_lock, 0);
+#elif AE_OS==AE_POSIX
+    pthread_mutex_unlock(&lock->mutex);
+#else
+    lock->is_locked = ae_false;
+#endif
+}
+
+
+/************************************************************************
+This function frees ae_lock structure.
+************************************************************************/
+void ae_free_lock(ae_lock *lock)
+{
+#if AE_OS==AE_POSIX
+    pthread_mutex_destroy(&lock->mutex);
+#endif
+}
+
+
+/************************************************************************
+This function creates ae_shared_pool structure.
+
+dst                 destination shared pool;
+                    already allocated, but not initialized.
+state               ALGLIB environment state
+make_automatic      if true, pool is added to the dynamic block list
+
+Error handling:
+* if state is NULL, returns ae_false on allocation error
+* if state is not NULL, calls ae_break() on allocation error
+* returns ae_true on success
+
+dst is assumed to be uninitialized, its fields are ignored.
+************************************************************************/
+ae_bool ae_shared_pool_init(void *_dst, ae_state *state, ae_bool make_automatic)
+{
+    ae_shared_pool *dst;
+    
+    dst = (ae_shared_pool*)_dst;
+    
+    /* init */
+    dst->seed_object = NULL;
+    dst->recycled_objects = NULL;
+    dst->recycled_entries = NULL;
+    dst->enumeration_counter = NULL;
+    dst->size_of_object = 0;
+    dst->init = NULL;
+    dst->init_copy = NULL;
+    dst->destroy = NULL;
+    dst->frame_entry.deallocator = ae_shared_pool_destroy;
+    dst->frame_entry.ptr = dst;
+    if( make_automatic && state!=NULL )
+        ae_db_attach(&dst->frame_entry, state);
+    ae_init_lock(&dst->pool_lock);
+    return ae_true;
+}
+
+
+/************************************************************************
+This function clears all dynamically allocated fields of the pool except
+for the lock. It does NOT try to acquire pool_lock.
+
+NOTE: this function is NOT thread-safe, it is not protected by lock.
+************************************************************************/
+static void ae_shared_pool_internalclear(ae_shared_pool *dst)
+{
+    ae_shared_pool_entry *ptr, *tmp;
+    
+    /* destroy seed */
+    if( dst->seed_object!=NULL )
+    {
+        dst->destroy((void*)dst->seed_object);
+        ae_free((void*)dst->seed_object);
+        dst->seed_object = NULL;
+    }
+    
+    /* destroy recycled objects */
+    for(ptr=dst->recycled_objects; ptr!=NULL;)
+    {
+        tmp = (ae_shared_pool_entry*)ptr->next_entry;
+        dst->destroy(ptr->obj);
+        ae_free(ptr->obj);
+        ae_free(ptr);
+        ptr = tmp;
+    }
+    dst->recycled_objects = NULL;
+    
+    /* destroy recycled entries */
+    for(ptr=dst->recycled_entries; ptr!=NULL;)
+    {
+        tmp = (ae_shared_pool_entry*)ptr->next_entry;
+        ae_free(ptr);
+        ptr = tmp;
+    }
+    dst->recycled_entries = NULL;
+}
+
+
+/************************************************************************
+This function creates copy of ae_shared_pool.
+
+dst                 destination pool, allocated but not initialized
+src                 source pool
+state               ALGLIB environment state
+make_automatic      if true, pool is added to the dynamic block list
+
+Error handling:
+* if state is NULL, returns ae_false on allocation error
+* if state is not NULL, calls ae_break() on allocation error
+* returns ae_true on success
+
+dst is assumed to be uninitialized, its fields are ignored.
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+ae_bool ae_shared_pool_init_copy(void *_dst, void *_src, ae_state *state, ae_bool make_automatic)
+{
+    ae_shared_pool *dst, *src;
+    ae_shared_pool_entry *ptr;
+    
+    dst = (ae_shared_pool*)_dst;
+    src = (ae_shared_pool*)_src;
+    if( !ae_shared_pool_init(dst, state, make_automatic) )
+        return ae_false;
+    
+    /* copy non-pointer fields */
+    dst->size_of_object = src->size_of_object;
+    dst->init = src->init;
+    dst->init_copy = src->init_copy;
+    dst->destroy = src->destroy;
+    ae_init_lock(&dst->pool_lock);    
+    
+    /* copy seed object */
+    if( src->seed_object!=NULL )
+    {
+        dst->seed_object = ae_malloc(dst->size_of_object, state);
+        if( dst->seed_object==NULL )
+            return ae_false;
+        if( !dst->init_copy(dst->seed_object, src->seed_object, state, ae_false) )
+            return ae_false;
+    }
+    
+    /* copy recycled objects */
+    dst->recycled_objects = NULL;
+    for(ptr=src->recycled_objects; ptr!=NULL; ptr=(ae_shared_pool_entry*)ptr->next_entry)
+    {
+        ae_shared_pool_entry *tmp;
+        tmp = (ae_shared_pool_entry*)ae_malloc(sizeof(ae_shared_pool_entry), state);
+        if( tmp==NULL )
+            return ae_false;
+        tmp->obj =  ae_malloc(dst->size_of_object, state);
+        if( tmp->obj==NULL )
+            return ae_false;
+        if( !dst->init_copy(tmp->obj, ptr->obj, state, ae_false) )
+            return ae_false;
+        tmp->next_entry = dst->recycled_objects;
+        dst->recycled_objects = tmp;
+    }
+    
+    /* recycled entries are not copied because they do not store any information */
+    dst->recycled_entries = NULL;
+    
+    /* enumeration counter is reset on copying */
+    dst->enumeration_counter = NULL;
+    
+    /* initialize frame record */
+    dst->frame_entry.deallocator = ae_shared_pool_destroy;
+    dst->frame_entry.ptr = dst;
+    
+    /* return */
+    return ae_true;
+}
+
+
+/************************************************************************
+This function clears contents of the pool, but pool remain usable.
+
+IMPORTANT: this function invalidates dst, it can not be used after it  is
+           cleared.
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+void ae_shared_pool_clear(void *_dst)
+{
+    ae_shared_pool *dst = (ae_shared_pool*)_dst;
+    
+    /* clear seed and lists */
+    ae_shared_pool_internalclear(dst);
+    
+    /* clear fields */
+    dst->seed_object = NULL;
+    dst->recycled_objects = NULL;
+    dst->recycled_entries = NULL;
+    dst->enumeration_counter = NULL;
+    dst->size_of_object = 0;
+    dst->init = NULL;
+    dst->init_copy = NULL;
+    dst->destroy = NULL;
+}
+
+
+/************************************************************************
+This function destroys  pool  (object  is  left  in  invalid  state,  all
+dynamically allocated memory is freed).
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+void ae_shared_pool_destroy(void *_dst)
+{
+    ae_shared_pool *dst = (ae_shared_pool*)_dst;
+    ae_shared_pool_clear(_dst);
+    ae_free_lock(&dst->pool_lock);
+}
+
+
+/************************************************************************
+This function returns True, if internal seed object was set.  It  returns
+False for un-seeded pool.
+
+dst                 destination pool (initialized by constructor function)
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+ae_bool ae_shared_pool_is_initialized(void *_dst)
+{
+    ae_shared_pool *dst = (ae_shared_pool*)_dst;
+    return dst->seed_object!=NULL;
+}
+
+
+/************************************************************************
+This function sets internal seed object. All objects owned by the pool
+(current seed object, recycled objects) are automatically freed.
+
+dst                 destination pool (initialized by constructor function)
+seed_object         new seed object
+size_of_object      sizeof(), used to allocate memory
+init                constructor function
+init_copy           copy constructor
+clear               destructor function
+state               ALGLIB environment state
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+void ae_shared_pool_set_seed(
+    ae_shared_pool  *dst,
+    void            *seed_object,
+    ae_int_t        size_of_object,
+    ae_bool         (*init)(void* dst, ae_state* state, ae_bool make_automatic),
+    ae_bool         (*init_copy)(void* dst, void* src, ae_state* state, ae_bool make_automatic),
+    void            (*destroy)(void* ptr),
+    ae_state        *state)
+{
+    /* destroy internal objects */
+    ae_shared_pool_internalclear(dst);
+    
+    /* set non-pointer fields */
+    dst->size_of_object = size_of_object;
+    dst->init = init;
+    dst->init_copy = init_copy;
+    dst->destroy = destroy;
+    
+    /* set seed object */
+    dst->seed_object = ae_malloc(size_of_object, state);
+    ae_assert(dst->seed_object!=NULL, "ALGLIB: unable to allocate memory for ae_shared_pool_set_seed()", state);
+    ae_assert(
+        init_copy(dst->seed_object, seed_object, state, ae_false),
+        "ALGLIB: unable to initialize seed in ae_shared_pool_set_seed()",
+        state);
+}
+
+
+/************************************************************************
+This  function  retrieves  a  copy  of  the seed object from the pool and
+stores it to target smart pointer ptr.
+
+In case target pointer owns non-NULL  value,  it  is  deallocated  before
+storing value retrieved from pool. Target pointer becomes  owner  of  the
+value which was retrieved from pool.
+
+pool                pool
+pptr                pointer to ae_smart_ptr structure
+state               ALGLIB environment state
+
+NOTE: this function IS thread-safe.  It  acquires  pool  lock  during its
+      operation and can be used simultaneously from several threads.
+************************************************************************/
+void ae_shared_pool_retrieve(
+    ae_shared_pool  *pool,
+    ae_smart_ptr    *pptr,
+    ae_state        *state)
+{
+    void *new_obj;
+    
+    /* assert that pool was seeded */
+    ae_assert(
+        pool->seed_object!=NULL,
+        "ALGLIB: shared pool is not seeded, PoolRetrieve() failed",
+        state);
+    
+    /* acquire lock */
+    ae_acquire_lock(&pool->pool_lock);
+    
+    /* try to reuse recycled objects */
+    if( pool->recycled_objects!=NULL )
+    {
+        void *new_obj;
+        ae_shared_pool_entry *result;
+        
+        /* retrieve entry/object from list of recycled objects */
+        result = pool->recycled_objects;
+        pool->recycled_objects = (ae_shared_pool_entry*)pool->recycled_objects->next_entry;
+        new_obj = result->obj;
+        result->obj = NULL;
+        
+        /* move entry to list of recycled entries */
+        result->next_entry = pool->recycled_entries;
+        pool->recycled_entries = result;
+        
+        /* release lock */
+        ae_release_lock(&pool->pool_lock);
+        
+        /* assign object to smart pointer */
+        ae_smart_ptr_assign(pptr, new_obj, ae_true, ae_true, pool->destroy);
+        return;
+    }
+        
+    /* release lock; we do not need it anymore because copy constructor does not modify source variable */
+    ae_release_lock(&pool->pool_lock);
+    
+    /* create new object from seed */
+    new_obj = ae_malloc(pool->size_of_object, state);
+    ae_assert(new_obj!=NULL, "ALGLIB: unable to allocate memory for ae_shared_pool_retrieve()", state);
+    ae_assert(
+        pool->init_copy(new_obj, pool->seed_object, state, ae_false),
+        "ALGLIB: unable to initialize object in ae_shared_pool_retrieve()",
+        state);
+        
+    /* assign object to smart pointer and return */
+    ae_smart_ptr_assign(pptr, new_obj, ae_true, ae_true, pool->destroy);
+}
+
+
+/************************************************************************
+This function recycles object owned by smart  pointer  by  moving  it  to
+internal storage of the shared pool.
+
+Source pointer must own the object. After function is over, it owns NULL
+pointer.
+
+pool                pool
+pptr                pointer to ae_smart_ptr structure
+state               ALGLIB environment state
+
+NOTE: this function IS thread-safe.  It  acquires  pool  lock  during its
+      operation and can be used simultaneously from several threads.
+************************************************************************/
+void ae_shared_pool_recycle(
+    ae_shared_pool  *pool,
+    ae_smart_ptr    *pptr,
+    ae_state        *state)
+{
+    ae_shared_pool_entry *new_entry;
+    
+    /* assert that pool was seeded */
+    ae_assert(
+        pool->seed_object!=NULL,
+        "ALGLIB: shared pool is not seeded, PoolRecycle() failed",
+        state);
+    
+    /* assert that pointer non-null and owns the object */
+    ae_assert(pptr->is_owner,  "ALGLIB: pptr in ae_shared_pool_recycle() does not own its pointer", state);
+    ae_assert(pptr->ptr!=NULL, "ALGLIB: pptr in ae_shared_pool_recycle() is NULL", state);
+    
+    /* acquire lock */
+    ae_acquire_lock(&pool->pool_lock);
+    
+    /* acquire shared pool entry (reuse one from recycled_entries or malloc new one) */
+    if( pool->recycled_entries!=NULL )
+    {
+        /* reuse previously allocated entry */
+        new_entry = pool->recycled_entries;
+        pool->recycled_entries = (ae_shared_pool_entry*)new_entry->next_entry;
+    }
+    else
+    {
+        /*
+         * Allocate memory for new entry.
+         *
+         * NOTE: we release pool lock during allocation because ae_malloc() may raise
+         *       exception and we do not want our pool to be left in the locked state.
+         */
+        ae_release_lock(&pool->pool_lock);
+        new_entry =  (ae_shared_pool_entry*)ae_malloc(sizeof(ae_shared_pool_entry), state);
+        ae_assert(new_entry!=NULL, "ALGLIB: unable to allocate memory in ae_shared_pool_recycle()", state);
+        ae_acquire_lock(&pool->pool_lock);
+    }
+    
+    /* add object to the list of recycled objects */
+    new_entry->obj = pptr->ptr;
+    new_entry->next_entry = pool->recycled_objects;
+    pool->recycled_objects = new_entry;
+    
+    /* release lock object */
+    ae_release_lock(&pool->pool_lock);
+    
+    /* release source pointer */
+    ae_smart_ptr_release(pptr);
+}
+
+
+/************************************************************************
+This function clears internal list of  recycled  objects,  but  does  not
+change seed object managed by the pool.
+
+pool                pool
+state               ALGLIB environment state
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+void ae_shared_pool_clear_recycled(
+    ae_shared_pool  *pool,
+    ae_state        *state)
+{
+    ae_shared_pool_entry *ptr, *tmp;
+    
+    /* clear recycled objects */
+    for(ptr=pool->recycled_objects; ptr!=NULL;)
+    {
+        tmp = (ae_shared_pool_entry*)ptr->next_entry;
+        pool->destroy(ptr->obj);
+        ae_free(ptr->obj);
+        ae_free(ptr);
+        ptr = tmp;
+    }
+    pool->recycled_objects = NULL;
+}
+
+
+/************************************************************************
+This function allows to enumerate recycled elements of the  shared  pool.
+It stores pointer to the first recycled object in the smart pointer.
+
+IMPORTANT:
+* in case target pointer owns non-NULL  value,  it  is deallocated before
+  storing value retrieved from pool.
+* recycled object IS NOT removed from pool
+* target pointer DOES NOT become owner of the new value
+* this function IS NOT thread-safe
+* you SHOULD NOT modify shared pool during enumeration (although you  can
+  modify state of the objects retrieved from pool)
+* in case there is no recycled objects in the pool, NULL is stored to pptr
+* in case pool is not seeded, NULL is stored to pptr
+
+pool                pool
+pptr                pointer to ae_smart_ptr structure
+state               ALGLIB environment state
+************************************************************************/
+void ae_shared_pool_first_recycled(
+    ae_shared_pool  *pool,
+    ae_smart_ptr    *pptr,
+    ae_state        *state)
+{   
+    /* modify internal enumeration counter */
+    pool->enumeration_counter = pool->recycled_objects;
+    
+    /* exit on empty list */
+    if( pool->enumeration_counter==NULL )
+    {
+        ae_smart_ptr_assign(pptr, NULL, ae_false, ae_false, NULL);
+        return;
+    }
+    
+    /* assign object to smart pointer */
+    ae_smart_ptr_assign(pptr, pool->enumeration_counter->obj, ae_false, ae_false, pool->destroy);
+}
+
+
+/************************************************************************
+This function allows to enumerate recycled elements of the  shared  pool.
+It stores pointer to the next recycled object in the smart pointer.
+
+IMPORTANT:
+* in case target pointer owns non-NULL  value,  it  is deallocated before
+  storing value retrieved from pool.
+* recycled object IS NOT removed from pool
+* target pointer DOES NOT become owner of the new value
+* this function IS NOT thread-safe
+* you SHOULD NOT modify shared pool during enumeration (although you  can
+  modify state of the objects retrieved from pool)
+* in case there is no recycled objects left in the pool, NULL is stored.
+* in case pool is not seeded, NULL is stored.
+
+pool                pool
+pptr                pointer to ae_smart_ptr structure
+state               ALGLIB environment state
+************************************************************************/
+void ae_shared_pool_next_recycled(
+    ae_shared_pool  *pool,
+    ae_smart_ptr    *pptr,
+    ae_state        *state)
+{   
+    /* exit on end of list */
+    if( pool->enumeration_counter==NULL )
+    {
+        ae_smart_ptr_assign(pptr, NULL, ae_false, ae_false, NULL);
+        return;
+    }
+    
+    /* modify internal enumeration counter */
+    pool->enumeration_counter = (ae_shared_pool_entry*)pool->enumeration_counter->next_entry;
+    
+    /* exit on empty list */
+    if( pool->enumeration_counter==NULL )
+    {
+        ae_smart_ptr_assign(pptr, NULL, ae_false, ae_false, NULL);
+        return;
+    }
+    
+    /* assign object to smart pointer */
+    ae_smart_ptr_assign(pptr, pool->enumeration_counter->obj, ae_false, ae_false, pool->destroy);
+}
+
+
+
+/************************************************************************
+This function clears internal list of recycled objects and  seed  object.
+However, pool still can be used (after initialization with another seed).
+
+pool                pool
+state               ALGLIB environment state
+
+NOTE: this function is NOT thread-safe. It does not acquire pool lock, so
+      you should NOT call it when lock can be used by another thread.
+************************************************************************/
+void ae_shared_pool_reset(
+    ae_shared_pool  *pool,
+    ae_state        *state)
+{
+    /* clear seed and lists */
+    ae_shared_pool_internalclear(pool);
+    
+    /* clear fields */
+    pool->seed_object = NULL;
+    pool->recycled_objects = NULL;
+    pool->recycled_entries = NULL;
+    pool->enumeration_counter = NULL;
+    pool->size_of_object = 0;
+    pool->init = NULL;
+    pool->init_copy = NULL;
+    pool->destroy = NULL;
+}
+
 
 /************************************************************************
 This function initializes serializer
@@ -3718,6 +4602,29 @@ void _rcommstate_clear(rcommstate* p)
     ae_vector_clear(&p->ca);
 }
 
+void _rcommstate_destroy(rcommstate* p)
+{
+    _rcommstate_clear(p);
+}
+
+#ifdef AE_DEBUG4WINDOWS
+int _tickcount()
+{
+    return GetTickCount();
+}
+#endif
+
+#ifdef AE_DEBUG4POSIX
+#include <time.h>
+int _tickcount()
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) )
+        return 0;
+    return now.tv_sec * 1000.0 + now.tv_nsec / 1000000.0;
+}
+#endif
+
 #ifdef AE_DEBUGRNG
 void ae_set_seed(ae_int_t s0, ae_int_t s1)
 {
@@ -4084,6 +4991,12 @@ alglib::complex alglib::conj(const alglib::complex &z)
 alglib::complex alglib::csqr(const alglib::complex &z)
 { return alglib::complex(z.x*z.x-z.y*z.y, 2*z.x*z.y); }
 
+void alglib::setnworkers(alglib::ae_int_t nworkers)
+{
+#ifdef AE_HPC
+    alglib_impl::ae_set_cores_to_use(nworkers);
+#endif
+}
 
 /********************************************************************
 Level 1 BLAS functions
@@ -4956,35 +5869,6 @@ alglib::ae_vector_wrapper::~ae_vector_wrapper()
         ae_vector_clear(p_vec);
 }
 
-alglib::ae_vector_wrapper::ae_vector_wrapper(const alglib::ae_vector_wrapper &rhs)
-{
-    if( rhs.p_vec!=NULL )
-    {
-        p_vec = &vec;
-        if( !ae_vector_init_copy(p_vec, rhs.p_vec, NULL, ae_false) )
-            throw alglib::ap_error("ALGLIB: malloc error!");
-    }
-    else
-        p_vec = NULL;
-}
-
-const alglib::ae_vector_wrapper& alglib::ae_vector_wrapper::operator=(const alglib::ae_vector_wrapper &rhs)
-{
-    if( this==&rhs )
-        return *this;
-    if( p_vec==&vec )
-        ae_vector_clear(p_vec);
-    if( rhs.p_vec!=NULL )
-    {
-        p_vec = &vec;
-        if( !ae_vector_init_copy(p_vec, rhs.p_vec, NULL, ae_false) )
-            throw alglib::ap_error("ALGLIB: malloc error!");
-    }
-    else
-        p_vec = NULL;
-    return *this;
-}
-
 void alglib::ae_vector_wrapper::setlength(ae_int_t iLen)
 {
     if( p_vec==NULL )
@@ -5030,12 +5914,19 @@ alglib_impl::ae_vector* alglib::ae_vector_wrapper::c_ptr()
     return p_vec;
 }
 
-alglib::boolean_1d_array::boolean_1d_array()  
+void alglib::ae_vector_wrapper::create(const alglib::ae_vector_wrapper &rhs)
 {
-    allocate_own(0, alglib_impl::DT_BOOL);
+    if( rhs.p_vec!=NULL )
+    {
+        p_vec = &vec;
+        if( !ae_vector_init_copy(p_vec, rhs.p_vec, NULL, ae_false) )
+            throw alglib::ap_error("ALGLIB: malloc error!");
+    }
+    else
+        p_vec = NULL;
 }
 
-alglib::boolean_1d_array::boolean_1d_array(const char *s)  
+void alglib::ae_vector_wrapper::create(const char *s, alglib_impl::ae_datatype datatype)
 {
     std::vector<const char*> svec;
     size_t i;
@@ -5043,9 +5934,22 @@ alglib::boolean_1d_array::boolean_1d_array(const char *s)
     try
     {
         str_vector_create(p, true, &svec);
-        allocate_own((ae_int_t)(svec.size()), alglib_impl::DT_BOOL);
+        allocate_own((ae_int_t)(svec.size()), datatype);
         for(i=0; i<svec.size(); i++)
-            operator()((ae_int_t)i) = parse_bool_delim(svec[i],",]");
+        {
+            if( datatype==alglib_impl::DT_BOOL )
+                p_vec->ptr.p_bool[i]    = parse_bool_delim(svec[i],",]");
+            if( datatype==alglib_impl::DT_INT )
+                p_vec->ptr.p_int[i]     = parse_int_delim(svec[i],",]");
+            if( datatype==alglib_impl::DT_REAL )
+                p_vec->ptr.p_double[i]  = parse_real_delim(svec[i],",]");
+            if( datatype==alglib_impl::DT_COMPLEX )
+            {
+                alglib::complex t = parse_complex_delim(svec[i],",]");
+                p_vec->ptr.p_complex[i].x = t.x;
+                p_vec->ptr.p_complex[i].y = t.y;
+            }
+        }
         alglib_impl::ae_free(p);
     }
     catch(...)
@@ -5055,10 +5959,65 @@ alglib::boolean_1d_array::boolean_1d_array(const char *s)
     }
 }
 
+void alglib::ae_vector_wrapper::assign(const alglib::ae_vector_wrapper &rhs)
+{
+    if( this==&rhs )
+        return;
+    if( p_vec==&vec || p_vec==NULL )
+    {
+        //
+        // Assignment to non-proxy object
+        //
+        ae_vector_clear(p_vec);
+        if( rhs.p_vec!=NULL )
+        {
+            p_vec = &vec;
+            if( !ae_vector_init_copy(p_vec, rhs.p_vec, NULL, ae_false) )
+                throw alglib::ap_error("ALGLIB: malloc error!");
+        }
+        else
+            p_vec = NULL;
+    }
+    else
+    {
+        //
+        // Assignment to proxy object
+        //
+        if( rhs.p_vec==NULL )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (sizes dont match)");
+        if( rhs.p_vec->datatype!=p_vec->datatype )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (types dont match)");
+        if( rhs.p_vec->cnt!=p_vec->cnt )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (sizes dont match)");
+        memcpy(p_vec->ptr.p_ptr, rhs.p_vec->ptr.p_ptr, p_vec->cnt*alglib_impl::ae_sizeof(p_vec->datatype));
+    }
+}
+    
+alglib::boolean_1d_array::boolean_1d_array()  
+{
+    allocate_own(0, alglib_impl::DT_BOOL);
+}
+
+alglib::boolean_1d_array::boolean_1d_array(const char *s)  
+{
+    create(s, alglib_impl::DT_BOOL);
+}
+
+alglib::boolean_1d_array::boolean_1d_array(const alglib::boolean_1d_array &rhs)
+{
+    create(rhs);
+}
+
 alglib::boolean_1d_array::boolean_1d_array(alglib_impl::ae_vector *p)  
 {
     p_vec = NULL;
     attach_to(p);
+}
+
+const alglib::boolean_1d_array& alglib::boolean_1d_array::operator=(const alglib::boolean_1d_array &rhs)
+{
+    assign(rhs);
+    return *this;
 }
 
 alglib::boolean_1d_array::~boolean_1d_array() 
@@ -5123,22 +6082,18 @@ alglib::integer_1d_array::integer_1d_array(alglib_impl::ae_vector *p)
 
 alglib::integer_1d_array::integer_1d_array(const char *s)  
 {
-    std::vector<const char*> svec;
-    size_t i;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_vector_create(p, true, &svec);
-        allocate_own((ae_int_t)(svec.size()), alglib_impl::DT_INT);
-        for(i=0; i<svec.size(); i++)
-            operator()((ae_int_t)i) = parse_int_delim(svec[i],",]");
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_INT);
+}
+
+alglib::integer_1d_array::integer_1d_array(const alglib::integer_1d_array &rhs)
+{
+    create(rhs);
+}
+
+const alglib::integer_1d_array& alglib::integer_1d_array::operator=(const alglib::integer_1d_array &rhs)
+{
+    assign(rhs);
+    return *this;
 }
 
 alglib::integer_1d_array::~integer_1d_array() 
@@ -5203,22 +6158,18 @@ alglib::real_1d_array::real_1d_array(alglib_impl::ae_vector *p)
 
 alglib::real_1d_array::real_1d_array(const char *s)  
 {
-    std::vector<const char*> svec;
-    size_t i;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_vector_create(p, true, &svec);
-        allocate_own((ae_int_t)(svec.size()), alglib_impl::DT_REAL);
-        for(i=0; i<svec.size(); i++)
-            operator()((ae_int_t)i) = parse_real_delim(svec[i],",]");
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_REAL);
+}
+
+alglib::real_1d_array::real_1d_array(const alglib::real_1d_array &rhs)
+{
+    create(rhs);
+}
+
+const alglib::real_1d_array& alglib::real_1d_array::operator=(const alglib::real_1d_array &rhs)
+{
+    assign(rhs);
+    return *this;
 }
 
 alglib::real_1d_array::~real_1d_array() 
@@ -5283,22 +6234,18 @@ alglib::complex_1d_array::complex_1d_array(alglib_impl::ae_vector *p)
 
 alglib::complex_1d_array::complex_1d_array(const char *s)  
 {
-    std::vector<const char*> svec;
-    size_t i;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_vector_create(p, true, &svec);
-        allocate_own((ae_int_t)(svec.size()), alglib_impl::DT_COMPLEX);
-        for(i=0; i<svec.size(); i++)
-            operator()((ae_int_t)i) = parse_complex_delim(svec[i],",]");
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_COMPLEX);
+}
+
+alglib::complex_1d_array::complex_1d_array(const alglib::complex_1d_array &rhs)
+{
+    create(rhs);
+}
+
+const alglib::complex_1d_array& alglib::complex_1d_array::operator=(const alglib::complex_1d_array &rhs)
+{
+    assign(rhs);
+    return *this;
 }
 
 alglib::complex_1d_array::~complex_1d_array() 
@@ -5364,7 +6311,13 @@ alglib::ae_matrix_wrapper::~ae_matrix_wrapper()
         ae_matrix_clear(p_mat);
 }
 
-alglib::ae_matrix_wrapper::ae_matrix_wrapper(const alglib::ae_matrix_wrapper &rhs)
+const alglib::ae_matrix_wrapper& alglib::ae_matrix_wrapper::operator=(const alglib::ae_matrix_wrapper &rhs)
+{
+    assign(rhs);
+    return *this;
+}
+
+void alglib::ae_matrix_wrapper::create(const ae_matrix_wrapper &rhs)
 {
     if( rhs.p_mat!=NULL )
     {
@@ -5376,21 +6329,81 @@ alglib::ae_matrix_wrapper::ae_matrix_wrapper(const alglib::ae_matrix_wrapper &rh
         p_mat = NULL;
 }
 
-const alglib::ae_matrix_wrapper& alglib::ae_matrix_wrapper::operator=(const alglib::ae_matrix_wrapper &rhs)
+void alglib::ae_matrix_wrapper::create(const char *s, alglib_impl::ae_datatype datatype)
+{
+    std::vector< std::vector<const char*> > smat;
+    size_t i, j;
+    char *p = filter_spaces(s);
+    try
+    {
+        str_matrix_create(p, &smat);
+        if( smat.size()!=0 )
+        {
+            allocate_own((ae_int_t)(smat.size()), (ae_int_t)(smat[0].size()), datatype);
+            for(i=0; i<smat.size(); i++)
+                for(j=0; j<smat[0].size(); j++)
+                {
+                    if( datatype==alglib_impl::DT_BOOL )
+                        p_mat->ptr.pp_bool[i][j]    = parse_bool_delim(smat[i][j],",]");
+                    if( datatype==alglib_impl::DT_INT )
+                        p_mat->ptr.pp_int[i][j]     = parse_int_delim(smat[i][j],",]");
+                    if( datatype==alglib_impl::DT_REAL )
+                        p_mat->ptr.pp_double[i][j]  = parse_real_delim(smat[i][j],",]");
+                    if( datatype==alglib_impl::DT_COMPLEX )
+                    {
+                        alglib::complex t = parse_complex_delim(smat[i][j],",]");
+                        p_mat->ptr.pp_complex[i][j].x = t.x;
+                        p_mat->ptr.pp_complex[i][j].y = t.y;
+                    }
+                }
+        }
+        else
+            allocate_own(0, 0, datatype);
+        alglib_impl::ae_free(p);
+    }
+    catch(...)
+    {
+        alglib_impl::ae_free(p);
+        throw;
+    }
+}
+    
+void alglib::ae_matrix_wrapper::assign(const alglib::ae_matrix_wrapper &rhs)
 {
     if( this==&rhs )
-        return *this;
-    if( p_mat==&mat )
-        ae_matrix_clear(p_mat);
-    if( rhs.p_mat!=NULL )
+        return;
+    if( p_mat==&mat || p_mat==NULL )
     {
-        p_mat = &mat;
-        if( !ae_matrix_init_copy(p_mat, rhs.p_mat, NULL, ae_false) )
-            throw alglib::ap_error("ALGLIB: malloc error!");
+        //
+        // Assignment to non-proxy object
+        //
+        ae_matrix_clear(p_mat);
+        if( rhs.p_mat!=NULL )
+        {
+            p_mat = &mat;
+            if( !ae_matrix_init_copy(p_mat, rhs.p_mat, NULL, ae_false) )
+                throw alglib::ap_error("ALGLIB: malloc error!");
+        }
+        else
+            p_mat = NULL;
     }
     else
-        p_mat = NULL;
-    return *this;
+    {
+        //
+        // Assignment to proxy object
+        //
+        ae_int_t i;
+        if( rhs.p_mat==NULL )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (sizes dont match)");
+        if( rhs.p_mat->datatype!=p_mat->datatype )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (types dont match)");
+        if( rhs.p_mat->rows!=p_mat->rows )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (sizes dont match)");
+        if( rhs.p_mat->cols!=p_mat->cols )
+            throw alglib::ap_error("ALGLIB: incorrect assignment to array (sizes dont match)");
+        for(i=0; i<p_mat->rows; i++)
+            memcpy(p_mat->ptr.pp_void[i], rhs.p_mat->ptr.pp_void[i], p_mat->cols*alglib_impl::ae_sizeof(p_mat->datatype));
+    }
 }
 
 void alglib::ae_matrix_wrapper::setlength(ae_int_t rows, ae_int_t cols)
@@ -5462,6 +6475,11 @@ alglib::boolean_2d_array::boolean_2d_array()
     allocate_own(0, 0, alglib_impl::DT_BOOL);
 }
 
+alglib::boolean_2d_array::boolean_2d_array(const alglib::boolean_2d_array &rhs)
+{
+    create(rhs);
+}
+
 alglib::boolean_2d_array::boolean_2d_array(alglib_impl::ae_matrix *p)  
 {
     p_mat = NULL;
@@ -5470,28 +6488,7 @@ alglib::boolean_2d_array::boolean_2d_array(alglib_impl::ae_matrix *p)
 
 alglib::boolean_2d_array::boolean_2d_array(const char *s)  
 {
-    std::vector< std::vector<const char*> > smat;
-    size_t i, j;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_matrix_create(p, &smat);
-        if( smat.size()!=0 )
-        {
-            allocate_own((ae_int_t)(smat.size()), (ae_int_t)(smat[0].size()), alglib_impl::DT_BOOL);
-            for(i=0; i<smat.size(); i++)
-                for(j=0; j<smat[0].size(); j++)
-                    operator()((ae_int_t)i,(ae_int_t)j) = parse_bool_delim(smat[i][j],",]");
-        }
-        else
-            allocate_own(0, 0, alglib_impl::DT_BOOL);
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_BOOL);
 }
 
 alglib::boolean_2d_array::~boolean_2d_array() 
@@ -5549,6 +6546,11 @@ alglib::integer_2d_array::integer_2d_array()
     allocate_own(0, 0, alglib_impl::DT_INT);
 }
 
+alglib::integer_2d_array::integer_2d_array(const alglib::integer_2d_array &rhs)
+{
+    create(rhs);
+}
+
 alglib::integer_2d_array::integer_2d_array(alglib_impl::ae_matrix *p)  
 {
     p_mat = NULL;
@@ -5557,28 +6559,7 @@ alglib::integer_2d_array::integer_2d_array(alglib_impl::ae_matrix *p)
 
 alglib::integer_2d_array::integer_2d_array(const char *s)  
 {
-    std::vector< std::vector<const char*> > smat;
-    size_t i, j;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_matrix_create(p, &smat);
-        if( smat.size()!=0 )
-        {
-            allocate_own((ae_int_t)(smat.size()), (ae_int_t)(smat[0].size()), alglib_impl::DT_INT);
-            for(i=0; i<smat.size(); i++)
-                for(j=0; j<smat[0].size(); j++)
-                    operator()((ae_int_t)i,(ae_int_t)j) = parse_int_delim(smat[i][j],",]");
-        }
-        else
-            allocate_own(0, 0, alglib_impl::DT_INT);
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_INT);
 }
 
 alglib::integer_2d_array::~integer_2d_array() 
@@ -5636,6 +6617,11 @@ alglib::real_2d_array::real_2d_array()
     allocate_own(0, 0, alglib_impl::DT_REAL);
 }
 
+alglib::real_2d_array::real_2d_array(const alglib::real_2d_array &rhs)
+{
+    create(rhs);
+}
+
 alglib::real_2d_array::real_2d_array(alglib_impl::ae_matrix *p)
 {
     p_mat = NULL;
@@ -5644,28 +6630,7 @@ alglib::real_2d_array::real_2d_array(alglib_impl::ae_matrix *p)
 
 alglib::real_2d_array::real_2d_array(const char *s)  
 {
-    std::vector< std::vector<const char*> > smat;
-    size_t i, j;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_matrix_create(p, &smat);
-        if( smat.size()!=0 )
-        {
-            allocate_own((ae_int_t)(smat.size()), (ae_int_t)(smat[0].size()), alglib_impl::DT_REAL);
-            for(i=0; i<smat.size(); i++)
-                for(j=0; j<smat[0].size(); j++)
-                    operator()((ae_int_t)i,(ae_int_t)j) = parse_real_delim(smat[i][j],",]");
-        }
-        else
-            allocate_own(0, 0, alglib_impl::DT_REAL);
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_REAL);
 }
 
 alglib::real_2d_array::~real_2d_array() 
@@ -5723,6 +6688,11 @@ alglib::complex_2d_array::complex_2d_array()
     allocate_own(0, 0, alglib_impl::DT_COMPLEX);
 }
 
+alglib::complex_2d_array::complex_2d_array(const alglib::complex_2d_array &rhs)
+{
+    create(rhs);
+}
+
 alglib::complex_2d_array::complex_2d_array(alglib_impl::ae_matrix *p)  
 {
     p_mat = NULL;
@@ -5731,28 +6701,7 @@ alglib::complex_2d_array::complex_2d_array(alglib_impl::ae_matrix *p)
 
 alglib::complex_2d_array::complex_2d_array(const char *s)  
 {
-    std::vector< std::vector<const char*> > smat;
-    size_t i, j;
-    char *p = filter_spaces(s);
-    try
-    {
-        str_matrix_create(p, &smat);
-        if( smat.size()!=0 )
-        {
-            allocate_own((ae_int_t)(smat.size()), (ae_int_t)(smat[0].size()), alglib_impl::DT_COMPLEX);
-            for(i=0; i<smat.size(); i++)
-                for(j=0; j<smat[0].size(); j++)
-                    operator()((ae_int_t)i,(ae_int_t)j) = parse_complex_delim(smat[i][j],",]");
-        }
-        else
-            allocate_own(0, 0, alglib_impl::DT_COMPLEX);
-        alglib_impl::ae_free(p);
-    }
-    catch(...)
-    {
-        alglib_impl::ae_free(p);
-        throw;
-    }
+    create(s, alglib_impl::DT_COMPLEX);
 }
 
 alglib::complex_2d_array::~complex_2d_array() 
@@ -5880,14 +6829,14 @@ alglib::ae_int_t alglib::my_stricmp(const char *s1, const char *s2)
 
 char* alglib::filter_spaces(const char *s)
 {
-    size_t i, j, n;
+    size_t i, n;
     char *r;
     char *r0;
     n = strlen(s);
     r = (char*)alglib_impl::ae_malloc(n+1, NULL);
     if( r==NULL )
         throw ap_error("malloc error");
-    for(i=0,j=0,r0=r; i<=n; i++,s++)
+    for(i=0,r0=r; i<=n; i++,s++)
         if( !isspace(*s) )
         {
             *r0 = *s;
@@ -9697,3 +10646,16 @@ void _ialglib_mm22x2_sse2(double alpha, const double *a, const double *b0, const
 #endif
 
 }
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+// THIS SECTION CONTAINS PARALLEL SUBROUTINES
+//
+/////////////////////////////////////////////////////////////////////////
+namespace alglib_impl
+{
+
+
+}
+

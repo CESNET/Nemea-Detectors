@@ -49,6 +49,15 @@
 #include <fstream>
 #include <sstream>
 #include "../../unirec/unirec.h"
+#include <string>
+#include <dirent.h>
+#include <algorithm>
+#include "alglib/dataanalysis.h"
+#include "alglib/stdafx.h"
+
+//#include "CLAPACK-3.2.1/INCLUDE/f2c.h"
+//#include "CLAPACK-3.2.1/INCLUDE/blaswrap.h"
+//#include "CLAPACK-3.2.1/INCLUDE/clapack.h"
 
 #include "PCA_sketch.h"
 
@@ -57,16 +66,16 @@
 #ifndef OFFLINE_MODE
    #include <string>
 //   #include <vector>
-   #include <dirent.h>
-   #include <algorithm>
-
-   #include "alglib/dataanalysis.h"
-   using namespace alglib;
+//   #include <dirent.h>
+//   #include <algorithm>
+//
+//   #include "alglib/dataanalysis.h"
+//   using namespace alglib;
 #endif//OFFLINE_MODE
-
+using namespace alglib;
 using namespace std;
 
-//#define VALIDATION
+#define VALIDATION
 #ifdef VALIDATION
    ostringstream fn;
    ofstream f;
@@ -230,10 +239,10 @@ float compute_entropy (uint32_t *sketch_row, unsigned int row_length, uint64_t p
    {
       if (sketch_row[i] > 0){
          float p = (float) sketch_row[i] / packet_count;
-         entropy -= p * log2(p);
+         entropy += p * log2(p);
       }
    }
-   return entropy;
+   return -entropy;
 }
 
 #ifndef OFFLINE_MODE
@@ -343,20 +352,21 @@ void preprocess_data(real_2d_array *data_matrix, uint32_t actual_timebin)
 // ***************** MATRIX OPERATIONS *****************************************
 /**
  * \brief Procedure transforms columns of matrix to have zero mean
- * \param[in,out] matrix_ptr Pointer to matrix which should be normalized.
+ * \param[in] src_matrix_ptr Pointer to matrix which should be normalized.
+ * \param[out] dst_matrix_ptr Pointer to structure for result matrix.
  */
-void transform_matrix_zero_mean (real_2d_array *matrix_ptr)
+void transform_matrix_zero_mean (float **src_matrix_ptr, real_2d_array *dst_matrix_ptr)
 {
    float mean;
 
-   for (int i = 0; i < matrix_ptr->cols(); i++){
+   for (int i = 0; i < dst_matrix_ptr->cols(); i++){
       mean = 0;
-      for (int j = 0; j < matrix_ptr->rows(); j++){
-         mean += (*matrix_ptr)(j, i);
+      for (int j = 0; j < dst_matrix_ptr->rows(); j++){
+         mean += src_matrix_ptr[j][i];
       }
-      mean /= matrix_ptr->rows();
-      for (int j = 0; j < matrix_ptr->rows(); j++){
-         (*matrix_ptr)(j,i) -= mean;
+      mean /= dst_matrix_ptr->rows();
+      for (int j = 0; j < dst_matrix_ptr->rows(); j++){
+         (*dst_matrix_ptr)(j,i) = src_matrix_ptr[j][i] - mean;
       }
    }
 }
@@ -484,6 +494,7 @@ void multiply_matrix_by_transposed_line (float **A_matrix_ptr,
       result_ptr[i] = row_sum;
    }
 }
+#endif//USE_JOINT_MATRIX_OP
 /**
  * \brief Procedure computes norm of vector
  * \param[in] vector_ptr Pointer to vector.
@@ -500,7 +511,7 @@ float norm_of_vector (float *vector_ptr, unsigned int vector_size)
 
    return sqrt(sum);
 }
-#endif//USE_JOINT_MATRIX_OP
+
 
 /**
  * \brief Procedure which multiplies matrix by vector.
@@ -567,12 +578,24 @@ void substitute_from_identity_matrix (float **matrix_ptr, unsigned int matrix_si
 #endif//OFFLINE_MODE
 int main(int argc, char **argv)
 {
+	ofstream log;
+
+	uint64_t pkt_cnts = 0;
+
+	#ifdef LOG_TO_FILE
+	log.open(LOG_TO_FILE);
+	if (!log.is_open()){
+		cerr << "ERROR while opening log file <" << LOG_TO_FILE << ">\n" << flush;
+	}
+	#endif
+
    clock_t t;//new-testing
+   clock_t t2;//new-testing
    clock_t det_time;//new-testing
    clock_t dt_sum = 0;//new-testing
    uint32_t dt_cnt = 0;//new-testing
    uint64_t flow_counter = 0;//new-testing
-   ofstream log;//new-testing
+   ofstream anomaly_log;//new-testing
 
    int ret;
    trap_ifc_spec_t ifc_spec;
@@ -604,7 +627,7 @@ int main(int argc, char **argv)
    ostringstream filename;
 
    #ifdef OFFLINE_MODE
-   static float data_matrices [NUMBER_OF_HASH_FUNCTION][SKETCH_SIZE * NUMBER_OF_FEATURES];
+   static float data_matrices [NUMBER_OF_HASH_FUNCTION][DATA_MATRIX_WIDTH];
 
    ofstream out_file;
    #else//OFFLINE_MODE
@@ -627,13 +650,22 @@ int main(int argc, char **argv)
 
    real_2d_array data_matrices[NUMBER_OF_HASH_FUNCTION];
     for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE, SKETCH_SIZE * NUMBER_OF_FEATURES);
+       data_matrices[i].setlength(WORKING_TIMEBIN_WINDOW_SIZE, DATA_MATRIX_WIDTH);
     }
 
+	float ***raw_data_matrices;
+   raw_data_matrices = new float **[NUMBER_OF_HASH_FUNCTION];
+   for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+      raw_data_matrices[i] = new float *[WORKING_TIMEBIN_WINDOW_SIZE];
+      for (int j = 0; j < WORKING_TIMEBIN_WINDOW_SIZE; j++){
+         raw_data_matrices[i][j] = new float [DATA_MATRIX_WIDTH];
+      }
+   }
+
    real_2d_array principal_components;
-   principal_components.setlength(NUMBER_OF_FEATURES*SKETCH_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE);
+   principal_components.setlength(DATA_MATRIX_WIDTH, DATA_MATRIX_WIDTH);
 	real_1d_array eigenvalues;
-	eigenvalues.setlength(NUMBER_OF_FEATURES*SKETCH_SIZE);
+	eigenvalues.setlength(DATA_MATRIX_WIDTH);
    ae_int_t info;
    #ifdef NSS_BY_DELTA_TEST
    float *data2pc_projection;
@@ -664,38 +696,106 @@ int main(int argc, char **argv)
    uint8_t anomaly_detetected;
    #endif//OFFLINE_MODE
 
-   // ***** TRAP initialization *****
-   // Let TRAP library parse command-line arguments and extract its parameters
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   // ***** END OF TRAP initialization *****
+   ret = trap_parse_params(&argc, argv, &ifc_spec);
+   if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) { // "-h" was found
+         trap_print_help(&module_info);
+         return 0;
+      }
+      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      return 1;
+   }
 
-      // Parse remaining parameters
+	// Parse remaining parameters
    char *in_unirec_specifier = (char *) "<BASIC_FLOW>";
    char opt;
-   #ifndef OFFLINE_MODE
+   #ifdef OFFLINE_MODE
+   while ((opt = getopt(argc, argv, "u:")) != -1) {
+	#else
    while ((opt = getopt(argc, argv, "I:u:")) != -1) {
+   #endif//OFFLINE_MODE
       switch (opt) {
+      	#ifndef OFFLINE_MODE
          case 'I':
             init_flag = 1;
             path_to_data = optarg;
             break;
+			#endif//NOT OFFLINE_MODE
          case 'u':
             in_unirec_specifier = optarg;
             break;
          default:
-            cerr << "Invalid arguments.\n";
+            cerr << "Invalid arguments.\n" << flush;
             return 2;
       }
    }
-   #endif
+
    if (optind > argc) {
-//   if (optind >= argc) {
-      cerr << "Wrong number of parameters.\n Usage: " << argv[0] << " -i trap-ifc-specifier";
+      cerr << "Wrong number of parameters.\n Usage: " << argv[0] << " -i trap-ifc-specifier [-u \"UNIREC,FIELDS\"]" << flush;
       #ifndef OFFLINE_MODE
-      cerr << " [-I path/to/init/data/] [-u \"UNIREC,FIELDS\"]";
-      #endif
+      cerr << " [-I path/to/init/data/]" << flush;
+      #endif//NOT OFFLINE_MODE
       return 2;
    }
+
+	#ifndef OFFLINE_MODE
+
+   if (init_flag){
+      STATUS_MSG(LOG_DST,"Initializing data matrices...")
+      for (unsigned int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
+         #ifdef VERBOSE_MSG
+         if (!(i % 100)){
+            STATUS_MSG(LOG_DST,".")
+         }
+         #endif
+         #ifdef VERBOSE_MSG
+         if (!(i % (WORKING_TIMEBIN_WINDOW_SIZE/10))){
+            STATUS_MSG(LOG_DST,(i / (WORKING_TIMEBIN_WINDOW_SIZE/10)) * 10 << "%")
+         }
+         #endif
+         for (unsigned int j = 0; j < NUMBER_OF_HASH_FUNCTION; j++){
+            filename.str("");
+            filename.clear();
+            filename<<path_to_data<<OUTPUT_FILE_NAME<<j<<"."<<i;
+            in_file.open(filename.str().c_str());
+            if (!in_file.is_open()){
+               cerr << "Unable to open data file for data matrix " << j << " row " << i << "." << endl
+               << "  File: [" << filename.str() << "]" << endl << flush;
+               return 3;
+            } else {
+               val_index = 0;
+               while (in_file>>val){
+                  raw_data_matrices[j][i][val_index] = val;
+                  val_index++;
+               }
+               if (val_index < (NUMBER_OF_FEATURES * SKETCH_SIZE)){
+                  cerr << "Bad value count: " << val_index << endl
+                  << "  File: [" << filename.str() << "]" << endl << flush;
+                  return 3;
+               }
+            }
+            in_file.close();
+         }
+         ++timebin_counter;
+      }
+      need_more_timebins -= timebin_counter;
+      STATUS_MSG(LOG_DST,"...OK.\n\n")
+   }
+   #endif//OFFLINE_MODE
+
+   // ***** TRAP initialization *****
+   // Initialize TRAP library (create and init all interfaces)
+   ret = trap_init(&module_info, ifc_spec);
+   if (ret != TRAP_E_OK) {
+      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 2;
+   }
+
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
+
+   // We don't need ifc_spec anymore, destroy it
+   trap_free_ifc_spec(ifc_spec);
+   // ***** END OF TRAP initialization *****
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
@@ -708,95 +808,8 @@ int main(int argc, char **argv)
    void *out_preliminary_rec = ur_create(out_preliminary_tmplt, 0);
 
    // ***** END OF Create UniRec templates & allocate memory for output records *****
-   #ifndef OFFLINE_MODE
 
-   if (init_flag){
-//      if ((dir = opendir(path_to_data.c_str())) != NULL){
-//         while((ent = readdir(dir)) != NULL){
-//            if((strcmp(".",ent->d_name) != 0) && (strcmp("..", ent->d_name) != 0)){
-//               tmp = path_to_data+ent->d_name;
-//               files.push_back(tmp);
-//            }
-//         }
-//         closedir(dir);
-//      } else {
-//         cerr << "Error while trying to get data files filenames from directory ["<<path_to_data<<"]"<<endl;
-//      }
-//
-//      tmp_string << path_to_data << OUTPUT_FILE_NAME;
-//      pos = tmp_string.str().length();
-//
-//      for (vector<string>::iterator it = (files.begin()+1); it != files.end(); it++){
-//         hf_index = atoi(it->substr(pos,1).c_str());
-//         row_index = atoi(it->substr(pos+2).c_str());
-////         for (int j = 0; j < NUMBER_OF_FEATURES * SKETCH_SIZE; j++){
-////         //data_matrices[hf_index][row_index][j] = from_file...;
-////         }
-//        break;
-//      }
-      STATUS_MSG("Initializing data matrices...")
-      for (unsigned int i = 0; i < WORKING_TIMEBIN_WINDOW_SIZE; i++){
-         #ifdef VERBOSE_MSG
-         if (!(i % 100)){
-            STATUS_MSG(".")
-         }
-         #endif
-         #ifdef VERBOSE_MSG
-         if (!(i % (WORKING_TIMEBIN_WINDOW_SIZE/10))){
-            STATUS_MSG((i / (WORKING_TIMEBIN_WINDOW_SIZE/10)) * 10 << "%")
-         }
-         #endif
-         for (unsigned int j = 0; j < NUMBER_OF_HASH_FUNCTION; j++){
-            filename.str("");
-            filename.clear();
-            filename<<path_to_data<<OUTPUT_FILE_NAME<<j<<"."<<i;
-            in_file.open(filename.str().c_str());
-            if (!in_file.is_open()){
-               cerr << "Unable to open data file for data matrix " << j << " row " << i << "." << endl
-               << "  File: [" << filename.str() << "]" << endl;
-               return 3;
-            } else {
-               val_index = 0;
-               while (in_file>>val){
-                  data_matrices[j][i][val_index] = val;
-                  val_index++;
-               }
-               if (val_index != NUMBER_OF_FEATURES * SKETCH_SIZE){
-                  cerr << "Bad value count: " << val_index << endl
-                  << "  File: [" << filename.str() << "]" << endl;
-                  return 3;
-               }
-   //            cout << "OK!\t" << filename.str() << endl;
-            }
-            in_file.close();
-         }
-         ++timebin_counter;
-      }
-      round_timebin_counter = timebin_counter % WORKING_TIMEBIN_WINDOW_SIZE;
-      need_more_timebins -= timebin_counter;
-      STATUS_MSG("...OK.\n\n")
-   }
-
-   #endif//OFFLINE_MODE
-   // ***** Main processing loop *****
-#ifdef VALIDATION
-   for (int i = 3; i < NUMBER_OF_HASH_FUNCTION; i++){
-      fn.str("");
-      fn.clear();
-      fn << "DataMatrix." << i;
-      f.open(fn.str().c_str());
-      cout << "Printing data matrix: [" << fn.str() << "] ..." << endl;
-      for (int j = 0; j < WORKING_TIMEBIN_WINDOW_SIZE; j++){
-         for (int k = 0; k < NUMBER_OF_FEATURES * SKETCH_SIZE; k++){
-            f << data_matrices[i][j][k] << "\t";
-         }
-         f << endl;
-      }
-      f.close();
-   }
-   ofstream f;
-#endif
-//   stop = 1;
+// ***** Main processing loop *****
    while (!stop) {
    // ***** Get input data *****
       const void *in_rec;
@@ -808,12 +821,12 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
-      if (in_rec_size < ur_rec_static_size(in_tmplt)) {
+      if (in_rec_size < ur_rec_static_size(in_tmplt)){
          if (in_rec_size <= 1) {
             break; // End of data (used for testing purposes)
          } else {
             cerr << "Error: data with wrong size received (expected size: >= "
-                 << ur_rec_static_size(in_tmplt) << "hu, received size: " << in_rec_size << "u)\n";
+                 << ur_rec_static_size(in_tmplt) << "hu, received size: " << in_rec_size << "u)\n" << flush;
             break;
          }
       }
@@ -822,7 +835,7 @@ int main(int argc, char **argv)
    // ***** Process the data *****
 
      // *** Timebin division (sampling) based on TIMEBIN_SIZE ***
-     #ifdef NEW_TIMEBIN_DIVISION
+////     #ifdef NEW_TIMEBIN_DIVISION
       start_of_actual_flow = (ur_get(in_tmplt, in_rec, UR_TIME_FIRST)) >> 32;
 
       if (timebin_init_flag){ // initialization of counters with first flow
@@ -844,14 +857,35 @@ int main(int argc, char **argv)
          memset(dp_sketches, 0, sizeof(dp_sketches[0][0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE * PORT_SKETCH_WIDTH);
          memset(packet_counts, 0, sizeof(packet_counts[0][0]) * 2 * NUMBER_OF_HASH_FUNCTION * SKETCH_SIZE);
       }
-
+//		STATUS_MSG(LOG_DST,start_of_next_timebin << "\t" << start_of_actual_flow << "\n" << flush)
       if (start_of_actual_flow > start_of_next_timebin){
+			STATUS_MSG(LOG_DST,"NEW TIMEBIN! at " << start_of_actual_flow<<"\n")
+//							<<" -------------------------------------------\n\n")
+
          if (index_addition != inverse_index_addition){//one "previous" timebin completed
-            STATUS_MSG("Timebin completed No." << timebin_counter << "\n")
-            STATUS_MSG("Computing entropy - creating data matrix line.\n\n")
+            STATUS_MSG(LOG_DST,"Timebin completed No." << timebin_counter << "\n")
+            STATUS_MSG(LOG_DST,"Computing entropy - creating data matrix line.\n\n")
+            #ifdef VALIDATION
+            fn.str("");
+				fn.clear();
+				fn<<"SIP-sketch"<<timebin_counter;
+				f.open(fn.str().c_str());
+				if (!f.is_open()){
+					cerr << "ERROR while opening output file <" << fn.str().c_str() << ">\n" << flush;
+				} else {
+					for (int j = 0; j < SKETCH_SIZE; j++){
+						for (int k = 0; k < ADDRESS_SKETCH_WIDTH; k++){
+							f << sip_sketches[inverse_index_addition][j][k] << "\t";
+						}
+						f << "\n";
+					}
+				}
+				f.close();
+				#endif
             for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
                for (int j = 0; j < SKETCH_SIZE; j++){
                   #ifdef OFFLINE_MODE
+                  pkt_cnts += packet_counts[(i * 2) + inverse_index_addition][j];
                   data_matrices[i][j] =
                      compute_entropy(sip_sketches[(i * 2) + inverse_index_addition][j],
                                      ADDRESS_SKETCH_WIDTH,
@@ -876,19 +910,19 @@ int main(int argc, char **argv)
                   }
                   packet_counts[(i * 2) + inverse_index_addition][j] = 0;
                   #else//OFFLINE_MODE
-                  data_matrices[i](round_timebin_counter, j) =
+                  raw_data_matrices[i][round_timebin_counter][j] =
                      compute_entropy(sip_sketches[(i * 2) + inverse_index_addition][j],
                                      ADDRESS_SKETCH_WIDTH,
                                      packet_counts[(i * 2) + inverse_index_addition][j]);
-                  data_matrices[i](round_timebin_counter, j + SKETCH_SIZE) =
+                  raw_data_matrices[i][round_timebin_counter][j + SKETCH_SIZE] =
                      compute_entropy(sp_sketches[(i * 2) + inverse_index_addition][j],
                                      PORT_SKETCH_WIDTH,
                                      packet_counts[(i * 2) + inverse_index_addition][j]);
-                  data_matrices[i](round_timebin_counter, j + (SKETCH_SIZE * 2)) =
+                  raw_data_matrices[i][round_timebin_counter][j + (SKETCH_SIZE * 2)] =
                      compute_entropy(dip_sketches[(i * 2) + inverse_index_addition][j],
                                      ADDRESS_SKETCH_WIDTH,
                                      packet_counts[(i * 2) + inverse_index_addition][j]);
-                  data_matrices[i](round_timebin_counter, j + (SKETCH_SIZE * 3)) =
+                  raw_data_matrices[i][round_timebin_counter][j + (SKETCH_SIZE * 3)] =
                      compute_entropy(dp_sketches[(i * 2) + inverse_index_addition][j],
                                      PORT_SKETCH_WIDTH,
                                      packet_counts[(i * 2) + inverse_index_addition][j]);
@@ -902,6 +936,7 @@ int main(int argc, char **argv)
                   #endif//OFFLINE_MODE
                }
             }
+            cout << pkt_cnts / NUMBER_OF_HASH_FUNCTION*SKETCH_SIZE;
             #ifdef OFFLINE_MODE
             for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
                filename.str("");
@@ -909,7 +944,7 @@ int main(int argc, char **argv)
                filename<<OUTPUT_FOLDER<<OUTPUT_FILE_NAME<<i<<"."<<timebin_counter;
                out_file.open(filename.str().c_str());
                if (!out_file.is_open()){
-                  cerr << "ERROR while opening output file <" << filename.str().c_str()) << ">\n";
+                  cerr << "ERROR while opening output file <" << filename.str().c_str()) << ">\n" << flush;
                }
 //               printf("Creating file <%s>\n", filename.str().c_str());
                for (int j = 0; j < SKETCH_SIZE * NUMBER_OF_FEATURES; j++){
@@ -923,43 +958,88 @@ int main(int argc, char **argv)
 
             if (need_more_timebins <= 0){
                t = clock();//new-testing
-               STATUS_MSG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-               STATUS_MSG("Data matrices are completed - starting detection...\n")
+               STATUS_MSG(LOG_DST,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+               STATUS_MSG(LOG_DST,"Data matrices are completed - starting detection...\n")
                need_more_timebins = 1;
 
                anomaly_detetected = 0;
 
                // *** Detection part ***
                for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
-                  STATUS_MSG("\tFor hash-function " << i << ":\n")
-                 #ifdef PREPROCESS_DATA
+                  STATUS_MSG(LOG_DST,"\tFor hash-function " << i << ":\n")
+                  #ifdef PREPROCESS_DATA
+                  t2 = clock();//new-testing
                   preprocess_data(&data_matrices[i], round_timebin_counter);
-                 #endif//PREPROCESS_DATA
+                  STATUS_MSG(LOG_DST,"\t\tPreprocessing data: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
+                  #endif//PREPROCESS_DATA
+
+						#ifdef VALIDATION
+						if (i == 0){
+							fn.str("");
+							fn.clear();
+							fn<<"DataMatrixRAW"<<timebin_counter;
+							f.open(fn.str().c_str());
+							if (!f.is_open()){
+								cerr << "ERROR while opening output file <" << fn.str().c_str() << ">\n" << flush;
+							} else {
+								for (int j = 0; j < SKETCH_SIZE * NUMBER_OF_FEATURES; j++){
+									for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){
+										f << raw_data_matrices[i][j][k] << "\t";
+									}
+									f << "\n";
+								}
+							}
+							f.close();
+						}
+						#endif
 
                   // ** Matrix normalization **
-                  transform_matrix_zero_mean(&data_matrices[i]);
+                  t2 = clock();//new-testing
+                  transform_matrix_zero_mean(raw_data_matrices[i],&data_matrices[i]);
                   transform_submatrix_unit_energy(&data_matrices[i], 0, SKETCH_SIZE);
                   transform_submatrix_unit_energy(&data_matrices[i], SKETCH_SIZE, 2 * SKETCH_SIZE);
                   transform_submatrix_unit_energy(&data_matrices[i], 2 * SKETCH_SIZE, 3 * SKETCH_SIZE);
                   transform_submatrix_unit_energy(&data_matrices[i], 3 * SKETCH_SIZE, 4 * SKETCH_SIZE);
+                  STATUS_MSG(LOG_DST,"\t\tTransofrming matrix: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
                   // ** END OF Matrix normalization **
 /********************************* NEW THREAD ??? ******************************************************************************************/
+                  #ifdef VALIDATION
+                  if (i == 0){
+							fn.str("");
+							fn.clear();
+							fn<<"DataMatrixNormalized"<<timebin_counter;
+							f.open(fn.str().c_str());
+							if (!f.is_open()){
+								cerr << "ERROR while opening output file <" << fn.str().c_str() << ">\n" << flush;
+							} else {
+								for (int j = 0; j < SKETCH_SIZE * NUMBER_OF_FEATURES; j++){
+									for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){
+										f << data_matrices[i][j][k] << "\t";
+									}
+									f << "\n";
+								}
+							}
+							f.close();
+                  }
+						#endif
                   // ** Computing of PCA **
-                  STATUS_MSG("\t  Computing PCA.\n")
+                  t2 = clock();//new-testing
+                  STATUS_MSG(LOG_DST,"\t  Computing PCA.\n")
                   pcabuildbasis(data_matrices[i], WORKING_TIMEBIN_WINDOW_SIZE, NUMBER_OF_FEATURES*SKETCH_SIZE,
                                  info, eigenvalues, principal_components);
-
                   if(info != 1){
-                     cerr << "Error while computing PCA (error code: " << info << ")" << endl;
+                     cerr << "Error while computing PCA (error code: " << info << ")" << endl << flush;
                      stop = 1;
                      break;
                   }
+                  STATUS_MSG(LOG_DST,"\t\tPCA: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
                   // ** END OF Computing of PCA **
 
                   // ** Finding of normal subspace size **
-                #ifdef NORMAL_SUBSPACE_SIZE_FIXED
+                  t2 = clock();//new-testing
+                  #ifdef NORMAL_SUBSPACE_SIZE_FIXED
                   normal_subspace_size = NORMAL_SUBSPACE_SIZE_FIXED;
-                #elif defined NSS_BY_PERCENTAGE
+                  #elif defined NSS_BY_PERCENTAGE
                   sum_variance = 0;
 
                   for (int j = 0; j < eigenvalues.length(); j++){
@@ -972,21 +1052,21 @@ int main(int argc, char **argv)
                      sum_variance -= eigenvalues(--normal_subspace_size);
                   }
                   normal_subspace_size++;
-                #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE_FIXED
+                  #else// !NSS_BY_PERCENTAGE && !NORMAL_SUBSPACE_SIZE_FIXED
                   normal_subspace_size = 0;
                   wi = 0;
                   while (!normal_subspace_size && (wi < NUMBER_OF_FEATURES*SKETCH_SIZE)){
                      multiply_matrix_column_vector(&data_matrices[i], &principal_components, wi,
-                                                   data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
+                                                   data2pc_projection);
                      norm = norm_of_vector(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
                      divide_vector_by_value(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE, norm);
-                    #if defined STD_DEV
+                     #if defined STD_DEV
                      delta_threshold = STD_DEV;
-                    #elif defined STD_DEV_VERSION2
+                     #elif defined STD_DEV_VERSION2
                      delta_threshold = vector_standard_deviation_v2(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                    #else//STD_DEV selection
+                     #else//STD_DEV selection
                      delta_threshold = vector_standard_deviation(data2pc_projection, WORKING_TIMEBIN_WINDOW_SIZE);
-                    #endif//STD_DEV selection
+                     #endif//STD_DEV selection
 
                      delta_threshold *= NSS_BY_DELTA_TEST;
                      for (int k = 0; k < WORKING_TIMEBIN_WINDOW_SIZE; k++){//"Delta" test
@@ -998,9 +1078,11 @@ int main(int argc, char **argv)
                      }
                      wi++;
                   }
-                #endif//NSS definition
-                  STATUS_MSG("\t  Normal subspace size is: " << normal_subspace_size << "\n")
+                  #endif//NSS definition
+                  STATUS_MSG(LOG_DST,"\t\tFinding NSS: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
+                  STATUS_MSG(LOG_DST,"\t  Normal subspace size is: " << normal_subspace_size << "\n")
 
+                  t2 = clock();//new-testing
                   // ** Computiing of linear operator C-residual (performs linear projection onto the anomaly subspace) **
                   multiply_submatrix_by_transposed_submatrix(&principal_components, normal_subspace_size, lin_op_c_residual[i]);
                   substitute_from_identity_matrix(lin_op_c_residual[i], NUMBER_OF_FEATURES*SKETCH_SIZE);
@@ -1015,10 +1097,12 @@ int main(int argc, char **argv)
                   SPE = norm_of_vector(mapped_data, NUMBER_OF_FEATURES * SKETCH_SIZE);
                  #endif//USE_JOINT_MATRIX_OP
                   SPE *= SPE;
+                  STATUS_MSG(LOG_DST,"\t\tComputing Cres & SPE: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
 
-                  STATUS_MSG("\t  Starting SPE test.\n")
+                  STATUS_MSG(LOG_DST,"\t  Starting SPE test.\n")
 
                   // ** Detecting anomalies by "SPE" test **
+                  t2 = clock();//new-testing
                   phi[0] = 0;
                   phi[1] = 0;
                   phi[2] = 0;
@@ -1035,60 +1119,61 @@ int main(int argc, char **argv)
                   delta_SPE = phi[0] * pow((
                         ((ALPHA_PERCENTILE_95 * sqrt(2.0 * phi[1] * h0 * h0)) / phi[0])
                         + 1.0 + ((phi[1] * h0 * (h0 - 1.0)) / (phi[0] * phi[0])) ),(1.0/h0));
-
+						STATUS_MSG(LOG_DST,SPE << "   ?>?   " << delta_SPE)
                   if (SPE > delta_SPE){
                      anomaly_detetected++;
-                     STATUS_MSG("\t  ## !!! ## Anomaly in timebin No." << timebin_counter << " !!!\n")
+                     STATUS_MSG(LOG_DST,"\t  ## !!! ## Anomaly in timebin No." << timebin_counter << " !!!\n")
                   } else {
-                     STATUS_MSG("\t  ## NO ## Anomaly in timebin No." << timebin_counter << "\n")
+                     STATUS_MSG(LOG_DST,"\t  ## NO ## Anomaly in timebin No." << timebin_counter << "\n")
                   }
+                  STATUS_MSG(LOG_DST,"\t\tSPE test: (" << (clock() - t2) / CLOCKS_PER_SEC << " sec)\n")//new-testing
                   // ** END OF Detecting anomalies by "SPE" test **
                }
                // *** END OF detection part ***
+               STATUS_MSG(LOG_DST,"-\t-\t-\t-\t-\t-\t-\t-\t-\n")
+
+               det_time = (clock() - t) / CLOCKS_PER_SEC;//new-testing
+               dt_sum += det_time;//new-testing
+               ++dt_cnt;//new-testing
+               STATUS_MSG(LOG_DST,"Detection has taken " << det_time << " seconds.\n")//new-testing
 
                // *** Merging results & sending preliminary timebin-warning if an anomaly was detected ***
-               STATUS_MSG("-\t-\t-\t-\t-\t-\t-\t-\t-\n")
-               STATUS_MSG("True detection threshold is " << NUMBER_OF_TRUE_DETECTION_THRESHOLD << "\n")
+               STATUS_MSG(LOG_DST,"-\t-\t-\t-\t-\t-\t-\t-\t-\n")
+               STATUS_MSG(LOG_DST,"True detection threshold is " << NUMBER_OF_TRUE_DETECTION_THRESHOLD << "\n")
 
-               log.open("PCA-detector-log.txt", ios::in | ios::app);
+               anomaly_log.open("PCA-detector-anomaly_log.txt", ios::in | ios::app);
                if (anomaly_detetected >= NUMBER_OF_TRUE_DETECTION_THRESHOLD){
-                  STATUS_MSG("There is an anomaly in " << timebin_counter << ".timebin" << ".\n")
+                  STATUS_MSG(LOG_DST,"There is an anomaly in " << timebin_counter << ".timebin" << ".\n")
                   // Fill output record
                   ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
                          (uint64_t) (start_of_next_timebin - (TIMEBIN_SIZE * 2)) << 32 );
                   ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
                          (uint64_t) (start_of_next_timebin - TIMEBIN_SIZE) << 32 );
-                  log << timebin_counter << ".TB: " << "an ANOMALY in time "
+                  anomaly_log << timebin_counter << ".TB: " << "an ANOMALY in time "
                       << (start_of_next_timebin - (TIMEBIN_SIZE * 2)) << " - "
                       << (start_of_next_timebin - TIMEBIN_SIZE) << " !!! " << endl;
                   // *** END OF sending preliminary warning ***
                } else {
-                  STATUS_MSG("No anomaly in " << timebin_counter << ".timebin" << ".\n")
+                  STATUS_MSG(LOG_DST,"No anomaly in " << timebin_counter << ".timebin" << ".\n")
                   // Fill output record
                   ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_FIRST,
                          (uint64_t) 0);
                   ur_set(out_preliminary_tmplt, out_preliminary_rec, UR_TIME_LAST,
                          (uint64_t) timebin_counter << 32);
-                  log << timebin_counter << ".TB: " << "NO anomaly in TB " << timebin_counter << endl;
-//                  log << timebin_counter << ".TB: " << "NO anomaly in time "
+                  anomaly_log << timebin_counter << ".TB: " << "NO anomaly in TB " << timebin_counter << endl;
+//                  anomaly_log << timebin_counter << ".TB: " << "NO anomaly in time "
 //                      << (start_of_next_timebin - (TIMEBIN_SIZE * 2)) << " - "
 //                      << (start_of_next_timebin - TIMEBIN_SIZE) << endl;
                }
-               log.close();
+               anomaly_log.close();
                // Send record to interface 0
                ret = trap_send_data(0, out_preliminary_rec, ur_rec_static_size(out_preliminary_tmplt), TRAP_WAIT);
                TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
-//               #ifdef DEBUG_OUT
+               #ifdef DEBUG_OUT
                char dummy[1] = {0};
                trap_send_data(0, dummy, 1, TRAP_WAIT);
-//               #endif//DEBUG_OUT
-               STATUS_MSG("-\t-\t-\t-\t-\t-\t-\t-\t-\n")
-
-               det_time = (clock() - t) / CLOCKS_PER_SEC;//new-testing
-               dt_sum += det_time;//new-testing
-               ++dt_cnt;//new-testing
-               STATUS_MSG("Detection taken " << det_time << " seconds.\n")//new-testing
-               STATUS_MSG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n")
+               #endif//DEBUG_OUT
+               STATUS_MSG(LOG_DST,"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n")
                // *** END OF Merging results ***
             }
             // *** END OF detection ***
@@ -1115,10 +1200,10 @@ int main(int argc, char **argv)
          #endif//OFFLINE_MODE
 
       } else if (start_of_actual_flow <= (start_of_next_timebin - TIMEBIN_SIZE)){
-         //actual flow belongs to previous timebin (... - (start_of_next_timebin - TIMEBIN_SIZE) >
+//         actual flow belongs to previous timebin (... - (start_of_next_timebin - TIMEBIN_SIZE) >
          flip_index = inverse_index_addition;
       } else {
-         //actual flow belongs to actual timebin ((start_of_next_timebin - TIMEBIN_SIZE) - start_of_next_timebin>
+//         actual flow belongs to actual timebin ((start_of_next_timebin - TIMEBIN_SIZE) - start_of_next_timebin>
          flip_index = index_addition;
       }
 
@@ -1146,15 +1231,19 @@ int main(int argc, char **argv)
 
          packet_counts[(i * 2) + flip_index][row_in_sketch] += ur_get(in_tmplt, in_rec, UR_PACKETS);
       }
-      #endif//NEW_TIMEBIN_DIVISION
-   }
+////      #endif//NEW_TIMEBIN_DIVISION
+   }//<while>
    // ***** END OF Main processing loop *****
-   STATUS_MSG("\n#############################################################\n")//new-testing
-   STATUS_MSG(flow_counter << " flows were processed.\n\n")//new-testing
-   STATUS_MSG("------------------------------------\n")//new-testing
-   STATUS_MSG("Average detection time was " << dt_sum / dt_cnt << " seconds.\n")//new-testing
-   STATUS_MSG("#############################################################\n")//new-testing
+   STATUS_MSG(LOG_DST,"\n#############################################################\n")//new-testing
+   STATUS_MSG(LOG_DST,flow_counter << " flows were processed.\n")//new-testing
+   STATUS_MSG(LOG_DST,"------------------------------------\n")//new-testing
+   STATUS_MSG(LOG_DST,"Average detection time was " << dt_sum / dt_cnt << " seconds.\n")//new-testing
+   STATUS_MSG(LOG_DST,"#############################################################\n")//new-testing
    // ***** Cleanup *****
+
+   #ifdef LOG_TO_FILE
+	log.close();
+	#endif
 
    #ifndef OFFLINE_MODE
 
@@ -1174,6 +1263,15 @@ int main(int argc, char **argv)
       delete [] lin_op_c_residual[i];
    }
    delete [] lin_op_c_residual;
+
+   for (int i = 0; i < NUMBER_OF_HASH_FUNCTION; i++){
+
+      for (int j = 0; j < WORKING_TIMEBIN_WINDOW_SIZE; j++){
+         delete [] raw_data_matrices[i][j];
+      }
+      delete [] raw_data_matrices[i];
+   }
+   delete [] raw_data_matrices;
 
    ur_free(out_preliminary_rec);
    ur_free_template(out_preliminary_tmplt);

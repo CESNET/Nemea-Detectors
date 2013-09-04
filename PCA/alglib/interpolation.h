@@ -98,11 +98,17 @@ typedef struct
 {
     double taskrcond;
     ae_int_t iterationscount;
+    ae_int_t varidx;
     double rmserror;
     double avgerror;
     double avgrelerror;
     double maxerror;
     double wrmserror;
+    ae_matrix covpar;
+    ae_vector errpar;
+    ae_vector errcurve;
+    ae_vector noise;
+    double r2;
 } lsfitreport;
 typedef struct
 {
@@ -120,10 +126,12 @@ typedef struct
     ae_matrix taskx;
     ae_vector tasky;
     ae_int_t npoints;
-    ae_vector w;
+    ae_vector taskw;
     ae_int_t nweights;
     ae_int_t wkind;
     ae_int_t wits;
+    double diffstep;
+    double teststep;
     ae_bool xupdated;
     ae_bool needf;
     ae_bool needfg;
@@ -134,13 +142,22 @@ typedef struct
     double f;
     ae_vector g;
     ae_matrix h;
+    ae_vector wcur;
+    ae_vector tmp;
+    ae_vector tmpf;
+    ae_matrix tmpjac;
+    ae_matrix tmpjacw;
+    double tmpnoise;
+    matinvreport invrep;
     ae_int_t repiterationscount;
     ae_int_t repterminationtype;
+    ae_int_t repvaridx;
     double reprmserror;
     double repavgerror;
     double repavgrelerror;
     double repmaxerror;
     double repwrmserror;
+    lsfitreport rep;
     minlmstate optstate;
     minlmreport optrep;
     ae_int_t prevnpt;
@@ -206,8 +223,27 @@ typedef struct
 typedef struct
 {
     ae_int_t k;
-    ae_vector c;
+    ae_int_t stype;
+    ae_int_t n;
+    ae_int_t m;
+    ae_int_t d;
+    ae_vector x;
+    ae_vector y;
+    ae_vector f;
 } spline2dinterpolant;
+typedef struct
+{
+    ae_int_t k;
+    ae_int_t stype;
+    ae_int_t n;
+    ae_int_t m;
+    ae_int_t l;
+    ae_int_t d;
+    ae_vector x;
+    ae_vector y;
+    ae_vector z;
+    ae_vector f;
+} spline3dinterpolant;
 
 }
 
@@ -409,9 +445,20 @@ public:
 
 
 /*************************************************************************
-Least squares fitting report:
+Least squares fitting report. This structure contains informational fields
+which are set by fitting functions provided by this unit.
+
+Different functions initialize different sets of  fields,  so  you  should
+read documentation on specific function you used in order  to  know  which
+fields are initialized.
+
     TaskRCond       reciprocal of task's condition number
     IterationsCount number of internal iterations
+
+    VarIdx          if user-supplied gradient contains errors  which  were
+                    detected by nonlinear fitter, this  field  is  set  to
+                    index  of  the  first  component  of gradient which is
+                    suspected to be spoiled by bugs.
 
     RMSError        RMS error
     AvgError        average error
@@ -419,6 +466,15 @@ Least squares fitting report:
     MaxError        maximum error
 
     WRMSError       weighted RMS error
+
+    CovPar          covariance matrix for parameters, filled by some solvers
+    ErrPar          vector of errors in parameters, filled by some solvers
+    ErrCurve        vector of fit errors -  variability  of  the  best-fit
+                    curve, filled by some solvers.
+    Noise           vector of per-point noise estimates, filled by
+                    some solvers.
+    R2              coefficient of determination (non-weighted, non-adjusted),
+                    filled by some solvers.
 *************************************************************************/
 class _lsfitreport_owner
 {
@@ -441,11 +497,17 @@ public:
     virtual ~lsfitreport();
     double &taskrcond;
     ae_int_t &iterationscount;
+    ae_int_t &varidx;
     double &rmserror;
     double &avgerror;
     double &avgrelerror;
     double &maxerror;
     double &wrmserror;
+    real_2d_array covpar;
+    real_1d_array errpar;
+    real_1d_array errcurve;
+    real_1d_array noise;
+    double &r2;
 
 };
 
@@ -628,6 +690,31 @@ public:
     spline2dinterpolant(const spline2dinterpolant &rhs);
     spline2dinterpolant& operator=(const spline2dinterpolant &rhs);
     virtual ~spline2dinterpolant();
+
+};
+
+/*************************************************************************
+3-dimensional spline inteprolant
+*************************************************************************/
+class _spline3dinterpolant_owner
+{
+public:
+    _spline3dinterpolant_owner();
+    _spline3dinterpolant_owner(const _spline3dinterpolant_owner &rhs);
+    _spline3dinterpolant_owner& operator=(const _spline3dinterpolant_owner &rhs);
+    virtual ~_spline3dinterpolant_owner();
+    alglib_impl::spline3dinterpolant* c_ptr();
+    alglib_impl::spline3dinterpolant* c_ptr() const;
+protected:
+    alglib_impl::spline3dinterpolant *p_struct;
+};
+class spline3dinterpolant : public _spline3dinterpolant_owner
+{
+public:
+    spline3dinterpolant();
+    spline3dinterpolant(const spline3dinterpolant &rhs);
+    spline3dinterpolant& operator=(const spline3dinterpolant &rhs);
+    virtual ~spline3dinterpolant();
 
 };
 
@@ -1791,7 +1878,7 @@ INPUT PARAMETERS:
     X           -   spline nodes, array[0..N-1]
     Y           -   function values, array[0..N-1]
     N           -   points count (optional):
-                    * N>=5
+                    * N>=2
                     * if given, only first N points are used to build spline
                     * if not given, automatically detected from X/Y sizes
                       (len(X) must be equal to len(Y))
@@ -1852,7 +1939,7 @@ INPUT PARAMETERS:
     C   -   spline interpolant.
     X   -   point
 
-Result:
+OUTPUT PARAMETERS:
     Tbl -   coefficients table, unpacked format, array[0..N-2, 0..5].
             For I = 0...N-2:
                 Tbl[I,0] = X[i]
@@ -1864,6 +1951,11 @@ Result:
             On [x[i], x[i+1]] spline is equals to:
                 S(x) = C0 + C1*t + C2*t^2 + C3*t^3
                 t = x-x[i]
+
+NOTE:
+    You  can rebuild spline with  Spline1DBuildHermite()  function,  which
+    accepts as inputs function values and derivatives at nodes, which  are
+    easy to calculate when you have coefficients.
 
   -- ALGLIB PROJECT --
      Copyright 29.06.2007 by Bochkanov Sergey
@@ -1915,6 +2007,30 @@ Result:
      Copyright 23.06.2007 by Bochkanov Sergey
 *************************************************************************/
 double spline1dintegrate(const spline1dinterpolant &c, const double x);
+
+
+/*************************************************************************
+This function builds monotone cubic Hermite interpolant. This interpolant
+is monotonic in [x(0),x(n-1)] and is constant outside of this interval.
+
+In  case  y[]  form  non-monotonic  sequence,  interpolant  is  piecewise
+monotonic.  Say, for x=(0,1,2,3,4)  and  y=(0,1,2,1,0)  interpolant  will
+monotonically grow at [0..2] and monotonically decrease at [2..4].
+
+INPUT PARAMETERS:
+    X           -   spline nodes, array[0..N-1]. Subroutine automatically
+                    sorts points, so caller may pass unsorted array.
+    Y           -   function values, array[0..N-1]
+    N           -   the number of points(N>=2).
+
+OUTPUT PARAMETERS:
+    C           -   spline interpolant.
+
+ -- ALGLIB PROJECT --
+     Copyright 21.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline1dbuildmonotone(const real_1d_array &x, const real_1d_array &y, const ae_int_t n, spline1dinterpolant &c);
+void spline1dbuildmonotone(const real_1d_array &x, const real_1d_array &y, spline1dinterpolant &c);
 
 /*************************************************************************
 Fitting by polynomials in barycentric form. This function provides  simple
@@ -2525,6 +2641,12 @@ QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
 
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
+
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
     W       -   array[0..N-1]  Weights  corresponding to function  values.
@@ -2545,11 +2667,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -2565,6 +2725,12 @@ This  is  variation  of LSFitLinearW(), which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then LSFitLinearW()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -2593,6 +2759,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -2601,6 +2769,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -2615,6 +2824,12 @@ Linear least squares fitting.
 QR decomposition is used to reduce task to MxM, then triangular solver  or
 SVD-based solver is used depending on condition number of the  system.  It
 allows to maximize speed and retain decent accuracy.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -2631,11 +2846,49 @@ OUTPUT PARAMETERS:
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
                 * Rep.TaskRCond     reciprocal of condition number
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
                 * MaxError          maximum error
                                     NON-WEIGHTED ERRORS ARE CALCULATED
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
@@ -2651,6 +2904,12 @@ This  is  variation  of LSFitLinear(),  which searchs for min|A*x=b| given
 that  K  additional  constaints  C*x=bc are satisfied. It reduces original
 task to modified one: min|B*y-d| WITHOUT constraints,  then  LSFitLinear()
 is called.
+
+IMPORTANT: if you want to perform  polynomial  fitting,  it  may  be  more
+           convenient to use PolynomialFit() function. This function gives
+           best  results  on  polynomial  problems  and  solves  numerical
+           stability  issues  which  arise  when   you   fit   high-degree
+           polynomials to your data.
 
 INPUT PARAMETERS:
     Y       -   array[0..N-1] Function values in  N  points.
@@ -2675,6 +2934,8 @@ OUTPUT PARAMETERS:
                 *  1    task is solved
     C       -   decomposition coefficients, array[0..M-1]
     Rep     -   fitting report. Following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -2683,6 +2944,47 @@ OUTPUT PARAMETERS:
 
 IMPORTANT:
     this subroitine doesn't calculate task's condition number for K<>0.
+
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(F*CovPar*F')),
+                    where F is functions matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 07.09.2009 by Bochkanov Sergey
@@ -3157,7 +3459,9 @@ INPUT PARAMETERS:
     State   -   algorithm state
 
 OUTPUT PARAMETERS:
-    Info    -   completetion code:
+    Info    -   completion code:
+                    * -7    gradient verification failed.
+                            See LSFitSetGradientCheck() for more information.
                     *  1    relative function improvement is no more than
                             EpsF.
                     *  2    relative step is no more than EpsX.
@@ -3166,8 +3470,9 @@ OUTPUT PARAMETERS:
                     *  7    stopping conditions are too stringent,
                             further improvement is impossible
     C       -   array[0..K-1], solution
-    Rep     -   optimization report. Following fields are set:
-                * Rep.TerminationType completetion code:
+    Rep     -   optimization report. On success following fields are set:
+                * R2                non-adjusted coefficient of determination
+                                    (non-weighted)
                 * RMSError          rms error on the (X,Y).
                 * AvgError          average error on the (X,Y).
                 * AvgRelError       average relative error on the non-zero Y
@@ -3175,11 +3480,105 @@ OUTPUT PARAMETERS:
                                     NON-WEIGHTED ERRORS ARE CALCULATED
                 * WRMSError         weighted rms error on the (X,Y).
 
+ERRORS IN PARAMETERS
+
+This  solver  also  calculates different kinds of errors in parameters and
+fills corresponding fields of report:
+* Rep.CovPar        covariance matrix for parameters, array[K,K].
+* Rep.ErrPar        errors in parameters, array[K],
+                    errpar = sqrt(diag(CovPar))
+* Rep.ErrCurve      vector of fit errors - standard deviations of empirical
+                    best-fit curve from "ideal" best-fit curve built  with
+                    infinite number of samples, array[N].
+                    errcurve = sqrt(diag(J*CovPar*J')),
+                    where J is Jacobian matrix.
+* Rep.Noise         vector of per-point estimates of noise, array[N]
+
+IMPORTANT:  errors  in  parameters  are  calculated  without  taking  into
+            account boundary/linear constraints! Presence  of  constraints
+            changes distribution of errors, but there is no  easy  way  to
+            account for constraints when you calculate covariance matrix.
+
+NOTE:       noise in the data is estimated as follows:
+            * for fitting without user-supplied  weights  all  points  are
+              assumed to have same level of noise, which is estimated from
+              the data
+            * for fitting with user-supplied weights we assume that  noise
+              level in I-th point is inversely proportional to Ith weight.
+              Coefficient of proportionality is estimated from the data.
+
+NOTE:       we apply small amount of regularization when we invert squared
+            Jacobian and calculate covariance matrix. It  guarantees  that
+            algorithm won't divide by zero  during  inversion,  but  skews
+            error estimates a bit (fractional error is about 10^-9).
+
+            However, we believe that this difference is insignificant  for
+            all practical purposes except for the situation when you  want
+            to compare ALGLIB results with "reference"  implementation  up
+            to the last significant digit.
+
+NOTE:       covariance matrix is estimated using  correction  for  degrees
+            of freedom (covariances are divided by N-M instead of dividing
+            by N).
 
   -- ALGLIB --
      Copyright 17.08.2009 by Bochkanov Sergey
 *************************************************************************/
 void lsfitresults(const lsfitstate &state, ae_int_t &info, real_1d_array &c, lsfitreport &rep);
+
+
+/*************************************************************************
+This  subroutine  turns  on  verification  of  the  user-supplied analytic
+gradient:
+* user calls this subroutine before fitting begins
+* LSFitFit() is called
+* prior to actual fitting, for  each  point  in  data  set  X_i  and  each
+  component  of  parameters  being  fited C_j algorithm performs following
+  steps:
+  * two trial steps are made to C_j-TestStep*S[j] and C_j+TestStep*S[j],
+    where C_j is j-th parameter and S[j] is a scale of j-th parameter
+  * if needed, steps are bounded with respect to constraints on C[]
+  * F(X_i|C) is evaluated at these trial points
+  * we perform one more evaluation in the middle point of the interval
+  * we  build  cubic  model using function values and derivatives at trial
+    points and we compare its prediction with actual value in  the  middle
+    point
+  * in case difference between prediction and actual value is higher  than
+    some predetermined threshold, algorithm stops with completion code -7;
+    Rep.VarIdx is set to index of the parameter with incorrect derivative.
+* after verification is over, algorithm proceeds to the actual optimization.
+
+NOTE 1: verification needs N*K (points count * parameters count)  gradient
+        evaluations. It is very costly and you should use it only for  low
+        dimensional  problems,  when  you  want  to  be  sure  that you've
+        correctly calculated analytic derivatives. You should not  use  it
+        in the production code  (unless  you  want  to  check  derivatives
+        provided by some third party).
+
+NOTE 2: you  should  carefully  choose  TestStep. Value which is too large
+        (so large that function behaviour is significantly non-cubic) will
+        lead to false alarms. You may use  different  step  for  different
+        parameters by means of setting scale with LSFitSetScale().
+
+NOTE 3: this function may lead to false positives. In case it reports that
+        I-th  derivative was calculated incorrectly, you may decrease test
+        step  and  try  one  more  time  - maybe your function changes too
+        sharply  and  your  step  is  too  large for such rapidly chanding
+        function.
+
+NOTE 4: this function works only for optimizers created with LSFitCreateWFG()
+        or LSFitCreateFG() constructors.
+
+INPUT PARAMETERS:
+    State       -   structure used to store algorithm state
+    TestStep    -   verification step:
+                    * TestStep=0 turns verification off
+                    * TestStep>0 activates verification
+
+  -- ALGLIB --
+     Copyright 15.06.2012 by Bochkanov Sergey
+*************************************************************************/
+void lsfitsetgradientcheck(const lsfitstate &state, const double teststep);
 
 /*************************************************************************
 This function  builds  non-periodic 2-dimensional parametric spline  which
@@ -4087,42 +4486,6 @@ OUTPUT PARAMETERS:
 void rbfunpack(const rbfmodel &s, ae_int_t &nx, ae_int_t &ny, real_2d_array &xwr, ae_int_t &nc, real_2d_array &v);
 
 /*************************************************************************
-This subroutine builds bilinear spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbilinear(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c);
-
-
-/*************************************************************************
-This subroutine builds bicubic spline coefficients table.
-
-Input parameters:
-    X   -   spline abscissas, array[0..N-1]
-    Y   -   spline ordinates, array[0..M-1]
-    F   -   function values, array[0..M-1,0..N-1]
-    M,N -   grid size, M>=2, N>=2
-
-Output parameters:
-    C   -   spline interpolant
-
-  -- ALGLIB PROJECT --
-     Copyright 05.07.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dbuildbicubic(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c);
-
-
-/*************************************************************************
 This subroutine calculates the value of the bilinear or bicubic spline  at
 the given point X.
 
@@ -4161,41 +4524,6 @@ void spline2ddiff(const spline2dinterpolant &c, const double x, const double y, 
 
 
 /*************************************************************************
-This subroutine unpacks two-dimensional spline into the coefficients table
-
-Input parameters:
-    C   -   spline interpolant.
-
-Result:
-    M, N-   grid size (x-axis and y-axis)
-    Tbl -   coefficients table, unpacked format,
-            [0..(N-1)*(M-1)-1, 0..19].
-            For I = 0...M-2, J=0..N-2:
-                K =  I*(N-1)+J
-                Tbl[K,0] = X[j]
-                Tbl[K,1] = X[j+1]
-                Tbl[K,2] = Y[i]
-                Tbl[K,3] = Y[i+1]
-                Tbl[K,4] = C00
-                Tbl[K,5] = C01
-                Tbl[K,6] = C02
-                Tbl[K,7] = C03
-                Tbl[K,8] = C10
-                Tbl[K,9] = C11
-                ...
-                Tbl[K,19] = C33
-            On each grid square spline is equals to:
-                S(x) = SUM(c[i,j]*(x^i)*(y^j), i=0..3, j=0..3)
-                t = x-x[j]
-                u = y-y[i]
-
-  -- ALGLIB PROJECT --
-     Copyright 29.06.2007 by Bochkanov Sergey
-*************************************************************************/
-void spline2dunpack(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, real_2d_array &tbl);
-
-
-/*************************************************************************
 This subroutine performs linear transformation of the spline argument.
 
 Input parameters:
@@ -4225,6 +4553,21 @@ Output parameters:
      Copyright 30.06.2007 by Bochkanov Sergey
 *************************************************************************/
 void spline2dlintransf(const spline2dinterpolant &c, const double a, const double b);
+
+
+/*************************************************************************
+This subroutine makes the copy of the spline model.
+
+Input parameters:
+    C   -   spline interpolant
+
+Output parameters:
+    CC  -   spline copy
+
+  -- ALGLIB PROJECT --
+     Copyright 29.06.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcopy(const spline2dinterpolant &c, spline2dinterpolant &cc);
 
 
 /*************************************************************************
@@ -4269,6 +4612,390 @@ Output parameters:
      Copyright by Bochkanov Sergey
 *************************************************************************/
 void spline2dresamplebilinear(const real_2d_array &a, const ae_int_t oldheight, const ae_int_t oldwidth, real_2d_array &b, const ae_int_t newheight, const ae_int_t newwidth);
+
+
+/*************************************************************************
+This subroutine builds bilinear vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinearv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &f, const ae_int_t d, spline2dinterpolant &c);
+
+
+/*************************************************************************
+This subroutine builds bicubic vector-valued spline.
+
+Input parameters:
+    X   -   spline abscissas, array[0..N-1]
+    Y   -   spline ordinates, array[0..M-1]
+    F   -   function values, array[0..M*N*D-1]:
+            * first D elements store D values at (X[0],Y[0])
+            * next D elements store D values at (X[1],Y[0])
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(J*N+I)...D*(J*N+I)+D-1].
+    M,N -   grid size, M>=2, N>=2
+    D   -   vector dimension, D>=1
+
+Output parameters:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubicv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &f, const ae_int_t d, spline2dinterpolant &c);
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcvbuf(const spline2dinterpolant &c, const double x, const double y, real_1d_array &f);
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y-   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dcalcv(const spline2dinterpolant &c, const double x, const double y, real_1d_array &f);
+
+
+/*************************************************************************
+This subroutine unpacks two-dimensional spline into the coefficients table
+
+Input parameters:
+    C   -   spline interpolant.
+
+Result:
+    M, N-   grid size (x-axis and y-axis)
+    D   -   number of components
+    Tbl -   coefficients table, unpacked format,
+            D - components: [0..(N-1)*(M-1)*D-1, 0..19].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index):
+                K :=  T + I*D + J*D*(N-1)
+
+                K-th row stores decomposition for T-th component of the
+                vector-valued function
+
+                Tbl[K,0] = X[i]
+                Tbl[K,1] = X[i+1]
+                Tbl[K,2] = Y[j]
+                Tbl[K,3] = Y[j+1]
+                Tbl[K,4] = C00
+                Tbl[K,5] = C01
+                Tbl[K,6] = C02
+                Tbl[K,7] = C03
+                Tbl[K,8] = C10
+                Tbl[K,9] = C11
+                ...
+                Tbl[K,19] = C33
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j]*(t^i)*(u^j), i=0..3, j=0..3)
+                t = x-x[j]
+                u = y-y[i]
+
+  -- ALGLIB PROJECT --
+     Copyright 16.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpackv(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, ae_int_t &d, real_2d_array &tbl);
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBilinearV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbilinear(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c);
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DBuildBicubicV(),  which  is  more
+flexible and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 05.07.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dbuildbicubic(const real_1d_array &x, const real_1d_array &y, const real_2d_array &f, const ae_int_t m, const ae_int_t n, spline2dinterpolant &c);
+
+
+/*************************************************************************
+This subroutine was deprecated in ALGLIB 3.6.0
+
+We recommend you to switch  to  Spline2DUnpackV(),  which is more flexible
+and accepts its arguments in more convenient order.
+
+  -- ALGLIB PROJECT --
+     Copyright 29.06.2007 by Bochkanov Sergey
+*************************************************************************/
+void spline2dunpack(const spline2dinterpolant &c, ae_int_t &m, ae_int_t &n, real_2d_array &tbl);
+
+/*************************************************************************
+This subroutine calculates the value of the trilinear or tricubic spline at
+the given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   coefficients table.
+            Built by BuildBilinearSpline or BuildBicubicSpline.
+    X, Y,
+    Z   -   point
+
+Result:
+    S(x,y,z)
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+double spline3dcalc(const spline3dinterpolant &c, const double x, const double y, const double z);
+
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline argument.
+
+INPUT PARAMETERS:
+    C       -   spline interpolant
+    AX, BX  -   transformation coefficients: x = A*u + B
+    AY, BY  -   transformation coefficients: y = A*v + B
+    AZ, BZ  -   transformation coefficients: z = A*w + B
+
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransxyz(const spline3dinterpolant &c, const double ax, const double bx, const double ay, const double by, const double az, const double bz);
+
+
+/*************************************************************************
+This subroutine performs linear transformation of the spline.
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    A, B-   transformation coefficients: S2(x,y) = A*S(x,y,z) + B
+
+OUTPUT PARAMETERS:
+    C   -   transformed spline
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dlintransf(const spline3dinterpolant &c, const double a, const double b);
+
+
+/*************************************************************************
+Trilinear spline resampling
+
+INPUT PARAMETERS:
+    A           -   array[0..OldXCount*OldYCount*OldZCount-1], function
+                    values at the old grid, :
+                        A[0]        x=0,y=0,z=0
+                        A[1]        x=1,y=0,z=0
+                        A[..]       ...
+                        A[..]       x=oldxcount-1,y=0,z=0
+                        A[..]       x=0,y=1,z=0
+                        A[..]       ...
+                        ...
+    OldZCount   -   old Z-count, OldZCount>1
+    OldYCount   -   old Y-count, OldYCount>1
+    OldXCount   -   old X-count, OldXCount>1
+    NewZCount   -   new Z-count, NewZCount>1
+    NewYCount   -   new Y-count, NewYCount>1
+    NewXCount   -   new X-count, NewXCount>1
+
+OUTPUT PARAMETERS:
+    B           -   array[0..NewXCount*NewYCount*NewZCount-1], function
+                    values at the new grid:
+                        B[0]        x=0,y=0,z=0
+                        B[1]        x=1,y=0,z=0
+                        B[..]       ...
+                        B[..]       x=newxcount-1,y=0,z=0
+                        B[..]       x=0,y=1,z=0
+                        B[..]       ...
+                        ...
+
+  -- ALGLIB routine --
+     26.04.2012
+     Copyright by Bochkanov Sergey
+*************************************************************************/
+void spline3dresampletrilinear(const real_1d_array &a, const ae_int_t oldzcount, const ae_int_t oldycount, const ae_int_t oldxcount, const ae_int_t newzcount, const ae_int_t newycount, const ae_int_t newxcount, real_1d_array &b);
+
+
+/*************************************************************************
+This subroutine builds trilinear vector-valued spline.
+
+INPUT PARAMETERS:
+    X   -   spline abscissas,  array[0..N-1]
+    Y   -   spline ordinates,  array[0..M-1]
+    Z   -   spline applicates, array[0..L-1]
+    F   -   function values, array[0..M*N*L*D-1]:
+            * first D elements store D values at (X[0],Y[0],Z[0])
+            * next D elements store D values at (X[1],Y[0],Z[0])
+            * next D elements store D values at (X[2],Y[0],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[1],Z[0])
+            * next D elements store D values at (X[1],Y[1],Z[0])
+            * next D elements store D values at (X[2],Y[1],Z[0])
+            * ...
+            * next D elements store D values at (X[0],Y[0],Z[1])
+            * next D elements store D values at (X[1],Y[0],Z[1])
+            * next D elements store D values at (X[2],Y[0],Z[1])
+            * ...
+            * general form - D function values at (X[i],Y[j]) are stored
+              at F[D*(N*(M*K+J)+I)...D*(N*(M*K+J)+I)+D-1].
+    M,N,
+    L   -   grid size, M>=2, N>=2, L>=2
+    D   -   vector dimension, D>=1
+
+OUTPUT PARAMETERS:
+    C   -   spline interpolant
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dbuildtrilinearv(const real_1d_array &x, const ae_int_t n, const real_1d_array &y, const ae_int_t m, const real_1d_array &z, const ae_int_t l, const real_1d_array &f, const ae_int_t d, spline3dinterpolant &c);
+
+
+/*************************************************************************
+This subroutine calculates bilinear or bicubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+    F   -   output buffer, possibly preallocated array. In case array size
+            is large enough to store result, it is not reallocated.  Array
+            which is too short will be reallocated
+
+OUTPUT PARAMETERS:
+    F   -   array[D] (or larger) which stores function values
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcvbuf(const spline3dinterpolant &c, const double x, const double y, const double z, real_1d_array &f);
+
+
+/*************************************************************************
+This subroutine calculates trilinear or tricubic vector-valued spline at the
+given point (X,Y,Z).
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+    X, Y,
+    Z   -   point
+
+OUTPUT PARAMETERS:
+    F   -   array[D] which stores function values.  F is out-parameter and
+            it  is  reallocated  after  call to this function. In case you
+            want  to    reuse  previously  allocated  F,   you   may   use
+            Spline2DCalcVBuf(),  which  reallocates  F only when it is too
+            small.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dcalcv(const spline3dinterpolant &c, const double x, const double y, const double z, real_1d_array &f);
+
+
+/*************************************************************************
+This subroutine unpacks tri-dimensional spline into the coefficients table
+
+INPUT PARAMETERS:
+    C   -   spline interpolant.
+
+Result:
+    N   -   grid size (X)
+    M   -   grid size (Y)
+    L   -   grid size (Z)
+    D   -   number of components
+    SType-  spline type. Currently, only one spline type is supported:
+            trilinear spline, as indicated by SType=1.
+    Tbl -   spline coefficients: [0..(N-1)*(M-1)*(L-1)*D-1, 0..13].
+            For T=0..D-1 (component index), I = 0...N-2 (x index),
+            J=0..M-2 (y index), K=0..L-2 (z index):
+                Q := T + I*D + J*D*(N-1) + K*D*(N-1)*(M-1),
+
+                Q-th row stores decomposition for T-th component of the
+                vector-valued function
+
+                Tbl[Q,0] = X[i]
+                Tbl[Q,1] = X[i+1]
+                Tbl[Q,2] = Y[j]
+                Tbl[Q,3] = Y[j+1]
+                Tbl[Q,4] = Z[k]
+                Tbl[Q,5] = Z[k+1]
+
+                Tbl[Q,6] = C000
+                Tbl[Q,7] = C100
+                Tbl[Q,8] = C010
+                Tbl[Q,9] = C110
+                Tbl[Q,10]= C001
+                Tbl[Q,11]= C101
+                Tbl[Q,12]= C011
+                Tbl[Q,13]= C111
+            On each grid square spline is equals to:
+                S(x) = SUM(c[i,j,k]*(x^i)*(y^j)*(z^k), i=0..1, j=0..1, k=0..1)
+                t = x-x[j]
+                u = y-y[i]
+                v = z-z[k]
+
+            NOTE: format of Tbl is given for SType=1. Future versions of
+                  ALGLIB can use different formats for different values of
+                  SType.
+
+  -- ALGLIB PROJECT --
+     Copyright 26.04.2012 by Bochkanov Sergey
+*************************************************************************/
+void spline3dunpackv(const spline3dinterpolant &c, ae_int_t &n, ae_int_t &m, ae_int_t &l, ae_int_t &d, ae_int_t &stype, real_2d_array &tbl);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -4303,9 +5030,10 @@ void idwbuildnoisy(/* Real    */ ae_matrix* xy,
      ae_int_t nw,
      idwinterpolant* z,
      ae_state *_state);
-ae_bool _idwinterpolant_init(idwinterpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _idwinterpolant_init_copy(idwinterpolant* dst, idwinterpolant* src, ae_state *_state, ae_bool make_automatic);
-void _idwinterpolant_clear(idwinterpolant* p);
+ae_bool _idwinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _idwinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _idwinterpolant_clear(void* _p);
+void _idwinterpolant_destroy(void* _p);
 double barycentriccalc(barycentricinterpolant* b,
      double t,
      ae_state *_state);
@@ -4349,9 +5077,10 @@ void barycentricbuildfloaterhormann(/* Real    */ ae_vector* x,
 void barycentriccopy(barycentricinterpolant* b,
      barycentricinterpolant* b2,
      ae_state *_state);
-ae_bool _barycentricinterpolant_init(barycentricinterpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _barycentricinterpolant_init_copy(barycentricinterpolant* dst, barycentricinterpolant* src, ae_state *_state, ae_bool make_automatic);
-void _barycentricinterpolant_clear(barycentricinterpolant* p);
+ae_bool _barycentricinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _barycentricinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _barycentricinterpolant_clear(void* _p);
+void _barycentricinterpolant_destroy(void* _p);
 void polynomialbar2cheb(barycentricinterpolant* p,
      double a,
      double b,
@@ -4585,9 +5314,15 @@ ae_int_t bisectmethod(double pa,
      double b,
      double* x,
      ae_state *_state);
-ae_bool _spline1dinterpolant_init(spline1dinterpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _spline1dinterpolant_init_copy(spline1dinterpolant* dst, spline1dinterpolant* src, ae_state *_state, ae_bool make_automatic);
-void _spline1dinterpolant_clear(spline1dinterpolant* p);
+void spline1dbuildmonotone(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     ae_int_t n,
+     spline1dinterpolant* c,
+     ae_state *_state);
+ae_bool _spline1dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _spline1dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _spline1dinterpolant_clear(void* _p);
+void _spline1dinterpolant_destroy(void* _p);
 void polynomialfit(/* Real    */ ae_vector* x,
      /* Real    */ ae_vector* y,
      ae_int_t n,
@@ -4804,6 +5539,9 @@ void lsfitresults(lsfitstate* state,
      /* Real    */ ae_vector* c,
      lsfitreport* rep,
      ae_state *_state);
+void lsfitsetgradientcheck(lsfitstate* state,
+     double teststep,
+     ae_state *_state);
 void lsfitscalexy(/* Real    */ ae_vector* x,
      /* Real    */ ae_vector* y,
      /* Real    */ ae_vector* w,
@@ -4819,21 +5557,26 @@ void lsfitscalexy(/* Real    */ ae_vector* x,
      /* Real    */ ae_vector* xoriginal,
      /* Real    */ ae_vector* yoriginal,
      ae_state *_state);
-ae_bool _polynomialfitreport_init(polynomialfitreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _polynomialfitreport_init_copy(polynomialfitreport* dst, polynomialfitreport* src, ae_state *_state, ae_bool make_automatic);
-void _polynomialfitreport_clear(polynomialfitreport* p);
-ae_bool _barycentricfitreport_init(barycentricfitreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _barycentricfitreport_init_copy(barycentricfitreport* dst, barycentricfitreport* src, ae_state *_state, ae_bool make_automatic);
-void _barycentricfitreport_clear(barycentricfitreport* p);
-ae_bool _spline1dfitreport_init(spline1dfitreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _spline1dfitreport_init_copy(spline1dfitreport* dst, spline1dfitreport* src, ae_state *_state, ae_bool make_automatic);
-void _spline1dfitreport_clear(spline1dfitreport* p);
-ae_bool _lsfitreport_init(lsfitreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _lsfitreport_init_copy(lsfitreport* dst, lsfitreport* src, ae_state *_state, ae_bool make_automatic);
-void _lsfitreport_clear(lsfitreport* p);
-ae_bool _lsfitstate_init(lsfitstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _lsfitstate_init_copy(lsfitstate* dst, lsfitstate* src, ae_state *_state, ae_bool make_automatic);
-void _lsfitstate_clear(lsfitstate* p);
+ae_bool _polynomialfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _polynomialfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _polynomialfitreport_clear(void* _p);
+void _polynomialfitreport_destroy(void* _p);
+ae_bool _barycentricfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _barycentricfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _barycentricfitreport_clear(void* _p);
+void _barycentricfitreport_destroy(void* _p);
+ae_bool _spline1dfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _spline1dfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _spline1dfitreport_clear(void* _p);
+void _spline1dfitreport_destroy(void* _p);
+ae_bool _lsfitreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _lsfitreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _lsfitreport_clear(void* _p);
+void _lsfitreport_destroy(void* _p);
+ae_bool _lsfitstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _lsfitstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _lsfitstate_clear(void* _p);
+void _lsfitstate_destroy(void* _p);
 void pspline2build(/* Real    */ ae_matrix* xy,
      ae_int_t n,
      ae_int_t st,
@@ -4933,12 +5676,14 @@ double pspline3arclength(pspline3interpolant* p,
      double a,
      double b,
      ae_state *_state);
-ae_bool _pspline2interpolant_init(pspline2interpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _pspline2interpolant_init_copy(pspline2interpolant* dst, pspline2interpolant* src, ae_state *_state, ae_bool make_automatic);
-void _pspline2interpolant_clear(pspline2interpolant* p);
-ae_bool _pspline3interpolant_init(pspline3interpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _pspline3interpolant_init_copy(pspline3interpolant* dst, pspline3interpolant* src, ae_state *_state, ae_bool make_automatic);
-void _pspline3interpolant_clear(pspline3interpolant* p);
+ae_bool _pspline2interpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _pspline2interpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _pspline2interpolant_clear(void* _p);
+void _pspline2interpolant_destroy(void* _p);
+ae_bool _pspline3interpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _pspline3interpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _pspline3interpolant_clear(void* _p);
+void _pspline3interpolant_destroy(void* _p);
 void rbfcreate(ae_int_t nx, ae_int_t ny, rbfmodel* s, ae_state *_state);
 void rbfsetpoints(rbfmodel* s,
      /* Real    */ ae_matrix* xy,
@@ -4990,26 +5735,14 @@ void rbfunpack(rbfmodel* s,
 void rbfalloc(ae_serializer* s, rbfmodel* model, ae_state *_state);
 void rbfserialize(ae_serializer* s, rbfmodel* model, ae_state *_state);
 void rbfunserialize(ae_serializer* s, rbfmodel* model, ae_state *_state);
-ae_bool _rbfmodel_init(rbfmodel* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _rbfmodel_init_copy(rbfmodel* dst, rbfmodel* src, ae_state *_state, ae_bool make_automatic);
-void _rbfmodel_clear(rbfmodel* p);
-ae_bool _rbfreport_init(rbfreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _rbfreport_init_copy(rbfreport* dst, rbfreport* src, ae_state *_state, ae_bool make_automatic);
-void _rbfreport_clear(rbfreport* p);
-void spline2dbuildbilinear(/* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_matrix* f,
-     ae_int_t m,
-     ae_int_t n,
-     spline2dinterpolant* c,
-     ae_state *_state);
-void spline2dbuildbicubic(/* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* y,
-     /* Real    */ ae_matrix* f,
-     ae_int_t m,
-     ae_int_t n,
-     spline2dinterpolant* c,
-     ae_state *_state);
+ae_bool _rbfmodel_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _rbfmodel_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _rbfmodel_clear(void* _p);
+void _rbfmodel_destroy(void* _p);
+ae_bool _rbfreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _rbfreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _rbfreport_clear(void* _p);
+void _rbfreport_destroy(void* _p);
 double spline2dcalc(spline2dinterpolant* c,
      double x,
      double y,
@@ -5021,11 +5754,6 @@ void spline2ddiff(spline2dinterpolant* c,
      double* fx,
      double* fy,
      double* fxy,
-     ae_state *_state);
-void spline2dunpack(spline2dinterpolant* c,
-     ae_int_t* m,
-     ae_int_t* n,
-     /* Real    */ ae_matrix* tbl,
      ae_state *_state);
 void spline2dlintransxy(spline2dinterpolant* c,
      double ax,
@@ -5054,9 +5782,124 @@ void spline2dresamplebilinear(/* Real    */ ae_matrix* a,
      ae_int_t newheight,
      ae_int_t newwidth,
      ae_state *_state);
-ae_bool _spline2dinterpolant_init(spline2dinterpolant* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _spline2dinterpolant_init_copy(spline2dinterpolant* dst, spline2dinterpolant* src, ae_state *_state, ae_bool make_automatic);
-void _spline2dinterpolant_clear(spline2dinterpolant* p);
+void spline2dbuildbilinearv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline2dinterpolant* c,
+     ae_state *_state);
+void spline2dbuildbicubicv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline2dinterpolant* c,
+     ae_state *_state);
+void spline2dcalcvbuf(spline2dinterpolant* c,
+     double x,
+     double y,
+     /* Real    */ ae_vector* f,
+     ae_state *_state);
+void spline2dcalcv(spline2dinterpolant* c,
+     double x,
+     double y,
+     /* Real    */ ae_vector* f,
+     ae_state *_state);
+void spline2dunpackv(spline2dinterpolant* c,
+     ae_int_t* m,
+     ae_int_t* n,
+     ae_int_t* d,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state);
+void spline2dbuildbilinear(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* f,
+     ae_int_t m,
+     ae_int_t n,
+     spline2dinterpolant* c,
+     ae_state *_state);
+void spline2dbuildbicubic(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* y,
+     /* Real    */ ae_matrix* f,
+     ae_int_t m,
+     ae_int_t n,
+     spline2dinterpolant* c,
+     ae_state *_state);
+void spline2dunpack(spline2dinterpolant* c,
+     ae_int_t* m,
+     ae_int_t* n,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state);
+ae_bool _spline2dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _spline2dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _spline2dinterpolant_clear(void* _p);
+void _spline2dinterpolant_destroy(void* _p);
+double spline3dcalc(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     ae_state *_state);
+void spline3dlintransxyz(spline3dinterpolant* c,
+     double ax,
+     double bx,
+     double ay,
+     double by,
+     double az,
+     double bz,
+     ae_state *_state);
+void spline3dlintransf(spline3dinterpolant* c,
+     double a,
+     double b,
+     ae_state *_state);
+void spline3dcopy(spline3dinterpolant* c,
+     spline3dinterpolant* cc,
+     ae_state *_state);
+void spline3dresampletrilinear(/* Real    */ ae_vector* a,
+     ae_int_t oldzcount,
+     ae_int_t oldycount,
+     ae_int_t oldxcount,
+     ae_int_t newzcount,
+     ae_int_t newycount,
+     ae_int_t newxcount,
+     /* Real    */ ae_vector* b,
+     ae_state *_state);
+void spline3dbuildtrilinearv(/* Real    */ ae_vector* x,
+     ae_int_t n,
+     /* Real    */ ae_vector* y,
+     ae_int_t m,
+     /* Real    */ ae_vector* z,
+     ae_int_t l,
+     /* Real    */ ae_vector* f,
+     ae_int_t d,
+     spline3dinterpolant* c,
+     ae_state *_state);
+void spline3dcalcvbuf(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     /* Real    */ ae_vector* f,
+     ae_state *_state);
+void spline3dcalcv(spline3dinterpolant* c,
+     double x,
+     double y,
+     double z,
+     /* Real    */ ae_vector* f,
+     ae_state *_state);
+void spline3dunpackv(spline3dinterpolant* c,
+     ae_int_t* n,
+     ae_int_t* m,
+     ae_int_t* l,
+     ae_int_t* d,
+     ae_int_t* stype,
+     /* Real    */ ae_matrix* tbl,
+     ae_state *_state);
+ae_bool _spline3dinterpolant_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _spline3dinterpolant_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _spline3dinterpolant_clear(void* _p);
+void _spline3dinterpolant_destroy(void* _p);
 
 }
 #endif

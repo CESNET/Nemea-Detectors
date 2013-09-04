@@ -231,10 +231,6 @@ void odesolverrkck(const real_1d_array &y, const ae_int_t n, const real_1d_array
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -304,10 +300,6 @@ void odesolverrkck(const real_1d_array &y, const real_1d_array &x, const double 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -328,10 +320,6 @@ bool odesolveriteration(const odesolverstate &state)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -359,10 +347,6 @@ void odesolversolve(odesolverstate &state,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -404,10 +388,6 @@ void odesolverresults(const odesolverstate &state, ae_int_t &m, real_1d_array &x
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 }
@@ -1045,8 +1025,10 @@ static void odesolver_odesolverinit(ae_int_t solvertype,
 }
 
 
-ae_bool _odesolverstate_init(odesolverstate* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _odesolverstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    odesolverstate *p = (odesolverstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_vector_init(&p->yc, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->escale, 0, DT_REAL, _state, make_automatic) )
@@ -1079,8 +1061,10 @@ ae_bool _odesolverstate_init(odesolverstate* p, ae_state *_state, ae_bool make_a
 }
 
 
-ae_bool _odesolverstate_init_copy(odesolverstate* dst, odesolverstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _odesolverstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    odesolverstate *dst = (odesolverstate*)_dst;
+    odesolverstate *src = (odesolverstate*)_src;
     dst->n = src->n;
     dst->m = src->m;
     dst->xscale = src->xscale;
@@ -1124,8 +1108,10 @@ ae_bool _odesolverstate_init_copy(odesolverstate* dst, odesolverstate* src, ae_s
 }
 
 
-void _odesolverstate_clear(odesolverstate* p)
+void _odesolverstate_clear(void* _p)
 {
+    odesolverstate *p = (odesolverstate*)_p;
+    ae_touch_ptr((void*)p);
     ae_vector_clear(&p->yc);
     ae_vector_clear(&p->escale);
     ae_vector_clear(&p->xg);
@@ -1143,22 +1129,56 @@ void _odesolverstate_clear(odesolverstate* p)
 }
 
 
-ae_bool _odesolverreport_init(odesolverreport* p, ae_state *_state, ae_bool make_automatic)
+void _odesolverstate_destroy(void* _p)
 {
+    odesolverstate *p = (odesolverstate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_vector_destroy(&p->yc);
+    ae_vector_destroy(&p->escale);
+    ae_vector_destroy(&p->xg);
+    ae_vector_destroy(&p->y);
+    ae_vector_destroy(&p->dy);
+    ae_matrix_destroy(&p->ytbl);
+    ae_vector_destroy(&p->yn);
+    ae_vector_destroy(&p->yns);
+    ae_vector_destroy(&p->rka);
+    ae_vector_destroy(&p->rkc);
+    ae_vector_destroy(&p->rkcs);
+    ae_matrix_destroy(&p->rkb);
+    ae_matrix_destroy(&p->rkk);
+    _rcommstate_destroy(&p->rstate);
+}
+
+
+ae_bool _odesolverreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    odesolverreport *p = (odesolverreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _odesolverreport_init_copy(odesolverreport* dst, odesolverreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _odesolverreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    odesolverreport *dst = (odesolverreport*)_dst;
+    odesolverreport *src = (odesolverreport*)_src;
     dst->nfev = src->nfev;
     dst->terminationtype = src->terminationtype;
     return ae_true;
 }
 
 
-void _odesolverreport_clear(odesolverreport* p)
+void _odesolverreport_clear(void* _p)
 {
+    odesolverreport *p = (odesolverreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+void _odesolverreport_destroy(void* _p)
+{
+    odesolverreport *p = (odesolverreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 

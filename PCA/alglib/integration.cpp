@@ -87,10 +87,6 @@ void gqgeneraterec(const real_1d_array &alpha, const real_1d_array &beta, const 
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -145,10 +141,6 @@ void gqgenerategausslobattorec(const real_1d_array &alpha, const real_1d_array &
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -205,10 +197,6 @@ void gqgenerategaussradaurec(const real_1d_array &alpha, const real_1d_array &be
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -248,10 +236,6 @@ void gqgenerategausslegendre(const ae_int_t n, ae_int_t &info, real_1d_array &x,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -296,10 +280,6 @@ void gqgenerategaussjacobi(const ae_int_t n, const double alpha, const double be
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -342,10 +322,6 @@ void gqgenerategausslaguerre(const ae_int_t n, const double alpha, ae_int_t &inf
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -384,10 +360,6 @@ void gqgenerategausshermite(const ae_int_t n, ae_int_t &info, real_1d_array &x, 
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -451,10 +423,6 @@ void gkqgeneraterec(const real_1d_array &alpha, const real_1d_array &beta, const
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -499,10 +467,6 @@ void gkqgenerategausslegendre(const ae_int_t n, ae_int_t &info, real_1d_array &x
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -556,10 +520,6 @@ void gkqgenerategaussjacobi(const ae_int_t n, const double alpha, const double b
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -602,10 +562,6 @@ void gkqlegendrecalc(const ae_int_t n, ae_int_t &info, real_1d_array &x, real_1d
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -643,10 +599,6 @@ void gkqlegendretbl(const ae_int_t n, real_1d_array &x, real_1d_array &wkronrod,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -837,10 +789,6 @@ void autogksmooth(const double a, const double b, autogkstate &state)
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -879,10 +827,6 @@ void autogksmoothw(const double a, const double b, const double xwidth, autogkst
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -932,10 +876,6 @@ void autogksingular(const double a, const double b, const double alpha, const do
     {
         throw ap_error(_alglib_env_state.error_msg);
     }
-    catch(...)
-    {
-        throw;
-    }
 }
 
 /*************************************************************************
@@ -956,10 +896,6 @@ bool autogkiteration(const autogkstate &state)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -987,10 +923,6 @@ void autogkintegrate(autogkstate &state,
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 
@@ -1024,10 +956,6 @@ void autogkresults(const autogkstate &state, double &v, autogkreport &rep)
     catch(alglib_impl::ae_error_type)
     {
         throw ap_error(_alglib_env_state.error_msg);
-    }
-    catch(...)
-    {
-        throw;
     }
 }
 }
@@ -3858,14 +3786,18 @@ static void autogk_mheapresize(/* Real    */ ae_matrix* heap,
 }
 
 
-ae_bool _autogkreport_init(autogkreport* p, ae_state *_state, ae_bool make_automatic)
+ae_bool _autogkreport_init(void* _p, ae_state *_state, ae_bool make_automatic)
 {
+    autogkreport *p = (autogkreport*)_p;
+    ae_touch_ptr((void*)p);
     return ae_true;
 }
 
 
-ae_bool _autogkreport_init_copy(autogkreport* dst, autogkreport* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _autogkreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    autogkreport *dst = (autogkreport*)_dst;
+    autogkreport *src = (autogkreport*)_src;
     dst->terminationtype = src->terminationtype;
     dst->nfev = src->nfev;
     dst->nintervals = src->nintervals;
@@ -3873,13 +3805,24 @@ ae_bool _autogkreport_init_copy(autogkreport* dst, autogkreport* src, ae_state *
 }
 
 
-void _autogkreport_clear(autogkreport* p)
+void _autogkreport_clear(void* _p)
 {
+    autogkreport *p = (autogkreport*)_p;
+    ae_touch_ptr((void*)p);
 }
 
 
-ae_bool _autogkinternalstate_init(autogkinternalstate* p, ae_state *_state, ae_bool make_automatic)
+void _autogkreport_destroy(void* _p)
 {
+    autogkreport *p = (autogkreport*)_p;
+    ae_touch_ptr((void*)p);
+}
+
+
+ae_bool _autogkinternalstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    autogkinternalstate *p = (autogkinternalstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !ae_matrix_init(&p->heap, 0, 0, DT_REAL, _state, make_automatic) )
         return ae_false;
     if( !ae_vector_init(&p->qn, 0, DT_REAL, _state, make_automatic) )
@@ -3896,8 +3839,10 @@ ae_bool _autogkinternalstate_init(autogkinternalstate* p, ae_state *_state, ae_b
 }
 
 
-ae_bool _autogkinternalstate_init_copy(autogkinternalstate* dst, autogkinternalstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _autogkinternalstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    autogkinternalstate *dst = (autogkinternalstate*)_dst;
+    autogkinternalstate *src = (autogkinternalstate*)_src;
     dst->a = src->a;
     dst->b = src->b;
     dst->eps = src->eps;
@@ -3928,8 +3873,10 @@ ae_bool _autogkinternalstate_init_copy(autogkinternalstate* dst, autogkinternals
 }
 
 
-void _autogkinternalstate_clear(autogkinternalstate* p)
+void _autogkinternalstate_clear(void* _p)
 {
+    autogkinternalstate *p = (autogkinternalstate*)_p;
+    ae_touch_ptr((void*)p);
     ae_matrix_clear(&p->heap);
     ae_vector_clear(&p->qn);
     ae_vector_clear(&p->wg);
@@ -3939,8 +3886,23 @@ void _autogkinternalstate_clear(autogkinternalstate* p)
 }
 
 
-ae_bool _autogkstate_init(autogkstate* p, ae_state *_state, ae_bool make_automatic)
+void _autogkinternalstate_destroy(void* _p)
 {
+    autogkinternalstate *p = (autogkinternalstate*)_p;
+    ae_touch_ptr((void*)p);
+    ae_matrix_destroy(&p->heap);
+    ae_vector_destroy(&p->qn);
+    ae_vector_destroy(&p->wg);
+    ae_vector_destroy(&p->wk);
+    ae_vector_destroy(&p->wr);
+    _rcommstate_destroy(&p->rstate);
+}
+
+
+ae_bool _autogkstate_init(void* _p, ae_state *_state, ae_bool make_automatic)
+{
+    autogkstate *p = (autogkstate*)_p;
+    ae_touch_ptr((void*)p);
     if( !_autogkinternalstate_init(&p->internalstate, _state, make_automatic) )
         return ae_false;
     if( !_rcommstate_init(&p->rstate, _state, make_automatic) )
@@ -3949,8 +3911,10 @@ ae_bool _autogkstate_init(autogkstate* p, ae_state *_state, ae_bool make_automat
 }
 
 
-ae_bool _autogkstate_init_copy(autogkstate* dst, autogkstate* src, ae_state *_state, ae_bool make_automatic)
+ae_bool _autogkstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic)
 {
+    autogkstate *dst = (autogkstate*)_dst;
+    autogkstate *src = (autogkstate*)_src;
     dst->a = src->a;
     dst->b = src->b;
     dst->alpha = src->alpha;
@@ -3974,10 +3938,21 @@ ae_bool _autogkstate_init_copy(autogkstate* dst, autogkstate* src, ae_state *_st
 }
 
 
-void _autogkstate_clear(autogkstate* p)
+void _autogkstate_clear(void* _p)
 {
+    autogkstate *p = (autogkstate*)_p;
+    ae_touch_ptr((void*)p);
     _autogkinternalstate_clear(&p->internalstate);
     _rcommstate_clear(&p->rstate);
+}
+
+
+void _autogkstate_destroy(void* _p)
+{
+    autogkstate *p = (autogkstate*)_p;
+    ae_touch_ptr((void*)p);
+    _autogkinternalstate_destroy(&p->internalstate);
+    _rcommstate_destroy(&p->rstate);
 }
 
 

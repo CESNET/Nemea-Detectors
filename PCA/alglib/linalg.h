@@ -36,6 +36,19 @@ typedef struct
 } matinvreport;
 typedef struct
 {
+    ae_vector vals;
+    ae_vector idx;
+    ae_vector ridx;
+    ae_vector didx;
+    ae_vector uidx;
+    ae_int_t matrixtype;
+    ae_int_t m;
+    ae_int_t n;
+    ae_int_t nfree;
+    ae_int_t ninitialized;
+} sparsematrix;
+typedef struct
+{
     double e1;
     double e2;
     ae_vector x;
@@ -52,19 +65,6 @@ typedef struct
     rcommstate rstate;
     ae_vector tmp2;
 } fblslincgstate;
-typedef struct
-{
-    ae_vector vals;
-    ae_vector idx;
-    ae_vector ridx;
-    ae_vector didx;
-    ae_vector uidx;
-    ae_int_t matrixtype;
-    ae_int_t m;
-    ae_int_t n;
-    ae_int_t nfree;
-    ae_int_t ninitialized;
-} sparsematrix;
 typedef struct
 {
     ae_int_t n;
@@ -141,8 +141,6 @@ public:
 
 };
 
-
-
 /*************************************************************************
 Sparse matrix
 
@@ -170,6 +168,8 @@ public:
     virtual ~sparsematrix();
 
 };
+
+
 
 /*************************************************************************
 This object stores state of the iterative norm estimation algorithm.
@@ -228,6 +228,19 @@ Input parameters:
     JB  -   submatrix offset (column index)
 *************************************************************************/
 void rmatrixtranspose(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, real_2d_array &b, const ae_int_t ib, const ae_int_t jb);
+
+
+/*************************************************************************
+This code enforces symmetricy of the matrix by copying Upper part to lower
+one (or vice versa).
+
+INPUT PARAMETERS:
+    A   -   matrix
+    N   -   number of rows/columns
+    IsUpper - whether we want to copy upper triangle to lower one (True)
+            or vice versa (False).
+*************************************************************************/
+void rmatrixenforcesymmetricity(const real_2d_array &a, const ae_int_t n, const bool isupper);
 
 
 /*************************************************************************
@@ -364,289 +377,59 @@ void rmatrixmv(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const
 
 
 /*************************************************************************
-This subroutine calculates X*op(A^-1) where:
-* X is MxN general matrix
-* A is NxN upper/lower triangular/unitriangular matrix
-* "op" may be identity transformation, transposition, conjugate transposition
 
-Multiplication result replaces X.
-Cache-oblivious algorithm is used.
-
-INPUT PARAMETERS
-    N   -   matrix size, N>=0
-    M   -   matrix size, N>=0
-    A       -   matrix, actial matrix is stored in A[I1:I1+N-1,J1:J1+N-1]
-    I1      -   submatrix offset
-    J1      -   submatrix offset
-    IsUpper -   whether matrix is upper triangular
-    IsUnit  -   whether matrix is unitriangular
-    OpType  -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-                * 2 - conjugate transposition
-    X   -   matrix, actial matrix is stored in X[I2:I2+M-1,J2:J2+N-1]
-    I2  -   submatrix offset
-    J2  -   submatrix offset
-
-  -- ALGLIB routine --
-     15.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void cmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void cmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void smp_cmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
 
 
 /*************************************************************************
-This subroutine calculates op(A^-1)*X where:
-* X is MxN general matrix
-* A is MxM upper/lower triangular/unitriangular matrix
-* "op" may be identity transformation, transposition, conjugate transposition
 
-Multiplication result replaces X.
-Cache-oblivious algorithm is used.
-
-INPUT PARAMETERS
-    N   -   matrix size, N>=0
-    M   -   matrix size, N>=0
-    A       -   matrix, actial matrix is stored in A[I1:I1+M-1,J1:J1+M-1]
-    I1      -   submatrix offset
-    J1      -   submatrix offset
-    IsUpper -   whether matrix is upper triangular
-    IsUnit  -   whether matrix is unitriangular
-    OpType  -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-                * 2 - conjugate transposition
-    X   -   matrix, actial matrix is stored in X[I2:I2+M-1,J2:J2+N-1]
-    I2  -   submatrix offset
-    J2  -   submatrix offset
-
-  -- ALGLIB routine --
-     15.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void cmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void cmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void smp_cmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const complex_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const complex_2d_array &x, const ae_int_t i2, const ae_int_t j2);
 
 
 /*************************************************************************
-This subroutine calculates X*op(A^-1) where:
-* X is MxN general matrix
-* A is NxN upper/lower triangular/unitriangular matrix
-* "op" may be identity transformation, transposition
 
-Multiplication result replaces X.
-Cache-oblivious algorithm is used.
-
-INPUT PARAMETERS
-    N   -   matrix size, N>=0
-    M   -   matrix size, N>=0
-    A       -   matrix, actial matrix is stored in A[I1:I1+N-1,J1:J1+N-1]
-    I1      -   submatrix offset
-    J1      -   submatrix offset
-    IsUpper -   whether matrix is upper triangular
-    IsUnit  -   whether matrix is unitriangular
-    OpType  -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-    X   -   matrix, actial matrix is stored in X[I2:I2+M-1,J2:J2+N-1]
-    I2  -   submatrix offset
-    J2  -   submatrix offset
-
-  -- ALGLIB routine --
-     15.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void rmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void rmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void smp_rmatrixrighttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
 
 
 /*************************************************************************
-This subroutine calculates op(A^-1)*X where:
-* X is MxN general matrix
-* A is MxM upper/lower triangular/unitriangular matrix
-* "op" may be identity transformation, transposition
 
-Multiplication result replaces X.
-Cache-oblivious algorithm is used.
-
-INPUT PARAMETERS
-    N   -   matrix size, N>=0
-    M   -   matrix size, N>=0
-    A       -   matrix, actial matrix is stored in A[I1:I1+M-1,J1:J1+M-1]
-    I1      -   submatrix offset
-    J1      -   submatrix offset
-    IsUpper -   whether matrix is upper triangular
-    IsUnit  -   whether matrix is unitriangular
-    OpType  -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-    X   -   matrix, actial matrix is stored in X[I2:I2+M-1,J2:J2+N-1]
-    I2  -   submatrix offset
-    J2  -   submatrix offset
-
-  -- ALGLIB routine --
-     15.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void rmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void rmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
+void smp_rmatrixlefttrsm(const ae_int_t m, const ae_int_t n, const real_2d_array &a, const ae_int_t i1, const ae_int_t j1, const bool isupper, const bool isunit, const ae_int_t optype, const real_2d_array &x, const ae_int_t i2, const ae_int_t j2);
 
 
 /*************************************************************************
-This subroutine calculates  C=alpha*A*A^H+beta*C  or  C=alpha*A^H*A+beta*C
-where:
-* C is NxN Hermitian matrix given by its upper/lower triangle
-* A is NxK matrix when A*A^H is calculated, KxN matrix otherwise
 
-Additional info:
-* cache-oblivious algorithm is used.
-* multiplication result replaces C. If Beta=0, C elements are not used in
-  calculations (not multiplied by zero - just not referenced)
-* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
-* if both Beta and Alpha are zero, C is filled by zeros.
-
-INPUT PARAMETERS
-    N       -   matrix size, N>=0
-    K       -   matrix size, K>=0
-    Alpha   -   coefficient
-    A       -   matrix
-    IA      -   submatrix offset
-    JA      -   submatrix offset
-    OpTypeA -   multiplication type:
-                * 0 - A*A^H is calculated
-                * 2 - A^H*A is calculated
-    Beta    -   coefficient
-    C       -   matrix
-    IC      -   submatrix offset
-    JC      -   submatrix offset
-    IsUpper -   whether C is upper triangular or lower triangular
-
-  -- ALGLIB routine --
-     16.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void cmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, complex_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
+void cmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, const complex_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
+void smp_cmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, const complex_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
 
 
 /*************************************************************************
-This subroutine calculates  C=alpha*A*A^T+beta*C  or  C=alpha*A^T*A+beta*C
-where:
-* C is NxN symmetric matrix given by its upper/lower triangle
-* A is NxK matrix when A*A^T is calculated, KxN matrix otherwise
 
-Additional info:
-* cache-oblivious algorithm is used.
-* multiplication result replaces C. If Beta=0, C elements are not used in
-  calculations (not multiplied by zero - just not referenced)
-* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
-* if both Beta and Alpha are zero, C is filled by zeros.
-
-INPUT PARAMETERS
-    N       -   matrix size, N>=0
-    K       -   matrix size, K>=0
-    Alpha   -   coefficient
-    A       -   matrix
-    IA      -   submatrix offset
-    JA      -   submatrix offset
-    OpTypeA -   multiplication type:
-                * 0 - A*A^T is calculated
-                * 2 - A^T*A is calculated
-    Beta    -   coefficient
-    C       -   matrix
-    IC      -   submatrix offset
-    JC      -   submatrix offset
-    IsUpper -   whether C is upper triangular or lower triangular
-
-  -- ALGLIB routine --
-     16.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void rmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, real_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
+void rmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, const real_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
+void smp_rmatrixsyrk(const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const double beta, const real_2d_array &c, const ae_int_t ic, const ae_int_t jc, const bool isupper);
 
 
 /*************************************************************************
-This subroutine calculates C = alpha*op1(A)*op2(B) +beta*C where:
-* C is MxN general matrix
-* op1(A) is MxK matrix
-* op2(B) is KxN matrix
-* "op" may be identity transformation, transposition, conjugate transposition
 
-Additional info:
-* cache-oblivious algorithm is used.
-* multiplication result replaces C. If Beta=0, C elements are not used in
-  calculations (not multiplied by zero - just not referenced)
-* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
-* if both Beta and Alpha are zero, C is filled by zeros.
-
-INPUT PARAMETERS
-    M       -   matrix size, M>0
-    N       -   matrix size, N>0
-    K       -   matrix size, K>0
-    Alpha   -   coefficient
-    A       -   matrix
-    IA      -   submatrix offset
-    JA      -   submatrix offset
-    OpTypeA -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-                * 2 - conjugate transposition
-    B       -   matrix
-    IB      -   submatrix offset
-    JB      -   submatrix offset
-    OpTypeB -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-                * 2 - conjugate transposition
-    Beta    -   coefficient
-    C       -   matrix
-    IC      -   submatrix offset
-    JC      -   submatrix offset
-
-  -- ALGLIB routine --
-     16.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void cmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const alglib::complex alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const complex_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const alglib::complex beta, complex_2d_array &c, const ae_int_t ic, const ae_int_t jc);
+void cmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const alglib::complex alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const complex_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const alglib::complex beta, const complex_2d_array &c, const ae_int_t ic, const ae_int_t jc);
+void smp_cmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const alglib::complex alpha, const complex_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const complex_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const alglib::complex beta, const complex_2d_array &c, const ae_int_t ic, const ae_int_t jc);
 
 
 /*************************************************************************
-This subroutine calculates C = alpha*op1(A)*op2(B) +beta*C where:
-* C is MxN general matrix
-* op1(A) is MxK matrix
-* op2(B) is KxN matrix
-* "op" may be identity transformation, transposition
 
-Additional info:
-* cache-oblivious algorithm is used.
-* multiplication result replaces C. If Beta=0, C elements are not used in
-  calculations (not multiplied by zero - just not referenced)
-* if Alpha=0, A is not used (not multiplied by zero - just not referenced)
-* if both Beta and Alpha are zero, C is filled by zeros.
-
-INPUT PARAMETERS
-    M       -   matrix size, M>0
-    N       -   matrix size, N>0
-    K       -   matrix size, K>0
-    Alpha   -   coefficient
-    A       -   matrix
-    IA      -   submatrix offset
-    JA      -   submatrix offset
-    OpTypeA -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-    B       -   matrix
-    IB      -   submatrix offset
-    JB      -   submatrix offset
-    OpTypeB -   transformation type:
-                * 0 - no transformation
-                * 1 - transposition
-    Beta    -   coefficient
-    C       -   matrix
-    IC      -   submatrix offset
-    JC      -   submatrix offset
-
-  -- ALGLIB routine --
-     16.12.2009
-     Bochkanov Sergey
 *************************************************************************/
-void rmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const real_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const double beta, real_2d_array &c, const ae_int_t ic, const ae_int_t jc);
+void rmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const real_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const double beta, const real_2d_array &c, const ae_int_t ic, const ae_int_t jc);
+void smp_rmatrixgemm(const ae_int_t m, const ae_int_t n, const ae_int_t k, const double alpha, const real_2d_array &a, const ae_int_t ia, const ae_int_t ja, const ae_int_t optypea, const real_2d_array &b, const ae_int_t ib, const ae_int_t jb, const ae_int_t optypeb, const double beta, const real_2d_array &c, const ae_int_t ic, const ae_int_t jc);
 
 /*************************************************************************
 QR decomposition of a rectangular matrix of size MxN
@@ -3108,8 +2891,6 @@ Output parameters:
 void cmatrixtrinverse(complex_2d_array &a, const ae_int_t n, const bool isupper, const bool isunit, ae_int_t &info, matinvreport &rep);
 void cmatrixtrinverse(complex_2d_array &a, const bool isupper, ae_int_t &info, matinvreport &rep);
 
-
-
 /*************************************************************************
 This function creates sparse matrix in a Hash-Table format.
 
@@ -3207,7 +2988,7 @@ below, in the "NOTES" section.
 INPUT PARAMETERS
     M           -   number of rows in a matrix, M>=1
     N           -   number of columns in a matrix, N>=1
-    NER         -   number of elements at each row, array[M], NER[i]>=0
+    NER         -   number of elements at each row, array[M], NER[I]>=0
 
 OUTPUT PARAMETERS
     S           -   sparse M*N matrix in CRS representation.
@@ -3302,24 +3083,27 @@ void sparseadd(const sparsematrix &s, const ae_int_t i, const ae_int_t j, const 
 
 
 /*************************************************************************
-This function modifies S[i,j] - element of the sparse matrix. Matrix must
-be in a Hash-Table mode.
+This function modifies S[i,j] - element of the sparse matrix.
 
-In  case  new  value  of S[i,j] is zero, this element is deleted from the
-table.
+For Hash-based storage format:
+* new value can be zero or non-zero.  In case new value of S[i,j] is zero,
+  this element is deleted from the table.
+* this  function  has  no  effect when called with zero V for non-existent
+  element.
+
+For CRS-bases storage format:
+* new value MUST be non-zero. Exception will be thrown for zero V.
+* elements must be initialized in correct order -  from top row to bottom,
+  within row - from left to right.
 
 INPUT PARAMETERS
-    S           -   sparse M*N matrix in Hash-Table representation.
-                    Exception will be thrown for CRS matrix.
+    S           -   sparse M*N matrix in Hash-Table or CRS representation.
     I           -   row index of the element to modify, 0<=I<M
     J           -   column index of the element to modify, 0<=J<N
     V           -   value to set, must be finite number, can be zero
 
 OUTPUT PARAMETERS
     S           -   modified matrix
-
-NOTE:  this  function  has  no  effect  when  called with zero V for non-
-existent element.
 
   -- ALGLIB PROJECT --
      Copyright 14.10.2011 by Bochkanov Sergey
@@ -3331,8 +3115,8 @@ void sparseset(const sparsematrix &s, const ae_int_t i, const ae_int_t j, const 
 This function returns S[i,j] - element of the sparse matrix.  Matrix  can
 be in any mode (Hash-Table or CRS), but this function is  less  efficient
 for CRS matrices.  Hash-Table  matrices can  find element  in O(1)  time,
-while  CRS  matrices  need  O(RS) time, where RS is an number of non-zero
-elements in a row.
+while  CRS  matrices  need O(log(RS)) time, where RS is an number of non-
+zero elements in a row.
 
 INPUT PARAMETERS
     S           -   sparse M*N matrix in Hash-Table representation.
@@ -3350,13 +3134,35 @@ double sparseget(const sparsematrix &s, const ae_int_t i, const ae_int_t j);
 
 
 /*************************************************************************
+This function returns I-th diagonal element of the sparse matrix.
+
+Matrix can be in any mode (Hash-Table or CRS storage), but this  function
+is most efficient for CRS matrices - it requires less than 50 CPU  cycles
+to extract diagonal element. For Hash-Table matrices we still  have  O(1)
+query time, but function is many times slower.
+
+INPUT PARAMETERS
+    S           -   sparse M*N matrix in Hash-Table representation.
+                    Exception will be thrown for CRS matrix.
+    I           -   index of the element to modify, 0<=I<min(M,N)
+
+RESULT
+    value of S[I,I] or zero (in case no element with such index is found)
+
+  -- ALGLIB PROJECT --
+     Copyright 14.10.2011 by Bochkanov Sergey
+*************************************************************************/
+double sparsegetdiagonal(const sparsematrix &s, const ae_int_t i);
+
+
+/*************************************************************************
 This function converts matrix to CRS format.
 
 Some  algorithms  (linear  algebra ones, for example) require matrices in
 CRS format.
 
 INPUT PARAMETERS
-    S           -   sparse M*N matrix.
+    S           -   sparse M*N matrix in any format
 
 OUTPUT PARAMETERS
     S           -   matrix in CRS format
@@ -3465,6 +3271,12 @@ thrown otherwise).
 INPUT PARAMETERS
     S           -   sparse M*M matrix in CRS format (you MUST convert  it
                     to CRS before calling this function).
+    IsUpper     -   whether upper or lower triangle of S is given:
+                    * if upper triangle is given,  only   S[i,j] for j>=i
+                      are used, and lower triangle is ignored (it can  be
+                      empty - these elements are not referenced at all).
+                    * if lower triangle is given,  only   S[i,j] for j<=i
+                      are used, and upper triangle is ignored.
     X           -   array[N], input vector. For  performance  reasons  we
                     make only quick checks - we check that array size  is
                     at least N, but we do not check for NAN's or INF's.
@@ -3583,6 +3395,12 @@ thrown otherwise).
 INPUT PARAMETERS
     S           -   sparse M*M matrix in CRS format (you MUST convert  it
                     to CRS before calling this function).
+    IsUpper     -   whether upper or lower triangle of S is given:
+                    * if upper triangle is given,  only   S[i,j] for j>=i
+                      are used, and lower triangle is ignored (it can  be
+                      empty - these elements are not referenced at all).
+                    * if lower triangle is given,  only   S[i,j] for j<=i
+                      are used, and upper triangle is ignored.
     A           -   array[N][K], input dense matrix. For performance reasons
                     we make only quick checks - we check that array size is
                     at least N, but we do not check for NAN's or INF's.
@@ -3613,6 +3431,243 @@ memory.
      Copyright 14.10.2011 by Bochkanov Sergey
 *************************************************************************/
 void sparseresizematrix(const sparsematrix &s);
+
+
+/*************************************************************************
+This  function  is  used  to enumerate all elements of the sparse matrix.
+Before  first  call  user  initializes  T0 and T1 counters by zero. These
+counters are used to remember current position in a  matrix;  after  each
+call they are updated by the function.
+
+Subsequent calls to this function return non-zero elements of the  sparse
+matrix, one by one. If you enumerate CRS matrix, matrix is traversed from
+left to right, from top to bottom. In case you enumerate matrix stored as
+Hash table, elements are returned in random order.
+
+EXAMPLE
+    > T0=0
+    > T1=0
+    > while SparseEnumerate(S,T0,T1,I,J,V) do
+    >     ....do something with I,J,V
+
+INPUT PARAMETERS
+    S           -   sparse M*N matrix in Hash-Table or CRS representation.
+    T0          -   internal counter
+    T1          -   internal counter
+
+OUTPUT PARAMETERS
+    T0          -   new value of the internal counter
+    T1          -   new value of the internal counter
+    I           -   row index of non-zero element, 0<=I<M.
+    J           -   column index of non-zero element, 0<=J<N
+    V           -   value of the T-th element
+
+RESULT
+    True in case of success (next non-zero element was retrieved)
+    False in case all non-zero elements were enumerated
+
+  -- ALGLIB PROJECT --
+     Copyright 14.03.2012 by Bochkanov Sergey
+*************************************************************************/
+bool sparseenumerate(const sparsematrix &s, ae_int_t &t0, ae_int_t &t1, ae_int_t &i, ae_int_t &j, double &v);
+
+
+/*************************************************************************
+This function rewrites existing (non-zero) element. It  returns  True   if
+element  exists  or  False,  when  it  is  called for non-existing  (zero)
+element.
+
+The purpose of this function is to provide convenient thread-safe  way  to
+modify  sparse  matrix.  Such  modification  (already  existing element is
+rewritten) is guaranteed to be thread-safe without any synchronization, as
+long as different threads modify different elements.
+
+INPUT PARAMETERS
+    S           -   sparse M*N matrix in Hash-Table or CRS representation.
+    I           -   row index of non-zero element to modify, 0<=I<M
+    J           -   column index of non-zero element to modify, 0<=J<N
+    V           -   value to rewrite, must be finite number
+
+OUTPUT PARAMETERS
+    S           -   modified matrix
+RESULT
+    True in case when element exists
+    False in case when element doesn't exist or it is zero
+
+  -- ALGLIB PROJECT --
+     Copyright 14.03.2012 by Bochkanov Sergey
+*************************************************************************/
+bool sparserewriteexisting(const sparsematrix &s, const ae_int_t i, const ae_int_t j, const double v);
+
+
+/*************************************************************************
+This function returns I-th row of the sparse matrix stored in CRS format.
+
+NOTE: when  incorrect  I  (outside  of  [0,M-1]) or  matrix (non-CRS)  are
+      passed, this function throws exception.
+
+INPUT PARAMETERS:
+    S           -   sparse M*N matrix in CRS format
+    I           -   row index, 0<=I<M
+    IRow        -   output buffer, can be  preallocated.  In  case  buffer
+                    size  is  too  small  to  store  I-th   row,   it   is
+                    automatically reallocated.
+
+OUTPUT PARAMETERS:
+    IRow        -   array[M], I-th row.
+
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void sparsegetrow(const sparsematrix &s, const ae_int_t i, real_1d_array &irow);
+
+
+/*************************************************************************
+This function performs in-place conversion from CRS format to  Hash  table
+storage.
+
+INPUT PARAMETERS
+    S           -   sparse matrix in CRS format.
+
+OUTPUT PARAMETERS
+    S           -   sparse matrix in Hash table format.
+
+NOTE:  this  function  has  no  effect  when  called with matrix which is
+already in Hash table mode.
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void sparseconverttohash(const sparsematrix &s);
+
+
+/*************************************************************************
+This  function  performs  out-of-place  conversion  to  Hash table storage
+format. S0 is copied to S1 and converted on-the-fly.
+
+INPUT PARAMETERS
+    S0          -   sparse matrix in any format.
+
+OUTPUT PARAMETERS
+    S1          -   sparse matrix in Hash table format.
+
+NOTE: if S0 is stored as Hash-table, it is just copied without conversion.
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void sparsecopytohash(const sparsematrix &s0, sparsematrix &s1);
+
+
+/*************************************************************************
+This  function  performs  out-of-place  conversion  to  CRS format.  S0 is
+copied to S1 and converted on-the-fly.
+
+INPUT PARAMETERS
+    S0          -   sparse matrix in any format.
+
+OUTPUT PARAMETERS
+    S1          -   sparse matrix in CRS format.
+
+NOTE: if S0 is stored as CRS, it is just copied without conversion.
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void sparsecopytocrs(const sparsematrix &s0, sparsematrix &s1);
+
+
+/*************************************************************************
+This function returns type of the matrix storage format.
+
+INPUT PARAMETERS:
+    S           -   sparse matrix.
+
+RESULT:
+    sparse storage format used by matrix:
+        0   -   Hash-table
+        1   -   CRS-format
+
+NOTE: future  versions  of  ALGLIB  may  include additional sparse storage
+      formats.
+
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+ae_int_t sparsegetmatrixtype(const sparsematrix &s);
+
+
+/*************************************************************************
+This function checks matrix storage format and returns True when matrix is
+stored using Hash table representation.
+
+INPUT PARAMETERS:
+    S   -   sparse matrix.
+
+RESULT:
+    True if matrix type is Hash table
+    False if matrix type is not Hash table
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+bool sparseishash(const sparsematrix &s);
+
+
+/*************************************************************************
+This function checks matrix storage format and returns True when matrix is
+stored using CRS representation.
+
+INPUT PARAMETERS:
+    S   -   sparse matrix.
+
+RESULT:
+    True if matrix type is CRS
+    False if matrix type is not CRS
+
+  -- ALGLIB PROJECT --
+     Copyright 20.07.2012 by Bochkanov Sergey
+*************************************************************************/
+bool sparseiscrs(const sparsematrix &s);
+
+
+/*************************************************************************
+The function frees all memory occupied by  sparse  matrix.  Sparse  matrix
+structure becomes unusable after this call.
+
+OUTPUT PARAMETERS
+    S   -   sparse matrix to delete
+
+  -- ALGLIB PROJECT --
+     Copyright 24.07.2012 by Bochkanov Sergey
+*************************************************************************/
+void sparsefree(sparsematrix &s);
+
+
+/*************************************************************************
+The function returns number of rows of a sparse matrix.
+
+RESULT: number of rows of a sparse matrix.
+
+  -- ALGLIB PROJECT --
+     Copyright 23.08.2012 by Bochkanov Sergey
+*************************************************************************/
+ae_int_t sparsegetnrows(const sparsematrix &s);
+
+
+/*************************************************************************
+The function returns number of columns of a sparse matrix.
+
+RESULT: number of columns of a sparse matrix.
+
+  -- ALGLIB PROJECT --
+     Copyright 23.08.2012 by Bochkanov Sergey
+*************************************************************************/
+ae_int_t sparsegetncols(const sparsematrix &s);
+
+
 
 /*************************************************************************
 This procedure initializes matrix norm estimator.
@@ -4128,6 +4183,10 @@ void rmatrixtranspose(ae_int_t m,
      ae_int_t ib,
      ae_int_t jb,
      ae_state *_state);
+void rmatrixenforcesymmetricity(/* Real    */ ae_matrix* a,
+     ae_int_t n,
+     ae_bool isupper,
+     ae_state *_state);
 void cmatrixcopy(ae_int_t m,
      ae_int_t n,
      /* Complex */ ae_matrix* a,
@@ -4200,6 +4259,17 @@ void cmatrixrighttrsm(ae_int_t m,
      ae_int_t i2,
      ae_int_t j2,
      ae_state *_state);
+void _pexec_cmatrixrighttrsm(ae_int_t m,
+    ae_int_t n,
+    /* Complex */ ae_matrix* a,
+    ae_int_t i1,
+    ae_int_t j1,
+    ae_bool isupper,
+    ae_bool isunit,
+    ae_int_t optype,
+    /* Complex */ ae_matrix* x,
+    ae_int_t i2,
+    ae_int_t j2, ae_state *_state);
 void cmatrixlefttrsm(ae_int_t m,
      ae_int_t n,
      /* Complex */ ae_matrix* a,
@@ -4212,6 +4282,17 @@ void cmatrixlefttrsm(ae_int_t m,
      ae_int_t i2,
      ae_int_t j2,
      ae_state *_state);
+void _pexec_cmatrixlefttrsm(ae_int_t m,
+    ae_int_t n,
+    /* Complex */ ae_matrix* a,
+    ae_int_t i1,
+    ae_int_t j1,
+    ae_bool isupper,
+    ae_bool isunit,
+    ae_int_t optype,
+    /* Complex */ ae_matrix* x,
+    ae_int_t i2,
+    ae_int_t j2, ae_state *_state);
 void rmatrixrighttrsm(ae_int_t m,
      ae_int_t n,
      /* Real    */ ae_matrix* a,
@@ -4224,6 +4305,17 @@ void rmatrixrighttrsm(ae_int_t m,
      ae_int_t i2,
      ae_int_t j2,
      ae_state *_state);
+void _pexec_rmatrixrighttrsm(ae_int_t m,
+    ae_int_t n,
+    /* Real    */ ae_matrix* a,
+    ae_int_t i1,
+    ae_int_t j1,
+    ae_bool isupper,
+    ae_bool isunit,
+    ae_int_t optype,
+    /* Real    */ ae_matrix* x,
+    ae_int_t i2,
+    ae_int_t j2, ae_state *_state);
 void rmatrixlefttrsm(ae_int_t m,
      ae_int_t n,
      /* Real    */ ae_matrix* a,
@@ -4236,6 +4328,17 @@ void rmatrixlefttrsm(ae_int_t m,
      ae_int_t i2,
      ae_int_t j2,
      ae_state *_state);
+void _pexec_rmatrixlefttrsm(ae_int_t m,
+    ae_int_t n,
+    /* Real    */ ae_matrix* a,
+    ae_int_t i1,
+    ae_int_t j1,
+    ae_bool isupper,
+    ae_bool isunit,
+    ae_int_t optype,
+    /* Real    */ ae_matrix* x,
+    ae_int_t i2,
+    ae_int_t j2, ae_state *_state);
 void cmatrixsyrk(ae_int_t n,
      ae_int_t k,
      double alpha,
@@ -4249,6 +4352,18 @@ void cmatrixsyrk(ae_int_t n,
      ae_int_t jc,
      ae_bool isupper,
      ae_state *_state);
+void _pexec_cmatrixsyrk(ae_int_t n,
+    ae_int_t k,
+    double alpha,
+    /* Complex */ ae_matrix* a,
+    ae_int_t ia,
+    ae_int_t ja,
+    ae_int_t optypea,
+    double beta,
+    /* Complex */ ae_matrix* c,
+    ae_int_t ic,
+    ae_int_t jc,
+    ae_bool isupper, ae_state *_state);
 void rmatrixsyrk(ae_int_t n,
      ae_int_t k,
      double alpha,
@@ -4262,6 +4377,18 @@ void rmatrixsyrk(ae_int_t n,
      ae_int_t jc,
      ae_bool isupper,
      ae_state *_state);
+void _pexec_rmatrixsyrk(ae_int_t n,
+    ae_int_t k,
+    double alpha,
+    /* Real    */ ae_matrix* a,
+    ae_int_t ia,
+    ae_int_t ja,
+    ae_int_t optypea,
+    double beta,
+    /* Real    */ ae_matrix* c,
+    ae_int_t ic,
+    ae_int_t jc,
+    ae_bool isupper, ae_state *_state);
 void cmatrixgemm(ae_int_t m,
      ae_int_t n,
      ae_int_t k,
@@ -4279,6 +4406,22 @@ void cmatrixgemm(ae_int_t m,
      ae_int_t ic,
      ae_int_t jc,
      ae_state *_state);
+void _pexec_cmatrixgemm(ae_int_t m,
+    ae_int_t n,
+    ae_int_t k,
+    ae_complex alpha,
+    /* Complex */ ae_matrix* a,
+    ae_int_t ia,
+    ae_int_t ja,
+    ae_int_t optypea,
+    /* Complex */ ae_matrix* b,
+    ae_int_t ib,
+    ae_int_t jb,
+    ae_int_t optypeb,
+    ae_complex beta,
+    /* Complex */ ae_matrix* c,
+    ae_int_t ic,
+    ae_int_t jc, ae_state *_state);
 void rmatrixgemm(ae_int_t m,
      ae_int_t n,
      ae_int_t k,
@@ -4296,6 +4439,22 @@ void rmatrixgemm(ae_int_t m,
      ae_int_t ic,
      ae_int_t jc,
      ae_state *_state);
+void _pexec_rmatrixgemm(ae_int_t m,
+    ae_int_t n,
+    ae_int_t k,
+    double alpha,
+    /* Real    */ ae_matrix* a,
+    ae_int_t ia,
+    ae_int_t ja,
+    ae_int_t optypea,
+    /* Real    */ ae_matrix* b,
+    ae_int_t ib,
+    ae_int_t jb,
+    ae_int_t optypeb,
+    double beta,
+    /* Real    */ ae_matrix* c,
+    ae_int_t ic,
+    ae_int_t jc, ae_state *_state);
 void rmatrixqr(/* Real    */ ae_matrix* a,
      ae_int_t m,
      ae_int_t n,
@@ -4798,41 +4957,10 @@ void cmatrixtrinverse(/* Complex */ ae_matrix* a,
      ae_int_t* info,
      matinvreport* rep,
      ae_state *_state);
-ae_bool _matinvreport_init(matinvreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _matinvreport_init_copy(matinvreport* dst, matinvreport* src, ae_state *_state, ae_bool make_automatic);
-void _matinvreport_clear(matinvreport* p);
-void fblscholeskysolve(/* Real    */ ae_matrix* cha,
-     double sqrtscalea,
-     ae_int_t n,
-     ae_bool isupper,
-     /* Real    */ ae_vector* xb,
-     /* Real    */ ae_vector* tmp,
-     ae_state *_state);
-void fblssolvecgx(/* Real    */ ae_matrix* a,
-     ae_int_t m,
-     ae_int_t n,
-     double alpha,
-     /* Real    */ ae_vector* b,
-     /* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* buf,
-     ae_state *_state);
-void fblscgcreate(/* Real    */ ae_vector* x,
-     /* Real    */ ae_vector* b,
-     ae_int_t n,
-     fblslincgstate* state,
-     ae_state *_state);
-ae_bool fblscgiteration(fblslincgstate* state, ae_state *_state);
-void fblssolvels(/* Real    */ ae_matrix* a,
-     /* Real    */ ae_vector* b,
-     ae_int_t m,
-     ae_int_t n,
-     /* Real    */ ae_vector* tmp0,
-     /* Real    */ ae_vector* tmp1,
-     /* Real    */ ae_vector* tmp2,
-     ae_state *_state);
-ae_bool _fblslincgstate_init(fblslincgstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _fblslincgstate_init_copy(fblslincgstate* dst, fblslincgstate* src, ae_state *_state, ae_bool make_automatic);
-void _fblslincgstate_clear(fblslincgstate* p);
+ae_bool _matinvreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _matinvreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _matinvreport_clear(void* _p);
+void _matinvreport_destroy(void* _p);
 void sparsecreate(ae_int_t m,
      ae_int_t n,
      ae_int_t k,
@@ -4858,6 +4986,7 @@ double sparseget(sparsematrix* s,
      ae_int_t i,
      ae_int_t j,
      ae_state *_state);
+double sparsegetdiagonal(sparsematrix* s, ae_int_t i, ae_state *_state);
 void sparseconverttocrs(sparsematrix* s, ae_state *_state);
 void sparsemv(sparsematrix* s,
      /* Real    */ ae_vector* x,
@@ -4901,9 +5030,70 @@ void sparsesmm(sparsematrix* s,
      ae_state *_state);
 void sparseresizematrix(sparsematrix* s, ae_state *_state);
 double sparsegetaveragelengthofchain(sparsematrix* s, ae_state *_state);
-ae_bool _sparsematrix_init(sparsematrix* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _sparsematrix_init_copy(sparsematrix* dst, sparsematrix* src, ae_state *_state, ae_bool make_automatic);
-void _sparsematrix_clear(sparsematrix* p);
+ae_bool sparseenumerate(sparsematrix* s,
+     ae_int_t* t0,
+     ae_int_t* t1,
+     ae_int_t* i,
+     ae_int_t* j,
+     double* v,
+     ae_state *_state);
+ae_bool sparserewriteexisting(sparsematrix* s,
+     ae_int_t i,
+     ae_int_t j,
+     double v,
+     ae_state *_state);
+void sparsegetrow(sparsematrix* s,
+     ae_int_t i,
+     /* Real    */ ae_vector* irow,
+     ae_state *_state);
+void sparseconverttohash(sparsematrix* s, ae_state *_state);
+void sparsecopytohash(sparsematrix* s0,
+     sparsematrix* s1,
+     ae_state *_state);
+void sparsecopytocrs(sparsematrix* s0, sparsematrix* s1, ae_state *_state);
+ae_int_t sparsegetmatrixtype(sparsematrix* s, ae_state *_state);
+ae_bool sparseishash(sparsematrix* s, ae_state *_state);
+ae_bool sparseiscrs(sparsematrix* s, ae_state *_state);
+void sparsefree(sparsematrix* s, ae_state *_state);
+ae_int_t sparsegetnrows(sparsematrix* s, ae_state *_state);
+ae_int_t sparsegetncols(sparsematrix* s, ae_state *_state);
+ae_bool _sparsematrix_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _sparsematrix_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _sparsematrix_clear(void* _p);
+void _sparsematrix_destroy(void* _p);
+void fblscholeskysolve(/* Real    */ ae_matrix* cha,
+     double sqrtscalea,
+     ae_int_t n,
+     ae_bool isupper,
+     /* Real    */ ae_vector* xb,
+     /* Real    */ ae_vector* tmp,
+     ae_state *_state);
+void fblssolvecgx(/* Real    */ ae_matrix* a,
+     ae_int_t m,
+     ae_int_t n,
+     double alpha,
+     /* Real    */ ae_vector* b,
+     /* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* buf,
+     ae_state *_state);
+void fblscgcreate(/* Real    */ ae_vector* x,
+     /* Real    */ ae_vector* b,
+     ae_int_t n,
+     fblslincgstate* state,
+     ae_state *_state);
+ae_bool fblscgiteration(fblslincgstate* state, ae_state *_state);
+void fblssolvels(/* Real    */ ae_matrix* a,
+     /* Real    */ ae_vector* b,
+     ae_int_t m,
+     ae_int_t n,
+     /* Real    */ ae_vector* tmp0,
+     /* Real    */ ae_vector* tmp1,
+     /* Real    */ ae_vector* tmp2,
+     ae_state *_state);
+ae_bool _fblslincgstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _fblslincgstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _fblslincgstate_clear(void* _p);
+void _fblslincgstate_destroy(void* _p);
 void normestimatorcreate(ae_int_t m,
      ae_int_t n,
      ae_int_t nstart,
@@ -4922,9 +5112,10 @@ void normestimatorresults(normestimatorstate* state,
      double* nrm,
      ae_state *_state);
 void normestimatorrestart(normestimatorstate* state, ae_state *_state);
-ae_bool _normestimatorstate_init(normestimatorstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _normestimatorstate_init_copy(normestimatorstate* dst, normestimatorstate* src, ae_state *_state, ae_bool make_automatic);
-void _normestimatorstate_clear(normestimatorstate* p);
+ae_bool _normestimatorstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _normestimatorstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _normestimatorstate_clear(void* _p);
+void _normestimatorstate_destroy(void* _p);
 double rmatrixludet(/* Real    */ ae_matrix* a,
      /* Integer */ ae_vector* pivots,
      ae_int_t n,

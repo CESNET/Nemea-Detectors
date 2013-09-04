@@ -819,15 +819,18 @@ void autogkresults(autogkstate* state,
      double* v,
      autogkreport* rep,
      ae_state *_state);
-ae_bool _autogkreport_init(autogkreport* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _autogkreport_init_copy(autogkreport* dst, autogkreport* src, ae_state *_state, ae_bool make_automatic);
-void _autogkreport_clear(autogkreport* p);
-ae_bool _autogkinternalstate_init(autogkinternalstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _autogkinternalstate_init_copy(autogkinternalstate* dst, autogkinternalstate* src, ae_state *_state, ae_bool make_automatic);
-void _autogkinternalstate_clear(autogkinternalstate* p);
-ae_bool _autogkstate_init(autogkstate* p, ae_state *_state, ae_bool make_automatic);
-ae_bool _autogkstate_init_copy(autogkstate* dst, autogkstate* src, ae_state *_state, ae_bool make_automatic);
-void _autogkstate_clear(autogkstate* p);
+ae_bool _autogkreport_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _autogkreport_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _autogkreport_clear(void* _p);
+void _autogkreport_destroy(void* _p);
+ae_bool _autogkinternalstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _autogkinternalstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _autogkinternalstate_clear(void* _p);
+void _autogkinternalstate_destroy(void* _p);
+ae_bool _autogkstate_init(void* _p, ae_state *_state, ae_bool make_automatic);
+ae_bool _autogkstate_init_copy(void* _dst, void* _src, ae_state *_state, ae_bool make_automatic);
+void _autogkstate_clear(void* _p);
+void _autogkstate_destroy(void* _p);
 
 }
 #endif
