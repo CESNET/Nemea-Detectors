@@ -1,8 +1,10 @@
-CC=gcc -DNO_BLAS_WRAP
+CC=gcc #-DNO_BLAS_WRAP
 CXX=g++
 CFLAGS=-std=c99 -O2 -g
 CXXFLAGS=-O2 -g
 LDFLAGS=
+
+NEMEAFILES=../../unirec/unirec.o -ltrap -lstdc++
 
 #alglib files
 ALSRCPATH=alglib/
@@ -14,13 +16,22 @@ ALGLIBFILES=$(ALOBJPATH)alglibinternal.o $(ALOBJPATH)alglibmisc.o $(ALOBJPATH)ap
 $(ALOBJPATH)%.o ::  $(ALSRCPATH)%.cpp $(ALSRCPATH)%.h
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-LDLIBS=../../unirec/unirec.o -ltrap -lstdc++ $(ALGLIBFILES) -L./CLAPACK-3.2.1/ -llapack -lblas -lf2c -lm
+LDLIBS=$(NEMEAFILES) $(ALGLIBFILES) #-L./CLAPACK-3.2.1/ -llapack -lblas -lf2c -lm
 #LDLIBS=../../unirec/unirec.o -ltrap -lstdc++ $(ALGLIBFILES)
 
-MODULES=PCA_sketch_detector PCA_test_receiver
+MODULES=PCA_basic_detector PCA_basic_data_reader PCA_sketch_detector PCA_test_receiver
 
 # Uses default rules
 all: $(ALGLIBFILES) ${MODULES}
+
+PCA_basic_detector.o: PCA_basic_detector.cpp PCA_basic.h $(ALGLIBFILES)
+	$(CXX) $(CXXFLAGS) -c -o PCA_basic_detector.o PCA_basic_detector.cpp
+
+PCA_basic_data_reader: PCA_basic_data_reader.o
+	$(CXX) $(CXXFLAGS) PCA_basic_data_reader.o $(NEMEAFILES) -o PCA_basic_data_reader
+
+PCA_basic_data_reader.o: PCA_basic_data_reader.cpp PCA_basic_data_reader.h $(ALGLIBFILES)
+	$(CXX) $(CXXFLAGS) -c -o PCA_basic_data_reader.o PCA_basic_data_reader.cpp
 
 PCA_sketch_detector.o: PCA_sketch_detector.cpp PCA_sketch.h $(ALGLIBFILES)
 	$(CXX) $(CXXFLAGS) -c -o PCA_sketch_detector.o PCA_sketch_detector.cpp
@@ -28,8 +39,17 @@ PCA_sketch_detector.o: PCA_sketch_detector.cpp PCA_sketch.h $(ALGLIBFILES)
 PCA_test_receiver.o: PCA_test_receiver.cpp PCA_sketch.h
 	$(CXX) $(CXXFLAGS) -c -o PCA_test_receiver.o PCA_test_receiver.cpp
 
+hash_check: hash_check.o
+	$(CXX) $(CXXFLAGS) hash_check.o -o hash_check
+
+hash_check.o: hash_check.cpp PCA_sketch.h
+	$(CXX) $(CXXFLAGS) -c -o hash_check.o hash_check.cpp
+
 #PCA_test_receiver:
 #	$(CXX) $(LDFAGS) ../../unirec/unirec.o -ltrap -lstdc++ -o PCA_test_receiver.cpp
 
 clean:
 	rm -f *.o ${MODULES}
+
+clean-alglib:
+	rm -f *.o $(ALGLIBFILES)
