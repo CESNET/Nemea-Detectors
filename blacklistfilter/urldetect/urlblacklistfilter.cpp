@@ -398,7 +398,7 @@ int main (int argc, char** argv)
     }
 
     ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<HTTP>");
-    ur_template_t* det = ur_create_template("<BASIC_FLOW>,URL_BLACKLIST,HTTP_REQUEST_URL"); // + BLACKLIST_TYPE
+    ur_template_t* det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,URL_BLACKLIST,HTTP_REQUEST_URL"); // + BLACKLIST_TYPE
 
     // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
@@ -497,6 +497,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             ++marked;
 #endif
+            ur_transfer_static(templ, det, data, detection);
             string url = string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_HOST)) 
                          + string(ur_get_dyn(templ, data, UR_HTTP_REQUEST_URL)).substr(0, ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_URL));
             memcpy(ur_get_dyn(det, detection, UR_HTTP_REQUEST_URL), url.c_str(), url.length());

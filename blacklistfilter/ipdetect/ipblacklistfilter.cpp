@@ -878,16 +878,6 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Sending report ..." << endl;
 #endif
-/*            ur_set(tmpl_det, detection, UR_SRC_IP, ur_get(templ, data, UR_SRC_IP));
-            ur_set(tmpl_det, detection, UR_DST_IP, ur_get(templ, data, UR_DST_IP));
-            ur_set(tmpl_det, detection, UR_SRC_PORT, ur_get(templ, data, UR_SRC_PORT));
-            ur_set(tmpl_det, detection, UR_DST_PORT, ur_get(templ, data, UR_DST_PORT));
-            ur_set(tmpl_det, detection, UR_TIME_FIRST, ur_get(templ, data, UR_TIME_FIRST));
-            ur_set(tmpl_det, detection, UR_PROTOCOL, ur_get(templ, data, UR_PROTOCOL));
-            ur_set(tmpl_det, detection, UR_PACKETS, ur_get(templ, data, UR_PACKETS));
-            ur_set(tmpl_det, detection, UR_BYTES, ur_get(templ, data, UR_BYTES));
-            ur_set(tmpl_det, detection, UR_TCP_FLAGS, ur_get(templ, data, UR_TCP_FLAGS));
-            ur_set(tmpl_det, detection, UR_DIR_BIT_FIELD, ur_get(templ, data, UR_DIR_BIT_FIELD));*/
             ur_transfer_static(templ, tmpl_det, data, detection);
             trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
 #ifdef DEBUG

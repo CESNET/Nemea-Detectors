@@ -1058,7 +1058,7 @@ int main (int argc, char** argv)
         }
 
         // check the data size 
-        if (data_size != ur_rec_static_size(templ)) {
+        if (data_size < ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
@@ -1111,7 +1111,7 @@ int main (int argc, char** argv)
             ur_transfer_static(templ, det, data, detection);
             ur_set(det, detection, UR_SPOOF_TYPE, 0x1);
 
-            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
+            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
             retval = ALL_OK; // reset return value
             continue;
         }
@@ -1133,7 +1133,7 @@ int main (int argc, char** argv)
             ur_transfer_static(templ, det, data, detection);
             ur_set(det, detection, UR_SPOOF_TYPE, 0x2);
 
-            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
+            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
         }
@@ -1157,7 +1157,7 @@ int main (int argc, char** argv)
             ur_transfer_static(templ, det, data, detection);
             ur_set(det, detection, UR_SPOOF_TYPE, 0x4);
 
-            trap_send_data(0, data, ur_rec_static_size(templ), TRAP_HALFWAIT);
+            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
             retval = ALL_OK;
             continue;
         }

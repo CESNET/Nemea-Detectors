@@ -390,6 +390,8 @@ void *check_dns(void *args)
 #endif
             //create detection record (must be created here because of dynamic items)
             params->detection = ur_create(params->output, ur_get_dyn_size(params->input, record, UR_DNS_NAME));
+
+            ur_transfer_static(params->input, params->output, record, params->detection);
             
             // set blacklist
             ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
@@ -562,14 +564,6 @@ void* check_ip(void *args)
             cout << "IP: Sending report ..." << endl;
             dets++;
 #endif            
-/*            ur_set(params->output, params->detection, UR_SRC_PORT, ur_get(params->input, record, UR_SRC_PORT));
-            ur_set(params->output, params->detection, UR_DST_PORT, ur_get(params->input, record, UR_DST_PORT));
-            ur_set(params->output, params->detection, UR_TIME_FIRST, ur_get(params->input, record, UR_TIME_FIRST));
-            ur_set(params->output, params->detection, UR_PROTOCOL, ur_get(params->input, record, UR_PROTOCOL));
-            ur_set(params->output, params->detection, UR_PACKETS, ur_get(params->input, record, UR_PACKETS));
-            ur_set(params->output, params->detection, UR_BYTES, ur_get(params->input, record, UR_BYTES));
-            ur_set(params->output, params->detection, UR_TCP_FLAGS, ur_get(params->input, record, UR_TCP_FLAGS));
-            ur_set(params->output, params->detection, UR_DIR_BIT_FIELD, ur_get(params->input, record, UR_DIR_BIT_FIELD)); */
             ur_transfer_static(params->input, params->output, record, params->detection);
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
             marked = false;
@@ -615,8 +609,8 @@ int main (int argc, char** argv)
     // link templates
     dns_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<DNS>");
     ip_input = ur_create_template("<COLLECTOR_FLOW>");
-    dns_det = ur_create_template("<BASIC_FLOW>,DNS_BLACKLIST,DNS_NAME"); // + DNS blacklist flag and BLACKLIST_TYPE
-    ip_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST"); // + BLACKLIST_TYPE
+    dns_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME"); // + DNS blacklist flag and BLACKLIST_TYPE
+    ip_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST"); // + BLACKLIST_TYPE
 
     dns_thread_params.input = dns_input;
     dns_thread_params.output = dns_det;
