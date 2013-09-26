@@ -534,9 +534,12 @@ void* check_ip(void *args)
         cout << "IP: Checking obtained IP addresses ..." << endl;
 #endif*/
 
+        uint8_t ip_bl = 0x0;
+
         if (bl != NULL) {
             ur_set(params->output, params->detection, UR_SRC_IP, ur_get(params->input, record, UR_SRC_IP));
             ur_set(params->output, params->detection, UR_SRC_BLACKLIST, *(uint8_t*) bl);
+            ip_bl |= ((*(uint8_t*) bl) << 4);
             marked = true;
 #ifdef DEBUG
             ip_to_str(&ip, matched);
@@ -552,6 +555,7 @@ void* check_ip(void *args)
         if (bl != NULL) {
             ur_set(params->output, params->detection, UR_DST_IP, ur_get(params->input, record, UR_DST_IP));
             ur_set(params->output, params->detection, UR_DST_BLACKLIST, *(uint8_t*) bl);
+            ip_bl |= (*(uint8_t*) bl);
             marked = true;
 #ifdef DEBUG
             ip_to_str(&ip, matched);
@@ -564,6 +568,7 @@ void* check_ip(void *args)
             cout << "IP: Sending report ..." << endl;
             dets++;
 #endif            
+            ur_set(params->output, params->detection, UR_BLACKLIST_TYPE, ip_bl);
             ur_transfer_static(params->input, params->output, record, params->detection);
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
             marked = false;
@@ -610,7 +615,7 @@ int main (int argc, char** argv)
     dns_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<DNS>");
     ip_input = ur_create_template("<COLLECTOR_FLOW>");
     dns_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME"); // + DNS blacklist flag and BLACKLIST_TYPE
-    ip_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST"); // + BLACKLIST_TYPE
+    ip_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE"); // + BLACKLIST_TYPE
 
     dns_thread_params.input = dns_input;
     dns_thread_params.output = dns_det;

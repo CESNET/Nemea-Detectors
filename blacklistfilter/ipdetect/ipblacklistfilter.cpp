@@ -471,9 +471,11 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
+    uint8_t bl = 0x0;
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist << 4);
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
@@ -482,6 +484,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
@@ -492,6 +495,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result != NOT_FOUND)
 //  ur_set(det_tmp, detected, UR_DST_BLACKLIST
     if (marked) {
+        ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -523,8 +527,11 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
 
+    uint8_t bl = 0x0;
+
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist) << 4;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
@@ -536,12 +543,14 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
+        bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
  
     if (marked) {
+        ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -741,7 +750,7 @@ int main (int argc, char** argv)
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST");
+    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE");
 
     // for use with prefixes (not implemented now)
     black_list_t v4_list; 
