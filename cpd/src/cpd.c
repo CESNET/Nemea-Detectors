@@ -46,8 +46,14 @@
 #include <string.h>
 #include <libtrap/trap.h>
 
-#include "common.h"
+#include "cpd_common.h"
 #include "cpd.h"
+#ifdef SDM_CPD
+//#define SDM_CPD_CREATEDATA
+#ifdef SDM_CPD_CREATEDATA
+#include <time.h>
+#endif
+#endif
 
 #define M_SQRT2	1.41421356237309504880	/* sqrt(2) */
 #define M_SQRT1_2	0.70710678118654752440	/* 1/sqrt(2) */
@@ -59,8 +65,10 @@ void (*cpd_alert_callback)(const char *method_name, double new_value, double xn,
 struct cpd_np_cusum_priv {
    double previous; /**< Previous value */
    double hist_est; /**< Historical estimate of E(Xn) */
+   #ifndef SDM_CPD
    double attack_est; /**< An estimate of E(Xn) under attact */
    double tuning;   /**< Tuning parameter */
+   #endif
    double tuned_attack_est;   /**< Tuning * atta_est */
 };
 
@@ -105,8 +113,10 @@ void cpd_np_cusum_init(union cpd_privs **priv, double hist_est, double attack_es
    }
    (*priv) = calloc(1, sizeof(union cpd_privs));
    (*priv)->np_cusum.hist_est = hist_est;
+   #ifndef SDM_CPD
    (*priv)->np_cusum.attack_est = attack_est;
    (*priv)->np_cusum.tuning = tuning;
+   #endif
    (*priv)->np_cusum.tuned_attack_est = attack_est * tuning;
 }
 
@@ -266,6 +276,7 @@ struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_h
 int main(int argc, char **argv)
 {
    FILE *history = NULL;
+	uint32_t *ent = NULL;
    sd_meanvar_data_t slidingwindow;
    uint32_t i;
    double values[10] = {
@@ -285,12 +296,13 @@ int main(int argc, char **argv)
    for (i=0; i<10; ++i) {
       cpd_run_methods(values[i], methods, cpd_methods_count);
       SD_MEANVAR_ADD(&slidingwindow, values[i]);
-      ent_reset();
-      fprintf(history, "%f\t%f\t%f\t%f\n", values[i], slidingwindow.mean, slidingwindow.var, ent_get_entropy((unsigned char *) &values[i], sizeof(*values), 0.0));
+      ent_reset(&ent);
+      ent_put_data(ent, (unsigned char *) &values[i], sizeof(*values));
+      fprintf(history, "%f\t%f\t%f\t%f\n", values[i], slidingwindow.mean, slidingwindow.var, ent_get_entropy(ent));
       fflush(history);
    }
    fclose(history);
-   ent_free();
+   ent_free(&ent);
 
    SD_MEANVAR_FREE(&slidingwindow);
 
@@ -299,5 +311,92 @@ int main(int argc, char **argv)
 
    return 0;
 }
+#endif
+
+#ifdef SDM_CPD
+/* This section is a source code for HLS of HW module of SDM */
+
+#ifdef SDM_CPD_CREATEDATA
+#define TEST_DATA_SIZE 100
+static double test_inputs[TEST_DATA_SIZE];
+static double test_results[TEST_DATA_SIZE];
+
+#else
+
+#include "sdm_cpd_test_data.c"
+
+#endif
+#define VIVADO_POS_ERROR 0.0002
+
+char test_cpd(double cur_val)
+{
+   static uint16_t index = 0;
+   double result = cur_val - test_results[index++];
+   return ((result>=0.0?result:-result) <= VIVADO_POS_ERROR);
+}
+
+int main(void)
+{
+   uint32_t i;
+   struct cpd_np_cusum_priv npcusumpriv;
+   #ifdef SDM_CPD_CREATEDATA
+   double *p = NULL;
+   #endif
+
+   /* initialize np_cusum */
+   memset(&npcusumpriv, 0, sizeof(npcusumpriv));
+   npcusumpriv.hist_est = 1.0699;
+   npcusumpriv.tuned_attack_est = 0.5;
+   
+   /* Creation of testing input and results */
+   #ifdef SDM_CPD_CREATEDATA
+   /* generate random input and corresponding output */
+   srand(time(NULL));
+   for (i=0; i<TEST_DATA_SIZE; ++i) {
+      test_inputs[i] = (double) rand()/(double) RAND_MAX;
+      test_inputs[i] *= 2.0;
+      // generate differences from 1.0
+      //test_inputs[i] = (1.0 >= test_inputs[i])?1.0-test_inputs[i]:test_inputs[i]-1.0;
+      //
+      test_results[i] = cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i]);
+   }
+
+   /* print out inputs & outputs */
+   FILE *testdataf = fopen("sdm_cpd_test_data.c", "w");
+   fprintf(testdataf, "#define TEST_DATA_SIZE %u\n", TEST_DATA_SIZE);
+
+   for (p=test_inputs; p!=NULL; p=(p==test_results?NULL:test_results)) {
+      if (p == test_inputs) {
+         fprintf(testdataf, "static double test_inputs[TEST_DATA_SIZE] = ");
+      } else {
+         fprintf(testdataf, "static double test_results[TEST_DATA_SIZE] = ");
+      }
+      fprintf(testdataf, "{");
+      for (i=0; i<TEST_DATA_SIZE; ++i) {
+         if (i>0) {
+            fprintf(testdataf, ", ");
+         }
+         fprintf(testdataf, "%f", p[i]);
+      }
+      fprintf(testdataf, "};\n");
+   }
+   fclose(testdataf);
+   #endif
+   
+   /* Beginning of test */
+   /* reset CPD */
+   npcusumpriv.previous = 0.0;
+   for (i=0; i<TEST_DATA_SIZE; ++i) {
+      //printf("%f %f\n", test_inputs[i], cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i]));
+      if (test_cpd(cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i])) == 0) {
+         //printf("error - value doesn't match\n");
+         return EXIT_FAILURE;
+      }
+   }
+   return EXIT_SUCCESS;
+   /* Everything done... Checked all prepared inputs. */
+
+}
+
 #endif
 

@@ -1,6 +1,6 @@
 /**
- * \file common.h
- * \brief Common functions and macros for CPD module etc
+ * \file sliding_window.h
+ * \brief Computation of statistics from sliding window
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
  */
@@ -40,32 +40,21 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef _COMMON_H_CPD
-#define _COMMON_H_CPD
+#ifndef _SLIDING_WINDOW_H
+#define _SLIDING_WINDOW_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-/**
- * \defgroup minmax
- * @{
- */
-
-#ifndef MAX
-#define MAX(a, b) (((a)>(b))?(a):(b))
+#ifndef DEBUG
+#ifndef NDEBUG
+#define NDEBUG
 #endif
-#ifndef MIN
-#define MIN(a, b) (((a)<(b))?(a):(b))
-#endif
-#ifndef ABS
-#define ABS(a) (((a)>=0)?(a):(-(a)))
 #endif
 
-/**
- * @}
- */
+#include <assert.h>
 
 /**
  * \defgroup slidingwindow
@@ -74,6 +63,23 @@
 
 #define SD_MEANVAR_DATA_ELTYPE double
 
+/**
+ * Switch of dynamic allocation.
+ *
+ * if SD_MEANVAR_USE_ALLOC is set to 0, we must manually set
+ * (data)->history before SD_MEANVAR_ADD!!!
+ */
+#define SD_MEANVAR_USE_ALLOC 1
+
+#if (SD_MEANVAR_USE_ALLOC == 1)
+#define SD_HIST_ALLOC(data, elementcount) (data)->history = calloc(1, 2 * elementcount * sizeof((data)->history[0]));
+#else
+#define SD_HIST_ALLOC(data, elementcount) memset(data, 0, elementcount * sizeof((data)->history[0]));
+#endif
+
+/**
+ * Internal data for one sliding window.
+ */
 struct sd_meanvar_data {
    SD_MEANVAR_DATA_ELTYPE mean, meansq, sum, sumsq, var;
    uint32_t mvidx, size;
@@ -88,8 +94,8 @@ typedef struct sd_meanvar_data sd_meanvar_data_t;
  * \param [in,out] data   Pointer to sd_meanvar_data_t.
  */
 #define SD_MEANVAR_INIT(data, elementcount) do { \
+  SD_HIST_ALLOC(data, elementcount); \
   (data)->size = elementcount; \
-  (data)->history = calloc(1, 2 * elementcount * sizeof((data)->history[0])); \
   (data)->mean = 0; \
   (data)->mvidx = elementcount - 1; \
   (data)->meansq = 0; \
@@ -105,6 +111,7 @@ typedef struct sd_meanvar_data sd_meanvar_data_t;
  * \param [in] value       new value to add into storage, replacing oldest one
  */
 #define SD_MEANVAR_ADD(data, value) do { \
+  assert((data)->history != NULL); \
   if ((data)->used_counter < (data)->size) { \
      (data)->used_counter++; \
   } \
@@ -126,6 +133,16 @@ typedef struct sd_meanvar_data sd_meanvar_data_t;
   (data)->mvidx -= (data)->size; \
 } while (0);
 
+/**
+ * Reset history and start again.
+ * \param [in,out] data    Should be pointer to sd_meanvar_data_t
+ */
+#define SD_MEANVAR_RESET(data) do { \
+   (data)->used_counter = 0; \
+   (data)->sum = 0; \
+   (data)->sumsq = 0; \
+} while (0);
+
 #define SD_MEANVAR_FREE(data) do { \
    if ((data)->history != NULL) { \
       free((data)->history); \
@@ -136,19 +153,6 @@ typedef struct sd_meanvar_data sd_meanvar_data_t;
 /**
  * @}
  */
-
-/**
- * \defgroup entropy
- * @{
- */
-void ent_reset();
-
-double ent_get_entropy(unsigned char *data, uint32_t data_size, double last_entropy);
-
-void ent_free();
-/**
-* @}
-*/
 
 #endif
 

@@ -1,5 +1,5 @@
 /**
- * \file common.c
+ * \file common.h
  * \brief Common functions and macros for CPD module etc
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
@@ -40,70 +40,12 @@
  * if advised of the possibility of such damage.
  *
  */
+#ifndef _COMMON_H_CPD
+#define _COMMON_H_CPD
 
-#include <stdint.h>
-#include <math.h>
-#include <string.h>
-#include "common.h"
+#include "sliding_window.h"
+#include "math_and_statistics.h"
+#include "entropy.h"
 
-
-/**
- * \defgroup entropy
- * @{
- */
-
-static uint32_t *ent_probs = NULL;
-static uint32_t ent_total;
-
-void ent_reset()
-{
-   if (ent_probs == NULL) {
-      ent_probs = (uint32_t *) calloc(1, 256*sizeof(uint32_t));
-   }
-   memset(ent_probs, 0, 256*sizeof(ent_probs[0]));
-   ent_total = 0;
-}
-
-/**
- * \brief Compute entropy from given data in data with size
- * \param [in] data           pointer to data - source of entropy
- * \param [in] data_size      length of data
- * \param [in] last_entropy   previous result of get_entropy, for first call
- * give 0.0
- * \return new entropy
- */
-double ent_get_entropy(unsigned char *data, uint32_t data_size, double last_entropy)
-{
-   double p;
-   uint32_t i;
-
-   if (data_size == 0) {
-      return last_entropy;
-   }
-
-   for (i=0; i<data_size; ++i) {
-      ent_probs[data[i]]++;
-      ent_total++;
-   }
-
-   for(i=0; i<256; i++) {
-      if (ent_probs[i] == 0) continue;
-      p = (double) ent_probs[i] / (double) ent_total;
-      last_entropy -= p*log2(p);
-   }
-
-   return last_entropy;
-}
-
-void ent_free()
-{
-   if (ent_probs != NULL) {
-      free(ent_probs);
-      ent_probs = NULL;
-   }
-}
-
-/**
-* @}
-*/
+#endif
 
