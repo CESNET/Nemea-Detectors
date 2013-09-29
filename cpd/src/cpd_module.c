@@ -48,9 +48,9 @@
 #include <getopt.h>
 #include <time.h>
 #include <libtrap/trap.h>
-#include "../../unirec/unirec.h"
+#include "../../../unirec/unirec.h"
 #include "cpd.h"
-#include "common.h"
+#include "cpd_common.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -117,6 +117,7 @@ int main(int argc, char **argv)
 
    char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
    char opt;
+	uint32_t *ents =NULL;
    while ((opt = getopt(argc, argv, "u:p:")) != -1) {
       switch (opt) {
          case 'u':
@@ -149,7 +150,7 @@ int main(int argc, char **argv)
    checkpoint_time = time(NULL);
 
    history = fopen("history.log", "w");
-   fprintf(history, "checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var, bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no, sdmv_flows.mean, sdmv_flows.var");
+   fprintf(history, "checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var, bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no, sdmv_flows.mean, sdmv_flows.var, entropy");
    while (!stop) {
       // Receive data from any interface, wait until data are available
       const void *data;
@@ -178,24 +179,24 @@ int main(int argc, char **argv)
       SD_MEANVAR_ADD(&sdmv_bytes, bytes_no);
 
       /* compute entropy of whole incoming message */
-      ent_reset();
-      ent_get_entropy((unsigned char *) data, data_size, 0.0);
+      ent_reset(&ents);
+      ent_put_data(ents, (unsigned char *) data, data_size);
 
       flows_no += 1;
       if ((time(NULL) - checkpoint_time) >= FLOWS_TIMEOUT) {
          cpd_run_methods(flows_no, cpd_methods_flows, CPD_METHODS_COUNT_DEFAULT);
          SD_MEANVAR_ADD(&sdmv_flows, flows_no);
          checkpoint_time = time(NULL);
-         fprintf(history, "%lu\t%u\t%f\t%f\t%u\t%f\t%f\t%u\t%f\t%f\n",
+         fprintf(history, "%lu\t%u\t%f\t%f\t%u\t%f\t%f\t%u\t%f\t%f\t%f\n",
                checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var,
                bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no,
-               sdmv_flows.mean, sdmv_flows.var);
+               sdmv_flows.mean, sdmv_flows.var, ent_get_entropy(ents));
          fflush(history);
          flows_no = 0;
       }
    }
    fclose(history);
-   ent_free();
+   ent_free(&ents);
 
    SD_MEANVAR_FREE(&sdmv_flows);
    SD_MEANVAR_FREE(&sdmv_packets);
