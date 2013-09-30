@@ -19,7 +19,7 @@ $(ALOBJPATH)%.o ::  $(ALSRCPATH)%.cpp $(ALSRCPATH)%.h
 LDLIBS=$(NEMEAFILES) $(ALGLIBFILES) #-L./CLAPACK-3.2.1/ -llapack -lblas -lf2c -lm
 #LDLIBS=../../unirec/unirec.o -ltrap -lstdc++ $(ALGLIBFILES)
 
-MODULES=PCA_basic_detector PCA_basic_data_reader PCA_sketch_detector PCA_test_receiver
+MODULES=PCA_basic_detector PCA_basic_data_reader #PCA_basic_RT_data_sender PCA_sketch_detector PCA_test_receiver
 
 # Uses default rules
 all: $(ALGLIBFILES) ${MODULES}
@@ -30,8 +30,14 @@ PCA_basic_detector.o: PCA_basic_detector.cpp PCA_basic.h $(ALGLIBFILES)
 PCA_basic_data_reader: PCA_basic_data_reader.o
 	$(CXX) $(CXXFLAGS) PCA_basic_data_reader.o $(NEMEAFILES) -o PCA_basic_data_reader
 
-PCA_basic_data_reader.o: PCA_basic_data_reader.cpp PCA_basic_data_reader.h $(ALGLIBFILES)
+PCA_basic_data_reader.o: PCA_basic_data_reader.cpp PCA_basic_data_reader.h PCA_basic.h
 	$(CXX) $(CXXFLAGS) -c -o PCA_basic_data_reader.o PCA_basic_data_reader.cpp
+
+PCA_basic_RT_data_sender: PCA_basic_RT_data_sender.o
+	$(CXX) $(CXXFLAGS) PCA_basic_RT_data_sender.o $(NEMEAFILES) -o PCA_basic_RT_data_sender
+
+PCA_basic_RT_data_sender.o: PCA_basic_RT_data_sender.cpp PCA_basic_RT_data_sender.h PCA_basic.h
+	$(CXX) $(CXXFLAGS) -c -o PCA_basic_RT_data_sender.o PCA_basic_RT_data_sender.cpp
 
 PCA_sketch_detector.o: PCA_sketch_detector.cpp PCA_sketch.h $(ALGLIBFILES)
 	$(CXX) $(CXXFLAGS) -c -o PCA_sketch_detector.o PCA_sketch_detector.cpp

@@ -1,0 +1,20 @@
+#Count of used links:
+link count=8
+
+#Link name list:
+links=aconet,geant,nix2,nix2_1,nix3,nix3_1,pioneer,sanet,#telia,
+#links=aconet,geant,nix3,nix3_1,pioneer,sanet,
+
+#Feature selector (flows,packets,bytes,ent_sip,ent_dip,ent_sport,ent_dport):
+agregation=flows,packets,bytes,ent_sip,ent_dip,ent_sport,ent_dport,#according to unirec fields
+
+#Working timebin window size:
+#window size=2358
+
+tolerance=100
+
+#Not used
+amsix
+telia2
+aconet-test
+

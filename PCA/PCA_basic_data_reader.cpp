@@ -84,8 +84,9 @@ string send_one_timebin(pca_basic_settings_t &settings, vector <ifstream*>& in_f
 {
 	int ret;
 	ostringstream state;
-	string timeslot;
-	uint64_t flows, packets, bytes, link_bit_field;
+	uint32_t packets;
+	uint64_t timeslot;
+	uint64_t flows/*, packets*/, bytes, link_bit_field;
 	float ent_sip, ent_dip, ent_sport, ent_dport;
 
 	ofstream timebin_checker ("tb_checker.txt", ios::in | ios::app);
@@ -112,7 +113,7 @@ string send_one_timebin(pca_basic_settings_t &settings, vector <ifstream*>& in_f
 		ofs << timebin_counter << "\t" << flows << "\t" << packets << "\t" << bytes << "\t" << ent_sip << "\t" << ent_dip << "\t" << ent_sport << "\t" << ent_dport << "\t";
 		#endif//VALDIATION
 
-		ur_set(out_tmplt, out_rec, UR_TIMESLOT, timebin_counter);
+		ur_set(out_tmplt, out_rec, UR_TIME_FIRST, timeslot);
 		ur_set(out_tmplt, out_rec, UR_LINK_BIT_FIELD, link_bit_field);
 
 		if (settings.agreg_unit_field & MASK_BIT(AU_FLOWS)){

@@ -11,7 +11,7 @@
 
 #define DEFAULT_TIMEBIN_CNT_TO_SEND 0 // 0 means all from file
 
-#define DEFAULT_PATH_TO_DATA "./multilink-data/"
+#define DEFAULT_PATH_TO_DATA "./data-demo/multi-link/"
 #define DEFAULT_FILENAME_SEPARATOR "-"
 #define DEFAULT_MONTH "08"
 #define DEFAULT_YEAR "2013"
