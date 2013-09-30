@@ -772,7 +772,8 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
 #ifdef DEBUG
             ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             if (strcmp("195.113.0.0", debug_ip_dst) == 0) {
-                cerr << debug_ip_dst << "\t" << filter[bf_active].flows[search_result].count << endl;
+                long t = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+                cerr << t << "\t" << filter[bf_active].flows[search_result].count << endl;
             }
 #endif
         if (filter[bf_active].flows[search_result].count > threshold) {
