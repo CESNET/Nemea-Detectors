@@ -270,7 +270,9 @@ public:
 
          bit_table_[bit_index / bits_per_char] |= bit_mask[bit];
       }
-      ++inserted_element_count_;
+      if (present) {
+          ++inserted_element_count_;
+      }
       return present;
    }
 

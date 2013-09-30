@@ -758,6 +758,9 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
     is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) { // the flow is already in filter --> will be ignored
+        if  (!filter[bf_learning].flows[search_result].sources->containsinsert((unsigned char *)ip_key, INET6_ADDRSTRLEN)) {;
+            filter[bf_learning].flows[search_result].count++;
+        }
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts
