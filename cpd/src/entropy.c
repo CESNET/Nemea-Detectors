@@ -44,7 +44,10 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-#include "entropy.h"
+#include "cpd_common.h"
+#ifdef HAVE_OMP_H
+#include <omp.h>
+#endif
 
 
 /**
@@ -57,6 +60,13 @@
 
 static uint32_t *ent_probs = NULL;
 static uint32_t ent_total;
+
+/* precomputed logarithms */
+static float logarg[] =
+#include "log2s.x"
+static float logres[] =
+#include "plog2s.data"
+/* ---------------------- */
 
 void ent_reset(uint32_t **ent_data)
 {
@@ -77,6 +87,22 @@ void ent_put_data(uint32_t *ent_data, unsigned char *data, uint32_t data_size)
    }
 }
 
+static int logargs_compar(const void *a, const void *b)
+{
+   if (*((float *)a) == *((float *) b)) {
+      return 0;
+   } else if (*((float *) a) < *((float *) b)) {
+      return -1;
+   } else {
+      return 1;
+   }
+}
+
+#ifdef DEBUG
+uint64_t ent_cache_miss = 0;
+uint64_t ent_cache_hit = 0;
+#endif
+
 /**
  * \brief Compute entropy from given data in data with size
  * \param [in] data           pointer to data - source of entropy
@@ -88,16 +114,30 @@ void ent_put_data(uint32_t *ent_data, unsigned char *data, uint32_t data_size)
 double ent_get_entropy(uint32_t *ent_data)
 {
    double p, entropy = 0.0;
+   float fp;
    uint32_t i;
    uint32_t ent_total = *((uint32_t *) ent_data + ENT_DATA_TOT_IND);
    uint32_t *ent_probs = (uint32_t *) ent_data;
+   float *pcr; ///< precomputed result
 
    for(i=0; i<256; i++) {
       if (ent_probs[i] == 0) continue;
       p = (double) ent_probs[i] / (double) ent_total;
-      entropy -= p*log2(p);
+      fp = ((int)(p * 1000000.0 + (p<0? -0.5 : 0.5))) / 1000000.0;
+      pcr = (float *) bsearch(&fp, logarg, (sizeof(logarg) / sizeof(*logarg)),
+         sizeof(*logarg), logargs_compar);
+      if (pcr == NULL) {
+         entropy -= p*log2(p);
+         #ifdef DEBUG
+         ent_cache_miss++;
+         #endif
+      } else {
+         entropy -= logres[pcr - logarg];
+         #ifdef DEBUG
+         ent_cache_hit++;
+         #endif
+      }
    }
-
    return entropy;
 }
 

@@ -51,6 +51,9 @@
 #include "../../../unirec/unirec.h"
 #include "cpd.h"
 #include "cpd_common.h"
+#ifdef HAVE_OMP_H
+#include <omp.h>
+#endif
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -65,59 +68,112 @@ trap_module_info_t module_info = {
    "   Inputs: 1 (flow records)\n"
    "   Outputs: 1\n",
    1, // Number of input interfaces
-   0, // Number of output interfaces
+   1, // Number of output interfaces
 };
 /* ************************************************************************* */
-
-#define FLOWS_TIMEOUT 1
 
 static int stop = 0;
 static int stats = 0;
 static int progress = 0;
+#ifdef DEBUG
+extern uint64_t ent_cache_miss;
+extern uint64_t ent_cache_hit;
+#endif
+
 
 #define STOPCMD do {stop = 1;} while (0);
 
 TRAP_DEFAULT_SIGNAL_HANDLER(STOPCMD);
+
 enum entindex {
-	SRCIP = 0;
-	DSTIP = 1;
-	SRCPORT = 2;
-	DSTPORT = 3;
-	SRCIPDSTIP = 4;
-	SRCIPSRCPORT = 5;
-	SRCIPDSTPORT = 6;
-	DSTIPSRCPORT = 7;
-	DSTIPDSTPORT = 8;
-	SRCIPDSTIPDSTPORT = 9;
-	SRCIPDSTIPSRCPORT = 10;
+   SRCIP = 0,
+   DSTIP = 1,
+   SRCPORT = 2,
+   DSTPORT = 3,
+   SRCIPDSTIP = 4,
+   SRCIPSRCPORT = 5,
+   SRCIPDSTPORT = 6,
+   DSTIPSRCPORT = 7,
+   DSTIPDSTPORT = 8,
+   SRCIPDSTIPDSTPORT = 9,
+   SRCIPDSTIPSRCPORT = 10
 };
+
+#define MEMBERCOUNT(array) (sizeof(array)/sizeof(*(array)))
 
 int main(int argc, char **argv)
 {
    int ret;
-   unsigned long cnt_flows = 0;
-   unsigned long cnt_packets = 0;
-   unsigned long cnt_bytes = 0;
-   void *entropies[] = {
-		NULL, //srcIP
-		NULL, //dstIP
-		NULL, //srcPort
-		NULL, //dstPort
-		NULL, //srcIP+dstIP
-		NULL, //srcIP+srcPort
-		NULL, //srcIP+dstPort
-		NULL, //dstIP+srcPort
-		NULL, //dstIP+dstPort
-		NULL, //srcIP+dstIP+dstPort
-		NULL  //srcIP+dstIP+srcPort
+   uint32_t i = 0, i2 = 0;
+   uint32_t datasize = 0;
+   uint32_t *entropies[] = {
+      NULL, //srcIP
+      NULL, //dstIP
+      NULL, //srcPort
+      NULL, //dstPort
+      NULL, //srcIP+dstIP
+      NULL, //srcIP+srcPort
+      NULL, //srcIP+dstPort
+      NULL, //dstIP+srcPort
+      NULL, //dstIP+dstPort
+      NULL, //srcIP+dstIP+dstPort
+      NULL  //srcIP+dstIP+srcPort
    };
+   #define ENTROPIES_COUNT MEMBERCOUNT(entropies)
+   #define TIMEWINDOW   (5*60)
+   double entropies_results[ENTROPIES_COUNT];
 
-
-   UR_PACKETS_T packets_no = 0;
-   UR_BYTES_T bytes_no = 0;
-   uint64_t flows_no = 0;
-   time_t checkpoint_time;
-   FILE *history;
+   int entsdstip[] = {
+      SRCIPDSTIP,
+      SRCIPDSTIPDSTPORT,
+      SRCIPDSTIPSRCPORT,
+      DSTIP,
+      DSTIPSRCPORT,
+   };
+   int entsdstport[] = {
+      DSTPORT,
+      SRCIPDSTPORT,
+      SRCIPDSTIPDSTPORT,
+   };
+   int entssrcport[] = {
+      SRCPORT,
+      SRCIPDSTIPSRCPORT,
+      SRCIPSRCPORT,
+   };
+   int entssrcip[] = {
+      SRCIP,
+      SRCIPDSTIP,
+      SRCIPSRCPORT,
+      SRCIPDSTPORT,
+      SRCIPDSTIPDSTPORT,
+      SRCIPDSTIPSRCPORT,
+   };
+   int *entslists[] = {
+      entsdstip,
+      entsdstport,
+      entssrcport,
+      entssrcip,
+   };
+   int entslists_count[] = {
+      MEMBERCOUNT(entsdstip),
+      MEMBERCOUNT(entsdstport),
+      MEMBERCOUNT(entssrcport),
+      MEMBERCOUNT(entssrcip)
+   };
+   int urfieldslist[] = {
+      UR_DST_IP,
+      UR_DST_PORT,
+      UR_SRC_PORT,
+      UR_SRC_IP
+   };
+   int *entpoint = NULL;
+   int *entslistpoint = NULL;
+   UR_TIME_FIRST_T cur_first_time = 0;
+   UR_PACKETS_T packets_total = 0;
+   UR_BYTES_T bytes_total = 0;
+   uint64_t flows_total = 0;
+   uint64_t last_send_time = 0;
+   unsigned char *p;
 
    // ***** TRAP initialization *****
 
@@ -125,37 +181,42 @@ int main(int argc, char **argv)
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_AUTOFLUSH_TIMEOUT, (-1l));
+
    // ***** Create UniRec template *****
 
-   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char *unirec_input_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
    char opt;
    while ((opt = getopt(argc, argv, "u:p:")) != -1) {
       switch (opt) {
-         case 'u':
-            unirec_specifier = optarg;
-            break;
-         case 'p':
-            progress = atoi(optarg);
-            break;
-         default:
-            fprintf(stderr, "Invalid arguments.\n");
-            return 3;
+      case 'u':
+         unirec_input_specifier = optarg;
+         break;
+      case 'p':
+         progress = atoi(optarg);
+         break;
+      default:
+         fprintf(stderr, "Invalid arguments.\n");
+         return 3;
       }
    }
+   char *unirec_output_specifier = "TIME_FIRST,LINK_BIT_FIELD,FLOWS,PACKETS,BYTES,ENTROPY_SRCIP,ENTROPY_DSTIP,ENTROPY_SRCPORT,ENTROPY_DSTPORT";
 
-   ur_template_t *tmplt = ur_create_template(unirec_specifier);
-   if (tmplt == NULL) {
+   ur_template_t *tmpl = ur_create_template(unirec_input_specifier);
+   if (tmpl == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
       trap_finalize();
       return 4;
    }
+   ur_template_t *tmplt_out = ur_create_template(unirec_output_specifier);
+   void *data_out = ur_create(tmplt_out, 0);
 
+   for (i=0; i<ENTROPIES_COUNT; ++i) {
+      ent_reset(&entropies[i]);
+   }
 
    // ***** Main processing loop *****
-   checkpoint_time = time(NULL);
-
-   history = fopen("history.log", "w");
-   fprintf(history, "checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var, bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no, sdmv_flows.mean, sdmv_flows.var, entropy");
    while (!stop) {
       // Receive data from any interface, wait until data are available
       const void *data;
@@ -164,55 +225,101 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
-      if (data_size < ur_rec_static_size(tmplt)) {
+      if (data_size < ur_rec_static_size(tmpl)) {
          if (data_size <= 1) {
+            trap_send_data(0, data, 1, TRAP_NO_WAIT);
             break; // End of data (used for testing purposes)
          } else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_static_size(tmplt), data_size);
+                    ur_rec_static_size(tmpl), data_size);
             break;
          }
       }
+      bytes_total += ur_get(tmpl, data, UR_BYTES);
+      flows_total += ur_get(tmpl, data, UR_FLOWS);
+      packets_total += ur_get(tmpl, data, UR_PACKETS);
+      cur_first_time = ur_get(tmpl, data, UR_TIME_FIRST);
 
-      // Update counters
-      packets_no = ur_get(tmplt, data, UR_PACKETS);
-      bytes_no = ur_get(tmplt, data, UR_BYTES);
+      /* set last_send time during first iteration */
+      if (last_send_time == 0) {
+         last_send_time = ur_time_get_sec(cur_first_time);
+      }
+
       /* compute entropy of whole incoming message */
-      ent_reset();
-      ent_put_data((unsigned char *) data, data_size);
+      /* Source IP */
+      /* iterate over entropies we want to compute */
+      for (i=0; i<MEMBERCOUNT(entslists); ++i) {
+         switch (urfieldslist[i]) {
+         case UR_SRC_IP:
+            p = (unsigned char *) ur_get_ptr(tmpl, data, UR_SRC_IP);
+            datasize = ur_get_size(UR_SRC_IP);
+            break;
+         case UR_SRC_PORT:
+            p = (unsigned char *) ur_get_ptr(tmpl, data, UR_SRC_PORT);
+            datasize = ur_get_size(UR_SRC_PORT);
+            break;
+         case UR_DST_PORT:
+            p = (unsigned char *) ur_get_ptr(tmpl, data, UR_DST_PORT);
+            datasize = ur_get_size(UR_DST_PORT);
+            break;
+         case UR_DST_IP:
+            p = (unsigned char *) ur_get_ptr(tmpl, data, UR_DST_IP);
+            datasize = ur_get_size(UR_DST_IP);
+         break;
+      default:
+         fprintf(stderr, "ERROR: unexpected unirec field!!!\n");
+         goto failed;
+      }
+      /* iterate over data fields that are needed for entropy */
+      entpoint = entslists[i];
+      for (i2=0; i2<entslists_count[i]; ++i2) {
+         ent_put_data(entropies[entpoint[i2]], p, datasize); /* complete */
+         }
+      }
+      /* All data processed, tables updated */
+      if ((ur_time_get_sec(cur_first_time) - last_send_time) >= TIMEWINDOW) {
+         /* compute entropies */
 
-      flows_no += 1;
-      if ((time(NULL) - checkpoint_time) >= FLOWS_TIMEOUT) {
-         cpd_run_methods(flows_no, cpd_methods_flows, CPD_METHODS_COUNT_DEFAULT);
-         SD_MEANVAR_ADD(&sdmv_flows, flows_no);
-         checkpoint_time = time(NULL);
-         fprintf(history, "%lu\t%u\t%f\t%f\t%u\t%f\t%f\t%u\t%f\t%f\t%f\n",
-               checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var,
-               bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no,
-               sdmv_flows.mean, sdmv_flows.var, ent_get_entropy());
-         fflush(history);
-         flows_no = 0;
+#ifdef HAVE_LIBGOMP
+#pragma omp parallel for
+#endif
+         for (i=0; i<ENTROPIES_COUNT; ++i) {
+               entropies_results[i] = ent_get_entropy(entropies[i]);
+         }
+
+         /* send output message with entropies */
+         ur_set(tmplt_out, data_out, UR_TIME_FIRST,      cur_first_time);
+         ur_set(tmplt_out, data_out, UR_LINK_BIT_FIELD,   0);
+         ur_set(tmplt_out, data_out, UR_FLOWS,            flows_total);
+         ur_set(tmplt_out, data_out, UR_PACKETS,         packets_total);
+         ur_set(tmplt_out, data_out, UR_BYTES,            bytes_total);
+         ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIP,   entropies_results[SRCIP]);
+         ur_set(tmplt_out, data_out, UR_ENTROPY_DSTIP,   entropies_results[DSTIP]);
+         ur_set(tmplt_out, data_out, UR_ENTROPY_SRCPORT,   entropies_results[SRCPORT]);
+         ur_set(tmplt_out, data_out, UR_ENTROPY_DSTPORT,   entropies_results[SRCPORT]);
+
+         flows_total = 0;
+         packets_total = 0;
+         bytes_total = 0;
+         last_send_time = ur_time_get_sec(cur_first_time);
+         trap_send_data(0, data_out, ur_rec_static_size(tmplt_out), TRAP_WAIT);
       }
    }
-   fclose(history);
-   ent_free();
-
-   SD_MEANVAR_FREE(&sdmv_flows);
-   SD_MEANVAR_FREE(&sdmv_packets);
-   SD_MEANVAR_FREE(&sdmv_bytes);
-
-   // ***** Print results *****
-
-   printf("Flows:   %20lu\n", cnt_flows);
-   printf("Packets: %20lu\n", cnt_packets);
-   printf("Bytes:   %20lu\n", cnt_bytes);
+failed:
+   for (i=0; i<ENTROPIES_COUNT; ++i) {
+      ent_free(&entropies[i]);
+   }
+   #ifdef DEBUG
+   printf("ent_cache_miss: %llu\nent_cache_hit: %llu\n", ent_cache_miss, ent_cache_hit);
+   #endif
 
    // ***** Cleanup *****
 
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
 
-   ur_free_template(tmplt);
+   ur_free_template(tmpl);
+   ur_free_template(tmplt_out);
 
    return 0;
 }
