@@ -43,6 +43,7 @@
 #ifndef _COMMON_H_CPD
 #define _COMMON_H_CPD
 
+#include "../config.h"
 #include "sliding_window.h"
 #include "math_and_statistics.h"
 #include "entropy.h"

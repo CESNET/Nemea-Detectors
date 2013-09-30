@@ -34,7 +34,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = cpd_module$(EXEEXT) cpd$(EXEEXT) sdmcpd$(EXEEXT)
+bin_PROGRAMS = cpd_module$(EXEEXT) entropy_module$(EXEEXT) \
+	cpd$(EXEEXT) sdmcpd$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -63,6 +64,12 @@ cpd_module_LDADD = $(LDADD)
 cpd_module_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(cpd_module_LDFLAGS) $(LDFLAGS) -o $@
+am_entropy_module_OBJECTS = entropy.$(OBJEXT) entropy_module.$(OBJEXT)
+entropy_module_OBJECTS = $(am_entropy_module_OBJECTS)
+entropy_module_LDADD = $(LDADD)
+entropy_module_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(entropy_module_LDFLAGS) $(LDFLAGS) -o $@
 am_sdmcpd_OBJECTS = sdmcpd-cpd.$(OBJEXT)
 sdmcpd_OBJECTS = $(am_sdmcpd_OBJECTS)
 sdmcpd_LDADD = $(LDADD)
@@ -82,8 +89,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(cpd_SOURCES) $(cpd_module_SOURCES) $(sdmcpd_SOURCES)
-DIST_SOURCES = $(cpd_SOURCES) $(cpd_module_SOURCES) $(sdmcpd_SOURCES)
+SOURCES = $(cpd_SOURCES) $(cpd_module_SOURCES) \
+	$(entropy_module_SOURCES) $(sdmcpd_SOURCES)
+DIST_SOURCES = $(cpd_SOURCES) $(cpd_module_SOURCES) \
+	$(entropy_module_SOURCES) $(sdmcpd_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -226,6 +235,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 cpd_module_SOURCES = cpd.c entropy.c cpd_module.c
 cpd_module_LDFLAGS = -lm -ltrap ../../../unirec/unirec.o
+entropy_module_SOURCES = entropy.c entropy_module.c
+entropy_module_LDFLAGS = -lm -ltrap ../../../unirec/unirec.o
+EXTRA_DATA = log2s.x log2s.data
 cpd_SOURCES = cpd.c entropy.c
 cpd_CPPFLAGS = -DTESTCPD_C
 cpd_LDFLAGS = -lm
@@ -315,6 +327,9 @@ cpd$(EXEEXT): $(cpd_OBJECTS) $(cpd_DEPENDENCIES)
 cpd_module$(EXEEXT): $(cpd_module_OBJECTS) $(cpd_module_DEPENDENCIES) 
 	@rm -f cpd_module$(EXEEXT)
 	$(cpd_module_LINK) $(cpd_module_OBJECTS) $(cpd_module_LDADD) $(LIBS)
+entropy_module$(EXEEXT): $(entropy_module_OBJECTS) $(entropy_module_DEPENDENCIES) 
+	@rm -f entropy_module$(EXEEXT)
+	$(entropy_module_LINK) $(entropy_module_OBJECTS) $(entropy_module_LDADD) $(LIBS)
 sdmcpd$(EXEEXT): $(sdmcpd_OBJECTS) $(sdmcpd_DEPENDENCIES) 
 	@rm -f sdmcpd$(EXEEXT)
 	$(sdmcpd_LINK) $(sdmcpd_OBJECTS) $(sdmcpd_LDADD) $(LIBS)
@@ -330,6 +345,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cpd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cpd_module.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/entropy.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/entropy_module.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdmcpd-cpd.Po@am__quote@
 
 .c.o:
