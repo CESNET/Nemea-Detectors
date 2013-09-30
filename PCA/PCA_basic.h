@@ -60,8 +60,8 @@ using namespace std;
 //#define STD_DEV 0.35355339 // 1/sqrt(DEFAULT_WORKING_TIMEBIN_WINDOW_SIZE)
 #define STD_DEV_VERSION2
 
-#define NSS_FIXED 2
-//#define NSS_BY_PERCENTAGE 0.90
+//#define NSS_FIXED 2
+#define NSS_BY_PERCENTAGE 0.90
 //#define NSS_BY_DELTA_TEST 5
 
 //#define SPE_TESTING 0 //value is index in A_PERCENTILES

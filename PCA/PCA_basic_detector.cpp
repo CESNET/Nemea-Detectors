@@ -62,7 +62,7 @@ using namespace alglib;
 using namespace std;
 
 //#define VALUES
-//#define VALIDATION
+#define VALIDATION
 #ifdef VALIDATION
 #define OUTPUT_LIMITER 40
 uint16_t output_counter = 0;
@@ -798,6 +798,7 @@ int main(int argc, char **argv)
    unsigned int round_timebin_counter = 0;
    uint64_t actual_timeslot_num;
    uint64_t timeslot_num;
+   uint64_t prev_timeslot_num;
    uint64_t *rcv_checker;
    uint64_t all_link_flag;
    uint64_t link_bit_field;
@@ -1043,7 +1044,6 @@ int main(int argc, char **argv)
    // **************************************************************************
    // **************************************************************************
 	// ***** MAIN PROCESSING LOOP ***********************************************
-// ***** Main processing loop *****
    while (!stop) {
 		// ***********************************************************************
 		// ***** Get input data **************************************************
@@ -1075,6 +1075,7 @@ int main(int argc, char **argv)
 
 		// ***********************************************************************
 		// ***** Timeslot continuity check ***************************************
+		prev_timeslot_num = timeslot_num; ///!!!TEMPORARY USE FOR OUTPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		timeslot_num = ur_get(in_tmplt, in_rec, UR_TIME_FIRST);
 
 		if (!timeslot_is_continuous(timeslot_num, actual_timeslot_num, settings)){/*TMP implementation of timeslot_is_continuous - time continuity is not checked yet*/
@@ -1142,7 +1143,7 @@ int main(int argc, char **argv)
 		// ***** Detection core **************************************************
 		if (!need_more_timebins){//data matrix is completed
 			STATUS_MSG(LOG_DST,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-			STATUS_MSG(LOG_DST,timebin_counter - 1 << ". timebin (" << round_timebin_counter << ") (timeslot " << timeslot_num << "): Data matrix is completed - starting detection...\n")
+			STATUS_MSG(LOG_DST,timebin_counter - 1 << ". timebin (" << round_timebin_counter << ") (timeslot " << prev_timeslot_num << "): Data matrix is completed - starting detection...\n")
 
 			++need_more_timebins;
 			// ********************************************************************
@@ -1150,6 +1151,10 @@ int main(int argc, char **argv)
 			transform_matrix_zero_mean(raw_data_matrix,&data_matrix);
 			// ********************************************************************
 			// ***** Preprocess data **********************************************
+			#ifndef MULTI_TEST
+			detection_log << "----------------------------------------------------------------------------------------------" << endl;
+			detection_log << timebin_counter - 1 << ".timebin (" << round_timebin_counter << ") (timeslot " << prev_timeslot_num << ")" << endl;
+			#endif
 			if (settings.preprocessing_flag){// !!! it's important to preprocess data here, since data matrix columns have zero mean
 				STATUS_MSG(LOG_DST,"Preprocessing data..\n")
 				ret = preprocess_data(&data_matrix, round_timebin_counter, preprocessing_identification_field);
@@ -1510,8 +1515,8 @@ int main(int argc, char **argv)
 ///******************************************************************************************************************
 			STATUS_MSG(LOG_DST,"\t  Starting SINGLE-TEST.\n")
 
-			detection_log << "----------------------------------------------------------------------------------------------" << endl;
-			detection_log << timebin_counter - 1 << ".timebin (" << round_timebin_counter << ") (timeslot " << timeslot_num << ")" << endl;
+//			detection_log << "----------------------------------------------------------------------------------------------" << endl;
+//			detection_log << timebin_counter - 1 << ".timebin (" << round_timebin_counter << ") (timeslot " << timeslot_num << ")" << endl;
 ///***********************************************************************************************************
 /// NSS DEFINITION *********************,,,,, SINGLE TESTING ,,,,,,,,,,,,,,,,,,,,,,***************************
 			// ********************************************************************
@@ -1569,7 +1574,7 @@ int main(int argc, char **argv)
 			STATUS_MSG(LOG_DST,"\t  Starting anomaly detection.\n")
 
 			detection_log_values << "\n==================================================================================\n";
-			detection_log_values << "Detection values in timebin " << timebin_counter - 1<< " (" << round_timebin_counter << ") (timeslot " << timeslot_num << ")" << endl;
+			detection_log_values << "Detection values in timebin " << timebin_counter - 1<< " (" << round_timebin_counter << ") (timeslot " << prev_timeslot_num << ")" << endl;
 			detection_log_values << "-----------------------------------------------------------------------------------\n";
 			detection_log_values << "\tFor NSS-def ";
 			#ifdef NSS_FIXED
