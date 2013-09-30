@@ -103,6 +103,9 @@ static int bf_learning = 1; // index of inactive bloom filter
  */
 inline void swap_filters() 
 {
+#ifdef DEBUG
+    cout << "Swapping Blomm filters ..." << endl;
+#endif
     int tmp;
     tmp = bf_learning;
     bf_learning = bf_active;
