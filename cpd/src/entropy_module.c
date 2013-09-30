@@ -174,7 +174,8 @@ int main(int argc, char **argv)
    uint64_t flows_total = 0;
    uint64_t last_send_time = 0;
    unsigned char *p;
-
+   char long_output = 0;
+   char *unirec_output_specifier;
    // ***** TRAP initialization *****
 
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
@@ -188,7 +189,7 @@ int main(int argc, char **argv)
 
    char *unirec_input_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
    char opt;
-   while ((opt = getopt(argc, argv, "u:p:")) != -1) {
+   while ((opt = getopt(argc, argv, "u:p:l")) != -1) {
       switch (opt) {
       case 'u':
          unirec_input_specifier = optarg;
@@ -196,12 +197,19 @@ int main(int argc, char **argv)
       case 'p':
          progress = atoi(optarg);
          break;
+      case 'l':
+         long_output = 1;
+         break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
          return 3;
       }
    }
-   char *unirec_output_specifier = "TIME_FIRST,LINK_BIT_FIELD,FLOWS,PACKETS,BYTES,ENTROPY_SRCIP,ENTROPY_DSTIP,ENTROPY_SRCPORT,ENTROPY_DSTPORT";
+   if (long_output == 0) {
+      unirec_output_specifier = "TIME_FIRST,LINK_BIT_FIELD,FLOWS,PACKETS,BYTES,ENTROPY_SRCIP,ENTROPY_DSTIP,ENTROPY_SRCPORT,ENTROPY_DSTPORT";
+   } else {
+      unirec_output_specifier = "TIME_FIRST,LINK_BIT_FIELD,FLOWS,PACKETS,BYTES,ENTROPY_SRCIP,ENTROPY_DSTIP,ENTROPY_SRCPORT,ENTROPY_DSTPORT,ENTROPY_SRCIPDSTIP,ENTROPY_SRCIPSRCPORT,ENTROPY_SRCIPDSTPORT,ENTROPY_DSTIPSRCPORT,ENTROPY_DSTIPDSTPORT,ENTROPY_SRCIPDSTIPDSTPORT,ENTROPY_SRCIPDSTIPSRCPORT";
+   }
 
    ur_template_t *tmpl = ur_create_template(unirec_input_specifier);
    if (tmpl == NULL) {
@@ -297,6 +305,15 @@ int main(int argc, char **argv)
          ur_set(tmplt_out, data_out, UR_ENTROPY_DSTIP,   entropies_results[DSTIP]);
          ur_set(tmplt_out, data_out, UR_ENTROPY_SRCPORT,   entropies_results[SRCPORT]);
          ur_set(tmplt_out, data_out, UR_ENTROPY_DSTPORT,   entropies_results[SRCPORT]);
+         if (long_output != 0) {
+            ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIP,   entropies_results[SRCIPDSTIP]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPSRCPORT,   entropies_results[SRCIPSRCPORT]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTPORT,   entropies_results[SRCIPDSTPORT]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_DSTIPSRCPORT,   entropies_results[DSTIPSRCPORT]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_DSTIPDSTPORT,   entropies_results[DSTIPDSTPORT]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIPDSTPORT,   entropies_results[SRCIPDSTIPDSTPORT]);
+            ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIPSRCPORT,   entropies_results[SRCIPDSTIPSRCPORT]);
+         }
 
          flows_total = 0;
          packets_total = 0;
