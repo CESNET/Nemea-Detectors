@@ -407,7 +407,9 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
+        char debug_ip_dst[INET6_ADDRSTRLEN];
         ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_DST_IP)), debug_ip_dst);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
@@ -422,7 +424,8 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
             cout << debug_ip_pref;
             cout <<"/";
             short a;
-            cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
+            cout << dec <<  (a = prefix_list[search_result].pref_length);
+            cout << " (Target: " << debug_ip_dst << ")" << endl;
 #endif
             return SPOOF_POSITIVE;
     }
