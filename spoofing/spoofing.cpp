@@ -720,8 +720,8 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
     // check the timestamp of filters and record
     long long tf, tr, td;
     tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-    tr = filter[bf_active].timestamp >> 32;
-    td = tr - tf;
+    tr = filter[bf_active].timestamp;
+    td = tf - tr;
 
     /*
      * If the time stamp is older than BF_SWAP_TIME constant
@@ -766,6 +766,12 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
         filter[bf_active].flows[search_result].count++;
         filter[bf_learning].flows[search_result].count++;
 
+#ifdef DEBUG
+            ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
+            if (strcmp("195.113.0.0", debug_ip_dst) == 0) {
+                cerr << debug_ip_dst << "\t" << filter[bf_active].flows[search_result].count << endl;
+            }
+#endif
         if (filter[bf_active].flows[search_result].count > threshold) {
         // flow limit exceeded
 #ifdef DEBUG
@@ -807,7 +813,7 @@ int check_new_flows_v6(ur_template_t *ur_tmp, const void *record, unsigned thres
     // check the timestamp of filters and the record
     long long tf, tr, td;
     tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-    tr = filter[bf_active].timestamp >> 32;
+    tr = filter[bf_active].timestamp;
     td = tr - tf;
 
     /*
