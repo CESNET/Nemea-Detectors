@@ -103,6 +103,9 @@ static int bf_learning = 1; // index of inactive bloom filter
  */
 inline void swap_filters() 
 {
+#ifdef DEBUG
+    cout << "Swapping Blomm filters ..." << endl;
+#endif
     int tmp;
     tmp = bf_learning;
     bf_learning = bf_active;
@@ -407,7 +410,9 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
 #ifdef DEBUG
         char debug_ip_src[INET6_ADDRSTRLEN];
         char debug_ip_pref[INET6_ADDRSTRLEN];
+        char debug_ip_dst[INET6_ADDRSTRLEN];
         ip_to_str(&(ur_get(ur_tmp, checked, UR_SRC_IP)), debug_ip_src);
+        ip_to_str(&(ur_get(ur_tmp, checked, UR_DST_IP)), debug_ip_dst);
         ip_to_str(&(prefix_list[search_result].ip), debug_ip_pref);
 #endif
 
@@ -422,7 +427,8 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
             cout << debug_ip_pref;
             cout <<"/";
             short a;
-            cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
+            cout << dec <<  (a = prefix_list[search_result].pref_length);
+            cout << " (Target: " << debug_ip_dst << ")" << endl;
 #endif
             return SPOOF_POSITIVE;
     }
@@ -714,8 +720,8 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
     // check the timestamp of filters and record
     long long tf, tr, td;
     tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-    tr = filter[bf_active].timestamp >> 32;
-    td = tr - tf;
+    tr = filter[bf_active].timestamp;
+    td = tf - tr;
 
     /*
      * If the time stamp is older than BF_SWAP_TIME constant
@@ -752,6 +758,9 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
     is_present = filter[bf_active].flows[search_result].sources->contains((unsigned char *) ip_key, INET6_ADDRSTRLEN);
 
     if (is_present) { // the flow is already in filter --> will be ignored
+        if  (!filter[bf_learning].flows[search_result].sources->containsinsert((unsigned char *)ip_key, INET6_ADDRSTRLEN)) {;
+            filter[bf_learning].flows[search_result].count++;
+        }
         return SPOOF_NEGATIVE;
     } else {
         // insert to both filters and increase their respective counts
@@ -760,6 +769,13 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
         filter[bf_active].flows[search_result].count++;
         filter[bf_learning].flows[search_result].count++;
 
+#ifdef DEBUG
+            ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
+            if (strcmp("195.113.0.0", debug_ip_dst) == 0) {
+                long t = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
+                cerr << t << "\t" << filter[bf_active].flows[search_result].count << endl;
+            }
+#endif
         if (filter[bf_active].flows[search_result].count > threshold) {
         // flow limit exceeded
 #ifdef DEBUG
@@ -801,7 +817,7 @@ int check_new_flows_v6(ur_template_t *ur_tmp, const void *record, unsigned thres
     // check the timestamp of filters and the record
     long long tf, tr, td;
     tf = ur_get(ur_tmp, record, UR_TIME_FIRST) >> 32;
-    tr = filter[bf_active].timestamp >> 32;
+    tr = filter[bf_active].timestamp;
     td = tr - tf;
 
     /*
