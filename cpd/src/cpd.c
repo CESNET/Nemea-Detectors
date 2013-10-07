@@ -297,7 +297,7 @@ int main(int argc, char **argv)
       cpd_run_methods(values[i], methods, cpd_methods_count);
       SD_MEANVAR_ADD(&slidingwindow, values[i]);
       ent_reset(&ent);
-      ent_put_data(ent, (unsigned char *) &values[i], sizeof(*values));
+      ent_put_data(ent, (char *) &values[i], sizeof(*values));
       fprintf(history, "%f\t%f\t%f\t%f\n", values[i], slidingwindow.mean, slidingwindow.var, ent_get_entropy(ent));
       fflush(history);
    }
@@ -385,10 +385,11 @@ int main(void)
    
    /* Beginning of test */
    /* reset CPD */
-   npcusumpriv.previous = 0.0;
+	union cpd_privs cpds;
+   cpds.np_cusum.previous = 0.0;
    for (i=0; i<TEST_DATA_SIZE; ++i) {
       //printf("%f %f\n", test_inputs[i], cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i]));
-      if (test_cpd(cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i])) == 0) {
+      if (test_cpd(cpd_np_cusum(&cpds, test_inputs[i])) == 0) {
          //printf("error - value doesn't match\n");
          return EXIT_FAILURE;
       }
