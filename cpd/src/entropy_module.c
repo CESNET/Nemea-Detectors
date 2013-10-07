@@ -278,7 +278,8 @@ int main(int argc, char **argv)
 
    // ***** Create UniRec template *****
 
-   char *unirec_input_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   //char *unirec_input_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char *unirec_input_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD";
    char opt;
    while ((opt = getopt(argc, argv, "u:p:ln:t:")) != -1) {
       switch (opt) {
