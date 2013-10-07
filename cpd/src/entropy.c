@@ -48,6 +48,7 @@
 #ifdef HAVE_OMP_H
 #include <omp.h>
 #endif
+#include "../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 
 
 /**
@@ -58,7 +59,6 @@
 #define ENT_DATA_SIZE 257
 #define ENT_DATA_TOT_IND (ENT_DATA_SIZE - 1)
 
-static uint32_t *ent_probs = NULL;
 static uint32_t ent_total;
 
 /* precomputed logarithms */
@@ -77,12 +77,22 @@ void ent_reset(uint32_t **ent_data)
    memset((*d), 0, ENT_DATA_SIZE*sizeof((*ent_data)[0]));
 }
 
-void ent_put_data(uint32_t *ent_data, unsigned char *data, uint32_t data_size)
+void ent_put_data(uint32_t *ent_data, char *data, uint32_t data_size)
+{
+   uint32_t i;
+   int32_t *d = (int32_t *) ent_data;
+   for (i=0; i<data_size; ++i) {
+      d[(unsigned char) data[i]]++;
+      d[ENT_DATA_TOT_IND]++;
+   }
+}
+
+void ent_put_data_hash(uint32_t *ent_data, char *data, uint32_t data_size)
 {
    uint32_t i;
    uint32_t *d = (uint32_t *) ent_data;
    for (i=0; i<data_size; ++i) {
-      d[data[i]]++;
+      d[(unsigned char) data[i]]++;
       d[ENT_DATA_TOT_IND]++;
    }
 }
@@ -103,6 +113,26 @@ uint64_t ent_cache_miss = 0;
 uint64_t ent_cache_hit = 0;
 #endif
 
+static inline double ent_compute_entropy(uint32_t nmemb, uint32_t total)
+{
+	double p = (double) nmemb / (double) ent_total;
+   float fp = ((int)(p * 1000000.0 + (p<0? -0.5 : 0.5))) / 1000000.0;
+   float *pcr; ///< precomputed result
+	pcr = (float *) bsearch(&fp, logarg, (sizeof(logarg) / sizeof(*logarg)),
+			sizeof(*logarg), logargs_compar);
+	if (pcr == NULL) {
+#ifdef DEBUG
+		ent_cache_miss++;
+#endif
+		return p*log2(p);
+	} else {
+#ifdef DEBUG
+		ent_cache_hit++;
+#endif
+		return logres[pcr - logarg];
+	}
+}
+
 /**
  * \brief Compute entropy from given data in data with size
  * \param [in] data           pointer to data - source of entropy
@@ -113,30 +143,14 @@ uint64_t ent_cache_hit = 0;
  */
 double ent_get_entropy(uint32_t *ent_data)
 {
-   double p, entropy = 0.0;
-   float fp;
+   double entropy = 0.0;
    uint32_t i;
    uint32_t ent_total = *((uint32_t *) ent_data + ENT_DATA_TOT_IND);
    uint32_t *ent_probs = (uint32_t *) ent_data;
-   float *pcr; ///< precomputed result
 
    for(i=0; i<256; i++) {
       if (ent_probs[i] == 0) continue;
-      p = (double) ent_probs[i] / (double) ent_total;
-      fp = ((int)(p * 1000000.0 + (p<0? -0.5 : 0.5))) / 1000000.0;
-      pcr = (float *) bsearch(&fp, logarg, (sizeof(logarg) / sizeof(*logarg)),
-         sizeof(*logarg), logargs_compar);
-      if (pcr == NULL) {
-         entropy -= p*log2(p);
-         #ifdef DEBUG
-         ent_cache_miss++;
-         #endif
-      } else {
-         entropy -= logres[pcr - logarg];
-         #ifdef DEBUG
-         ent_cache_hit++;
-         #endif
-      }
+		entropy -= ent_compute_entropy(ent_probs[i], ent_total);
    }
    return entropy;
 }
@@ -153,3 +167,154 @@ void ent_free(uint32_t **d)
 * @}
 */
 
+/**
+ * \defgroup cuckoohashentropy
+ * @{
+ */
+typedef struct ent_hash_private {
+	unsigned int table_size;
+	unsigned int data_size;
+	unsigned int key_length;
+	cc_hash_table_v2_t hashtable;
+} ent_hash_priv_t;
+
+/**
+ * \param [in] table_size	number of entries
+ * \param [in] key_length	size of data in bytes for entropy computing (e.g. TCP dst port ~ 2)
+ */
+ent_hash_t *ent_hash_init(unsigned int table_size, unsigned int key_length)
+{
+	ent_hash_priv_t *priv = (ent_hash_priv_t *) calloc(1, sizeof(ent_hash_priv_t));
+	priv->table_size = table_size;
+	priv->key_length = key_length;
+	ht_init_v2(&priv->hashtable, table_size, sizeof(uint32_t), key_length);
+	return ((void *) priv);
+}
+
+/**
+ * \param [in] inst	private data
+ * \param [in] data	data for entropy computing, size should be equal to key_length from ent_hash_init()
+ */
+void ent_hash_put_data(ent_hash_t *inst, char *data)
+{
+	ent_hash_priv_t *priv = (ent_hash_priv_t *) inst;
+	uint32_t counter = 0;
+	int index = ht_get_index_v2(&priv->hashtable, data);
+	if (index == -1) {
+		ht_insert_v2(&priv->hashtable, data, (void *) &counter);
+	} else {
+		/* key already exists, increment counter */
+		*((uint32_t *) priv->hashtable.data[index]) += 1;
+	}
+}
+
+double ent_hash_get_entropy(ent_hash_t *ent_data) {
+	ent_hash_priv_t *priv = (ent_hash_priv_t *) ent_data;
+	uint32_t i;
+	uint32_t total = 0;
+	double entropy = 0.0;
+	for (i=0; i<priv->table_size; ++i) {
+		if ((priv->hashtable.ind[i].valid == 1) &&
+				(*((uint32_t *) priv->hashtable.data[priv->hashtable.ind[i].index]) > 0)) {
+			total++;
+		}
+	}
+	for (i=0; i<priv->table_size; ++i) {
+		if ((priv->hashtable.ind[i].valid == 1) &&
+				(*((uint32_t *) priv->hashtable.data[priv->hashtable.ind[i].index]) > 0)) {
+			entropy -= ent_compute_entropy(*((uint32_t *) priv->hashtable.data[priv->hashtable.ind[i].index]), total);
+		}
+	}
+	return entropy;
+}
+
+void ent_hash_reset(ent_hash_t *ent_data)
+{
+	ent_hash_priv_t *priv = (ent_hash_priv_t *) ent_data;
+	ht_clear_v2(&priv->hashtable);
+}
+
+void ent_hash_free(ent_hash_t **ent_data)
+{
+	ent_hash_priv_t *priv = *((ent_hash_priv_t **) ent_data);
+	ht_destroy_v2(&priv->hashtable);
+	free(priv);
+	(*ent_data) = NULL;
+}
+
+/**
+ * @}
+ */
+
+/**
+ * \defgroup superhashentropy
+ * @{
+ */
+
+#include "../../../common/super_fast_hash/super_fast_hash.h"
+
+typedef struct ent_shash_private {
+	unsigned int table_size;
+	unsigned int data_size;
+	unsigned int key_length;
+	uint32_t *hashtable;
+	uint64_t data_count;
+} ent_shash_priv_t;
+
+/**
+ * \param [in] table_size	number of entries
+ * \param [in] key_length	size of data in bytes for entropy computing (e.g. TCP dst port ~ 2)
+ */
+ent_shash_t *ent_shash_init(unsigned int table_size, unsigned int key_length)
+{
+	ent_shash_priv_t *priv = (ent_shash_priv_t *) calloc(1, sizeof(ent_shash_priv_t));
+	priv->table_size = table_size;
+	priv->key_length = key_length;
+	priv->hashtable = (uint32_t *) calloc(table_size, sizeof(uint32_t));
+	return ((void *) priv);
+}
+
+/**
+ * \param [in] inst	private data
+ * \param [in] data	data for entropy computing, size should be equal to key_length from ent_shash_init()
+ */
+void ent_shash_put_data(ent_shash_t *inst, char *data)
+{
+	ent_shash_priv_t *priv = (ent_shash_priv_t *) inst;
+	uint32_t key = SuperFastHash(data, priv->key_length);
+	priv->hashtable[key % priv->table_size]++;
+	priv->data_count++;
+}
+
+double ent_shash_get_entropy(ent_shash_t *ent_data) {
+	ent_shash_priv_t *priv = (ent_shash_priv_t *) ent_data;
+	uint32_t i;
+	double entropy = 0.0;
+	for (i=0; i<priv->table_size; ++i) {
+		if (priv->hashtable[i] > 0) {
+			entropy -= ent_compute_entropy(priv->hashtable[i], priv->data_count);
+		}
+	}
+	return entropy;
+}
+
+void ent_shash_reset(ent_shash_t *ent_data)
+{
+	ent_shash_priv_t *priv = (ent_shash_priv_t *) ent_data;
+	memset(priv->hashtable, 0, priv->table_size * sizeof(*priv->hashtable));
+	priv->data_count = 0;
+}
+
+void ent_shash_free(ent_shash_t **ent_data)
+{
+	ent_shash_priv_t *priv = *((ent_shash_priv_t **) ent_data);
+	if (priv->hashtable != NULL) {
+		free(priv->hashtable);
+	}
+	free(priv);
+	(*ent_data) = NULL;
+}
+
+/**
+ * @}
+ */

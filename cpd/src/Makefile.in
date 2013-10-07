@@ -54,6 +54,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_cpd_OBJECTS = cpd-cpd.$(OBJEXT) cpd-entropy.$(OBJEXT)
 cpd_OBJECTS = $(am_cpd_OBJECTS)
 cpd_LDADD = $(LDADD)
+cpd_DEPENDENCIES = ../../../unirec/unirec.o \
+	../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
 cpd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(cpd_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -61,18 +63,18 @@ am_cpd_module_OBJECTS = cpd.$(OBJEXT) entropy.$(OBJEXT) \
 	cpd_module.$(OBJEXT)
 cpd_module_OBJECTS = $(am_cpd_module_OBJECTS)
 cpd_module_LDADD = $(LDADD)
-cpd_module_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(cpd_module_LDFLAGS) $(LDFLAGS) -o $@
+cpd_module_DEPENDENCIES = ../../../unirec/unirec.o \
+	../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
 am_entropy_module_OBJECTS = entropy.$(OBJEXT) entropy_module.$(OBJEXT)
 entropy_module_OBJECTS = $(am_entropy_module_OBJECTS)
 entropy_module_LDADD = $(LDADD)
-entropy_module_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(entropy_module_LDFLAGS) $(LDFLAGS) -o $@
+entropy_module_DEPENDENCIES = ../../../unirec/unirec.o \
+	../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
 am_sdmcpd_OBJECTS = sdmcpd-cpd.$(OBJEXT)
 sdmcpd_OBJECTS = $(am_sdmcpd_OBJECTS)
 sdmcpd_LDADD = $(LDADD)
+sdmcpd_DEPENDENCIES = ../../../unirec/unirec.o \
+	../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
 sdmcpd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(sdmcpd_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -233,10 +235,13 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+LDADD = ../../../unirec/unirec.o ../../../common/cuckoo_hash_v2/libcuckoo_hash_lock.a
+AM_CFLAGS = -Wall
+AM_LDFLAGS = -lm -ltrap
 cpd_module_SOURCES = cpd.c entropy.c cpd_module.c
-cpd_module_LDFLAGS = -lm -ltrap ../../../unirec/unirec.o
+#cpd_module_LDFLAGS=-lm -ltrap
 entropy_module_SOURCES = entropy.c entropy_module.c
-entropy_module_LDFLAGS = -lm -ltrap ../../../unirec/unirec.o
+#entropy_module_LDFLAGS=-lm -ltrap
 EXTRA_DATA = log2s.x log2s.data
 cpd_SOURCES = cpd.c entropy.c
 cpd_CPPFLAGS = -DTESTCPD_C
@@ -326,10 +331,10 @@ cpd$(EXEEXT): $(cpd_OBJECTS) $(cpd_DEPENDENCIES)
 	$(cpd_LINK) $(cpd_OBJECTS) $(cpd_LDADD) $(LIBS)
 cpd_module$(EXEEXT): $(cpd_module_OBJECTS) $(cpd_module_DEPENDENCIES) 
 	@rm -f cpd_module$(EXEEXT)
-	$(cpd_module_LINK) $(cpd_module_OBJECTS) $(cpd_module_LDADD) $(LIBS)
+	$(LINK) $(cpd_module_OBJECTS) $(cpd_module_LDADD) $(LIBS)
 entropy_module$(EXEEXT): $(entropy_module_OBJECTS) $(entropy_module_DEPENDENCIES) 
 	@rm -f entropy_module$(EXEEXT)
-	$(entropy_module_LINK) $(entropy_module_OBJECTS) $(entropy_module_LDADD) $(LIBS)
+	$(LINK) $(entropy_module_OBJECTS) $(entropy_module_LDADD) $(LIBS)
 sdmcpd$(EXEEXT): $(sdmcpd_OBJECTS) $(sdmcpd_DEPENDENCIES) 
 	@rm -f sdmcpd$(EXEEXT)
 	$(sdmcpd_LINK) $(sdmcpd_OBJECTS) $(sdmcpd_LDADD) $(LIBS)

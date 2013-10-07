@@ -72,7 +72,6 @@ trap_module_info_t module_info = {
 #define FLOWS_TIMEOUT 1
 
 static int stop = 0;
-static int stats = 0;
 static int progress = 0;
 
 #define STOPCMD do {stop = 1;} while (0);
@@ -180,16 +179,16 @@ int main(int argc, char **argv)
 
       /* compute entropy of whole incoming message */
       ent_reset(&ents);
-      ent_put_data(ents, (unsigned char *) data, data_size);
+      ent_put_data(ents, (char *) data, data_size);
 
       flows_no += 1;
       if ((time(NULL) - checkpoint_time) >= FLOWS_TIMEOUT) {
          cpd_run_methods(flows_no, cpd_methods_flows, CPD_METHODS_COUNT_DEFAULT);
          SD_MEANVAR_ADD(&sdmv_flows, flows_no);
          checkpoint_time = time(NULL);
-         fprintf(history, "%lu\t%u\t%f\t%f\t%u\t%f\t%f\t%u\t%f\t%f\t%f\n",
+         fprintf(history, "%lu\t%u\t%f\t%f\t%llu\t%f\t%f\t%llu\t%f\t%f\t%f\n",
                checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var,
-               bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no,
+               (long long unsigned int) bytes_no, sdmv_bytes.mean, sdmv_bytes.var, (long long unsigned int) flows_no,
                sdmv_flows.mean, sdmv_flows.var, ent_get_entropy(ents));
          fflush(history);
          flows_no = 0;
