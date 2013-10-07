@@ -77,6 +77,9 @@ static int progress = 0;
 #ifdef DEBUG
 extern uint64_t ent_cache_miss;
 extern uint64_t ent_cache_hit;
+uint64_t gflow_total = 0;
+uint64_t gpkts_total = 0;
+uint64_t gbyte_total = 0;
 #endif
 #define BREAK_ON_FIRST_LINK
 
@@ -211,6 +214,14 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
          ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIPDSTPORT,   sdata[i].entropies_results[SRCIPDSTIPDSTPORT]);
          ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIPSRCPORT,   sdata[i].entropies_results[SRCIPDSTIPSRCPORT]);
       }
+#ifdef DEBUG
+      printf("link#%03X timesl:%u flows#%llu pkts#%llu bytes#%llu\n", sdata[i].linkid, *cur_timeslot,
+         (unsigned long long int) sdata[i].flows_total, (unsigned long long int) sdata[i].packets_total,
+         (unsigned long long int) sdata[i].bytes_total);
+      gflow_total += sdata[i].flows_total;
+      gpkts_total += sdata[i].packets_total;
+      gbyte_total += sdata[i].bytes_total;
+#endif
 
       sdata[i].flows_total = 0;
       sdata[i].packets_total = 0;
@@ -384,7 +395,7 @@ int main(int argc, char **argv)
          }
 
          sdata[link].bytes_total += ur_get(tmpl, data, UR_BYTES);
-         sdata[link].flows_total += ur_get(tmpl, data, UR_FLOWS);
+         sdata[link].flows_total += 1;
          sdata[link].packets_total += ur_get(tmpl, data, UR_PACKETS);
          cur_first_time = ur_time_get_sec(ur_get(tmpl, data, UR_TIME_FIRST));
 
@@ -519,7 +530,9 @@ loopend:
    }
    free(sdata);
    #ifdef DEBUG
-   printf("ent_cache_miss: %llu\nent_cache_hit: %llu\n", ent_cache_miss, ent_cache_hit);
+   printf("ent_cache_miss: %llu\nent_cache_hit: %llu\n", (unsigned long long int) ent_cache_miss, (unsigned long long int) ent_cache_hit);
+   printf("Total: flows#%llu pkts#%llu bytes#%llu\n", (unsigned long long int) gflow_total,
+   (unsigned long long int) gpkts_total, (unsigned long long int) gbyte_total);
    #endif
    ur_free_template(tmpl);
    ur_free_template(tmplt_out);
