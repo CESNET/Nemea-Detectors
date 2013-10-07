@@ -374,7 +374,8 @@ int main(int argc, char **argv)
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, timewindow*TRAPTIMEOUT);
       if (ret == TRAP_E_TIMEOUT) {
          fprintf(stderr, "Timeout -> forced send.\n");
-         goto forcesend;
+         send_results(sdata, linkcount, tmplt_out, data_out, &cur_timeslot, timewindow, long_output);
+         continue;
       } else if (ret != TRAP_E_OK) {
          goto loopend;
       }
@@ -388,6 +389,18 @@ int main(int argc, char **argv)
          }
          goto loopend; // End of data (used for testing purposes)
       }
+
+      cur_first_time = ur_time_get_sec(ur_get(tmpl, data, UR_TIME_FIRST));
+      /* set last_send time during first iteration */
+      if (cur_timeslot == 0) {
+         cur_timeslot = cur_first_time;
+      }
+
+      /* send previous data if new unirec does not belong to the same timeslot */
+      if ((cur_first_time >= cur_timeslot) && ((cur_first_time - cur_timeslot) >= timewindow)) {
+         send_results(sdata, linkcount, tmplt_out, data_out, &cur_timeslot, timewindow, long_output);
+      }
+
       linkbit = ur_get(tmpl, data, UR_LINK_BIT_FIELD);
       for (link=0, linkbitp=1; link<linkcount; linkbitp<<=1,++link) {
          if (((linkbitp & linkbit) == 0) && (linkbit != 0)) {
@@ -398,12 +411,6 @@ int main(int argc, char **argv)
          sdata[link].bytes_total += ur_get(tmpl, data, UR_BYTES);
          sdata[link].flows_total += 1;
          sdata[link].packets_total += ur_get(tmpl, data, UR_PACKETS);
-         cur_first_time = ur_time_get_sec(ur_get(tmpl, data, UR_TIME_FIRST));
-
-         /* set last_send time during first iteration */
-         if (cur_timeslot == 0) {
-            cur_timeslot = cur_first_time;
-         }
 
          /* compute entropy of whole incoming message */
 #ifdef BYTEENTROPY
@@ -514,10 +521,6 @@ int main(int argc, char **argv)
          }
       }
       /* All data processed, tables updated */
-      if ((cur_first_time >= cur_timeslot) && ((cur_first_time - cur_timeslot) >= timewindow)) {
-forcesend:
-         send_results(sdata, linkcount, tmplt_out, data_out, &cur_timeslot, timewindow, long_output);
-      }
    } /* while (!stop) */
 loopend:
    send_results(sdata, linkcount, tmplt_out, data_out, &cur_timeslot, timewindow, long_output);
