@@ -138,9 +138,9 @@ int main(int argc, char **argv)
       return 4;
    }
 
-   cpd_methods_flows = cpd_default_init_methods(thresholds_flows, 1000, 1500, 1);
-   cpd_methods_bytes = cpd_default_init_methods(thresholds_bytes, 1000, 1500, 1);
-   cpd_methods_packets = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1);
+   cpd_methods_flows = cpd_default_init_methods(thresholds_flows, 1000, 1500, 1, 16, 16);
+   cpd_methods_bytes = cpd_default_init_methods(thresholds_bytes, 1000, 1500, 1, 16, 16);
+   cpd_methods_packets = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
    SD_MEANVAR_INIT(&sdmv_packets, 10);
    SD_MEANVAR_INIT(&sdmv_bytes, 10);
    SD_MEANVAR_INIT(&sdmv_flows, 10);

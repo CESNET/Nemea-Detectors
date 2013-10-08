@@ -51,7 +51,7 @@ struct cpd_method {
    double threshold;
 };
 
-#define CPD_METHODS_COUNT_DEFAULT   3
+#define CPD_METHODS_COUNT_DEFAULT   4
 extern uint32_t cpd_methods_count;
 
 void cpd_set_alert_callback(void (*cpd_alert_callback)(const char *method_name, double new_value, double xn, double threshold));
@@ -62,19 +62,22 @@ void cpd_set_alert_callback(void (*cpd_alert_callback)(const char *method_name, 
  * Default methods are 1) COUNT (compares current value with thresholt)
  * 2) CUSUM (Page's CUSUM with probability computed according to probability
  * of normalized value with mean and variation from sliding window of size n)
- * 3) Non-parametric CUSUM (NP-CUSUM)
+ * 3) Non-parametric CUSUM (NP-CUSUM) 4) EWMA
  *
- * \param [in] thresholds     array with 3 double values for thresholds of
- * methods
+ * \param [in] thresholds     array with 4 double values for thresholds of methods
  * \param [in] npcusum_historical_est  1st parameter for NP-CUSUM
  * \param [in] npcusum_attact_est      2nd parameter for NP-CUSUM
  * \param [in] npcusum_tuning          3rd parameter for NP-CUSUM
+ * \param [in] ewma_factor					1st parameter for EWMA - factor, must be power of 2 (Factor to use for the scaled up internal value. The maximum value of averages can be ULONG_MAX/(factor*weight).)
+ * \param [in] ewma_weight					2nd parameter for EWMA - weight, must be power of 2 (how fast history decays)
  * \return pointer to methods initialized configuration
  */
-struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_historical_est, double npcusum_attack_est, double npcusum_tuning);
+struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_historical_est, double npcusum_attack_est, double npcusum_tuning,
+		uint32_t factor, uint32_t weight);
 
 void cpd_run_methods(double new_value, struct cpd_method *methods, uint32_t methods_num);
 
 void cpd_free_methods(struct cpd_method *methods, uint32_t methods_num);
 
 #endif
+

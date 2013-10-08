@@ -45,6 +45,7 @@
 #include <math.h>
 #include <string.h>
 #include <libtrap/trap.h>
+#include "linux_ewma.h"
 
 #include "cpd_common.h"
 #include "cpd.h"
@@ -80,10 +81,15 @@ struct cpd_cusum_priv {
    double previous;
 };
 
+struct cpd_ewma_priv {
+	struct ewma config;
+};
+
 union cpd_privs {
    struct cpd_np_cusum_priv np_cusum;
    struct cpd_count_priv counter;
    struct cpd_cusum_priv cusum;
+   struct cpd_ewma_priv ewma;
 
    /* add others here */
 };
@@ -219,6 +225,39 @@ void cpd_count_reset(union cpd_privs *privs)
  * @}
  */
 
+/**
+ * \defgroup cpd_ewma	Using Exponential Weighted Moving Average for
+ * Change-Point Detection
+ * @{
+ */
+double cpd_ewma(union cpd_privs *privs, double current_val)
+{
+   struct cpd_ewma_priv *p = &privs->ewma;
+	ewma_add(&p->config, (unsigned long) current_val);
+	return ((double) ewma_read(&p->config));
+}
+
+void cpd_ewma_init(union cpd_privs **priv, uint32_t factor, uint32_t weight)
+{
+	struct cpd_ewma_priv *p;
+   if (priv == NULL) {
+      fprintf(stderr, "Bad priv pointer, initialization was not successful.");
+      return;
+   }
+   (*priv) = calloc(1, sizeof(union cpd_privs));
+	p = &(*priv)->ewma;
+	ewma_init(&p->config, factor, weight);
+}
+
+void cpd_ewma_reset(union cpd_privs *privs)
+{
+   struct cpd_ewma_priv *p = &privs->ewma;
+   p->config.internal = 0;
+}
+/**
+ * @}
+ */
+
 void cpd_run_methods(double new_value, struct cpd_method *methods, uint32_t methods_num)
 {
    int i;
@@ -244,7 +283,8 @@ void cpd_free_methods(struct cpd_method *methods, uint32_t methods_num)
    }
 }
 
-struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_historical_est, double npcusum_attack_est, double npcusum_tuning)
+struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_historical_est, double npcusum_attack_est, double npcusum_tuning,
+		uint32_t ewma_factor, uint32_t ewma_weight)
 {
    struct cpd_method *methods = (struct cpd_method *) malloc(sizeof(*methods) * cpd_methods_count);
    if (methods == NULL) {
@@ -254,7 +294,7 @@ struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_h
    methods[0].name = "COUNT";
    methods[0].compute_next = cpd_count;
    methods[0].reset = cpd_count_reset;
-   methods[0].threshold = thresholds[2];
+   methods[0].threshold = thresholds[0];
    cpd_count_init(&methods[0].priv);
 
    methods[1].name = "CUSUM";
@@ -266,8 +306,14 @@ struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_h
    methods[2].name = "NP-CUSUM";
    methods[2].compute_next = cpd_np_cusum;
    methods[2].reset = cpd_np_cusum_reset;
-   methods[2].threshold = thresholds[0];
+   methods[2].threshold = thresholds[2];
    cpd_np_cusum_init(&methods[2].priv, npcusum_historical_est, npcusum_attack_est, npcusum_tuning);
+
+   methods[3].name = "EWMA";
+   methods[3].compute_next = cpd_ewma;
+   methods[3].reset = cpd_ewma_reset;
+   methods[3].threshold = thresholds[3];
+   cpd_ewma_init(&methods[3].priv, ewma_factor, ewma_weight);
 
    return methods;
 }
@@ -287,7 +333,7 @@ int main(int argc, char **argv)
    };
 
    /* initialization of methods */
-   struct cpd_method *methods = cpd_default_init_methods(thresholds, 10, 15, 1);
+   struct cpd_method *methods = cpd_default_init_methods(thresholds, 10, 15, 1, 16, 16);
 
    SD_MEANVAR_INIT(&slidingwindow, 3);
 
