@@ -59,8 +59,6 @@
 #define ENT_DATA_SIZE 257
 #define ENT_DATA_TOT_IND (ENT_DATA_SIZE - 1)
 
-static uint32_t ent_total;
-
 /* precomputed logarithms */
 static float logarg[] =
 #include "log2s.x"
@@ -115,7 +113,7 @@ uint64_t ent_cache_hit = 0;
 
 static inline double ent_compute_entropy(uint32_t nmemb, uint32_t total)
 {
-	double p = (double) nmemb / (double) ent_total;
+	double p = (double) nmemb / (double) total;
    float fp = ((int)(p * 1000000.0 + (p<0? -0.5 : 0.5))) / 1000000.0;
    float *pcr; ///< precomputed result
 	pcr = (float *) bsearch(&fp, logarg, (sizeof(logarg) / sizeof(*logarg)),
@@ -258,7 +256,7 @@ typedef struct ent_shash_private {
 	unsigned int data_size;
 	unsigned int key_length;
 	uint32_t *hashtable;
-	uint64_t data_count;
+	uint32_t data_count;
 } ent_shash_priv_t;
 
 /**

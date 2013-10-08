@@ -215,9 +215,10 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
          ur_set(tmplt_out, data_out, UR_ENTROPY_SRCIPDSTIPSRCPORT,   sdata[i].entropies_results[SRCIPDSTIPSRCPORT]);
       }
 #ifdef DEBUG
-      printf("link#%03X timesl:%u flows#%llu pkts#%llu bytes#%llu\n", sdata[i].linkid, *cur_timeslot,
+      printf("link#%03X timesl:%u flows#%llu pkts#%llu bytes#%llu sip:%.5f dip:%.5f spr:%.5f dpr:%.5f\n", sdata[i].linkid, *cur_timeslot,
          (unsigned long long int) sdata[i].flows_total, (unsigned long long int) sdata[i].packets_total,
-         (unsigned long long int) sdata[i].bytes_total);
+         (unsigned long long int) sdata[i].bytes_total, sdata[i].entropies_results[SRCIP], sdata[i].entropies_results[DSTIP],
+			sdata[i].entropies_results[SRCPORT], sdata[i].entropies_results[DSTPORT]);
       gflow_total += sdata[i].flows_total;
       gpkts_total += sdata[i].packets_total;
       gbyte_total += sdata[i].bytes_total;
@@ -349,7 +350,7 @@ int main(int argc, char **argv)
       ent_data_total += ent_data_sizes[i];
 
       for (link=0; link<linkcount; ++link) {
-         sdata[link].hash_entropies[i] = ent_shash_init(1000, ent_data_sizes[i]);
+         sdata[link].hash_entropies[i] = ent_shash_init(1000000, ent_data_sizes[i]);
          sdata[link].linkid = 1<<link;
       }
       if (i == 0) {
