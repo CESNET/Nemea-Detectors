@@ -52,13 +52,63 @@
  * \defgroup entropy
  * @{
  */
+/**
+ * \defgroup byteentropy Byte based entropy computation
+ * @{
+ */
 void ent_reset(uint32_t **ent_data);
 
 double ent_get_entropy(uint32_t *ent_data);
 
-void ent_put_data(uint32_t *ent_data, unsigned char *data, uint32_t data_size);
+void ent_put_data(uint32_t *ent_data, char *data, uint32_t data_size);
 
 void ent_free(uint32_t **ent_data);
+/**
+ * @}
+ */
+
+/**
+ * \defgroup cuckootableentropy Hash table based entropy computation (cuckoo hashing)
+ * @{
+ */
+
+#define ent_hash_t void
+
+ent_hash_t *ent_hash_init(unsigned int table_size, unsigned int key_length);
+
+void ent_hash_put_data(ent_hash_t *inst, char *data);
+
+void ent_hash_reset(ent_hash_t *inst);
+
+double ent_hash_get_entropy(ent_hash_t *inst);
+
+void ent_hash_free(ent_hash_t **inst);
+
+/**
+ * @}
+ */
+
+/**
+ * \defgroup superhashtableentropy Hash table based entropy computation
+ * @{
+ */
+
+#define ent_shash_t void
+
+ent_shash_t *ent_shash_init(unsigned int table_size, unsigned int key_length);
+
+void ent_shash_put_data(ent_shash_t *inst, char *data);
+
+void ent_shash_reset(ent_shash_t *inst);
+
+double ent_shash_get_entropy(ent_shash_t *inst);
+
+void ent_shash_free(ent_shash_t **inst);
+
+/**
+ * @}
+ */
+
 /**
 * @}
 */

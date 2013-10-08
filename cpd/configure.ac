@@ -31,6 +31,14 @@ AC_CHECK_LIB([trap], [trap_init])
 # Checks for header files.
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
 
+AC_ARG_ENABLE(openmp,
+	AS_HELP_STRING([--disable-openmp],[ disable OpenMP]),
+	[], [AC_CHECK_HEADERS([omp.h],
+		[CFLAGS="$CFLAGS -fopenmp ";
+		AC_CHECK_LIB(gomp, omp_get_num_procs)],
+		[AC_MSG_ERROR(omp.h not found. please either install gcc version 4.2 or any later version or use the --disable-openmp options..)])
+	])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_TYPE_UINT16_T
