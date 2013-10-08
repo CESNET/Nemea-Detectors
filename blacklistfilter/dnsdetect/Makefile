@@ -9,7 +9,13 @@ LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash_v2/libcuckoo_hash_l
 # if no special flags or libraries are needed, it's sufficient to add the name
 # of a new module here (when no rule is found, make uses default one)
 MODULES=dnsblacklistfilter
-all: ${MODULES}
+all: unirec ckhash ${MODULES}
+
+ckhash:
+	$(MAKE) -C ../../../common/cuckoo_hash/
+	$(MAKE) -C ../../../common/cuckoo_hash_v2/
+unirec:
+	$(MAKE) -C ../../../unirec/
 
 doxygen:
 	doxygen dnsblacklistfilter.cpp
