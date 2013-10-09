@@ -98,11 +98,15 @@ int main(int argc, char **argv)
    signal(SIGINT, signal_handler);
 
    char opt;
-   while ((opt = getopt(argc, argv, "f:i:")) != -1) {
+   while ((opt = getopt(argc, argv, "f:i:h")) != -1) {
       switch (opt) {
-         case 'f':
-            output_file = optarg;
-            break;
+      case 'f':
+         output_file = optarg;
+         break;
+      case 'h':
+         fprintf(stderr, "%s -f <output file> -i <libtrap ifc specs>\n",
+            argv[0]);
+         break;
       }
    }
    if (output_file == NULL) {
@@ -128,7 +132,7 @@ int main(int argc, char **argv)
    trap_free_ifc_spec(ifc_spec);
    
    
-   fout = fopen(output_file, "a");
+   fout = fopen(output_file, "w");
    if (fout == NULL) {
       fprintf(stderr, "Output file could not be opened.\n");
       exit(1);
