@@ -81,30 +81,31 @@ TRAP_DEFAULT_SIGNAL_HANDLER(STOPCMD);
 int main(int argc, char **argv)
 {
    int ret;
-   unsigned long cnt_flows = 0;
-   unsigned long cnt_packets = 0;
-   unsigned long cnt_bytes = 0;
    struct cpd_method *cpd_methods_flows = NULL;
    struct cpd_method *cpd_methods_packets = NULL;
    struct cpd_method *cpd_methods_bytes = NULL;
-   sd_meanvar_data_t sdmv_flows;
-   sd_meanvar_data_t sdmv_packets;
-   sd_meanvar_data_t sdmv_bytes;
 
-   double thresholds_flows[3] = {
-      10000, 1000, 10000
+   struct cpd_method *cpd_methods_entsip       = NULL;
+   struct cpd_method *cpd_methods_entdip       = NULL;
+   struct cpd_method *cpd_methods_entspr       = NULL;
+   struct cpd_method *cpd_methods_entdpr       = NULL;
+   struct cpd_method *cpd_methods_entsipdip    = NULL;
+   struct cpd_method *cpd_methods_entsipspr    = NULL;
+   struct cpd_method *cpd_methods_entsipdpr    = NULL;
+   struct cpd_method *cpd_methods_entdipspr    = NULL;
+   struct cpd_method *cpd_methods_entdipdpr    = NULL;
+   struct cpd_method *cpd_methods_entsipdipspr = NULL;
+   struct cpd_method *cpd_methods_entsipdipdpr = NULL;
+
+   double thresholds_flows[] = {
+      10000, 1000, 10000, 10000
    };
-   double thresholds_packets[3] = {
-      10000, 1000, 10000
+   double thresholds_packets[] = {
+      10000, 1000, 10000, 10000
    };
-   double thresholds_bytes[3] = {
-      10000, 10000, 10000
+   double thresholds_bytes[] = {
+      10000, 10000, 10000, 10000
    };
-   UR_PACKETS_T packets_no = 0;
-   UR_BYTES_T bytes_no = 0;
-   uint64_t flows_no = 0;
-   time_t checkpoint_time;
-   FILE *history;
 
    // ***** TRAP initialization *****
 
@@ -114,9 +115,8 @@ int main(int argc, char **argv)
 
    // ***** Create UniRec template *****
 
-   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char *unirec_specifier = "TIMESLOT,LINK_BIT_FIELD,FLOWS,PACKETS,BYTES,ENTROPY_SRCIP,ENTROPY_DSTIP,ENTROPY_SRCPORT,ENTROPY_DSTPORT,ENTROPY_SRCIPDSTIP,ENTROPY_SRCIPSRCPORT,ENTROPY_SRCIPDSTPORT,ENTROPY_DSTIPSRCPORT,ENTROPY_DSTIPDSTPORT,ENTROPY_SRCIPDSTIPDSTPORT,ENTROPY_SRCIPDSTIPSRCPORT";
    char opt;
-	uint32_t *ents =NULL;
    while ((opt = getopt(argc, argv, "u:p:")) != -1) {
       switch (opt) {
          case 'u':
@@ -138,18 +138,24 @@ int main(int argc, char **argv)
       return 4;
    }
 
-   cpd_methods_flows = cpd_default_init_methods(thresholds_flows, 1000, 1500, 1, 16, 16);
-   cpd_methods_bytes = cpd_default_init_methods(thresholds_bytes, 1000, 1500, 1, 16, 16);
-   cpd_methods_packets = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
-   SD_MEANVAR_INIT(&sdmv_packets, 10);
-   SD_MEANVAR_INIT(&sdmv_bytes, 10);
-   SD_MEANVAR_INIT(&sdmv_flows, 10);
+   /*                                                                 npcusum u,   o,  e | ewma */
+   cpd_methods_flows        = cpd_default_init_methods(thresholds_flows,   1000, 1500, 1, 16, 16);
+   cpd_methods_bytes        = cpd_default_init_methods(thresholds_bytes,   1000, 1500, 1, 16, 16);
+   cpd_methods_packets      = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsip       = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entdip       = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entspr       = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entdpr       = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsipdip    = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsipspr    = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsipdpr    = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entdipspr    = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entdipdpr    = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsipdipspr = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
+   cpd_methods_entsipdipdpr = cpd_default_init_methods(thresholds_packets, 1000, 1500, 1, 16, 16);
 
    // ***** Main processing loop *****
-   checkpoint_time = time(NULL);
 
-   history = fopen("history.log", "w");
-   fprintf(history, "checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var, bytes_no, sdmv_bytes.mean, sdmv_bytes.var, flows_no, sdmv_flows.mean, sdmv_flows.var, entropy");
    while (!stop) {
       // Receive data from any interface, wait until data are available
       const void *data;
@@ -168,44 +174,27 @@ int main(int argc, char **argv)
          }
       }
 
-      // Update counters
-      packets_no = ur_get(tmplt, data, UR_PACKETS);
-      bytes_no = ur_get(tmplt, data, UR_BYTES);
-      cpd_run_methods(packets_no, cpd_methods_packets, CPD_METHODS_COUNT_DEFAULT);
-      cpd_run_methods(bytes_no, cpd_methods_bytes, CPD_METHODS_COUNT_DEFAULT);
+      #define X(URF, CPDM) do { \
+         printf("----------%s---------- New value: %f\n", #URF, (double) *((URF ## _T*)(ur_get_ptr_by_id(tmplt, data, URF)))); \
+         cpd_run_methods(*((URF ## _T*)(ur_get_ptr_by_id(tmplt, data, URF))), CPDM, CPD_METHODS_COUNT_DEFAULT); \
+      } while(0);
 
-      SD_MEANVAR_ADD(&sdmv_packets, packets_no);
-      SD_MEANVAR_ADD(&sdmv_bytes, bytes_no);
+      X(UR_PACKETS                  , cpd_methods_packets     );
+      X(UR_BYTES                    , cpd_methods_bytes       );
+      X(UR_ENTROPY_SRCIP            , cpd_methods_entsip      );
+      X(UR_ENTROPY_DSTIP            , cpd_methods_entdip      );
+      X(UR_ENTROPY_SRCPORT          , cpd_methods_entspr      );
+      X(UR_ENTROPY_DSTPORT          , cpd_methods_entdpr      );
+      X(UR_ENTROPY_SRCIPDSTIP       , cpd_methods_entsipdip   );
+      X(UR_ENTROPY_SRCIPSRCPORT     , cpd_methods_entsipspr   );
+      X(UR_ENTROPY_SRCIPDSTPORT     , cpd_methods_entsipdpr   );
+      X(UR_ENTROPY_DSTIPSRCPORT     , cpd_methods_entdipspr   );
+      X(UR_ENTROPY_DSTIPDSTPORT     , cpd_methods_entdipdpr   );
+      X(UR_ENTROPY_SRCIPDSTIPSRCPORT, cpd_methods_entsipdipspr);
+      X(UR_ENTROPY_SRCIPDSTIPDSTPORT, cpd_methods_entsipdipdpr);
 
-      /* compute entropy of whole incoming message */
-      ent_reset(&ents);
-      ent_put_data(ents, (char *) data, data_size);
-
-      flows_no += 1;
-      if ((time(NULL) - checkpoint_time) >= FLOWS_TIMEOUT) {
-         cpd_run_methods(flows_no, cpd_methods_flows, CPD_METHODS_COUNT_DEFAULT);
-         SD_MEANVAR_ADD(&sdmv_flows, flows_no);
-         checkpoint_time = time(NULL);
-         fprintf(history, "%lu\t%u\t%f\t%f\t%llu\t%f\t%f\t%llu\t%f\t%f\t%f\n",
-               checkpoint_time, packets_no, sdmv_packets.mean, sdmv_packets.var,
-               (long long unsigned int) bytes_no, sdmv_bytes.mean, sdmv_bytes.var, (long long unsigned int) flows_no,
-               sdmv_flows.mean, sdmv_flows.var, ent_get_entropy(ents));
-         fflush(history);
-         flows_no = 0;
-      }
+      #undef X
    }
-   fclose(history);
-   ent_free(&ents);
-
-   SD_MEANVAR_FREE(&sdmv_flows);
-   SD_MEANVAR_FREE(&sdmv_packets);
-   SD_MEANVAR_FREE(&sdmv_bytes);
-
-   // ***** Print results *****
-
-   printf("Flows:   %20lu\n", cnt_flows);
-   printf("Packets: %20lu\n", cnt_packets);
-   printf("Bytes:   %20lu\n", cnt_bytes);
 
    // ***** Cleanup *****
 

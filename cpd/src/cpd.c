@@ -56,8 +56,8 @@
 #endif
 #endif
 
-#define M_SQRT2	1.41421356237309504880	/* sqrt(2) */
-#define M_SQRT1_2	0.70710678118654752440	/* 1/sqrt(2) */
+#define M_SQRT2   1.41421356237309504880   /* sqrt(2) */
+#define M_SQRT1_2   0.70710678118654752440   /* 1/sqrt(2) */
 
 uint32_t cpd_methods_count = CPD_METHODS_COUNT_DEFAULT;
 
@@ -82,7 +82,7 @@ struct cpd_cusum_priv {
 };
 
 struct cpd_ewma_priv {
-	struct ewma config;
+   struct ewma config;
 };
 
 union cpd_privs {
@@ -226,27 +226,35 @@ void cpd_count_reset(union cpd_privs *privs)
  */
 
 /**
- * \defgroup cpd_ewma	Using Exponential Weighted Moving Average for
+ * \defgroup cpd_ewma   Using Exponential Weighted Moving Average for
  * Change-Point Detection
  * @{
  */
 double cpd_ewma(union cpd_privs *privs, double current_val)
 {
    struct cpd_ewma_priv *p = &privs->ewma;
-	ewma_add(&p->config, (unsigned long) current_val);
-	return ((double) ewma_read(&p->config));
+   double difference, ewma_stat;
+   ewma_add(&p->config, (unsigned long) current_val);
+   ewma_stat = (double) ewma_read(&p->config);
+   difference = abs(current_val - ewma_stat);
+#ifdef DEBUG
+   printf("\tEWMA: average: %f, abs.difference: %f\n",
+         current_val, ewma_stat, difference);
+
+#endif
+   return difference;
 }
 
 void cpd_ewma_init(union cpd_privs **priv, uint32_t factor, uint32_t weight)
 {
-	struct cpd_ewma_priv *p;
+   struct cpd_ewma_priv *p;
    if (priv == NULL) {
       fprintf(stderr, "Bad priv pointer, initialization was not successful.");
       return;
    }
    (*priv) = calloc(1, sizeof(union cpd_privs));
-	p = &(*priv)->ewma;
-	ewma_init(&p->config, factor, weight);
+   p = &(*priv)->ewma;
+   ewma_init(&p->config, factor, weight);
 }
 
 void cpd_ewma_reset(union cpd_privs *privs)
@@ -265,11 +273,18 @@ void cpd_run_methods(double new_value, struct cpd_method *methods, uint32_t meth
    //printf("new value accepted: %f\n", new_value);
    for (i=0; i<methods_num; ++i) {
       xn = methods[i].compute_next(methods[i].priv, new_value);
+#ifdef DEBUG
+      printf("\t%s method, new statistic: %f threshold: %f\n",
+            methods[i].name, xn, methods[i].threshold);
+#endif
       if (ABS(xn) >= methods[i].threshold) {
          methods[i].reset(methods[i].priv);
          //fprintf(stderr, "%s: ALERT!!!\n", methods[i].name);
          if (cpd_alert_callback != NULL) {
             cpd_alert_callback(methods[i].name, new_value, xn, methods[i].threshold);
+         } else {
+            printf("ALERT: %s method, current value: %f statistic: %f threshold: %f\n",
+                  methods[i].name, new_value, xn, methods[i].threshold);
          }
       }
    }
@@ -284,7 +299,7 @@ void cpd_free_methods(struct cpd_method *methods, uint32_t methods_num)
 }
 
 struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_historical_est, double npcusum_attack_est, double npcusum_tuning,
-		uint32_t ewma_factor, uint32_t ewma_weight)
+      uint32_t ewma_factor, uint32_t ewma_weight)
 {
    struct cpd_method *methods = (struct cpd_method *) malloc(sizeof(*methods) * cpd_methods_count);
    if (methods == NULL) {
@@ -322,18 +337,18 @@ struct cpd_method *cpd_default_init_methods(double *thresholds, double npcusum_h
 int main(int argc, char **argv)
 {
    FILE *history = NULL;
-	uint32_t *ent = NULL;
+   uint32_t *ent = NULL;
    sd_meanvar_data_t slidingwindow;
    uint32_t i;
-   double values[10] = {
-      10, 20, 30, 230, 30, 20, 12345, 222222, 99999, 0
+   double values[] = {
+      4,5,7,4,4,2,6,2,2,3,13,13,10,16,15,19,16,11,17,15
    };
-   double thresholds[3] = {
-      10, 10, 10
+   double thresholds[] = {
+      10, 10, 10, 10
    };
 
    /* initialization of methods */
-   struct cpd_method *methods = cpd_default_init_methods(thresholds, 10, 15, 1, 16, 16);
+   struct cpd_method *methods = cpd_default_init_methods(thresholds, 5, 15, 0.0001, 16, 16);
 
    SD_MEANVAR_INIT(&slidingwindow, 3);
 
@@ -359,91 +374,4 @@ int main(int argc, char **argv)
 }
 #endif
 
-#ifdef SDM_CPD
-/* This section is a source code for HLS of HW module of SDM */
-
-#ifdef SDM_CPD_CREATEDATA
-#define TEST_DATA_SIZE 100
-static double test_inputs[TEST_DATA_SIZE];
-static double test_results[TEST_DATA_SIZE];
-
-#else
-
-#include "sdm_cpd_test_data.c"
-
-#endif
-#define VIVADO_POS_ERROR 0.0002
-
-char test_cpd(double cur_val)
-{
-   static uint16_t index = 0;
-   double result = cur_val - test_results[index++];
-   return ((result>=0.0?result:-result) <= VIVADO_POS_ERROR);
-}
-
-int main(void)
-{
-   uint32_t i;
-   struct cpd_np_cusum_priv npcusumpriv;
-   #ifdef SDM_CPD_CREATEDATA
-   double *p = NULL;
-   #endif
-
-   /* initialize np_cusum */
-   memset(&npcusumpriv, 0, sizeof(npcusumpriv));
-   npcusumpriv.hist_est = 1.0699;
-   npcusumpriv.tuned_attack_est = 0.5;
-   
-   /* Creation of testing input and results */
-   #ifdef SDM_CPD_CREATEDATA
-   /* generate random input and corresponding output */
-   srand(time(NULL));
-   for (i=0; i<TEST_DATA_SIZE; ++i) {
-      test_inputs[i] = (double) rand()/(double) RAND_MAX;
-      test_inputs[i] *= 2.0;
-      // generate differences from 1.0
-      //test_inputs[i] = (1.0 >= test_inputs[i])?1.0-test_inputs[i]:test_inputs[i]-1.0;
-      //
-      test_results[i] = cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i]);
-   }
-
-   /* print out inputs & outputs */
-   FILE *testdataf = fopen("sdm_cpd_test_data.c", "w");
-   fprintf(testdataf, "#define TEST_DATA_SIZE %u\n", TEST_DATA_SIZE);
-
-   for (p=test_inputs; p!=NULL; p=(p==test_results?NULL:test_results)) {
-      if (p == test_inputs) {
-         fprintf(testdataf, "static double test_inputs[TEST_DATA_SIZE] = ");
-      } else {
-         fprintf(testdataf, "static double test_results[TEST_DATA_SIZE] = ");
-      }
-      fprintf(testdataf, "{");
-      for (i=0; i<TEST_DATA_SIZE; ++i) {
-         if (i>0) {
-            fprintf(testdataf, ", ");
-         }
-         fprintf(testdataf, "%f", p[i]);
-      }
-      fprintf(testdataf, "};\n");
-   }
-   fclose(testdataf);
-   #endif
-   
-   /* Beginning of test */
-   /* reset CPD */
-	union cpd_privs cpds;
-   cpds.np_cusum.previous = 0.0;
-   for (i=0; i<TEST_DATA_SIZE; ++i) {
-      //printf("%f %f\n", test_inputs[i], cpd_np_cusum((union cpd_privs *) &npcusumpriv, test_inputs[i]));
-      if (test_cpd(cpd_np_cusum(&cpds, test_inputs[i])) == 0) {
-         //printf("error - value doesn't match\n");
-         return EXIT_FAILURE;
-      }
-   }
-   return EXIT_SUCCESS;
-   /* Everything done... Checked all prepared inputs. */
-
-}
-
-#endif
 
