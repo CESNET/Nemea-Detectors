@@ -53,6 +53,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <dirent.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,9 +66,8 @@ extern "C" {
 #include "ipblacklistfilter.h"
 #include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
-#define DEBUG 1
-
-#include <unistd.h>
+//#define DEBUG
+#define LONG_RUN
 
 using namespace std;
 
@@ -79,6 +79,9 @@ trap_module_info_t module_info = {
     "If any of the addresses is blacklisted the record is changed by adding \n"
     "a number of the list which blacklisted the address. UniRec with this \n"
     "flag is then sent to the next module.\n"
+    "Running syntax:\n"
+    "\t./ipblacklistfilter -i <trap_interface> <blacklist_folder>\n"
+    "The module should be controlled by python script \"detector.py\".\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n", 
@@ -945,8 +948,10 @@ int main (int argc, char** argv)
 
     }
 
-
+// we don't want cascading shutdown of following modules
+#ifndef LONG_RUN
     trap_send_data(0, data, 1, TRAP_HALFWAIT);
+#endif
 
 #ifdef DEBUG
     out << count << " flows went through." << endl;

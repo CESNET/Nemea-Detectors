@@ -54,14 +54,25 @@ extern "C" {
 #endif
 
 /**
- * Return value for filters when spoofing is found.
- */
-#define SPOOF_POSITIVE 1
-
-/**
  * Return value for filters when the flow is clear.
  */
-#define SPOOF_NEGATIVE 0
+#define SPOOF_NEGATIVE -1
+
+/**
+ * New IP was discovered for IP/prefix.
+ */
+
+#define NEW_IP 0x4
+
+/**
+ * Asymetric route for incomming flow detected.
+ */
+#define ASYMETRIC 0x2
+
+/**
+ * Address fits bogon/specific prefix.
+ */
+#define BOGON 0x1
 
 /**
  * Return value when file with prefixes cannot be loaded 
@@ -87,7 +98,7 @@ extern "C" {
 /**
  * Default threshold for new flow counter used for warning.
  */
-#define NEW_FLOW_DEFAULT 100000000
+#define NEW_FLOW_DEFAULT 1000000
 
 /**
  * Time setting for swapping the Bloom filters in seconds.

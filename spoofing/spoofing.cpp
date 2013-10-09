@@ -62,7 +62,7 @@ extern "C" {
 #include "spoofing.h"
 #include "../../common/cuckoo_hash/cuckoo_hash.h"
 
-#define DEBUG 1
+//#define DEBUG
 
 
 using namespace std;
@@ -82,7 +82,7 @@ trap_module_info_t module_info = {
     "Additional parameters:\n"
     "   -b <filename>    File with list of bogon prefixes. This parameter is \n"
     "                    mandatory.\n"
-    "   -c <filename>    File with other specific prefixes.\n"
+    "   -c <filename>    File with other specific prefixes. This parameter is mandatory.\n"
     "   -s <sec>         Time before updating records for symetric routing \n"
     "                    filter. Default value is 45 seconds.\n"
     "   -t <num>         Threshold for reporting spoofed addresses from new \n"
@@ -290,11 +290,16 @@ int load_pref (pref_list_t& prefix_list_v4, pref_list_t& prefix_list_v6, const c
         if (!ip_from_str(raw_ip.c_str(), &(pref.ip))) {
             continue;
         }
-        // load prefix length (+1 for skipping the '/' character
-        raw_ip = line.substr(pos + 1);
+        if ((pos = line.find('/')) == string::npos) {
+            // length is specified -- assume IP address only
+            ip_is4(&(pref.ip)) ? pref.pref_length = 32 : pref.pref_length == 128;
+        } else {
+            // load prefix length (+1 for skipping the '/' character
+            raw_ip = line.substr(pos + 1);
 
-        // convert to number
-        pref.pref_length = strtoul(raw_ip.c_str(), NULL, 0);
+            // convert to number
+            pref.pref_length = strtoul(raw_ip.c_str(), NULL, 0);
+        }
 
         // length of the prefix is out of bounds (32 for IPv4, 128 for IPv6)
         if (ip_is4(&(pref.ip)) &&  (pref.pref_length > 32)) {
@@ -430,7 +435,7 @@ int v4_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
             cout << dec <<  (a = prefix_list[search_result].pref_length);
             cout << " (Target: " << debug_ip_dst << ")" << endl;
 #endif
-            return SPOOF_POSITIVE;
+        return BOGON;
     }
     return SPOOF_NEGATIVE;
 }
@@ -478,7 +483,7 @@ int v6_bogon_filter(ur_template_t* ur_tmp, const void *checked, pref_list_t& pre
        cout << dec <<  (a = prefix_list[search_result].pref_length) << endl;
 #endif
 
-        return SPOOF_POSITIVE;
+        return BOGON;
     }
     return SPOOF_NEGATIVE;   
 }
@@ -542,7 +547,7 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, cc_hash_table_t&
 
     } else { // incomming traffic --> check for validity
         // mask with 24-bit long prefix
-        ip = ur_get(ur_tmp, record, UR_DST_IP);
+        ip = ur_get(ur_tmp, record, UR_SRC_IP);
         ip.ui32[2] &= m4[24];
         route = (sym_src_t *) ht_get(&src, (char *) ip.bytes, src.key_length);
         if (route != NULL) {
@@ -555,7 +560,7 @@ int check_symetry_v4(ur_template_t *ur_tmp, const void *record, cc_hash_table_t&
                 cout << " while stored is " << (long long) route->link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
-                return SPOOF_POSITIVE;
+                return ASYMETRIC;
             } else {
                 // trafic went through the valid link
                 return SPOOF_NEGATIVE;
@@ -642,7 +647,7 @@ int check_symetry_v6(ur_template_t* ur_tmp, const void *record, cc_hash_table_t&
                 cout << " while stored is " << (long long) route->link  << endl;
                 cout << "Possible spoofing found: tested route is asymetric." << endl;
 #endif
-                return SPOOF_POSITIVE;
+                return ASYMETRIC;
             } else {
                 return SPOOF_NEGATIVE;
             }
@@ -769,6 +774,8 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
         filter[bf_active].flows[search_result].count++;
         filter[bf_learning].flows[search_result].count++;
 
+        return NEW_IP;
+
 #ifdef DEBUG
             ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             if (strcmp("195.113.0.0", debug_ip_dst) == 0) {
@@ -776,15 +783,14 @@ int check_new_flows_v4(ur_template_t *ur_tmp, const void *record, unsigned thres
                 cerr << t << "\t" << filter[bf_active].flows[search_result].count << endl;
             }
 #endif
-        if (filter[bf_active].flows[search_result].count > threshold) {
+/*        if (filter[bf_active].flows[search_result].count > threshold) {
         // flow limit exceeded
 #ifdef DEBUG
             ip_to_str(&(prefix_list[search_result].ip), debug_ip_dst);
             cout << "Possible spoofing found: ";
             cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[search_result].count << ")." << endl;
 #endif
-            return SPOOF_POSITIVE;
-        }
+        }*/
     }
     return SPOOF_NEGATIVE;
 }
@@ -872,7 +878,7 @@ int check_new_flows_v6(ur_template_t *ur_tmp, const void *record, unsigned thres
             cout << "Possible spoofing found: ";
             cout << debug_ip_dst << " recieving too many flows (" << filter[bf_active].flows[search_result].count << ")." << endl;
 #endif
-            return SPOOF_POSITIVE;
+            return NEW_IP;
         }
     }
     return SPOOF_NEGATIVE;
@@ -885,6 +891,7 @@ int main (int argc, char** argv)
 {
 
     int retval = 0; // return value
+    char spoof_type = 0;
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
@@ -1107,29 +1114,24 @@ int main (int argc, char** argv)
         // ***** 1. bogon and specific prefix filter *****
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             retval = v4_bogon_filter(templ, data, bogon_list_v4, v4_masks);
-//            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
-//                retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
-//            }
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+                retval = v4_bogon_filter(templ, data, spec_list_v4, v4_masks);
+            }
         } else {
             retval = v6_bogon_filter(templ, data, bogon_list_v6, v6_masks);
-//            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01 && c_flag) {
-//                retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
-//            }
+            if (retval == SPOOF_NEGATIVE && ur_get(templ, data, UR_DIR_BIT_FIELD) == 0x01) {
+                retval = v6_bogon_filter(templ, data, spec_list_v6, v6_masks);
+            }
         }
        
         // we caught a spoofed address by bogon prefix
-        if (retval == SPOOF_POSITIVE) {
+        if (retval == BOGON) {
 #ifdef DEBUG
             ++spoof_count;
             ++bogons;
 #endif
             //for future use
-            ur_transfer_static(templ, det, data, detection);
-            ur_set(det, detection, UR_SPOOF_TYPE, 0x1);
-
-            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
-            retval = ALL_OK; // reset return value
-            continue;
+            spoof_type |= BOGON;
         }
 
         // ***** 2. symetric routing filter *****
@@ -1140,18 +1142,12 @@ int main (int argc, char** argv)
         }
         
         // we caught a spoofed address by not keeping to symteric routing
-        if (retval == SPOOF_POSITIVE) {
+        if (retval == ASYMETRIC) {
 #ifdef DEBUG
             ++spoof_count;
             ++syms;
 #endif
-            //for future use
-            ur_transfer_static(templ, det, data, detection);
-            ur_set(det, detection, UR_SPOOF_TYPE, 0x2);
-
-            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
-            retval = ALL_OK;
-            continue;
+            spoof_type |= ASYMETRIC;
         }
         
         // 3. asymetric routing filter (will be implemented later)
@@ -1164,19 +1160,18 @@ int main (int argc, char** argv)
             retval = check_new_flows_v6(templ, data, nf_threshold, v6_flows, v6_masks, spec_list_v6);
         }
     
-        if (retval == SPOOF_POSITIVE) {
+        if (retval == NEW_IP) {
 #ifdef DEBUG
             ++spoof_count;
             ++nflows;
 #endif
-            //for future use
-            ur_transfer_static(templ, det, data, detection);
-            ur_set(det, detection, UR_SPOOF_TYPE, 0x4);
-
-            trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
-            retval = ALL_OK;
-            continue;
+            spoof_type |= NEW_IP;
         }
+
+        ur_transfer_static(templ, det, data, detection);
+        ur_set(det, detection, UR_SPOOF_TYPE, spoof_type);
+        trap_send_data(0, detection, ur_rec_static_size(det), TRAP_HALFWAIT);
+        retval = SPOOF_NEGATIVE;
     }
 
 #ifdef DEBUG
