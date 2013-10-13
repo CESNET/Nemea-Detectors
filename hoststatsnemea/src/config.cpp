@@ -205,6 +205,7 @@ void Configuration::clean()
 
 void Configuration::freeConfiguration()
 {
+   delete instance;
    pthread_mutex_destroy(&config_mutex);
    /* This class is useless from this time! */
 }

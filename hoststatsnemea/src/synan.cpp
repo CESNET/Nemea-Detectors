@@ -93,13 +93,13 @@
 
 #define SET_DATA(p) do { \
    if ( mode == MODE_BOTH ) \
-      data = rec.in_##p + rec.out_##p; \
+      data = rec.in_all_##p + rec.out_all_##p; \
    \
    else if ( mode == MODE_IN ) \
-      data = rec.in_##p; \
+      data = rec.in_all_##p; \
    \
    else if ( mode == MODE_OUT ) \
-      data = rec.out_##p; \
+      data = rec.out_all_##p; \
 } while ( 0 )
 
 #define PLACE_OP do { \

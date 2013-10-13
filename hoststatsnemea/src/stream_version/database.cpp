@@ -14,13 +14,18 @@
 using namespace std;
 
 const char *struct_spec = "address,16"
-   ";in_flows,4;out_flows,4;in_packets,8;out_packets,8;in_bytes,8;out_bytes,8"
-   ";in_syn_cnt,4;out_syn_cnt,4;in_ack_cnt,4;out_ack_cnt,4;in_fin_cnt,4;out_fin_cnt,4"
-   ";in_rst_cnt,4;out_rst_cnt,4;in_psh_cnt,4;out_psh_cnt,4;in_urg_cnt,4;out_urg_cnt,4"
-   ";in_uniqueips,4;out_uniqueips,4;in_linkbitfield,8;out_linkbitfield,8"
-   ";last_record_timestamp,4;first_record_timestamp,4"
+   ";in_all_flows,4;in_req_flows,2;in_rsp_flows,2;in_sf_flows,2;in_req_packets,2"
+   ";in_all_packets,4;in_req_bytes,2;in_all_bytes,4;in_req_rst_cnt,2"
+   ";in_all_rst_cnt,2;in_req_psh_cnt,2;in_all_psh_cnt,2;in_req_ack_cnt,2"
+   ";in_all_ack_cnt,2;in_all_syn_cnt,2;in_all_fin_cnt,2;in_all_urg_cnt,2"
+   ";in_req_uniqueips,2;in_all_uniqueips,2;in_linkbitfield,4"
+   ";out_all_flows,4;out_req_flows,2;out_rsp_flows,2;out_sf_flows,2;out_req_packets,2"
+   ";out_all_packets,4;out_req_bytes,2;out_all_bytes,4;out_req_rst_cnt,2"
+   ";out_all_rst_cnt,2;out_req_psh_cnt,2;out_all_psh_cnt,2;out_req_ack_cnt,2"
+   ";out_all_ack_cnt,2;out_all_syn_cnt,2;out_all_fin_cnt,2;out_all_urg_cnt,2"
+   ";out_req_uniqueips,2;out_all_uniqueips,2;out_linkbitfield,4"
+   ";first_rec_ts,4;last_rec_ts,4"
    "\n";
-
 
 Database::Database(const std::string& profile_name)
  : profile_name(profile_name)
