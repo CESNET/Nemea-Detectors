@@ -4,22 +4,14 @@
 listen-port      = 3333
 listen-interface = localhost
 
-# Path where files with statistics (hoststats database) are stored.
-# If db-read-only=1, new statistics are not stored (i.e. no files are created)
-# WARNING: It may generate very large files, make sure you have max-db-size and
-# db-cleaner-path (see below) correctly set, otherwise it can fill whole storage
-# space quickly.
-db-path = /data/hoststats/data/
-#db-read-only = 1
-
-# Maximum total size of files with statistics. The oldest files are  
-# automatically removed by db-cleaner script when this size is exceeded.
-db-max-size = 100G
-db-cleaner = ./hscleaner.py
+# Subprofiles (set to 1 to enable)
+dns = 0
+ssh = 0
 
 # Detection rules (set to 1 to enable)
 rules-generic = 1
-rules-ssh = 0 # doesn't work correctly yet, so it's disabled by default
+rules-ssh = 0
+rules-dns = 0
 
 # Directory for detection log files
 detection-log     = /data/hoststats/log/
@@ -31,11 +23,14 @@ detection-log     = /data/hoststats/log/
 log-upto-level    = LOG_INFO
 #log-upto-level    = LOG_DEBUG
 
-##########################
-# FOR STREAM VERSION ONLY:
-# TODO: write more info...
-# Active and inactive timeouts are in seconds.
-timeout-active         = 300
-timeout-inactive       = 30
-detectors-starts-pause = 10
+# Size of cuckoo hash table (== maximum number of records)
+table-size = 500000
 
+# A record is released, when it is in the table longer than this time. [seconds]
+timeout-active    = 300
+
+# A record is released, if it wasn't updated during this time. [seconds]
+timeout-inactive  = 30
+
+# A detector controlling above timeouts starts periodically after this time. [seconds]
+det_start_time    = 10
