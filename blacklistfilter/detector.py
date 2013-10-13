@@ -77,14 +77,17 @@ dns_sources = cwd + '/dnsdetect/update/'
 hash_detector = cwd + '/hashdetect/hashblacklistfilter'
 hash_sources = cwd + '/hashdetect/update/'
 
-usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url|dns|hash"
-
-if len( sys.argv ) != 3:
-   error( "Bad argument count supplied.\n" + usage )
-   exit( 1 )
+usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url|dns|hash <trap_ifc_spec>"
 
 call_method = sys.argv[1]
 filter_type = sys.argv[2]
+
+if (len( sys.argv ) != 4 and call_method == 'start') :
+   error( "Bad argument count supplied.\n" + usage )
+   exit( 1 )
+elif (len( sys.argv ) != 3):
+   error( "Bad argument count supplied.\n" + usage )
+   exit( 1 )
 
 if filter_type == 'ip':
    main_program = ip_detector
@@ -110,9 +113,6 @@ if call_method != 'start' and call_method != 'stop' and call_method != 'install'
    error( "Bad arguments supplied.\n" + usage )
    exit( 1 )
 
-port = '7000'
-params = 'tb;localhost'
-
 # Get parameters from config or use implicit ones
 config = read_config()
 pid_name = config.get( 'pid_loc', '.pid_file' )
@@ -122,6 +122,7 @@ cron_path = config.get( 'cron_loc', '/etc/crontab' )
 user = config.get( 'user', getuser() )
 
 if call_method == 'start':
+   trap_ifc = sys.argv[3]
    if not get_lists('new'):
       exit( 1 )
 
@@ -131,7 +132,7 @@ if call_method == 'start':
 
    try:
       tmp = subprocess.Popen(
-         [main_program, '-i', params + ',' + port + ';', sources],
+         [main_program, '-i', trap_ifc, sources],
          stdout = subprocess.PIPE,
          stderr = subprocess.PIPE,
          stdin = subprocess.PIPE

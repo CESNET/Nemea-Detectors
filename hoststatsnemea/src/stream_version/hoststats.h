@@ -8,124 +8,101 @@
 #include <pthread.h>
 
 #include "../../../../unirec/ipaddr_cpp.h"
-#include "../../../../unirec/ipaddr.h"
-#include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
+
+extern "C" {
+   #include "../../../../unirec/ipaddr.h"
+   #include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
+}
 
 /////////////////////////////////////////////////////////////////
-// Global struct and type definitions
-
-// Flow record
-struct flow_record_t {
-   uint64_t packets;
-   uint64_t bytes;
-   uint8_t tcp_flags;
-   uint64_t linkbitfield; // each bit denotes the link a flow record has been seen
-   uint8_t dirbitfield; // 0x10 means incoming from abroad, 0x01 means outgoing
-
-   flow_record_t() {
-      packets = 0;
-      bytes = 0;
-      tcp_flags = 0;
-      linkbitfield = 0x0;
-      dirbitfield = 0x0;
-   }
-};
-
-// Flow key
-struct flow_key_t{
-   ip_addr_t sad;
-   ip_addr_t dad;
-   uint16_t sport;
-   uint16_t dport;
-   uint8_t proto;
-
-   flow_key_t() { // Constructor sets all values to zeros.
-      memset(this, 0, sizeof(flow_key_t));
-   }
-
-   bool operator<(const flow_key_t &key2) const {
-      return (IPaddr_cpp(&sad) < IPaddr_cpp(&key2.sad) || (IPaddr_cpp(&sad) == IPaddr_cpp(&key2.sad) && 
-                (IPaddr_cpp(&dad) < IPaddr_cpp(&key2.dad) || (IPaddr_cpp(&dad) == IPaddr_cpp(&key2.dad) &&
-                   (sport < key2.sport || (sport == key2.sport &&
-                      (dport < key2.dport || (dport == key2.dport &&
-                         (proto < key2.proto) )))))))); 
-    }
-};
-
-// flow-key -> flow_record map
-typedef std::map<flow_key_t, flow_record_t> flow_map_t;
-typedef flow_map_t::iterator flow_map_iter;
-
-// vector of flow maps
-typedef std::vector<flow_map_t> flow_map_vector_t;
-typedef flow_map_vector_t::iterator flow_map_vector_iter;
-
-///////////////////////
+// List of subprofiles
+class DNSHostProfile;
+class SSHHostProfile;
 
 // Record with statistics about a host
-// ** If you change this struct, you MUST also change struct_spec in 
-//    database.cpp and get_field_offset in requesthandlers.cpp! **
+// TODO: update this comment !!! 
 struct hosts_record_t {
-   uint32_t in_flows;
-   uint32_t out_flows;
-   uint64_t in_packets;
-   uint64_t out_packets;
-   uint64_t in_bytes;
-   uint64_t out_bytes;
-   uint32_t in_syn_cnt;
-   uint32_t out_syn_cnt;
-   uint32_t in_ack_cnt;
-   uint32_t out_ack_cnt;
-   uint32_t in_fin_cnt;
-   uint32_t out_fin_cnt;
-   uint32_t in_rst_cnt;
-   uint32_t out_rst_cnt;
-   uint32_t in_psh_cnt;
-   uint32_t out_psh_cnt;
-   uint32_t in_urg_cnt;
-   uint32_t out_urg_cnt;
-   uint32_t in_uniqueips;
-   uint32_t out_uniqueips;
-   uint64_t in_linkbitfield;
-   uint64_t out_linkbitfield;
-   uint32_t last_record_timestamp;  // timestamp of last flow  - for inactive timeout
-   uint32_t first_record_timestamp; // timestamp of first flow - for active timeout
+   uint32_t in_all_flows;
+   uint16_t in_req_flows;
+   uint16_t in_rsp_flows;
+   uint16_t in_sf_flows;
+   uint16_t in_req_packets;
+   uint32_t in_all_packets;
+   uint16_t in_req_bytes;
+   uint32_t in_all_bytes;
+   uint16_t in_req_rst_cnt;
+   uint16_t in_all_rst_cnt;
+   uint16_t in_req_psh_cnt;
+   uint16_t in_all_psh_cnt;
+   uint16_t in_req_ack_cnt;
+   uint16_t in_all_ack_cnt;
+   uint16_t in_all_syn_cnt;
+   uint16_t in_all_fin_cnt;
+   uint16_t in_all_urg_cnt;
+   uint16_t in_req_uniqueips;
+   uint16_t in_all_uniqueips;
+   uint32_t in_linkbitfield;
+
+   uint32_t out_all_flows;
+   uint16_t out_req_flows;
+   uint16_t out_rsp_flows;
+   uint16_t out_sf_flows;
+   uint16_t out_req_packets;
+   uint32_t out_all_packets;
+   uint16_t out_req_bytes;
+   uint32_t out_all_bytes;
+   uint16_t out_req_rst_cnt;
+   uint16_t out_all_rst_cnt;
+   uint16_t out_req_psh_cnt;
+   uint16_t out_all_psh_cnt;
+   uint16_t out_req_ack_cnt;
+   uint16_t out_all_ack_cnt;
+   uint16_t out_all_syn_cnt;
+   uint16_t out_all_fin_cnt;
+   uint16_t out_all_urg_cnt;
+   uint16_t out_req_uniqueips;
+   uint16_t out_all_uniqueips;
+   uint32_t out_linkbitfield;
+
+   uint32_t first_rec_ts; // timestamp of first flow
+   uint32_t last_rec_ts;  // timestamp of last flow
+
+   DNSHostProfile *dnshostprofile;
+   SSHHostProfile *sshhostprofile;
+
 
    hosts_record_t() { // Constructor sets all values to zeros.
       memset(this, 0, sizeof(hosts_record_t));
    }
 } __attribute__((packed));
 
+
 typedef ip_addr_t hosts_key_t;
-
-struct class_comp {
-   bool operator() (const ip_addr_t& first, const ip_addr_t& second) const
-   {
-      return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
-   }
-};
-
-// key->record map
-typedef std::map<hosts_key_t, hosts_record_t, class_comp> stat_map_t;
-typedef stat_map_t::iterator stat_map_iter;
-typedef stat_map_t::const_iterator stat_map_citer;
 
 // hash table
 typedef cc_hash_table_v2_t stat_table_t;
 
+// struct class_comp {
+//    bool operator() (const ip_addr_t& first, const ip_addr_t& second) const
+//    {
+//       return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
+//    }
+// };
 
-// Function for flow filtering (used by profiles)
-typedef bool (*flow_filter_func_ptr)(const flow_key_t&, const flow_record_t&);
+// INFO: stat_map_t was replaced by stat_table_t, but stat_map_t can be used
+//       in another functions (database, request_handler) 
+// typedef std::map<hosts_key_t, hosts_record_t, class_comp> stat_map_t;
+// typedef stat_map_t::iterator stat_map_iter;
+// typedef stat_map_t::const_iterator stat_map_citer;
+
 
 // The identification of item to remove from stat_table
 typedef struct remove_item_s {
    hosts_key_t key;
-   void *profile_ptr;
 
    bool operator== (const remove_item_s& second) const
    {
-      return (profile_ptr == second.profile_ptr) &&
-         (memcmp(&key, &second.key, sizeof(hosts_key_t)) == 0);   
+      return (memcmp(&key, &second.key, sizeof(hosts_key_t)) == 0);   
    }
 } remove_item_t;
 
@@ -141,7 +118,7 @@ typedef struct thread_share_s {
    thread_share_s() { // Constructor
       pthread_mutex_init(&det_processing, NULL);
       pthread_mutex_init(&remove_mutex, NULL);
-      remove_vector.reserve(256);
+      remove_vector.reserve(1024);
       remove_ready = false;
    }
 
@@ -152,15 +129,9 @@ typedef struct thread_share_s {
 } thread_share_t;
 
 ////////////////////////////////////
-// Declaration of global variables
-
-//extern stat_map_t stat_map; // Main host statictics
 
 // Status information
+//TODO: check if this still exists
 extern bool processing_data;
-extern bool data_available;
-extern unsigned int flows_loaded;
-extern unsigned int hosts_loaded;
-extern std::string timeslot;
 
 #endif

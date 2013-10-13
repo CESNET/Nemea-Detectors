@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <unistd.h>
 #include "aux_func.h"
 
 using namespace std;

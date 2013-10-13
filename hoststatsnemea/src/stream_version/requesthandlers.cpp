@@ -42,28 +42,48 @@ field_info_t get_field_info(const string &field_name)
    #define FIELD(name) \
       if (field_name == #name) \
          return field_info_t((char*)&tmp.name - (char*)&tmp, sizeof(tmp.name))
-   FIELD(in_flows);
-   FIELD(out_flows);
-   FIELD(in_packets);
-   FIELD(out_packets);
-   FIELD(in_bytes);
-   FIELD(out_bytes);
-   FIELD(in_syn_cnt);
-   FIELD(out_syn_cnt);
-   FIELD(in_ack_cnt);
-   FIELD(out_ack_cnt);
-   FIELD(in_fin_cnt);
-   FIELD(out_fin_cnt);
-   FIELD(in_rst_cnt);
-   FIELD(out_rst_cnt);
-   FIELD(in_psh_cnt);
-   FIELD(out_psh_cnt);
-   FIELD(in_urg_cnt);
-   FIELD(out_urg_cnt);
-   FIELD(in_uniqueips);
-   FIELD(out_uniqueips);
-   FIELD(last_record_timestamp);
-   FIELD(first_record_timestamp);
+   FIELD(in_all_flows);
+   FIELD(in_req_flows);
+   FIELD(in_rsp_flows);
+   FIELD(in_sf_flows);
+   FIELD(in_req_packets);
+   FIELD(in_all_packets);
+   FIELD(in_req_bytes);
+   FIELD(in_all_bytes);
+   FIELD(in_req_rst_cnt);
+   FIELD(in_all_rst_cnt);
+   FIELD(in_req_psh_cnt);
+   FIELD(in_all_psh_cnt);
+   FIELD(in_req_ack_cnt);
+   FIELD(in_all_ack_cnt);
+   FIELD(in_all_syn_cnt);
+   FIELD(in_all_fin_cnt);
+   FIELD(in_all_urg_cnt);
+   FIELD(in_req_uniqueips);
+   FIELD(in_all_uniqueips);
+   FIELD(in_linkbitfield);
+   FIELD(out_all_flows);
+   FIELD(out_req_flows);
+   FIELD(out_rsp_flows);
+   FIELD(out_sf_flows);
+   FIELD(out_req_packets);
+   FIELD(out_all_packets);
+   FIELD(out_req_bytes);
+   FIELD(out_all_bytes);
+   FIELD(out_req_rst_cnt);
+   FIELD(out_all_rst_cnt);
+   FIELD(out_req_psh_cnt);
+   FIELD(out_all_psh_cnt);
+   FIELD(out_req_ack_cnt);
+   FIELD(out_all_ack_cnt);
+   FIELD(out_all_syn_cnt);
+   FIELD(out_all_fin_cnt);
+   FIELD(out_all_urg_cnt);
+   FIELD(out_req_uniqueips);
+   FIELD(out_all_uniqueips);
+   FIELD(out_linkbitfield);
+   FIELD(first_rec_ts); // timestamp of first flow - for active timeout
+   FIELD(last_rec_ts);
    #undef FIELD
    return field_info_t(0, 0);
 }
@@ -219,10 +239,17 @@ string get_profiles(const string &params)
 
 string get_field_list(const string &profile)
 {
-   return "in_flows;in_packets;in_bytes;out_flows;out_packets;out_bytes;"
-          "in_syn_cnt;in_ack_cnt;in_fin_cnt;in_rst_cnt;in_psh_cnt;in_urg_cnt;"
-          "out_syn_cnt;out_ack_cnt;out_fin_cnt;out_rst_cnt;out_psh_cnt;out_urg_cnt;"
-          "in_uniqueips;out_uniqueips;in_linkbitfield;out_linkbitfield";
+   return "in_all_flows;in_req_flows;in_rsp_flows;in_sf_flows;in_req_packets;"
+          "in_all_packets;in_req_bytes;in_all_bytes;in_req_rst_cnt;"
+          "in_all_rst_cnt;in_req_psh_cnt;in_all_psh_cnt;in_req_ack_cnt;"
+          "in_all_ack_cnt;in_all_syn_cnt;in_all_fin_cnt;in_all_urg_cnt;"
+          "in_req_uniqueips;in_all_uniqueips;in_linkbitfield;"
+          "out_all_flows;out_req_flows;out_rsp_flows;out_sf_flows;out_req_packets;"
+          "out_all_packets;out_req_bytes;out_all_bytes;out_req_rst_cnt;"
+          "out_all_rst_cnt;out_req_psh_cnt;out_all_psh_cnt;out_req_ack_cnt;"
+          "out_all_ack_cnt;out_all_syn_cnt;out_all_fin_cnt;out_all_urg_cnt;"
+          "out_req_uniqueips;out_all_uniqueips;out_linkbitfield;"
+          "first_rec_ts;last_rec_ts";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -276,37 +303,65 @@ string get_timeslot(const Profile *profile, const string &timeslot,
    }
    
    stringstream out;
-   out << "address;in_flows;in_packets;in_bytes;out_flows;out_packets;out_bytes;"
-          "in_syn_cnt;in_ack_cnt;in_fin_cnt;in_rst_cnt;in_psh_cnt;in_urg_cnt;"
-          "out_syn_cnt;out_ack_cnt;out_fin_cnt;out_rst_cnt;out_psh_cnt;out_urg_cnt;"
-          "in_uniqueips;out_uniqueips;in_linkbitfield;out_linkbitfield\n";
+   out << "address;"
+          "in_all_flows;in_req_flows;in_rsp_flows;in_sf_flows;in_req_packets;"
+          "in_all_packets;in_req_bytes;in_all_bytes;in_req_rst_cnt;"
+          "in_all_rst_cnt;in_req_psh_cnt;in_all_psh_cnt;in_req_ack_cnt;"
+          "in_all_ack_cnt;in_all_syn_cnt;in_all_fin_cnt;in_all_urg_cnt;"
+          "in_req_uniqueips;in_all_uniqueips;in_linkbitfield;"
+          "out_all_flows;out_req_flows;out_rsp_flows;out_sf_flows;out_req_packets;"
+          "out_all_packets;out_req_bytes;out_all_bytes;out_req_rst_cnt;"
+          "out_all_rst_cnt;out_req_psh_cnt;out_all_psh_cnt;out_req_ack_cnt;"
+          "out_all_ack_cnt;out_all_syn_cnt;out_all_fin_cnt;out_all_urg_cnt;"
+          "out_req_uniqueips;out_all_uniqueips;out_linkbitfield;"
+          "first_rec_ts;last_rec_ts\n";
    
    int i = 0;
    vector<pair<hosts_key_t, hosts_record_t> >::iterator it;
    for (it = result_stats.begin(); it != result_stats.end() && (limit < 0 || i < limit); ++it, ++i) {
       out << IPaddr_cpp(&it->first).toString() << ';';
-      out << it->second.in_flows << ';';
-      out << it->second.in_packets << ';';
-      out << it->second.in_bytes << ';';
-      out << it->second.out_flows << ';';
-      out << it->second.out_packets << ';';
-      out << it->second.out_bytes << ';';
-      out << it->second.in_syn_cnt << ';';
-      out << it->second.in_ack_cnt << ';';
-      out << it->second.in_fin_cnt << ';';
-      out << it->second.in_rst_cnt << ';';
-      out << it->second.in_psh_cnt << ';';
-      out << it->second.in_urg_cnt << ';';
-      out << it->second.out_syn_cnt << ';';
-      out << it->second.out_ack_cnt << ';';
-      out << it->second.out_fin_cnt << ';';
-      out << it->second.out_rst_cnt << ';';
-      out << it->second.out_psh_cnt << ';';
-      out << it->second.out_urg_cnt << ';';
-      out << it->second.in_uniqueips << ';';
-      out << it->second.out_uniqueips << ';';
+      out << it->second.in_all_flows << ';';
+      out << it->second.in_req_flows << ';';
+      out << it->second.in_rsp_flows << ';';
+      out << it->second.in_sf_flows << ';';
+      out << it->second.in_req_packets << ';';
+      out << it->second.in_all_packets << ';';
+      out << it->second.in_req_bytes << ';';
+      out << it->second.in_all_bytes << ';';
+      out << it->second.in_req_rst_cnt << ';';
+      out << it->second.in_all_rst_cnt << ';';
+      out << it->second.in_req_psh_cnt << ';';
+      out << it->second.in_all_psh_cnt << ';';
+      out << it->second.in_req_ack_cnt << ';';
+      out << it->second.in_all_ack_cnt << ';';
+      out << it->second.in_all_syn_cnt << ';';
+      out << it->second.in_all_fin_cnt << ';';
+      out << it->second.in_all_urg_cnt << ';';
+      out << it->second.in_req_uniqueips << ';';
+      out << it->second.in_all_uniqueips << ';';
       out << it->second.in_linkbitfield << ';';
-      out << it->second.out_linkbitfield;
+      out << it->second.out_all_flows << ';';
+      out << it->second.out_req_flows << ';';
+      out << it->second.out_rsp_flows << ';';
+      out << it->second.out_sf_flows << ';';
+      out << it->second.out_req_packets << ';';
+      out << it->second.out_all_packets << ';';
+      out << it->second.out_req_bytes << ';';
+      out << it->second.out_all_bytes << ';';
+      out << it->second.out_req_rst_cnt << ';';
+      out << it->second.out_all_rst_cnt << ';';
+      out << it->second.out_req_psh_cnt << ';';
+      out << it->second.out_all_psh_cnt << ';';
+      out << it->second.out_req_ack_cnt << ';';
+      out << it->second.out_all_ack_cnt << ';';
+      out << it->second.out_all_syn_cnt << ';';
+      out << it->second.out_all_fin_cnt << ';';
+      out << it->second.out_all_urg_cnt << ';';
+      out << it->second.out_req_uniqueips << ';';
+      out << it->second.out_all_uniqueips << ';';
+      out << it->second.out_linkbitfield << ';';
+      out << it->second.first_rec_ts << ';';
+      out << it->second.last_rec_ts;
       out << '\n';
    }
    
@@ -417,12 +472,12 @@ string get_timeslot_ipmap(const Profile *profile, const string &timeslot,
       
       addr = range_start | (addr & (0x0000ffff << (16 - prefix_len)));
       
-      prefix_stats[addr].in_flows += it->second.in_flows;
-      prefix_stats[addr].out_flows += it->second.out_flows;
-      prefix_stats[addr].in_packets += it->second.in_packets;
-      prefix_stats[addr].out_packets += it->second.out_packets;
-      prefix_stats[addr].in_bytes += it->second.in_bytes;
-      prefix_stats[addr].out_bytes += it->second.out_bytes;
+      prefix_stats[addr].in_flows += it->second.in_all_flows;
+      prefix_stats[addr].out_flows += it->second.out_all_flows;
+      prefix_stats[addr].in_packets += it->second.in_all_packets;
+      prefix_stats[addr].out_packets += it->second.out_all_packets;
+      prefix_stats[addr].in_bytes += it->second.in_all_bytes;
+      prefix_stats[addr].out_bytes += it->second.out_all_bytes;
    }
    
    stringstream out;
@@ -509,10 +564,18 @@ string get_host_history(const Profile *profile, const hosts_key_t &address,
       return "ERROR: No data available between timeslots "+timestart+" and "+timeend+".";
    
    stringstream out;
-   out << "timeslot;in_flows;in_packets;in_bytes;out_flows;out_packets;out_bytes;"
-          "in_syn_cnt;in_ack_cnt;in_fin_cnt;in_rst_cnt;in_psh_cnt;in_urg_cnt;"
-          "out_syn_cnt;out_ack_cnt;out_fin_cnt;out_rst_cnt;out_psh_cnt;out_urg_cnt;"
-          "in_uniqueips;out_uniqueips;in_linkbitfield;out_linkbitfield\n";
+   out << "timeslot;"
+          "in_all_flows;in_req_flows;in_rsp_flows;in_sf_flows;in_req_packets;"
+          "in_all_packets;in_req_bytes;in_all_bytes;in_req_rst_cnt;"
+          "in_all_rst_cnt;in_req_psh_cnt;in_all_psh_cnt;in_req_ack_cnt;"
+          "in_all_ack_cnt;in_all_syn_cnt;in_all_fin_cnt;in_all_urg_cnt;"
+          "in_req_uniqueips;in_all_uniqueips;in_linkbitfield;"
+          "out_all_flows;out_req_flows;out_rsp_flows;out_sf_flows;out_req_packets;"
+          "out_all_packets;out_req_bytes;out_all_bytes;out_req_rst_cnt;"
+          "out_all_rst_cnt;out_req_psh_cnt;out_all_psh_cnt;out_req_ack_cnt;"
+          "out_all_ack_cnt;out_all_syn_cnt;out_all_fin_cnt;out_all_urg_cnt;"
+          "out_req_uniqueips;out_all_uniqueips;out_linkbitfield;"
+          "first_rec_ts;last_rec_ts\n";
    
    for (vector<string>::iterator it = ts.begin(); it != ts.end(); ++it) {
       // Get record from file
@@ -524,28 +587,48 @@ string get_host_history(const Profile *profile, const hosts_key_t &address,
       }
       // Print record values
       out << *it << ';';
-      out << rec.in_flows << ';';
-      out << rec.in_packets << ';';
-      out << rec.in_bytes << ';';
-      out << rec.out_flows << ';';
-      out << rec.out_packets << ';';
-      out << rec.out_bytes << ';';
-      out << rec.in_syn_cnt << ';';
-      out << rec.in_ack_cnt << ';';
-      out << rec.in_fin_cnt << ';';
-      out << rec.in_rst_cnt << ';';
-      out << rec.in_psh_cnt << ';';
-      out << rec.in_urg_cnt << ';';
-      out << rec.out_syn_cnt << ';';
-      out << rec.out_ack_cnt << ';';
-      out << rec.out_fin_cnt << ';';
-      out << rec.out_rst_cnt << ';';
-      out << rec.out_psh_cnt << ';';
-      out << rec.out_urg_cnt << ';';
-      out << rec.in_uniqueips << ';';
-      out << rec.out_uniqueips << ';';
+      out << rec.in_all_flows << ';';
+      out << rec.in_req_flows << ';';
+      out << rec.in_rsp_flows << ';';
+      out << rec.in_sf_flows << ';';
+      out << rec.in_req_packets << ';';
+      out << rec.in_all_packets << ';';
+      out << rec.in_req_bytes << ';';
+      out << rec.in_all_bytes << ';';
+      out << rec.in_req_rst_cnt << ';';
+      out << rec.in_all_rst_cnt << ';';
+      out << rec.in_req_psh_cnt << ';';
+      out << rec.in_all_psh_cnt << ';';
+      out << rec.in_req_ack_cnt << ';';
+      out << rec.in_all_ack_cnt << ';';
+      out << rec.in_all_syn_cnt << ';';
+      out << rec.in_all_fin_cnt << ';';
+      out << rec.in_all_urg_cnt << ';';
+      out << rec.in_req_uniqueips << ';';
+      out << rec.in_all_uniqueips << ';';
       out << rec.in_linkbitfield << ';';
-      out << rec.out_linkbitfield;
+      out << rec.out_all_flows << ';';
+      out << rec.out_req_flows << ';';
+      out << rec.out_rsp_flows << ';';
+      out << rec.out_sf_flows << ';';
+      out << rec.out_req_packets << ';';
+      out << rec.out_all_packets << ';';
+      out << rec.out_req_bytes << ';';
+      out << rec.out_all_bytes << ';';
+      out << rec.out_req_rst_cnt << ';';
+      out << rec.out_all_rst_cnt << ';';
+      out << rec.out_req_psh_cnt << ';';
+      out << rec.out_all_psh_cnt << ';';
+      out << rec.out_req_ack_cnt << ';';
+      out << rec.out_all_ack_cnt << ';';
+      out << rec.out_all_syn_cnt << ';';
+      out << rec.out_all_fin_cnt << ';';
+      out << rec.out_all_urg_cnt << ';';
+      out << rec.out_req_uniqueips << ';';
+      out << rec.out_all_uniqueips << ';';
+      out << rec.out_linkbitfield << ';';
+      out << rec.first_rec_ts << ';';
+      out << rec.last_rec_ts;
       out << '\n';
    }
    return out.str();

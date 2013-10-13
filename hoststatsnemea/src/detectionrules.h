@@ -3,22 +3,14 @@
 
 #ifdef STREAM_VERSION
 #include "stream_version/hoststats.h"
-#include "stream_version/profile.h"
 #else
 #include "timeslot_version/hoststats.h"
-#include "timeslot_version/profile.h"
 #endif
 
-#ifndef STREAM_VERSION
-void check_rules(const Profile* profile);
-#endif
+const std::string get_rec_time(const hosts_record_t &rec); 
 
-void check_rules(const hosts_key_t &addr, const hosts_record_t &rec, const std::string &timeslot);
+void check_rules(const hosts_key_t &addr, const hosts_record_t &rec);
 
-#ifndef STREAM_VERSION
-void check_rules_ssh(const Profile* profile);
-#endif
-
-void check_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec, const std::string &timeslot);
+void check_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec);
 
 #endif
