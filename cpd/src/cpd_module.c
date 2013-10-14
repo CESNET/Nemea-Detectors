@@ -60,7 +60,6 @@ trap_module_info_t module_info = {
    "NEMEA module for anomalies detection based on CPD methods.\n"
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-   "   -p N        Show progess - print a dot every N flows.\n"
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
    "   Outputs: 0\n",
@@ -72,7 +71,6 @@ trap_module_info_t module_info = {
 #define FLOWS_TIMEOUT 1
 
 static int stop = 0;
-static int progress = 0;
 
 #define STOPCMD do {stop = 1;} while (0);
 
@@ -122,9 +120,6 @@ int main(int argc, char **argv)
          case 'u':
             unirec_specifier = optarg;
             break;
-         case 'p':
-            progress = atoi(optarg);
-            break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
             return 3;
@@ -160,7 +155,7 @@ int main(int argc, char **argv)
       // Receive data from any interface, wait until data are available
       const void *data;
       uint16_t data_size;
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_HALFWAIT);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
