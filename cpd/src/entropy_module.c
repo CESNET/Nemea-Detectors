@@ -64,6 +64,9 @@ trap_module_info_t module_info = {
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -p N        Show progess - print a dot every N flows.\n"
+   "   -l          long_output (send all 11 computed entropies).\n"
+   "   -n N        number of links\n"
+   "   -t N        timewindow size in seconds.\n"
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
    "   Outputs: 1\n",
@@ -182,6 +185,7 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
    uint32_t timewindow, char long_output)
 {
    uint32_t i;
+   static uint64_t cnt_flows = 0;
    /* compute entropies */
 #ifdef HAVE_LIBGOMP
 #pragma omp parallel for
@@ -218,7 +222,7 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
       printf("link#%03X timesl:%u flows#%llu pkts#%llu bytes#%llu sip:%.5f dip:%.5f spr:%.5f dpr:%.5f\n", sdata[i].linkid, *cur_timeslot,
          (unsigned long long int) sdata[i].flows_total, (unsigned long long int) sdata[i].packets_total,
          (unsigned long long int) sdata[i].bytes_total, sdata[i].entropies_results[SRCIP], sdata[i].entropies_results[DSTIP],
-			sdata[i].entropies_results[SRCPORT], sdata[i].entropies_results[DSTPORT]);
+         sdata[i].entropies_results[SRCPORT], sdata[i].entropies_results[DSTPORT]);
       gflow_total += sdata[i].flows_total;
       gpkts_total += sdata[i].packets_total;
       gbyte_total += sdata[i].bytes_total;
@@ -240,6 +244,12 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
 #else
       ent_shash_reset(sdata[i/ENTROPIES_COUNT].hash_entropies[i%ENTROPIES_COUNT]);
 #endif
+   }
+   cnt_flows++;
+   if ((progress > 0) && (cnt_flows == progress)) {
+      cnt_flows = 0;
+      printf(".");
+      fflush(stdout);
    }
 }
 
