@@ -227,7 +227,7 @@ static void send_results(struct link_entdata *sdata, uint32_t linkcount,
       sdata[i].flows_total = 0;
       sdata[i].packets_total = 0;
       sdata[i].bytes_total = 0;
-      trap_send_data(0, data_out, ur_rec_static_size(tmplt_out), TRAP_WAIT);
+      trap_send_data(0, data_out, ur_rec_static_size(tmplt_out), TRAP_HALFWAIT);
    }
    (*cur_timeslot) += timewindow;
 

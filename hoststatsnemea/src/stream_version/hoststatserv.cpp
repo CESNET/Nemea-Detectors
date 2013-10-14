@@ -22,12 +22,10 @@
 #include "../aux_func.h"
 #include "processdata.h"
 #include "../config.h"
-#include "requesthandlers.h"
+// #include "requesthandlers.h"
 #include "../detectionrules.h"
-#include "../../../../common/cuckoo_hash_v2/cuckoo_hash.h"
 //#include "sshdetection.h"
 
-#include "../BloomFilter.hpp"
 //TRAP
 extern "C" {
    #include <libtrap/trap.h>
@@ -67,45 +65,27 @@ static string server;
 static string port;
 
 
-
-///////////////////////////////////////////////////
-// Flow filter functions for profile definitions
-
-// SSH (TCP port 22)
-bool ff_ssh(const flow_key_t& key, const flow_record_t& rec)
-{
-   return (key.proto == 6 && (key.sport == 22 || key.dport == 22));
-}
-
-// Telnet (TCP port 23)
-bool ff_telnet(const flow_key_t& key, const flow_record_t& rec)
-{
-   return (key.proto == 6 && (key.sport == 23 || key.dport == 23));
-}
-
-// DNS (TCP and UDP ports 53)
-bool ff_dns(const flow_key_t& key, const flow_record_t& rec)
-{
-   return ((key.proto == 6 || key.proto == 17) && (key.sport == 53 || key.dport == 53));
-}
-
 ///////////////////////////////////////////////////
 // Struct with information about Nemea module
 trap_module_info_t module_info = {
-   (char *) "HostStats module", // Module name
+   (char *) "HostStatsNemea module", // Module name
    // Module description
-   (char *) "This module works as HostStats plugin for NfSen (Listens on network interface \n"
-      "and process requests for host statistics), but adds extra input for TRAP.\n"
+   (char *)
+      "This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)\n"
       "\n"
-      "USAGE ./hoststatserv ARGUMENTS\n"
-      "    -s IPADDRESS   IP address \n"
-      "    -p NUMBER      Port number\n"
-      "    -f             Stay in foreground (program runs in background by default)\n"
+      "USAGE ./hoststatserv_stream ARGUMENTS\n"
+      "    -f   Stay in foreground (module runs in the background by default)\n"
       "\n"
-      "Note: All parameters are taken from hoststats.conf by default.\n"
+      "Note: Other parameters are taken from hoststats.conf by default.\n"
       "\n" 
+      "Example of how to run this module:\n"
+      "   Edit the configuration file \"hoststats.conf\" and especially the line\n"
+      "   \"detection-log\" with the folder path to save the event log.\n"
+      "   Use FlowDirection or DedupAggregator output as an input for this module.\n"
+      "   Run module: ./hoststatserv_stream -f -i \"t;localhost,12345\"\n"
+      "\n"
       "TRAP Interfaces:\n"
-      "   Inputs: 1\n"
+      "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
       "   Outputs: 0\n",
    1, // Number of input TRAP interfaces
    0, // Number of output TRAP interfaces
@@ -125,38 +105,40 @@ void *service(void * connectfd)
    bool stop = false;
    
    // Read null-terminated message from socket
-   while ( !stop && (n = read(fd, buf, BUFFER)) > 0) {
-      r = 0;
-      if (action == -1 && n > 0) {
-         action = buf[0];
-         r = 1;
-         //log(LOG_INFO, "Trap action %i", action);
-      }
-      while (r < n && buf[r] != 0) {
-         params += buf[r];
-         r++;
-      }
-      stop = (buf[r] == 0);
-   }
+   // while ( !stop && (n = read(fd, buf, BUFFER)) > 0) {
+   //    r = 0;
+   //    if (action == -1 && n > 0) {
+   //       action = buf[0];
+   //       r = 1;
+   //       //log(LOG_INFO, "Trap action %i", action);
+   //    }
+   //    while (r < n && buf[r] != 0) {
+   //       params += buf[r];
+   //       r++;
+   //    }
+   //    stop = (buf[r] == 0);
+   // }
    
-   // Message about new data available
-   if (action == NEW_DATA) {
-      log(LOG_WARNING, "NEW_DATA action is not supported in the HostStatsNemea module");
-   }
-   // Request from frontend
-   else if (action > 0 && action < num_request_handlers && request_handlers[action] != 0) {
-      log(LOG_INFO, "Request received (code: %i, params: \"%s\").", action, params.c_str());
-      string ret = request_handlers[action](params);
-      r = write(fd, ret.c_str(), ret.length());
-      if (r == (ssize_t) -1)
-         log(LOG_ERR, "Could not write reply, error status: %i", errno);
-      if (r != (ssize_t) ret.length())
-         log(LOG_ERR, "write(): Buffer written just partially");
-      log(LOG_INFO, "Request %i replied.", action);
-   }
-   else {
-      log(LOG_ERR, "Unknown request (code %i) received.", action);
-   }
+   log(LOG_WARNING, "Request handler doesn't work in this version");
+
+   // // Message about new data available
+   // if (action == NEW_DATA) {
+   //    log(LOG_WARNING, "NEW_DATA action is not supported in the HostStatsNemea module");
+   // }
+   // // Request from frontend
+   // else if (action > 0 && action < num_request_handlers && request_handlers[action] != 0) {
+   //    log(LOG_INFO, "Request received (code: %i, params: \"%s\").", action, params.c_str());
+   //    string ret = request_handlers[action](params);
+   //    r = write(fd, ret.c_str(), ret.length());
+   //    if (r == (ssize_t) -1)
+   //       log(LOG_ERR, "Could not write reply, error status: %i", errno);
+   //    if (r != (ssize_t) ret.length())
+   //       log(LOG_ERR, "write(): Buffer written just partially");
+   //    log(LOG_INFO, "Request %i replied.", action);
+   // }
+   // else {
+   //    log(LOG_ERR, "Unknown request (code %i) received.", action);
+   // }
    close(fd);
    pthread_exit(NULL);
 }
@@ -197,15 +179,16 @@ void terminate_daemon(int signal)
       cf->reload();
       logmask = cf->getValue("log-upto-level");
       parse_logmask(logmask);
+      //TODO: call MainProfile funcion reload_config()
       break;
    case SIGTERM:
-      trap_terminate();
       terminated = 1;
+      trap_terminate();
       log(LOG_NOTICE, "Cought TERM signal...");
       break;
    case SIGINT:
-      trap_terminate();
       terminated = 1;
+      trap_terminate();
       log(LOG_NOTICE, "Cought INT signal...");
       break;
    default:
@@ -237,42 +220,28 @@ void parse_logmask(string &mask)
 
 int main(int argc, char *argv[])
 {
-   int rc = TRAP_E_OK;
-   trap_ifc_spec_t ifc_spec;
-
-   openlog(NULL, LOG_NDELAY, 0);
-   log(LOG_INFO, "HostStats started");
-   
-   // TRAP parse params
-   rc = trap_parse_params(&argc, argv, &ifc_spec);
-   if (rc != TRAP_E_OK) {
-      if (rc == TRAP_E_HELP) {
-         trap_print_help(&module_info);
-         return 0;
-      }
-      log(LOG_ERR, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      return 1;
-   }
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info)
 
    // UniRec template
-   tmpl_in = ur_create_template("<COLLECTOR_FLOW>");
+   tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
    tmpl_out = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL");
    if (tmpl_in == NULL || tmpl_out == NULL) {
       log(LOG_ERR, "Error when creating UniRec template.\n");
-      trap_free_ifc_spec(ifc_spec);
       if (tmpl_in == NULL) ur_free_template(tmpl_in);
       if (tmpl_out == NULL) ur_free_template(tmpl_out);
       return 1;
    }
 
-
+   openlog(NULL, LOG_NDELAY, 0);
+   log(LOG_INFO, "HostStats started");
+/*   
    int listenfd[LISTENFDS], connectfd[LISTENFDS];
    struct hostent *hostent;
    struct sigaction sa;
    int listenfds, gai_error, i, maxfd;
    struct addrinfo hints, *res, *res0;
    fd_set rset, allset;
-
+*/
    
    // Initialize Configuration singleton
    Configuration *config = Configuration::getInstance();
@@ -290,62 +259,11 @@ int main(int argc, char *argv[])
    if (!logmask.empty()) {
       parse_logmask(logmask);
    }
-   
-   // ***** Profiles *****
-   // TODO: Read specifiaction of profiles from config
-   vector<pair<string, flow_filter_func_ptr> > prof_spec;
-   prof_spec.push_back(make_pair("all", (flow_filter_func_ptr)NULL));
-   prof_spec.push_back(make_pair("ssh", ff_ssh));
-   prof_spec.push_back(make_pair("telnet", ff_telnet));
-   prof_spec.push_back(make_pair("dns", ff_dns));
-   
+
    config->unlock();
 
-   // BloomFilter
-   bloom_parameters bp;
-   bp.projected_element_count = 5000000;
-   bp.false_positive_probability = 0.01;
-   bp.compute_optimal_parameters();
-   //log(LOG_INFO, "process_data: Creating Bloom Filter, table size: %d, hashes: %d",
-   //    bp.optimal_parameters.table_size, bp.optimal_parameters.number_of_hashes);
-
-
-   // Create profiles
-   for (int i = 0; i < prof_spec.size(); i++) {
-      profiles.push_back(new Profile(prof_spec[i].second, prof_spec[i].first));
-      if (profiles.back()->database.connect() != 0) {
-         log(LOG_ERR, "Error in initialization of database of profile \"%s\"", prof_spec[i].first.c_str());
-         while (i >= 0)
-            delete profiles[i--];
-         return 1;
-      } else {
-         profiles.back()->bf_active = new bloom_filter(bp);
-         profiles.back()->bf_learn = new bloom_filter(bp);
-      }
-   }
-
-   // TODO: read this from configuration file
-   // For each profile init hash table
-   for (int i = 0; i < profiles.size(); i++) {
-      unsigned int size;
-      if (profiles[i]->name == "all") size = 1000000;
-      else if (profiles[i]->name == "ssh") size = 1000000;
-      else if (profiles[i]->name == "dns") size = 300000;
-      else if (profiles[i]->name == "telnet") size = 1000;
-      else size = 10000;
-
-      ht_init_v2(profiles[i]->stat_table_to_check, size, sizeof(hosts_record_t), sizeof(hosts_key_t));
-   }
-
-   // TODO: read this from configuration
-   for (int i = 0; i < profiles.size(); i++) {
-      if (profiles[i]->name == "all") 
-         profiles[i]->detectors.push_back(make_pair("rules-generic", &check_rules));
-   }
-
-
    // ***** Initialization done, start server *****
-
+/*
    memset(&hints, 0, sizeof(hints));
    hints.ai_family = AF_UNSPEC;
    hints.ai_socktype = SOCK_STREAM;
@@ -401,21 +319,13 @@ int main(int argc, char *argv[])
    if (listenfds == 0)
       errx(1, "getaddrinfo(): Interface not found");
    freeaddrinfo(res0);
-
+*/
    // Switch to background (daemonize)
    if (background) {
       log(LOG_INFO, "Entering daemon mode");
       // Do not change current working directory, redirect std* to /dev/null
       daemon(1, 0);
    }
-
-   // ***** Trap interface initialization *****
-   rc = trap_init(&module_info, ifc_spec);
-   if (rc != TRAP_E_OK) {
-      log(LOG_ERR, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      terminated = 1;
-   }
-   trap_free_ifc_spec(ifc_spec);
 
    signal(SIGTERM, terminate_daemon);
    signal(SIGINT, terminate_daemon);
@@ -425,15 +335,17 @@ int main(int argc, char *argv[])
    // Create threads for data from TRAP
    thread_share_t share;
 
-   if (!terminated) {
-      rc = pthread_create(&share.data_reader_thread, NULL, &data_reader_trap, (void *) &share);
-      if (rc) {
-         trap_terminate();
-         terminated = 1;
-      }
+   int rc;
+   rc = pthread_create(&share.data_reader_thread, NULL, &data_reader_trap, 
+      (void *) &share);
+   if (rc) {
+      trap_terminate();
+      terminated = 1;
+   }
 
-      pthread_mutex_lock(&detector_start);
-      rc = pthread_create(&share.data_process_thread, NULL, &data_process_trap, (void *) &share);
+   if (terminated != 1) {
+      rc = pthread_create(&share.data_process_thread, NULL, &data_process_trap, 
+         (void *) &share);
       if (rc) {
          trap_terminate();
          terminated = 1;
@@ -452,6 +364,7 @@ int main(int argc, char *argv[])
       terminated = 1;
    }
 
+/*
    // Create services for requests from frontend
    maxfd = 0;
    FD_ZERO(&allset);
@@ -460,6 +373,7 @@ int main(int argc, char *argv[])
          maxfd = listenfd[i];
       FD_SET(listenfd[i], &allset);
    }
+
    rc = 0;
    while (1) {
       if (terminated == 1) {
@@ -497,24 +411,22 @@ int main(int argc, char *argv[])
    for (i = 0; i < listenfds; i++) {
       close(listenfd[i]);
    }
+*/
 
    // Wait until end of TRAP threads
    pthread_join(share.data_process_thread, NULL);
    pthread_join(share.data_reader_thread, NULL);
 
-   // Delete profiles
-   for (int i = 0; i < profiles.size(); i++) {
-      delete profiles[i]->bf_active;
-      delete profiles[i]->bf_learn;
-      ht_destroy_v2(profiles[i]->stat_table_to_check);
-      delete profiles[i];
-   }
-   
    // Delete configuration
-   config->freeConfiguration();
+   Configuration::freeConfiguration();
 
    // Necessary cleanup before exiting
-   trap_finalize();
+   TRAP_DEFAULT_FINALIZATION();
+
+   ur_free_template(tmpl_in);
+   ur_free_template(tmpl_out);
+
+   closelog();
 
    pthread_exit(NULL);
    return 0;
