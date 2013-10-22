@@ -5,7 +5,7 @@ CXXFLAGS=-O2
 LDFLAGS=
 LDLIBS=-ltrap
 
-SUBDIRS=nfreader flowcounter transitfilter spoofing traffic_repeater traffic_merger
+SUBDIRS=nfreader flowcounter transitfilter flowdirection ipspoofingdetector traffic_repeater traffic_merger cpd_module entropy_module simplebotnetdetector pca logger delaybuffer anonymizer blacklistfilter hoststatsnemea trapdump trapreplay
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
@@ -13,8 +13,17 @@ SUBDIRS=nfreader flowcounter transitfilter spoofing traffic_repeater traffic_mer
 
 all: others
 
+.PHONY: bootstraps
+bootstraps:
+	@for directory in $(SUBDIRS); do \
+		(cd "$$directory" ; \
+		test ! -e configure -a -f "bootstrap.sh" -a -x "bootstrap.sh" && \
+		echo "Bootstrap for $$directory" && \
+		./bootstrap.sh && ./configure || true);  \
+	done
+
 .PHONY: others
-others: ../unirec/unirec.o
+others: ../unirec/unirec.o bootstraps
 	@for directory in $(SUBDIRS); do \
 		make -C "$$directory"; \
 	done

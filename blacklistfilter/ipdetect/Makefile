@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 CFLAGS=-O2 -std=c99
-CXXFLAGS=-std=c++98 -g
+CXXFLAGS=-std=c++98 -O2
 LDFLAGS=
 LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash/libcuckoo_hash.a -ltrap
 
@@ -11,6 +11,7 @@ LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash/libcuckoo_hash.a -l
 MODULES=ipblacklistfilter
 
 all: unirec ckhash  ${MODULES}
+	mv ipblacklistfilter ipdetect
 
 ckhash:
 	$(MAKE) -C ../../../common/cuckoo_hash/
