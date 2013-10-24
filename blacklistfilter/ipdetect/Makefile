@@ -11,6 +11,7 @@ LDLIBS= ../../../unirec/unirec.o ../../../common/cuckoo_hash/libcuckoo_hash.a -l
 MODULES=ipblacklistfilter
 
 all: unirec ckhash  ${MODULES}
+	mv ipblacklistfilter ipdetect
 
 ckhash:
 	$(MAKE) -C ../../../common/cuckoo_hash/

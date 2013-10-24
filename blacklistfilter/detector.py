@@ -68,7 +68,7 @@ def is_running(pid):
 
 program_prefix = sys.argv[0]
 cwd = os.getcwd()
-ip_detector = cwd + '/ipdetect/ipblacklistfilter'
+ip_detector = cwd + '/ipdetect/ipdetect'
 ip_sources = cwd + '/ipdetect/update/'
 url_detector = cwd + '/urldetect/urlblacklistfilter'
 url_sources = cwd + '/urldetect/update/'
@@ -81,12 +81,12 @@ usage = "Usage: \n\t" + program_prefix + " start|stop|install|download ip|url|dn
 
 call_method = sys.argv[1]
 filter_type = sys.argv[2]
-
-if (len( sys.argv ) != 4 and call_method == 'start') :
-   error( "Bad argument count supplied.\n" + usage )
-   exit( 1 )
+if (call_method == 'start') :
+   if ( len( sys.argv ) != 4 ) : 
+      error( "Bad argument count supplied: " + str(len(sys.argv)) + "\n"  + usage )
+      exit( 1 )
 elif (len( sys.argv ) != 3):
-   error( "Bad argument count supplied.\n" + usage )
+   error( "Bad argument count supplied: " + str(len(sys.argv)) + "\n" + usage )
    exit( 1 )
 
 if filter_type == 'ip':

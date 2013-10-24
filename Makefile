@@ -5,7 +5,7 @@ CXXFLAGS=-O2
 LDFLAGS=
 LDLIBS=-ltrap
 
-SUBDIRS=nfreader flowcounter transitfilter ipspoofingdetector traffic_repeater traffic_merger cpd_module entropy_module
+SUBDIRS=nfreader flowcounter transitfilter flowdirection ipspoofingdetector traffic_repeater traffic_merger cpd_module entropy_module simplebotnetdetector pca logger delaybuffer anonymizer blacklistfilter hoststatsnemea trapdump trapreplay
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
