@@ -1,0 +1,122 @@
+******************* Simple DNSAmplification module for NEMEA ****************
+
+
+Table of Contents
+=================
+
+    1. Module description
+    2. How it works
+    3. Detection methods
+    4. How to use
+    5. Compilation and linking
+
+
+1. Module desctiption
+=====================
+
+    Module implements simple DNS Amplification attacks detection, based
+on flow's number of packets and bytes. It analyzes query and response traffic. 
+Works with NetFlow.
+
+
+2. How it works
+===============
+
+    The module uses history model to analyze number of packets and bytes of
+queries and responses between two IP addresses. Detection process for the IP
+address pair starts when certain time window of data is reached. Then the 
+oldest 5 minutes of data are erased from history. Inactive IP address pairs
+are also deleted after some time.
+
+Detection method is based on the amount of packets/bytes in the traffic. It uses
+several thresholds specified in the section of Additional parameters. Method
+calculates histograms of different monitored data, which are used to determine
+the most occured values.
+
+Module input:	<COLLECTOR-FLOW>
+Module output:	<AMPLIFICATION-ALERT>
+
+
+3. Detection method
+===================
+
+Detection process is triggered when the stored data for <SRC_IP> and <DST_IP>
+key pair reached certain time window.
+
+At first, 4 histograms from the stored data in the history model are generated:
+  - histogram of flow sizes in bytes for query direction (hvqb)
+  - histogram of flow sizes in packets for query direction (hvqp)
+  - histogram of flow sizes in bytes for response direction (hvrb)
+  - histogram of flow sizes in packets for response direction (hvrp)
+
+Now we can use these histograms in the detection algorithm along with functions
+which are required for detection. It is important that we are able to transform
+histogram to normalized histogram, count number of occurences of flow, sum
+number of packets or bytes and compute average value of histogram. Very
+important is that we can take only N of most occuring values sorted descending.
+
+Algorithm is demonstrated by this pseudocode:
+ 
+if (sum(topn(norm(hvrb),<N>) > <I> && sum(topn(hvrb),<N>) > <T> ) {
+   if ( prumh(topn(hvrp,<N>)) > <Y> && prumh(topn(hvrb,<N>)) > <L> && prumh(topn(hvqb,<N>)) < <M> ) {
+      if ( sum(topn(hvrb),<N>)/sum(topn(hvqb),<N>) ) > <A> ) {
+            send(<AMPLIFICATION_ALERT>);
+      }
+   }
+}
+
+In first condition we normalize the histogram of flow sizes in bytes for response 
+direction, then we take N most occuring values from the histogram and we sum 
+the occurences of pair. This value must be higher than threshold I.
+Also we take top-N of the same histogram and we sum the occurence of pair, 
+comparing it to the threshold T.
+
+Second condition is created from three similiar parts. We take three histograms,
+get tje top-N from each of them and then we compute their average values. Each
+of these values must be higher or lower than certain threshold.
+
+Then the third condition computes the amplification effect from summing the 
+top-N values of histograms of bytes for queries and responses. If the computed
+amplification effect is higher than threshold set for this value, the condition 
+is met.
+
+Now the <AMPLIFICATION_ALERT> is generated, which consists of:
+  - SRC IP address
+  - DST IP address
+  - SRC PORT
+  - total flows of attack
+  - total packets of attack  
+  - total bytes of attack
+  - attack start time
+  - attack detection time
+
+
+4. How to use
+=============
+
+The module is implemented on TRAP platform so you have to specify TRAP 
+interfaces correctly. Then you can specify one of the parameters listed below.
+Default values of parameters are in the brackets 
+
+Usage:
+    ./dns_amplification -i <trap_interface> <Additional parameters>
+
+Additional parameters:
+    -p <port>		port used for detection (53)
+    -n <num>		number of topN values chosen (10)
+    -q <step>		step of histogram (10)
+    -a <num>		minimal amplification effect considered an attack (5)
+    -t <num> 		minimal threshold for number of flows in TOP-N (1000)
+    -i <num>		minimal normalized threshold for count of flows in TOP-N (0.4)
+    -y <num>		minimal threshold for average size of responses in packets in TOP-N (0)
+    -l <num>		minimal threshold for average size of responses in bytes in TOP-N (1000)
+    -m <num>		maximal threshold for average size of queries in bytes in TOP-N (300)
+    -w <sec>		time window of detection (3600)
+    -d <sec>		time window of deletion (300)
+
+5. Compilation and linking
+==========================
+
+No special compilation parameters are needed. For linking add -ltrap 
+and path to unirec.o.
+Doxygen documentation can be generated with "make doxygen" command.
