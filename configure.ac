@@ -64,7 +64,7 @@ AC_CONFIG_FILES([Makefile
                  nfreader/Makefile
                  pca/Makefile
                  pca/src/timebin_division/Makefile
-                 pca/test-receiver/Makefile
+                 pca/pca-test-receiver/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
                  test_threads/Makefile

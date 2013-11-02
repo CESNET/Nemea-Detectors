@@ -15,7 +15,7 @@ ipspoofingdetector \
 logger \
 nfreader \
 pca \
-pca/test-receiver \
+pca/pca-test-receiver \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
