@@ -1,11 +1,7 @@
 #ifndef _DETECTION_RULES_H_
 #define _DETECTION_RULES_H_
 
-#ifdef STREAM_VERSION
-#include "stream_version/hoststats.h"
-#else
-#include "timeslot_version/hoststats.h"
-#endif
+#include "hoststats.h"
 
 const std::string get_rec_time(const hosts_record_t &rec); 
 

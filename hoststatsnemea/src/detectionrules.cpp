@@ -2,12 +2,7 @@
 
 #include "detectionrules.h"
 #include "eventhandler.h"
-
-#ifdef STREAM_VERSION
-#include "stream_version/profile.h"
-#else
-#include "timeslot_version/profile.h"
-#endif
+#include "profile.h"
 
 using namespace std;
 

@@ -1,11 +1,7 @@
 #ifndef _FILTER_H_
 #define _FILTER_H_
 
-#ifdef STREAM_VERSION
-#include "stream_version/hoststats.h"
-#else
-#include "timeslot_version/hoststats.h"
-#endif
+#include "hoststats.h"
 
 // Filter is not implemented yet, match() returns always true
 class Filter {
