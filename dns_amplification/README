@@ -58,7 +58,7 @@ important is that we can take only N of most occuring values sorted descending.
 Algorithm is demonstrated by this pseudocode:
  
 if (sum(topn(norm(hvrb),<N>) > <I> && sum(topn(hvrb),<N>) > <T> ) {
-   if ( prumh(topn(hvrp,<N>)) > <Y> && prumh(topn(hvrb,<N>)) > <L> && prumh(topn(hvqb,<N>)) < <M> ) {
+   if ( avgh(topn(hvrp,<N>)) > <Y> && avgh(topn(hvrb,<N>)) > <L> && avgh(topn(hvqb,<N>)) < <M> ) {
       if ( sum(topn(hvrb),<N>)/sum(topn(hvqb),<N>) ) > <A> ) {
             send(<AMPLIFICATION_ALERT>);
       }
@@ -81,14 +81,14 @@ amplification effect is higher than threshold set for this value, the condition
 is met.
 
 Now the <AMPLIFICATION_ALERT> is generated, which consists of:
-  - SRC IP address
-  - DST IP address
-  - SRC PORT
-  - total flows of attack
-  - total packets of attack  
-  - total bytes of attack
-  - attack start time
-  - attack detection time
+  - SRC IP address		ip address of amplification server
+  - DST IP address		ip address of victim
+  - SRC PORT			port of detection
+  - total flows of attack	# of flows in detected as attack
+  - total packets of attack	# of attack packets
+  - total bytes of attack	# of attack bytes
+  - attack start time		first timestamp of attack flow
+  - attack detection time	timestamp of positive detection
 
 
 4. How to use
@@ -106,13 +106,13 @@ Additional parameters:
     -n <num>		number of topN values chosen (10)
     -q <step>		step of histogram (10)
     -a <num>		minimal amplification effect considered an attack (5)
-    -t <num> 		minimal threshold for number of flows in TOP-N (1000)
+    -t <num>		minimal threshold for number of flows in TOP-N (1000)
     -i <num>		minimal normalized threshold for count of flows in TOP-N (0.4)
     -y <num>		minimal threshold for average size of responses in packets in TOP-N (0)
     -l <num>		minimal threshold for average size of responses in bytes in TOP-N (1000)
     -m <num>		maximal threshold for average size of queries in bytes in TOP-N (300)
-    -w <sec>		time window of detection (3600)
-    -d <sec>		time window of deletion (300)
+    -h <sec>		time window of detection (3600)
+    -s <sec>		time window of deletion (300)
 
 5. Compilation and linking
 ==========================

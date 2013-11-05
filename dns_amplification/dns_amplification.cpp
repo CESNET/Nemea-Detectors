@@ -49,6 +49,8 @@
 #include <algorithm>
 #include <list>
 #include <map>
+#include <utility>
+#include <algorithm>
 
 #ifdef __cplusplus
 extern "C" {   
@@ -82,8 +84,8 @@ trap_module_info_t module_info = {
     "   -y <num>         minimal threshold for average size of responses in packets in TOP-N (0)\n"
     "   -l <num>         minimal threshold for average size of responses in bytes in TOP-N (1000)\n"
     "   -m <num>         maximal threshold for average size of queries in bytes in TOP-N (300)\n"
-    "   -w <sec>         time window of detection (3600)\n"
-    "   -d <sec>         time window of deletion (300)\n",
+    "   -h <sec>         time window of detection (3600)\n"
+    "   -s <sec>         time window of deletion (300)\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -109,7 +111,7 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
 
     // choose the direction
     if (direction == QUERY) {
-	
+
         // Create the histogram
 	for (vector<flow_item_t>::iterator i = flows.q.begin(); i != flows.q.end(); ++i) {
 	      // choose base data of histogram
@@ -117,18 +119,19 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
 		  ++histogram[i->packets];
 		  }
 	      else if (type == BYTES) {
-		  ++histogram[i->bytes];
-		  }
+		  histogram[i->bytes] = histogram[i->bytes]+1;
+		}
 	}
 	
     } else if (direction == RESPONSE) {
-	
+
 	// Create the histogram
 	for (vector<flow_item_t>::iterator i = flows.r.begin(); i != flows.r.end(); ++i) {
-	      if (type == PACKETS)
+	      if (type == PACKETS) {
 		  ++histogram[i->packets];
-	      else if (type == BYTES)
-		  ++histogram[i->bytes];
+	      } else if (type == BYTES) {
+		  histogram[i->bytes] = histogram[i->bytes]+1;
+		}
 	}
     }
     
@@ -138,7 +141,7 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
     for (int i = 0; i < BYTES_MAX; i+=config.q) {
 	for (histogram_iter it = histogram.begin(); it != histogram.end(); ++it) {
 	    if ((it->first >= i) && (it->first < max)) {
-		++histogram_q[max];
+		histogram_q[max] = it->second;
 		}
 	}
 	max += config.q;
@@ -146,7 +149,7 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
     
     // DEBUG
     //for (histogram_iter i = histogram_q.begin(); i != histogram_q.end(); ++i) {
-    //		printf("!!! %d : %d \n", i->first, i->second);
+    //		printf("!!q! %d : %d \n", i->first, i->second);
     //}
     
     return histogram_q;
@@ -196,20 +199,22 @@ histogram_t topnHistogram(histogram_t h) {
     histogram_t tmp, topn;
     
     // swap histogram pairs to sort them
+    vector<pair<unsigned int, unsigned int> > values;
     for (histogram_iter it = h.begin(); it != h.end(); ++it) {
-	tmp[it->second] = it->first;
-	
+	values.push_back(make_pair(it->second, it->first));
     }
     
-    // take only n pairs
-    histogram_iter it = tmp.begin();
-    for (int i = 0; i < config.n; i++) {
-	if (it != tmp.end()) {
-	    topn[it->second] = it->first;
-	    it++;
+    sort(values.rbegin(), values.rend());
+    
+    // take only n items
+    int i = 0;
+    for (int j = 0; j < config.n; j++) {
+	if (i < values.size()) {
+	    topn[values[i].second] = values[i].first;
+	    i++;
 	}
     }
-
+    
     return topn;
 }
 
@@ -249,12 +254,16 @@ histogram_norm_t topnNormHistogram(histogram_norm_t h) {
  * @param h input histogram
  * @return sum
  */
-unsigned int sum (histogram_t h) {
+unsigned int sum (histogram_t h, int type) {
 	
 	unsigned int s = 0;
 	
 	for (histogram_iter it = h.begin(); it != h.end(); it++) {
-	    s += it->second;
+	    if (type == BYTES) {
+		s += it->first;
+	    } else if (type == PACKETS) {
+		s += it->second;
+	    }
 	}
 
 	return s;
@@ -353,7 +362,7 @@ int main (int argc, char** argv)
   
    // parse parameters
    char opt;
-   while ((opt = getopt(argc, argv, "p:n:t:q:a:i:l:m:w:d:")) != -1) {
+   while ((opt = getopt(argc, argv, "p:n:t:q:a:i:l:m:h:s:")) != -1) {
       switch (opt) {
 	case 'p':
             config.port = atoi(optarg);
@@ -382,10 +391,10 @@ int main (int argc, char** argv)
 	case 'm':
             config.max_quer_bytes = atoi(optarg);
             break;
-        case 'w':
+        case 'h':
 	    config.det_window = atoi (optarg);
 	    break;
-        case 'd':
+        case 's':
 	    config.del_time = atoi (optarg);
 	    break;
         default:
@@ -440,19 +449,40 @@ int main (int argc, char** argv)
         src_port = ur_get(unirec_in, data, UR_SRC_PORT); 
 	dst_port = ur_get(unirec_in, data, UR_DST_PORT);
 	
+	// create actualy inspected key
+        flow_key_t actual_key;
+	
         // check if src or dst port is expected, otherwise next flow
         if (src_port == config.port) {
 	    qr = true;
+	    actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
+    	    actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
 	} else if (dst_port == config.port) { 
 	    qr = false;
+	    actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
+    	    actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
 	} else {
 	    continue;
         }
         
-	// create actualy inspected key
-        flow_key_t actual_key;
-        actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
-        actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
+        //char ip1[INET6_ADDRSTRLEN];
+        //char ip2[INET6_ADDRSTRLEN];
+        //char ip3[INET6_ADDRSTRLEN] = "147.229.2.221";
+        //char ip4[INET6_ADDRSTRLEN] = "77.66.30.195";
+        //bool flag = false;
+        //ip_to_str(&actual_key.src, ip1);
+        //ip_to_str(&actual_key.dst, ip2);
+
+        //if ((strcmp(ip1, ip3) == 0) && (strcmp(ip2, ip4) == 0)) { 
+            //cout << "SOURCE " <<  ip1 << " " << " " <<endl;
+    	//    cout.flush();
+    	//    flag = true;
+    	//    flagg = true;
+    	//} else if (strcmp(ip2, ip4) == 0) {
+    	    //cout << "DESTINATION " << ip2 << endl;
+    	//    cout.flush();
+    	    //flag = true;
+    	//}
 	
 	// iterate through history
 	history_iter it;
@@ -479,7 +509,9 @@ int main (int argc, char** argv)
 	    if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - it->second.first_t) > config.det_window) {
 		
 		// DETECTION PROCESS
-		
+		//if (flag) 
+		//    cout << "det " << ip1 << " " << ip2 << " ";
+		    
 		// create histograms
 		histogram_t hvqb, hvqp, hvrb, hvrp;
 		histogram_norm_t hvrb_n;
@@ -488,22 +520,26 @@ int main (int argc, char** argv)
 		hvrb = createHistogram(it->second, BYTES, RESPONSE);
 		hvrp = createHistogram(it->second, PACKETS, RESPONSE);
 		
-		//printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb)),config.min_flows);
+		//if (flag) 
+		//    printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb), BYTES),config.min_flows);
 		
 		// detection algorithm
-		if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb)) > config.min_flows) ) {
+		if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), BYTES) > config.min_flows) ) {
 		
-		    //printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
+		//    if (flag) 
+		//	printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
 		
 		    if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
 			
-			//cout << "!3! " << sum(topnHistogram(hvrb)) << " " << sum(topnHistogram(hvqb)) << " " << config.min_a << endl;
+		//	if (flag) 
+		//	    cout << "!3! " << sum(topnHistogram(hvrb), BYTES) << " " << sum(topnHistogram(hvqb), BYTES) << " " << config.min_a << endl;
 			
-			if (sum(topnHistogram(hvqb)) > 0) {
-				if ( (sum(topnHistogram(hvrb)) / sum(topnHistogram(hvqb))) > config.min_a ) {
+			if (sum(topnHistogram(hvqb), BYTES) > 0) {
+				if ( (sum(topnHistogram(hvrb), BYTES) / sum(topnHistogram(hvqb), BYTES)) > config.min_a ) {
 					//send(<AMPLIFICATION_ALERT>);
-					//cout << "!4!" << endl;
-					cout.flush();
+		//			if (flag) 
+		//			    cout << "!4!" << endl;
+		//			cout.flush();
 					
 					// set detection alert template fields
 					ur_set(unirec_out, detection, UR_SRC_IP, ur_get(unirec_in, data, UR_SRC_IP));
@@ -512,8 +548,8 @@ int main (int argc, char** argv)
 					ur_set(unirec_out, detection, UR_FLOWS, (it->second.q.size()+it->second.r.size()));
 					ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
 					ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
-					ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
-					ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+					ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
+					ur_set(unirec_out, detection, UR_TIME_LAST, ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)));
 					
 					// send alert
 					trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
@@ -523,29 +559,33 @@ int main (int argc, char** argv)
 		}
 		
 		// DELETION OF WINDOW
-		/*
+		
 		// delete flows from queries
-		for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); del++) {
+		for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
 		
 			if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
 				it->second.total_bytes -= del->bytes;
 				it->second.total_packets -= del->packets;
-				it->second.q.erase(del);
+				del = it->second.q.erase(del);
+			} else {
+				++del;
 			}
 		}
 		
 		
 		// delete flows from responses
-		//for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); del++) {
-		//
-		//	
-		//	if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
-		//		
-		//		it->second.total_bytes -= del->bytes;
-		//		it->second.total_packets -= del->packets;
-		//		it->second.r.erase(del);
-		//	}
-		//}
+		for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
+		
+			
+			if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
+				
+				it->second.total_bytes -= del->bytes;
+				it->second.total_packets -= del->packets;
+				del = it->second.r.erase(del);
+			} else {
+				++del;
+			}
+		}
 		
 		// determine new first time of key was spotted
 		ur_time_t min_time = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
@@ -566,7 +606,7 @@ int main (int argc, char** argv)
 		}
 		
 		it->second.first_t = min_time;
-		*/
+		
 	    }
 	
 	} else {	// does not exist - create new one
