@@ -111,8 +111,8 @@ Additional parameters:
     -y <num>		minimal threshold for average size of responses in packets in TOP-N (0)
     -l <num>		minimal threshold for average size of responses in bytes in TOP-N (1000)
     -m <num>		maximal threshold for average size of queries in bytes in TOP-N (300)
-    -h <sec>		time window of detection (3600)
-    -s <sec>		time window of deletion (300)
+    -w <sec>		time window of detection / timeout of inactive flow key (3600)
+    -s <sec>		time window of deletion / period of inactive flow keys checking (300)
 
 5. Compilation and linking
 ==========================
