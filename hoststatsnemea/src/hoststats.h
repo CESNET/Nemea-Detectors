@@ -11,7 +11,7 @@
 
 extern "C" {
    #include "../../../unirec/ipaddr.h"
-   #include "../../../common/cuckoo_hash_v2/cuckoo_hash.h"
+   #include "../../../common/cuckoo_hash_v2/cuckoo_hash_v2.h"
 }
 
 /////////////////////////////////////////////////////////////////
