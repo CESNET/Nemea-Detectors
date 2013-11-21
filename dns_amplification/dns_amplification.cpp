@@ -115,7 +115,7 @@ void delete_inactive(int signum) {
 
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
-	
+
 		if (((long)actual_timestamp - (long)iter->second.last_t) > config.det_window) {
 			model.erase(iter++);
 		} else {
@@ -297,7 +297,7 @@ unsigned int sum (histogram_t h, int type) {
 
 	// sum
 	unsigned int s = 0;
-	
+
 	for (histogram_iter it = h.begin(); it != h.end(); it++) {
 
 		// choose first or second value of map
@@ -340,12 +340,12 @@ float sumN (histogram_norm_t h) {
 float sum_average (histogram_t h) {
 
 	// sum and number of items
-	unsigned int s = 0;
-	unsigned int n = 0;
+	unsigned long s = 0;
+	unsigned long n = 0;
 
 	for (histogram_iter it = h.begin(); it != h.end(); ++it) {
-		s += it->first;
-		n++;
+		s += (it->first * it->second);
+		n += it->second;
 	}
 
 	// check for returning zero
@@ -377,7 +377,7 @@ int main (int argc, char** argv) {
 
 	// parse parameters
 	char opt;
-	while ((opt = getopt(argc, argv, "p:n:t:q:a:i:l:m:w:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:n:t:q:a:I:l:y:m:w:s:")) != -1) {
 		switch (opt) {
 			case 'p':
 				config.port = atoi(optarg);
@@ -394,7 +394,7 @@ int main (int argc, char** argv) {
 			case 'a':
 				config.min_a = atoi(optarg);
 				break;
-			case 'i':
+			case 'I':
 				config.min_flows_norm = atof(optarg);
 				break;
 			case 'l':
@@ -465,7 +465,7 @@ int main (int argc, char** argv) {
 	}
 
 	// get ports of flow
-	src_port = ur_get(unirec_in, data, UR_SRC_PORT); 
+	src_port = ur_get(unirec_in, data, UR_SRC_PORT);
 	dst_port = ur_get(unirec_in, data, UR_DST_PORT);
 
 	// create actualy inspected key
@@ -476,7 +476,7 @@ int main (int argc, char** argv) {
 		qr = true;
 		actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
 		actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
-	} else if (dst_port == config.port) { 
+	} else if (dst_port == config.port) {
 		qr = false;
 		actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
 		actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
