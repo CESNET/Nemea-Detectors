@@ -7,18 +7,6 @@
 using namespace std;
 
 
-const std::string get_rec_time(const hosts_record_t &rec)
-{
-   time_t temp = rec.first_rec_ts;
-   struct tm *timeinfo;
-   char buff[13]; //12 signs + '/0'
-
-   timeinfo = localtime(&temp);
-   strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo); 
-
-   return string(buff);
-}
-
 /*
 void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
 {
@@ -90,7 +78,7 @@ void check_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        rec.out_all_uniqueips >= 200 && // a lot of different destinations
        rec.out_all_syn_cnt > rec.out_all_flows/2) // it is more than half of total outgoing traffic of this address
    {
-      Event evt(get_rec_time(rec), PORTSCAN_H);
+      Event evt(rec.first_rec_ts, PORTSCAN_H);
       evt.addProto(TCP).addSrcAddr(addr);
       evt.setScale(rec.out_all_syn_cnt - rec.out_all_ack_cnt);
       evt.setNote("horizontal SYN scan");
@@ -102,7 +90,7 @@ void check_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        rec.in_all_packets < 2*rec.in_all_flows && // packets per flow < 2
        rec.out_all_flows < rec.in_all_flows/2) // less than half of requests are replied
    {
-      Event evt(get_rec_time(rec), DOS);
+      Event evt(rec.first_rec_ts, DOS);
       evt.addProto(TCP).addDstAddr(addr);
       evt.setScale(rec.in_all_flows);
       evt.setNote("in: %u flows, %u packets; out: %u flows, %u packets; approx. %u source addresses",
@@ -120,7 +108,7 @@ void check_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        rec.out_all_packets < 2*rec.out_all_flows && // packets per flow < 2
        rec.in_all_flows < rec.out_all_flows/2) // less than half of requests are replied
    {
-      Event evt(get_rec_time(rec), DOS);
+      Event evt(rec.first_rec_ts, DOS);
       evt.addProto(TCP).addSrcAddr(addr);
       evt.setScale(rec.out_all_flows);
       evt.setNote("out: %u flows, %u packets; in: %u flows, %u packets; approx. %u destination addresses",
@@ -186,7 +174,7 @@ void check_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
    )
    && ( rec.out_all_syn_cnt > BRUTEFORCE_IPS_RATIO*rec.out_all_uniqueips) // alespon 30x odpovidal stejne adrese
    ) {
-      Event evt(get_rec_time(rec), BRUTEFORCE);
+      Event evt(rec.first_rec_ts, BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addDstAddr(addr);
       evt.setScale(rec.in_all_syn_cnt);
       //evt.setNote("");
@@ -224,7 +212,7 @@ void check_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
    )
    )
    {
-      Event evt(get_rec_time(rec), BRUTEFORCE);
+      Event evt(rec.first_rec_ts, BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addSrcAddr(addr);
       evt.setScale(rec.out_all_syn_cnt);
       //evt.setNote("");
