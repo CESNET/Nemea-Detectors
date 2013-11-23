@@ -20,14 +20,14 @@ class Event
 {
 public:
    EventType type;
-   std::string timeslot;
+   uint32_t timeslot;
    std::vector<ip_addr_t> src_addr, dst_addr;
    std::vector<uint16_t> src_port, dst_port;
    std::vector<uint8_t> proto;
    int scale;
    std::string note;
    
-   Event(const std::string &timeslot, EventType type)
+   Event(const uint32_t &timeslot, EventType type)
     : type(type), timeslot(timeslot)
    { }
    
