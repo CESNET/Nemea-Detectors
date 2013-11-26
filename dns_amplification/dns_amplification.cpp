@@ -581,25 +581,29 @@ int main (int argc, char** argv) {
 				}
 			}
 
-			// determine new first time of key was spotted
-			ur_time_t min_time = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+			if (it->second.r.empty() || it->second.q.empty()){
+			   model.erase(it);
+			} else {
+            // determine new first time of key was spotted
+            ur_time_t min_time = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 
-			for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); del++) {
+            for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); del++) {
 
-				if (del->t < min_time) {
-					min_time = del->t;
-				}
-			}
+               if (del->t < min_time) {
+                  min_time = del->t;
+               }
+            }
 
-			for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); del++) {
+            for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); del++) {
 
-				if (del->t < min_time) {
-					min_time = del->t;
-				}
-			}
+               if (del->t < min_time) {
+                  min_time = del->t;
+               }
+            }
 
-			it->second.first_t = min_time;
-			}
+            it->second.first_t = min_time;
+            }
+         }
 
 		} else {	// does not exist - create new one
 
