@@ -565,8 +565,6 @@ int main (int argc, char** argv) {
 			for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
 
 				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
-					it->second.total_bytes -= del->bytes;
-					it->second.total_packets -= del->packets;
 					del = it->second.q.erase(del);
 				} else {
 					++del;
@@ -577,8 +575,6 @@ int main (int argc, char** argv) {
 			for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
 
 				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
-					it->second.total_bytes -= del->bytes;
-					it->second.total_packets -= del->packets;
 					del = it->second.r.erase(del);
 				} else {
 					++del;
