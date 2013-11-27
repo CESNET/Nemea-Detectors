@@ -63,6 +63,9 @@ extern "C" {
 #define ERROR 		-1
 #define OK 		1
 
+#define LOG_FILE_PREFIX ""
+#define LOG_FILE_SUFFIX ".log"
+
 using namespace std;
 
 
@@ -137,6 +140,8 @@ struct flow_data_t {
 	int total_packets;		// total packets of flows
 	ur_time_t first_t;		// timestamp of first flow
 	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
+	ur_time_t last_logged;		// timestamp of last logged flow
+	uint32_t identifier;   // unique identifier of event
 };
 
 /** Map storing history model of flows */
@@ -158,4 +163,4 @@ typedef histogram_norm_t::iterator histogram_norm_iter;
 }
 #endif
 
-#endif /* SIMPLE_BOTNET_DETECTOR_H */   
+#endif /* SIMPLE_BOTNET_DETECTOR_H */
