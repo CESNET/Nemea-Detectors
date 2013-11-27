@@ -43,6 +43,8 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
@@ -366,6 +368,10 @@ int main (int argc, char** argv) {
 
 	int ret;			// return value
 
+   uint32_t unique_id = 0;
+   ofstream log;
+   ostringstream filename;
+
 	uint16_t src_port;		// actual source port
 	uint16_t dst_port;		// actual destination flows
 	bool qr;			// query=false, response=true
@@ -524,16 +530,16 @@ int main (int argc, char** argv) {
 			hvrb = createHistogram(it->second, BYTES, RESPONSE);
 			hvrp = createHistogram(it->second, PACKETS, RESPONSE);
 
-			//printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb), VALUE),config.min_flows);
+//			printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb), VALUE),config.min_flows);
 
 			// detection algorithm
 			if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
 
-				//printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
+//				printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
 
 				if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
 
-					//cout << "!3! " << sum(topnHistogram(hvrb), KEY) << " " << sum(topnHistogram(hvqb), KEY) << " " << config.min_a << endl;
+//					cout << "!3! " << sum(topnHistogram(hvrb), KEY) << " " << sum(topnHistogram(hvqb), KEY) << " " << config.min_a << endl;
 
 					if (sum(topnHistogram(hvqb), BYTES) > 0) {
 
@@ -541,7 +547,7 @@ int main (int argc, char** argv) {
 
 							//send(<AMPLIFICATION_ALERT>);
 
-							//cout << "!4!" << endl;
+//							cout << "!4!" << endl;
 
 							// set detection alert template fields
 							ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
@@ -552,9 +558,100 @@ int main (int argc, char** argv) {
 							ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
 							ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
 							ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+							ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
 							// send alert
 							trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
+
+                     // LOG QUERY/RESPONSE VECTORS
+                     size_t pos[2] = {0,0};
+                     int shorter;
+                     int longer;
+                     tm *rec_time;
+                     char time_buff[40];
+                     ur_time_t tmp_t_r = 0;
+                     ur_time_t tmp_t_q = 0;
+                     ur_time_t sooner_end;
+                     ur_time_t later_end;
+                     for (vector<flow_item_t>::iterator iter2 = it->second.q.begin(); iter2 != it->second.q.end(); ++iter2) {
+                        if (iter2->t > tmp_t_q) {
+                           tmp_t_q = iter2->t;
+                        }
+                     }
+                     for (vector<flow_item_t>::iterator iter2 = it->second.r.begin(); iter2 != it->second.r.end(); ++iter2) {
+                        if (iter2->t > tmp_t_r) {
+                           tmp_t_r = iter2->t;
+                        }
+                     }
+
+                     if (tmp_t_r < tmp_t_q){
+                        shorter = RESPONSE;
+                        longer = QUERY;
+                        sooner_end = it->second.r.size();
+                        later_end = it->second.q.size();
+                     } else {
+                        shorter = QUERY;
+                        longer = RESPONSE;
+                        sooner_end = it->second.q.size();
+                        later_end = it->second.r.size();
+                     }
+
+                     filename.str("");
+                     filename.clear();
+                     filename << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+
+                     ifstream if_test(filename.str().c_str());
+                     if (!if_test){//print header
+                        // prepare log file
+                        char addr_buff[INET6_ADDRSTRLEN];
+                        log.open(filename.str().c_str());
+                        if (log.is_open()){
+                           // print header
+                           ip_to_str(&actual_key.src, addr_buff);
+                           log << "Abused server IP: " << addr_buff;
+                           ip_to_str(&actual_key.dst, addr_buff);
+                           log << "   Target IP: " << addr_buff << "\n";
+                           log << "Time\tDirection\tPackets\tBytes" << endl;
+                           log.close();
+                        } else {
+                           cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
+                        }
+                     } else {
+                        if_test.close();
+                     }
+
+                     log.open(filename.str().c_str(), ofstream::app);
+
+                     if (log.is_open()){
+                        while (pos[shorter] < sooner_end){
+                           if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
+                              rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
+                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+                              log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                              ++pos[QUERY];
+                           } else {
+                              rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
+                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+                              log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                              ++pos[RESPONSE];
+                           }
+                        }
+                        for (pos[shorter]; pos[shorter] < later_end; ++pos[shorter]) {
+                           if (shorter == QUERY){
+                              rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
+                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+                              log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                           } else {
+                              rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
+                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+                              log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                           }
+                        }
+
+                        log.close();
+                     } else {
+                        cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
+                     }
 						}
 					}
 				}
@@ -614,6 +711,9 @@ int main (int argc, char** argv) {
 			d.total_packets = ur_get(unirec_in, data, UR_PACKETS);
 			d.first_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 			d.last_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+			d.last_logged = 0;
+			d.identifier = unique_id;
+			++unique_id;
 
 			// create flow item
 			flow_item_t i;
