@@ -16,12 +16,15 @@ extern ur_template_t *tmpl_out;
 
 string getProtoString(uint8_t proto);
 string getTypeString(EventType type);
+string getTimeString(const uint32_t &timestamp);
 
 void reportEvent(const Event& event)
 {
+   string timeslot = getTimeString(event.timeslot);
+
    // Print info about event into a string 
    stringstream line;
-   line << event.timeslot << ';';
+   line << timeslot << ';';
    line << getTypeString(event.type) << ';';
    for (vector<uint8_t>::const_iterator it = event.proto.begin(); it != event.proto.end(); ++it) {
       if (it != event.proto.begin())
@@ -63,19 +66,19 @@ void reportEvent(const Event& event)
    string warden_script = config->getValue("warden-send-script");
    config->unlock();
    
-   string y = event.timeslot.substr(0,4);
-   string m = event.timeslot.substr(4,2);
-   string d = event.timeslot.substr(6,2);
-   string h = event.timeslot.substr(8,2);
-   string n = event.timeslot.substr(10,2);
+   string y = timeslot.substr(0,4);
+   string m = timeslot.substr(4,2);
+   string d = timeslot.substr(6,2);
+   string h = timeslot.substr(8,2);
+   string n = timeslot.substr(10,2);
    
    if (!path.empty()) {
       // Fill in year, month, day, hour and minute
-//       replace(path, "%y", event.timeslot.substr(0,4));
-//       replace(path, "%m", event.timeslot.substr(4,2));
-//       replace(path, "%d", event.timeslot.substr(6,2));
-//       replace(path, "%H", event.timeslot.substr(8,2));
-//       replace(path, "%M", event.timeslot.substr(10,2));
+//       replace(path, "%y", timeslot.substr(0,4));
+//       replace(path, "%m", timeslot.substr(4,2));
+//       replace(path, "%d", timeslot.substr(6,2));
+//       replace(path, "%H", timeslot.substr(8,2));
+//       replace(path, "%M", timeslot.substr(10,2));
       
       if (path[path.size()-1] != '/')
          path += '/';
@@ -120,7 +123,52 @@ void reportEvent(const Event& event)
    }
 
    // Send event report to TRAP output interface (HALF_WAIT)
-   // TODO: implement
+   void *rec = ur_create(tmpl_out, 0);
+
+   ur_set(tmpl_out, rec, UR_EVENT_TYPE, event.type);
+   ur_set(tmpl_out, rec, UR_TIMESLOT, event.timeslot);
+
+   // SRC IP ADDRESS
+   if (!event.src_addr.empty()) {
+      ur_set(tmpl_out, rec, UR_SRC_IP, event.src_addr.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_int(0));
+   }
+
+
+   // DST IP ADDRESS
+   if (!event.dst_addr.empty()) {
+      ur_set(tmpl_out, rec, UR_DST_IP, event.dst_addr.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_DST_IP, ip_from_int(0));
+   }
+
+   // SRC PORT
+   if (!event.src_port.empty()) {
+      ur_set(tmpl_out, rec, UR_SRC_PORT, event.src_port.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_SRC_PORT, 0);
+   }
+
+   // DST PORT
+   if (!event.dst_port.empty()) {
+      ur_set(tmpl_out, rec, UR_DST_PORT, event.dst_port.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_DST_PORT, 0);
+   }
+
+   // PROTOCOL
+   if (!event.proto.empty()) {
+      ur_set(tmpl_out, rec, UR_PROTOCOL, event.proto.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_PROTOCOL, 0);
+   }
+
+   ur_set(tmpl_out, rec, UR_EVENT_SCALE, double(event.scale));
+
+   trap_send_data(0, rec, ur_rec_static_size(tmpl_out), TRAP_NO_WAIT);
+
+   ur_free(rec);
 }
 
 
@@ -148,6 +196,18 @@ string getProtoString(uint8_t proto)
       case ICMP: return "ICMP";
       default:   return int2str((int)proto);
    }
+}
+
+std::string getTimeString(const uint32_t &timestamp)
+{
+   time_t temp = timestamp;
+   struct tm *timeinfo;
+   char buff[13]; //12 signs + '/0'
+
+   timeinfo = localtime(&temp);
+   strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo); 
+
+   return string(buff);
 }
 
 

@@ -85,9 +85,9 @@ trap_module_info_t module_info = {
       "\n"
       "TRAP Interfaces:\n"
       "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
-      "   Outputs: 0\n",
+      "   Outputs: 1\n",
    1, // Number of input TRAP interfaces
-   0, // Number of output TRAP interfaces
+   1, // Number of output TRAP interfaces
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 
    // UniRec template
    tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
-   tmpl_out = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL");
+   tmpl_out = ur_create_template("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
    if (tmpl_in == NULL || tmpl_out == NULL) {
       log(LOG_ERR, "Error when creating UniRec template.\n");
       if (tmpl_in == NULL) ur_free_template(tmpl_in);
