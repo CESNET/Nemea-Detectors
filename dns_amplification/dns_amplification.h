@@ -138,6 +138,7 @@ struct flow_data_t {
 	vector<flow_item_t> r;		// vector of response flows
 	int total_bytes;		// total bytes of flows
 	int total_packets;		// total packets of flows
+	int total_flows;		// total number of flows
 	ur_time_t first_t;		// timestamp of first flow
 	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
 	ur_time_t last_logged;		// timestamp of last logged flow

@@ -501,6 +501,7 @@ int main (int argc, char** argv) {
 
 		it->second.total_bytes += ur_get(unirec_in, data, UR_BYTES);
 		it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
+		it->second.total_flows += 1;
 		it->second.last_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 
 		// creeate new flow information structure
@@ -553,7 +554,7 @@ int main (int argc, char** argv) {
 							ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
 							ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
 							ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-							ur_set(unirec_out, detection, UR_FLOWS, (it->second.q.size()+it->second.r.size()));
+							ur_set(unirec_out, detection, UR_FLOWS, it->second.total_flows);
 							ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
 							ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
 							ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
@@ -709,6 +710,7 @@ int main (int argc, char** argv) {
 
 			d.total_bytes = ur_get(unirec_in, data, UR_BYTES);
 			d.total_packets = ur_get(unirec_in, data, UR_PACKETS);
+			d.total_flows = 1;
 			d.first_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 			d.last_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 			d.last_logged = 0;
