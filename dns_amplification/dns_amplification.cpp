@@ -97,8 +97,8 @@ static int stop = 0;
 static config_t config;
 /* created history model of flows */
 static history_t model;
-/* actual flow timestamp  */
-static ur_time_t actual_timestamp;
+/* current flow timestamp (seconds) */
+static unsigned long actual_timestamp;
 
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
@@ -118,7 +118,7 @@ void delete_inactive(int signum) {
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
 
-		if (((long)actual_timestamp - (long)iter->second.last_t) > config.det_window) {
+		if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
 			model.erase(iter++);
 		} else {
 			++iter;
@@ -358,6 +358,18 @@ float sum_average (histogram_t h) {
 }
 
 
+static char time_buff[25];
+
+char *time2str(ur_time_t t)
+{
+   time_t sec = ur_time_get_sec(t);
+   int msec = ur_time_get_msec(t);
+   strftime(time_buff, 25, "%Y-%m-%dT%H:%M:%S", gmtime(&sec));
+   sprintf(time_buff + 19, ".%03iZ", msec);
+   return time_buff;
+}
+
+
 /**
  * Main function.
  *
@@ -502,11 +514,11 @@ int main (int argc, char** argv) {
 		it->second.total_bytes += ur_get(unirec_in, data, UR_BYTES);
 		it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
 		it->second.total_flows += 1;
-		it->second.last_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
-
-		// creeate new flow information structure
+		it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
+		
+		// create new flow information structure
 		flow_item_t i;
-		i.t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+		i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
 		i.bytes = ur_get(unirec_in, data, UR_BYTES);
 		i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
@@ -517,7 +529,7 @@ int main (int argc, char** argv) {
 			it->second.q.push_back(i);
 
 		long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
-		long t2 = it->second.first_t;
+		long t2 = ur_time_get_sec(it->second.first_t);
 		long t = t1 - t2;
 
 		// check if detection window for the key is met
@@ -557,7 +569,7 @@ int main (int argc, char** argv) {
 							ur_set(unirec_out, detection, UR_FLOWS, it->second.total_flows);
 							ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
 							ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
-							ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
+							ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
 							ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
 							ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
@@ -568,8 +580,6 @@ int main (int argc, char** argv) {
                      size_t pos[2] = {0,0};
                      int shorter;
                      int longer;
-                     tm *rec_time;
-                     char time_buff[40];
                      ur_time_t tmp_t_r = 0;
                      ur_time_t tmp_t_q = 0;
                      ur_time_t sooner_end;
@@ -626,26 +636,22 @@ int main (int argc, char** argv) {
                      if (log.is_open()){
                         while (pos[shorter] < sooner_end){
                            if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
-                              rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
-                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-                              log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                              char *time_str = time2str(it->second.q[pos[QUERY]].t);
+                              log << time_str << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
                               ++pos[QUERY];
                            } else {
-                              rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
-                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-                              log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                              char *time_str = time2str(it->second.r[pos[RESPONSE]].t);
+                              log << time_str << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
                               ++pos[RESPONSE];
                            }
                         }
                         for (pos[shorter]; pos[shorter] < later_end; ++pos[shorter]) {
                            if (shorter == QUERY){
-                              rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
-                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-                              log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                              char *time_str = time2str(it->second.q[pos[QUERY]].t);
+                              log << time_str << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
                            } else {
-                              rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
-                              strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-                              log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                              char *time_str = time2str(it->second.r[pos[RESPONSE]].t);
+                              log << time_str << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
                            }
                         }
 
@@ -662,7 +668,7 @@ int main (int argc, char** argv) {
 			// delete flows from queries
 			for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
 
-				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
+				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
 					del = it->second.q.erase(del);
 				} else {
 					++del;
@@ -672,7 +678,7 @@ int main (int argc, char** argv) {
 			// delete flows from responses
 			for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
 
-				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - del->t) > (config.det_window - config.del_time)) {
+				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
 					del = it->second.r.erase(del);
 				} else {
 					++del;
@@ -683,7 +689,7 @@ int main (int argc, char** argv) {
 			   model.erase(it);
 			} else {
             // determine new first time of key was spotted
-            ur_time_t min_time = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+            ur_time_t min_time = ur_get(unirec_in, data, UR_TIME_FIRST);
 
             for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); del++) {
 
@@ -711,8 +717,8 @@ int main (int argc, char** argv) {
 			d.total_bytes = ur_get(unirec_in, data, UR_BYTES);
 			d.total_packets = ur_get(unirec_in, data, UR_PACKETS);
 			d.total_flows = 1;
-			d.first_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
-			d.last_t = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+			d.first_t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			d.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
 			d.last_logged = 0;
 			d.identifier = unique_id;
 			++unique_id;
