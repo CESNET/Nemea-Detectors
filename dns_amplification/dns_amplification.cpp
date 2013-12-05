@@ -357,6 +357,43 @@ float sum_average (histogram_t h) {
 		return (s/n);
 }
 
+/**
+ * Calculates maximum packet count in vecotr of given direction
+ *
+ * @param vec input vector
+ * @return maximum packet count
+ */
+int max_packets (vector<flow_item_t> &vec) {
+
+	int max = 0;
+
+	for (vector<flow_item_t>::iterator it = vec.begin(); it != vec.end(); ++it) {
+		if (it->packets > max){
+			max = it->packets;
+		}
+	}
+
+	return (max);
+}
+
+/**
+ * Calculates maximum byte count in vecotr of given direction
+ *
+ * @param vec input vector
+ * @return maximum byte count
+ */
+int max_bytes (vector<flow_item_t> &vec) {
+
+	int max = 0;
+
+	for (vector<flow_item_t>::iterator it = vec.begin(); it != vec.end(); ++it) {
+		if (it->bytes > max){
+			max = it->bytes;
+		}
+	}
+
+	return (max);
+}
 
 /**
  * Main function.
@@ -383,7 +420,7 @@ int main (int argc, char** argv) {
 
 	// parse parameters
 	char opt;
-	while ((opt = getopt(argc, argv, "p:n:t:q:a:I:l:y:m:w:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:n:t:q:a:I:l:y:m:w:s:D:E:F:G:")) != -1) {
 		switch (opt) {
 			case 'p':
 				config.port = atoi(optarg);
@@ -417,6 +454,18 @@ int main (int argc, char** argv) {
 				break;
 			case 's':
 				config.del_time = atoi (optarg);
+				break;
+			case 'D':
+				config.max_quer_flow_packets = atoi (optarg);
+				break;
+			case 'E':
+				config.max_quer_flow_bytes = atoi (optarg);
+				break;
+			case 'F':
+				config.max_resp_flow_packets = atoi (optarg);
+				break;
+			case 'G':
+				config.max_resp_flow_bytes = atoi (optarg);
 				break;
 			default:
 				fprintf(stderr, "Invalid arguments.\n");
@@ -533,7 +582,118 @@ int main (int argc, char** argv) {
 //			printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb), VALUE),config.min_flows);
 
 			// detection algorithm
-			if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
+			if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
+//				cout << max_packets(it->second.q) << endl;
+//				cout << max_bytes(it->second.r) << endl;
+//				char addr_buff[INET6_ADDRSTRLEN];
+//				ip_to_str(&actual_key.src, addr_buff);
+//				cout << "Abused server IP: " << addr_buff;
+//				ip_to_str(&actual_key.dst, addr_buff);
+//				cout << "   Target IP: " << addr_buff << "\n";
+				// set detection alert template fields
+				ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
+				ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
+				ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
+				ur_set(unirec_out, detection, UR_FLOWS, (it->second.q.size()+it->second.r.size()));
+				ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
+				ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
+				ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
+				ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+				ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
+
+				// send alert
+				trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
+
+				// LOG QUERY/RESPONSE VECTORS
+				size_t pos[2] = {0,0};
+				int shorter;
+				int longer;
+				tm *rec_time;
+				char time_buff[40];
+				ur_time_t tmp_t_r = 0;
+				ur_time_t tmp_t_q = 0;
+				ur_time_t sooner_end;
+				ur_time_t later_end;
+				for (vector<flow_item_t>::iterator iter2 = it->second.q.begin(); iter2 != it->second.q.end(); ++iter2) {
+					if (iter2->t > tmp_t_q) {
+						tmp_t_q = iter2->t;
+					}
+				}
+				for (vector<flow_item_t>::iterator iter2 = it->second.r.begin(); iter2 != it->second.r.end(); ++iter2) {
+					if (iter2->t > tmp_t_r) {
+						tmp_t_r = iter2->t;
+					}
+				}
+
+				if (tmp_t_r < tmp_t_q){
+					shorter = RESPONSE;
+					longer = QUERY;
+					sooner_end = it->second.r.size();
+					later_end = it->second.q.size();
+				} else {
+					shorter = QUERY;
+					longer = RESPONSE;
+					sooner_end = it->second.q.size();
+					later_end = it->second.r.size();
+				}
+
+				filename.str("");
+				filename.clear();
+				filename << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+
+				ifstream if_test(filename.str().c_str());
+				if (!if_test){//print header
+					// prepare log file
+					char addr_buff[INET6_ADDRSTRLEN];
+					log.open(filename.str().c_str());
+					if (log.is_open()){
+						// print header
+						ip_to_str(&actual_key.src, addr_buff);
+						log << "Abused server IP: " << addr_buff;
+						ip_to_str(&actual_key.dst, addr_buff);
+						log << "   Target IP: " << addr_buff << "\n";
+						log << "Time\tDirection\tPackets\tBytes" << endl;
+						log.close();
+					} else {
+						cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
+					}
+				} else {
+					if_test.close();
+				}
+
+				log.open(filename.str().c_str(), ofstream::app);
+
+				if (log.is_open()){
+					while (pos[shorter] < sooner_end){
+						if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
+							rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
+							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+							log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+							++pos[QUERY];
+						} else {
+							rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
+							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+							log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+							++pos[RESPONSE];
+						}
+					}
+					for (pos[shorter]; pos[shorter] < later_end; ++pos[shorter]) {
+						if (shorter == QUERY){
+							rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
+							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+							log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+						} else {
+							rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
+							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
+							log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+						}
+					}
+
+					log.close();
+				} else {
+					cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
+				}
+			} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
 
 //				printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
 
