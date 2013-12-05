@@ -64,8 +64,7 @@ extern "C" {
 #define OK 		1
 
 #define LOG_FILE_PREFIX ""
-#define LOG_FILE_SUFFIX ".log"
-
+#define LOG_FILE_SUFFIX "-TEST"
 using namespace std;
 
 
@@ -83,6 +82,10 @@ typedef struct config_s {
 	int min_resp_packets;	/** minimal average of response packets in TOP-N */
 	int min_resp_bytes;	/** minimal threshold for average size of responses in bytes in TOP-N */
 	int max_quer_bytes;	/** maximal threshold for average size of queries in bytes in TOP-N */
+	int max_quer_flow_packets;	/** maximal threshold for number of packets in one flow for requests */
+	int max_quer_flow_bytes;	/** maximal threshold for number of bytes in one flow for requests */
+	int max_resp_flow_packets;	/** maximal threshold for number of packets in one flow for responses */
+	int max_resp_flow_bytes;	/** maximal threshold for number of bytes in one flow for responses */
 	int det_window;		/** length of detection window */
 	int del_time;		/** length of delete window after detection */
 
@@ -96,6 +99,10 @@ typedef struct config_s {
 		min_resp_packets = 0;
 		min_resp_bytes = 1000;
 		max_quer_bytes = 300;
+		max_quer_flow_packets = 1000;
+		max_quer_flow_bytes = 40000;
+		max_resp_flow_packets = 1000;
+		max_resp_flow_bytes = 100000;
 		det_window = 3600;
 		del_time = 300;
 	}
@@ -141,8 +148,8 @@ struct flow_data_t {
 	int total_flows;		// total number of flows
 	ur_time_t first_t;		// timestamp of first flow
 	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
+	uint32_t identifier;		// unique identifier
 	ur_time_t last_logged;		// timestamp of last logged flow
-	uint32_t identifier;   // unique identifier of event
 };
 
 /** Map storing history model of flows */
