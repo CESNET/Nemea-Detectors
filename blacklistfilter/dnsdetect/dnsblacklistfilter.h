@@ -50,7 +50,7 @@ extern "C" {
 #endif
 
 #include "../../../unirec/unirec.h"
-#include "../../../common/cuckoo_hash_v2/cuckoo_hash.h"
+#include "../../../common/cuckoo_hash_v2/cuckoo_hash_v2.h"
 #include "../../../common/cuckoo_hash/cuckoo_hash.h"
 
 /**
