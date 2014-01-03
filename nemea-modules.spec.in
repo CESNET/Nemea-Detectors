@@ -1,0 +1,38 @@
+Summary: Package with basic NEMEA modules
+Name: nemea-modules
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: https://www.liberouter.org/repo/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+Requires: libtrap nemea-common
+BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
+Provides: nemea-modules
+
+%description
+
+%prep
+%setup
+
+%build
+./configure --prefix=%{_prefix} --libdir=%{_libdir} -q --enable-silent-rules;
+make -j5
+
+%install
+make -j5 DESTDIR=$RPM_BUILD_ROOT install
+
+%post
+
+%files
+%{_bindir}/*
+%{_docdir}/nemea-modules/anonymizer/README
+%{_docdir}/nemea-modules/entropy/README
+%{_docdir}/nemea-modules/hoststatsnemea/README
+%{_docdir}/nemea-modules/pca/README
+%{_docdir}/nemea-modules/trapdreplay/README
+%{_docdir}/nemea-modules/trapdump/README
+

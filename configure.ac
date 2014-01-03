@@ -2,20 +2,30 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [0.0.0], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [1.0.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([trapdump/trapdump.c])
 AC_CONFIG_HEADERS([config.h])
+RELEASE=1
+AC_SUBST(RELEASE)
+USERNAME=`git config --get user.name`
+USERMAIL=`git config --get user.email`
+AC_SUBST(USERNAME)
+AC_SUBST(USERMAIL)
 AM_INIT_AUTOMAKE([-Wall -Werror silent-rules])
 LT_INIT
 
-USERNAME=`git config --get user.name`
-USERMAIL=`git config --get user.email`
-
 AC_CONFIG_MACRO_DIR([m4])
 
+pkgdatadir=${datadir}/nemea
+PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
+AC_SUBST(PKGDATADIR)
+AC_SUBST(pkgdatadir)
+AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
+AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
 
 # Checks for programs.
 AC_PROG_CC_C99
+AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_AWK
 AC_PROG_CPP
@@ -23,9 +33,84 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+AC_CHECK_PROG(PYTHON, python, python, [""])
+AC_SUBST(PYTHON)
+# Check for rpmbuild
+AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+
+
+if test -z "$TRAPLIB"; then
+	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
+	LDFLAGS="$LIBTRAP_LDFLAGS $LDFLAGS"
+	LIBS="$LIBTRAP_LIBS $LIBS"
+	CFLAGS="$LIBTRAP_CFLAGS $CFLAGS"
+	CXXFLAGS="$LIBTRAP_CFLAGS $CXXFLAGS"
+fi
+if test -z "$TRAPLIB"; then
+	# Check for TRAP toolkit as a superproject.
+	if test -d "$srcdir/../libtrap"; then
+	TRAPINC='$(top_srcdir)/../libtrap/include'
+	TRAPLIB='$(top_builddir)/../libtrap'
+	fi
+	# AC_SUBST command line variables from TRAPLIB and TRAPINC.
+	if test -n "$TRAPLIB"; then
+	AC_SUBST([TRAP_LTLIB], ["$TRAPLIB/libtrap.la"])
+	AC_SUBST([TRAP_INCLUDE], ["-I$TRAPINC"])
+	LDFLAGS="-L$TRAPLIB $LDFLAGS"
+	CFLAGS="-I$TRAPINC $CFLAGS"
+	CXXFLAGS="-I$TRAPINC $CXXFLAGS"
+	fi
+fi
+
+if test -z "$UNIRECLIB"; then
+	PKG_CHECK_MODULES([UNIREC], [unirec], [UNIRECLIB="yes"], AC_MSG_WARN([UNIREC was not found by pkg-config]))
+	LDFLAGS="$UNIREC_LDFLAGS $LDFLAGS"
+	LIBS="$UNIREC_LIBS $LIBS"
+	CFLAGS="$UNIREC_CFLAGS $CFLAGS"
+	CXXFLAGS="$UNIREC_CFLAGS $CXXFLAGS"
+fi
+# Still empty? Check for *installed* UNIREC.
+if test -z "$UNIRECLIB"; then
+	# Check for UNIREC toolkit as a superproject.
+	if test -d "$srcdir/../unirec"; then
+	UNIRECINC='$(top_srcdir)/../'
+	UNIRECLIB='$(top_builddir)/../unirec'
+	fi
+	# AC_SUBST command line variables from UNIRECLIB and UNIRECINC.
+	if test -n "$UNIRECLIB"; then
+	AC_SUBST([UNIREC_LTLIB], ["$UNIRECLIB/libunirec.la"])
+	AC_SUBST([UNIREC_INCLUDE], ["-I$UNIRECINC"])
+	LDFLAGS="-L$UNIRECLIB  $LDFLAGS"
+	CFLAGS="-I$UNIRECINC $CFLAGS"
+	CXXFLAGS="-I$UNIRECINC $CXXFLAGS"
+	fi
+fi
+
+if test -z "$NEMEACOMMONLIB"; then
+	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
+	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
+	LIBS="$NEMEACOMMON_LIBS $LIBS"
+	CFLAGS="$NEMEACOMMON_CFLAGS $CFLAGS"
+	CXXFLAGS="$NEMEACOMMON_CFLAGS $CXXFLAGS"
+fi
+if test -z "$NEMEACOMMONLIB"; then
+	# Check for NEMEACOMMON toolkit as a superproject.
+	if test -d "$srcdir/../common"; then
+	NEMEACOMMONINC='$(top_srcdir)/../common/include'
+	NEMEACOMMONLIB='$(top_builddir)/../common'
+	fi
+	# AC_SUBST command line variables from NEMEACOMMONLIB and NEMEACOMMONINC.
+	if test -n "$NEMEACOMMONLIB"; then
+	AC_SUBST([NEMEACOMMON_LTLIB], ["$NEMEACOMMONLIB/libnemea-common.la"])
+	AC_SUBST([NEMEACOMMON_INCLUDE], ["-I$NEMEACOMMONINC"])
+	LDFLAGS="-L$NEMEACOMMONLIB $LDFLAGS"
+	CFLAGS="-I$NEMEACOMMONINC $CFLAGS"
+	CXXFLAGS="-I$NEMEACOMMONINC $CXXFLAGS"
+	fi
+fi
+
 
 # Checks for libraries.
-AC_CHECK_LIB([trap], [trap_init])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
@@ -65,8 +150,6 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
 #DX_INIT_DOXYGEN([nemea-cpd], [Doxyfile], [doc])
 
-# for modules with configure script
-AC_CONFIG_SUBDIRS([entropy_module cpd_module])
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
@@ -99,3 +182,30 @@ AC_CONFIG_FILES([Makefile
 
 
 AC_OUTPUT
+
+echo
+echo
+echo "------------------------------------------------------------------------"
+echo "$PACKAGE $VERSION"
+echo "------------------------------------------------------------------------"
+echo
+echo
+echo "Configuration Options Summary:"
+echo
+echo "  ASM.(32 bit only)..: $ASM"
+echo "  Static binary......: $static"
+echo
+echo "Documentation..........: ${build_doc}"
+echo
+echo "Compilation............: make (or gmake)"
+echo "  CPPFLAGS.............: $CPPFLAGS"
+echo "  CFLAGS...............: $CFLAGS"
+echo "  CXXFLAGS.............: $CXXFLAGS"
+echo "  LDFLAGS..............: $LDFLAGS"
+echo "  LIBS.................: $LIBS"
+echo
+echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
+echo "  prefix...............: $prefix"
+echo "Subdirs................: $ENABLEDTESTS"
+echo
+
