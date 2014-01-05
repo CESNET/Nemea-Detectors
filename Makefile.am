@@ -8,6 +8,7 @@ delaybuffer \
 entropy_module \
 example \
 flow_gen \
+flow_sanity_check \
 flowcounter \
 flowdirection \
 hoststatsnemea \

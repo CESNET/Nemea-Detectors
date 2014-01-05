@@ -78,6 +78,7 @@ AC_CONFIG_FILES([Makefile
                  delaybuffer/Makefile
                  example/Makefile
                  flow_gen/Makefile
+                 flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
                  hoststatsnemea/Makefile
