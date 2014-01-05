@@ -7,8 +7,8 @@
 extern "C" {
    #include <libtrap/trap.h>
 }
-//#include "../../../unirec/ipaddr.h"
-#include "../../../unirec/ipaddr_cpp.h"
+//#include <unirec/ipaddr.h>
+#include <unirec/ipaddr_cpp.h>
 
 using namespace std;
 

@@ -49,9 +49,8 @@
 extern "C" {
 #endif
 
-#include "../../../unirec/unirec.h"
-#include "../../../common/cuckoo_hash_v2/cuckoo_hash_v2.h"
-#include "../../../common/cuckoo_hash/cuckoo_hash.h"
+#include <unirec/unirec.h>
+#include <cuckoo_hash_v2.h>
 
 /**
  * Size of the table with DNS blacklist

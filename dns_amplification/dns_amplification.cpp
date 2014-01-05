@@ -60,7 +60,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 #include "../../unirec/ipaddr.h"
 #include "dns_amplification.h"
 

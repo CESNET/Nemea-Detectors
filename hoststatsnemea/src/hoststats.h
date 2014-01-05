@@ -7,11 +7,11 @@
 #include <vector>
 #include <pthread.h>
 
-#include "../../../unirec/ipaddr_cpp.h"
+#include <unirec/ipaddr_cpp.h>
 
 extern "C" {
-   #include "../../../unirec/ipaddr.h"
-   #include "../../../common/cuckoo_hash_v2/cuckoo_hash_v2.h"
+   #include <unirec/ipaddr.h>
+   #include <cuckoo_hash_v2.h>
 }
 
 /////////////////////////////////////////////////////////////////

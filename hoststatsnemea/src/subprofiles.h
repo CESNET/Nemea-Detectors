@@ -9,7 +9,7 @@
 #include "detectionrules.h"
 
 extern "C" {
-   #include "../../../unirec/unirec.h"
+   #include <unirec/unirec.h>
 }
 
 // Direction flag for subprofile update functions

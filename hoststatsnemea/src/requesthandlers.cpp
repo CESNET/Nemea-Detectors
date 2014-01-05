@@ -15,7 +15,7 @@
 #include "synan.h"
 #include "config.h"
 
-#include "../../../unirec/ipaddr_cpp.h"
+#include <unirec/ipaddr_cpp.h>
 
 using namespace std;
 

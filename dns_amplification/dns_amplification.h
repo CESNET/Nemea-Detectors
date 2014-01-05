@@ -42,7 +42,7 @@
  *
  */
 
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 #include <vector>
 #include <map>
 

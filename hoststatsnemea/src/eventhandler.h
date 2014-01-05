@@ -7,7 +7,7 @@
 #include <cstdarg>
 
 #include "aux_func.h"
-#include "../../../unirec/unirec.h"
+#include <unirec/unirec.h>
 
 enum EventType {PORTSCAN, PORTSCAN_H, PORTSCAN_V, DOS, DDOS, BRUTEFORCE, OTHER};
 
