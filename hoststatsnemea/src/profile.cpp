@@ -1,3 +1,40 @@
+/*
+ * Copyright (C) 2013 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include "profile.h"
 #include "aux_func.h"
 
@@ -14,22 +51,20 @@ extern uint32_t hs_time;
 #define D_INACTIVE_TIMEOUT 30    // default value (in seconds)
 #define D_DET_START_PAUSE  5     // default time between starts of detector (in seconds)
 
-// Direction flag for subprofile update functions
-#define DIR_OUT 0x0
-#define DIR_IN  0x1
-
+#define REQ 8  // request
+#define RSP 4  // response
+#define SF  2  // single flow
+#define NRC 1  // not recognize
 
 /* -------------------- MAIN PROFILE -------------------- */
 
 HostProfile::HostProfile()
 {
    // Fill vector of subprofiles 
-   subprofile_t sp_dns("dns", "rules-dns", DNSHostProfile::update,
-      DNSHostProfile::check_record, DNSHostProfile::delete_record);
+   subprofile_t sp_dns("dns", "rules-dns", dns_pointers);
    sp_list.push_back(sp_dns);
 
-   subprofile_t sp_ssh("ssh", "rules-ssh", SSHHostProfile::update,
-      SSHHostProfile::check_record, SSHHostProfile::delete_record);
+   subprofile_t sp_ssh("ssh", "rules-ssh", ssh_pointers);
    sp_list.push_back(sp_ssh);
 
    // Load configuration
@@ -69,7 +104,7 @@ HostProfile::~HostProfile()
       hosts_record_t &temp = *((hosts_record_t *)stat_table_ptr->data[index]);
 
       for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-         it->delete_ptr(temp);
+         it->pointers.delete_ptr(temp);
       }
    }
 
@@ -79,6 +114,13 @@ HostProfile::~HostProfile()
    // Delete BloomFilters
    delete bf_active;
    delete bf_learn;
+
+   // Delete all BloomFilters in subprofiles
+   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
+      if (it->pointers.bf_config_ptr != NULL) {
+         it->pointers.bf_config_ptr(BF_DESTROY);
+      }
+   }
 }
 
 int HostProfile::reload_config()
@@ -119,6 +161,17 @@ void HostProfile::apply_config()
    // update subprofile configuration
    for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
       it->check_config();
+
+      if (it->pointers.bf_config_ptr == NULL) {
+         continue;
+      }
+
+      // Create/destroy subprofile's BloomFilters
+      if (it->sp_status) {
+         it->pointers.bf_config_ptr(BF_CREATE);
+      } else {
+         it->pointers.bf_config_ptr(BF_DESTROY);
+      }
    }
 
    // Sort vector - active subprofiles go to the forefront of sp_list
@@ -140,7 +193,7 @@ void HostProfile::apply_config()
 void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       bool subprofiles)
 {
-   // find/add record in bloom filter
+   // find/add record in the BloomFilter
    ip_addr_t bkey[2] = {ur_get(tmpl_in, record, UR_SRC_IP),
                         ur_get(tmpl_in, record, UR_DST_IP)};
    bool present = false;
@@ -182,26 +235,24 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
 
    src_host_rec.out_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
 
-   // request flows
-   if (dir_flags & 0x8) {
+   if (dir_flags & REQ) {
+      // request flows
       ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
       if (!present) INC(src_host_rec.out_req_uniqueips);
       INC(src_host_rec.out_req_flows);
 
+      if (tcp_flags & 0x2)  INC(src_host_rec.out_req_syn_cnt);
       if (tcp_flags & 0x4)  INC(src_host_rec.out_req_rst_cnt);
       if (tcp_flags & 0x8)  INC(src_host_rec.out_req_psh_cnt);
       if (tcp_flags & 0x10) INC(src_host_rec.out_req_ack_cnt);
-   }
-
-   //response flows
-   if (dir_flags & 0x4) {
+   } else if (dir_flags & RSP) {
+      // response flows
+      ADD(src_host_rec.out_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
       INC(src_host_rec.out_rsp_flows);
-   }
 
-   // signle flows
-   if (dir_flags & 0x2) {
-      INC(src_host_rec.out_sf_flows);
+      if (tcp_flags & 0x2)  INC(src_host_rec.out_rsp_syn_cnt);
+      if (tcp_flags & 0x10) INC(src_host_rec.out_rsp_ack_cnt);
    }
 
    // destination ---------------------------------------------------
@@ -225,8 +276,8 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
 
    dst_host_rec.in_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
 
-   // request flows
-   if (dir_flags & 0x8) {
+   if (dir_flags & REQ) {
+      // request flows
       ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
       if (!present) INC(dst_host_rec.in_req_uniqueips);
@@ -235,16 +286,12 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (tcp_flags & 0x4)  INC(dst_host_rec.in_req_rst_cnt);
       if (tcp_flags & 0x8)  INC(dst_host_rec.in_req_psh_cnt);
       if (tcp_flags & 0x10) INC(dst_host_rec.in_req_ack_cnt);
-   }
-
-   // response flows
-   if (dir_flags & 0x4) {
+   } else if (dir_flags & RSP) {
+      // response flows
+      ADD(dst_host_rec.in_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
       INC(dst_host_rec.in_rsp_flows);
-   }
 
-   // signle flows
-   if (dir_flags & 0x2) {
-      INC(dst_host_rec.in_sf_flows);
+      if (tcp_flags & 0x10) INC(dst_host_rec.in_rsp_ack_cnt);
    }
 
    if (!subprofiles)
@@ -255,8 +302,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (!it->sp_status)
          break;
 
-      it->update_ptr(src_host_rec, record, tmpl_in, DIR_OUT);
-      it->update_ptr(dst_host_rec, record, tmpl_in, DIR_IN);
+      it->pointers.update_ptr(&bkey, src_host_rec, dst_host_rec, record, tmpl_in);
    }
 }
 
@@ -270,7 +316,7 @@ void HostProfile::remove_by_key(const hosts_key_t &key)
 {
    hosts_record_t &rec = get_record(key);
    for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      it->delete_ptr(rec);
+      it->pointers.delete_ptr(rec);
    }
 
    ht_remove_by_key_v2(stat_table_ptr, (char *) key.bytes);
@@ -293,7 +339,7 @@ void HostProfile::release()
       hosts_record_t &temp = *((hosts_record_t *)stat_table_ptr->data[index]);
 
       for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-         it->delete_ptr(temp);
+         it->pointers.delete_ptr(temp);
       }
    }
 
@@ -311,19 +357,15 @@ void HostProfile::swap_bf()
    bloom_filter *tmp = bf_active;
    bf_active = bf_learn;
    bf_learn = tmp;
-}
 
-/*
- * check_record()
- * Check whether there are any incidents in the record that belongs to key
- *
- * @param key Key of the record
- * @param subprofiles When True check active subprofiles with active detector
- */
-void HostProfile::check_record(const hosts_key_t &key, bool subprofiles)
-{
-   const hosts_record_t &record = get_record(key);
-   check_record(key, record, subprofiles);
+   // Swap BloomFilters in subprofiles
+   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
+      if (it->pointers.bf_config_ptr == NULL) {
+         continue;
+      }
+
+      it->pointers.bf_config_ptr(BF_SWAP);
+   }
 }
 
 /*
@@ -339,20 +381,20 @@ void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &rec
 {
    // detector
    if (detector_status) {
-      check_rules(key, record);
+      check_new_rules(key, record);
    }
 
    if (!subprofiles) {
       return;
    }
 
-   // call detector of subprofiles
+   // call detectors of subprofiles
    for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
       if (!it->detector_status || !it->sp_status) {
          break;
       }
 
-      it->check_ptr(key, record);
+      it->pointers.check_ptr(key, record);
    }
 }
 
@@ -362,7 +404,7 @@ void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &rec
  * 
  * Find the record in the table. If the record does not exist, create new empty
  * one. Sometime when the empty record is saved, another record is kicked off
- * and sent to the detector. (move info in cuckoo_hash files)
+ * and sent to the detector. (more info in cuckoo_hash files)
  *
  * @params key Key of the record
  * @return Referece to the record
@@ -383,7 +425,7 @@ hosts_record_t& HostProfile::get_record(const hosts_key_t& key)
 
          // Delete subprofiles in the kicked item
          for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-            it->delete_ptr(*(hosts_record_t *)stat_table_ptr->data_kick);
+            it->pointers.delete_ptr(*(hosts_record_t *)stat_table_ptr->data_kick);
          }
       }
       index = ht_get_index_v2(stat_table_ptr, (char*) key.bytes);

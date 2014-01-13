@@ -1,20 +1,17 @@
 # HostStats configuration
 
-# Address and port to listen on
-listen-port      = 3333
-listen-interface = localhost
-
 # Subprofiles (set to 1 to enable)
+ssh = 1
 dns = 0
-ssh = 0
+# Note: DNS subprofile is under development (disabled by default)
 
 # Detection rules (set to 1 to enable)
 rules-generic = 1
-rules-ssh = 0
+rules-ssh = 1
 rules-dns = 0
 
 # Directory for detection log files
-detection-log     = /data/hoststats/log/
+detection-log     = /data/hoststatsnemea/log/
 
 # Script for sending reports to warden, comment the line to disable sending
 #warden-send-script  = ./hostsendwarden.pl
