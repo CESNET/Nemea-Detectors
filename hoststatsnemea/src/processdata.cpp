@@ -1,3 +1,40 @@
+/*
+ * Copyright (C) 2013 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <iostream>
 #include <sstream>
 #include <map>
@@ -34,7 +71,7 @@ extern ur_template_t *tmpl_in;
 extern ur_template_t *tmpl_out;
 
 // Global profile
-HostProfile MainProfile;
+HostProfile *MainProfile = NULL;
 
 pthread_mutex_t detector_start = PTHREAD_MUTEX_INITIALIZER;
 uint32_t hs_time               = 0; 
@@ -47,6 +84,15 @@ static bool threads_terminated = 0; // TRAP threads general stop
 /////////////////////////////////////////
 // Host stats processing functions
 
+/*
+ * Signal alarm handling
+ *
+ * Based on the alarm signal runs in regular (user defined) intervals thread
+ * that goes throught the content of cuckoo hash table with flow records and 
+ * checks flow validity.
+ *
+ * @param signal Signal for processing
+ */
 void alarm_handler(int signal)
 {
    if (signal != SIGALRM) {
@@ -60,7 +106,7 @@ void alarm_handler(int signal)
    hs_time = time(NULL);
 
 
-   if (hs_time % MainProfile.det_start_time != 0) {
+   if (hs_time % MainProfile->det_start_time != 0) {
       return;
    }
 
@@ -73,16 +119,16 @@ void alarm_handler(int signal)
    pthread_mutex_unlock(&detector_start);
 }
 
-
-
-// Detect and change timeslot when new flow data are from next timeslot 
+/*
+ * Specifies time when the BloomFilters are swapped
+ */
 void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change, 
                 const uint32_t &current_time)
 {
    // BloomFilter swap
    if (current_time >= next_bf_change) {
-      MainProfile.swap_bf();
-      next_bf_change += (MainProfile.active_timeout/2);
+      MainProfile->swap_bf();
+      next_bf_change += (MainProfile->active_timeout/2);
    }
 
    // Is current time in new timeslot?
@@ -94,7 +140,14 @@ void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change,
    next_ts_start += SIZEOFTIMESLOT;
 }
 
-// TODO: add comment
+/*
+ * Verify the validity of flow record in cuckoo hash table
+ *
+ * If a record is valid and it is in the table longer than a specified 
+ * time or has not been updated for specified time then the record is checked by
+ * detectors and invalidated.
+ *
+ */
 bool record_validity(HostProfile &profile, int index, thread_share_t *share)
 {
    // Get record and check timestamps
@@ -194,7 +247,7 @@ void *data_reader_trap(void *share_struct)
          hs_time = time(NULL);
          alarm(1);
 
-         next_bf_change = flow_time + MainProfile.active_timeout/2;
+         next_bf_change = flow_time + MainProfile->active_timeout/2;
          last_change = flow_time;
       }
 
@@ -210,7 +263,7 @@ void *data_reader_trap(void *share_struct)
 
          while(!share->remove_vector.empty()) {
             remove_item_t &item = share->remove_vector.back();
-            MainProfile.remove_by_key(item.key);
+            MainProfile->remove_by_key(item.key);
             share->remove_vector.pop_back();
          }
          share->remove_ready = false;
@@ -218,7 +271,7 @@ void *data_reader_trap(void *share_struct)
       }
 
       // Update main profile and subprofiles
-      MainProfile.update(data, tmpl_in, true);
+      MainProfile->update(data, tmpl_in, true);
    }
 
    // TRAP TERMINATED, exiting... 
@@ -234,7 +287,7 @@ void *data_reader_trap(void *share_struct)
 
 
 /** 
- * Thread function for process data after stat map swap
+ * Thread for check validity of flow records
  */
 void *data_process_trap(void *share_struct)
 {  
@@ -253,8 +306,8 @@ void *data_process_trap(void *share_struct)
       pthread_mutex_lock(&share->det_processing);
       processing_data = true;
 
-      for (int i = 0; i < MainProfile.get_table_size(); ++i) {
-         record_validity(MainProfile, i, share);
+      for (int i = 0; i < MainProfile->get_table_size(); ++i) {
+         record_validity(*MainProfile, i, share);
 
          if (threads_terminated) {
             break;

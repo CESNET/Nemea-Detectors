@@ -1,3 +1,40 @@
+/*
+ * Copyright (C) 2013 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -57,12 +94,13 @@ static int terminated = 0;
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
 extern pthread_mutex_t detector_start;
+extern HostProfile *MainProfile;
 
 ////////////////////////////
 // Module global variables
 
-static string server;
-static string port;
+// static string server;
+// static string port;
 
 
 ///////////////////////////////////////////////////
@@ -85,7 +123,8 @@ trap_module_info_t module_info = {
       "\n"
       "TRAP Interfaces:\n"
       "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
-      "   Outputs: 1\n",
+      "   Outputs: 1 (\"EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,\n"
+      "                 EVENT_SCALE\") \n",
    1, // Number of input TRAP interfaces
    1, // Number of output TRAP interfaces
 };
@@ -140,29 +179,6 @@ void *service(void * connectfd)
    // }
    close(fd);
    pthread_exit(NULL);
-}
-
-int arguments(int argc, char *argv[])
-{
-   char opt;
-   
-   while ((opt = getopt(argc, argv, "s:p:f")) != -1) {
-      switch (opt) {
-      case 's':  // Server
-         server = string(optarg);
-         break;
-      case 'p':  // port
-         port = string(optarg);
-         break;
-      // DEACTIVATED
-      // case 'f':  // foreground
-      //    background = false;
-      //    break;
-      default:  // invalid arguments
-         errx(1,"invalid arguments");
-      }
-   }
-   return 1;
 }
 
 void parse_logmask(string &mask);
@@ -222,6 +238,12 @@ int main(int argc, char *argv[])
 {
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info)
 
+   if (argc > 1) {
+      fprintf(stderr, "ERROR: unrecognized parameter(s). Use \"-h\" for help\n");
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
+
    // UniRec template
    tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
    tmpl_out = ur_create_template("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
@@ -248,12 +270,9 @@ int main(int argc, char *argv[])
    
    // Load default configuration from config file
    config->lock();
-   server = config->getValue("listen-interface");
-   port = config->getValue("listen-port");
+   // server = config->getValue("listen-interface");
+   // port = config->getValue("listen-port");
    
-   // Default configuration may be overwritten by arguments
-   arguments(argc, argv);
-
    /* Set logmask if used */
    string logmask = config->getValue("log-upto-level");
    if (!logmask.empty()) {
@@ -327,6 +346,10 @@ int main(int argc, char *argv[])
    //    daemon(1, 0);
    // }
 
+
+   MainProfile = new HostProfile();
+
+   /* termination signals */
    signal(SIGTERM, terminate_daemon);
    signal(SIGINT, terminate_daemon);
    /* reload configuration signal: */
@@ -416,6 +439,9 @@ int main(int argc, char *argv[])
    // Wait until end of TRAP threads
    pthread_join(share.data_process_thread, NULL);
    pthread_join(share.data_reader_thread, NULL);
+
+   // Delete all records
+   delete MainProfile;
 
    // Delete configuration
    Configuration::freeConfiguration();

@@ -49,6 +49,7 @@
 #include <pthread.h>
 #include "aux_func.h"
 #include "config.h"
+#include "../../config.h"
 
 using namespace std;
 
@@ -115,7 +116,8 @@ void Configuration::load()
 {
    fstream file;
    string line;
-   file.open(INI_FILENAME, ios_base::in);
+   
+   file.open(SYSCONFDIR "/" INI_FILENAME, ios_base::in);
    if (file.good()) {
       while (file.good()) {
          getline(file, line);
@@ -124,7 +126,8 @@ void Configuration::load()
       file.close();
       return;
    }
-   file.open("/etc/" INI_FILENAME, ios_base::in);
+
+   file.open(INI_FILENAME, ios_base::in);
    if (file.good()) {
       while (file.good()) {
          getline(file, line);
@@ -138,12 +141,15 @@ void Configuration::load()
    log(LOG_NOTICE, INI_FILENAME " file not found, trying to load " INI_DEFAULT_FILENAME);
    
    // copy INI_DEFAULT_FILENAME to INI_FILENAME
-   if (copy_file(INI_DEFAULT_FILENAME, INI_FILENAME)) {
+   if (copy_file(SYSCONFDIR "/" INI_DEFAULT_FILENAME, SYSCONFDIR "/" INI_FILENAME)) {
+      log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
+      file.open(SYSCONFDIR "/" INI_FILENAME, ios_base::in);
+   } else if (copy_file(INI_DEFAULT_FILENAME, INI_FILENAME)){
       log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
       file.open(INI_FILENAME, ios_base::in);
    } else {
       syslog(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME, ", using default file directly.");
-      file.open(INI_DEFAULT_FILENAME, ios_base::in);
+      file.open(SYSCONFDIR "/" INI_DEFAULT_FILENAME, ios_base::in);
    }
    if (file.good()) {
       while (file.good()) {
