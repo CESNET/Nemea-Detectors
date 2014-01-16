@@ -2,9 +2,12 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=anonymizer \
 astute \
+attack_gen \
 blacklistfilter \
-cpd_module \
+deduplication \
 delaybuffer \
+dns_amplification \
+dns_amp_twente \
 entropy_module \
 example \
 flow_gen \
@@ -14,15 +17,11 @@ flowdirection \
 hoststatsnemea \
 ipspoofingdetector \
 logger \
-nfreader \
 pca \
-pca/pca-test-receiver \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
 timestamp_checker \
-traffic_merger \
-traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay
@@ -43,4 +42,5 @@ rpm-clean:
 	rm -rf $(RPMDIR)
 else
 endif
-
+#pca/pca-test-receiver 
+#cpd_module 

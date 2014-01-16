@@ -1,0 +1,2 @@
+SUBDIRS=ipdetect dnsdetect urldetect
+

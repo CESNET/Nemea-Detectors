@@ -50,7 +50,7 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <cuckoo_hash_v2.h>
+#include <nemea-common.h>
 
 /**
  * Size of the table with DNS blacklist

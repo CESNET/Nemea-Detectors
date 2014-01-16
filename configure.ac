@@ -154,11 +154,16 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
-                 blacklistfilter/Makefile
-                 blacklistfilter/dnsdetect/Makefile
-                 blacklistfilter/ipdetect/Makefile
-                 blacklistfilter/urldetect/Makefile
+		 attack_gen/Makefile
+		 blacklistfilter/Makefile
+		 blacklistfilter/dnsdetect/Makefile
+		 blacklistfilter/ipdetect/Makefile
+		 blacklistfilter/urldetect/Makefile
+		 deduplication/Makefile
                  delaybuffer/Makefile
+		 dns_amplification/Makefile
+		 dns_amp_twente/Makefile
+		 entropy_module/Makefile
                  example/Makefile
                  flow_gen/Makefile
                  flow_sanity_check/Makefile
@@ -167,7 +172,6 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  logger/Makefile
-                 nfreader/Makefile
                  pca/Makefile
                  pca/src/timebin_division/Makefile
                  pca/pca-test-receiver/Makefile
@@ -175,8 +179,6 @@ AC_CONFIG_FILES([Makefile
                  simplebotnetdetector/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
-                 traffic_merger/Makefile
-                 traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile])

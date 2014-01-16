@@ -52,6 +52,7 @@
 #include <map>
 #include <utility>
 #include <algorithm>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
