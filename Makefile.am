@@ -22,6 +22,8 @@ protocolcounters \
 simplebotnetdetector \
 test_threads \
 timestamp_checker \
+traffic_merger \
+traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay \
