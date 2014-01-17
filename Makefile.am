@@ -24,7 +24,8 @@ test_threads \
 timestamp_checker \
 transitfilter \
 trapdump \
-trapreplay
+trapreplay \
+tunnel_detection
 
 RPMDIR = RPMBUILD
 

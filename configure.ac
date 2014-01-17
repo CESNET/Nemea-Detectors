@@ -181,7 +181,8 @@ AC_CONFIG_FILES([Makefile
                  timestamp_checker/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
-                 trapreplay/Makefile])
+                 trapreplay/Makefile
+		 tunnel_detection/Makefile])
 
 
 AC_OUTPUT
