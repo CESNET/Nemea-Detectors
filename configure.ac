@@ -109,6 +109,11 @@ if test -z "$NEMEACOMMONLIB"; then
 	fi
 fi
 
+AC_CHECK_HEADER(idna.h,
+         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module form blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
+echo "have_libidn ${HAVE_LIBIDN}"
 
 # Checks for libraries.
 
