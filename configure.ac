@@ -182,6 +182,8 @@ AC_CONFIG_FILES([Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
+                 traffic_merger/Makefile
+                 traffic_repeater/Makefile
 		 tunnel_detection/Makefile])
 
 
