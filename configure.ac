@@ -178,8 +178,6 @@ AC_CONFIG_FILES([Makefile
                  ipspoofingdetector/Makefile
                  logger/Makefile
                  pca/Makefile
-                 pca/src/timebin_division/Makefile
-                 pca/pca-test-receiver/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
                  test_threads/Makefile
