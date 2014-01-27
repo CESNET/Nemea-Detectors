@@ -11,7 +11,7 @@
 #include "../../unirec/unirec.h"
 #include "../../common/include/nemea-common.h"
 
-#include "main.h"
+#include "pcap2unirec.h"
 #include "packet.h"
 #include "flowifc.h"
 #include "pcapreader.h"

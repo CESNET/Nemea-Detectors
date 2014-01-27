@@ -1,7 +1,7 @@
 #ifndef PCAPREADER_H
 #define PCAPREADER_H
 
-#include "main.h"
+#include "pcap2unirec.h"
 #include "packet.h"
 #include "packetreceiver.h"
 
