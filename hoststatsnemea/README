@@ -53,7 +53,7 @@ depends on each subprofile. Specific statistics (subprofiles) are available
 from the global statistics of each IP address that are stored in cuckoo hash
 table.
 
-Note: SSH and DNS subprofiles are still in development and therefore are
+Note: DNS subprofiles are still in development and therefore are
 disabled in a configuration file.
 
 The module consists of two basic threads – manipulating and checking.
@@ -77,3 +77,11 @@ Edit the configuration file “hoststats.conf” and especially the line
 module and then run module: 
 
     ./hoststatsnemea -i <trap_interface>
+
+Example:
+    Run this module:
+    ./hoststatsnemea -i "tt;localhost,12346;12347,5"
+ 
+    Run flowdirection module:
+    ./flowdirection -i "tt;localhost,12345;12346,5" -u "<COLLECTOR_FLOW>"
+    

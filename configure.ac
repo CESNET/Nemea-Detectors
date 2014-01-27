@@ -109,6 +109,10 @@ if test -z "$NEMEACOMMONLIB"; then
 	fi
 fi
 
+AC_CHECK_HEADER(idna.h,
+         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module form blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
 # Checks for libraries.
 
@@ -154,11 +158,16 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
-                 blacklistfilter/Makefile
-                 blacklistfilter/dnsdetect/Makefile
-                 blacklistfilter/ipdetect/Makefile
-                 blacklistfilter/urldetect/Makefile
+		 attack_gen/Makefile
+		 blacklistfilter/Makefile
+		 blacklistfilter/dnsdetect/Makefile
+		 blacklistfilter/ipdetect/Makefile
+		 blacklistfilter/urldetect/Makefile
+		 deduplication/Makefile
                  delaybuffer/Makefile
+		 dns_amplification/Makefile
+		 dns_amp_twente/Makefile
+		 entropy_module/Makefile
                  example/Makefile
                  flow_gen/Makefile
                  flow_sanity_check/Makefile
@@ -167,19 +176,17 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  logger/Makefile
-                 nfreader/Makefile
                  pca/Makefile
-                 pca/src/timebin_division/Makefile
-                 pca/pca-test-receiver/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
-                 traffic_merger/Makefile
-                 traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
-                 trapreplay/Makefile])
+                 trapreplay/Makefile
+                 traffic_merger/Makefile
+                 traffic_repeater/Makefile
+		 tunnel_detection/Makefile])
 
 
 AC_OUTPUT

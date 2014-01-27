@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <cuckoo_hash_v2.h>
+#include <nemea-common.h>
 
 /**
  * Constant returned if everything is ok.

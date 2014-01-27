@@ -45,6 +45,7 @@
 #include <vector>
 #include <unirec/unirec.h>
 #include <cuckoo_hash_v2.h>
+#include <nemea-common.h>
 
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
