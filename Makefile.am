@@ -18,6 +18,7 @@ hoststatsnemea \
 ipspoofingdetector \
 logger \
 pca \
+pcap2unirec \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
