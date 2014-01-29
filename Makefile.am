@@ -16,7 +16,6 @@ flowcounter \
 flowdirection \
 hoststatsnemea \
 ipspoofingdetector \
-ipv6stats \
 logger \
 nfreader \
 pca \
