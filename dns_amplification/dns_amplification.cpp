@@ -421,6 +421,7 @@ int main (int argc, char** argv) {
    uint32_t unique_id = 0;
    ofstream log;
    ostringstream filename;
+   string log_path="";
 
 	uint16_t src_port;		// actual source port
 	uint16_t dst_port;		// actual destination flows
@@ -433,8 +434,11 @@ int main (int argc, char** argv) {
 
 	// parse parameters
 	char opt;
-	while ((opt = getopt(argc, argv, "p:n:t:q:a:I:l:y:m:w:s:D:E:F:G:")) != -1) {
+	while ((opt = getopt(argc, argv, "d:p:n:t:q:a:I:l:y:m:w:s:D:E:F:G:")) != -1) {
 		switch (opt) {
+			case 'd':
+				log_path = optarg;
+				break;
 			case 'p':
 				config.port = atoi(optarg);
 				break;
@@ -565,7 +569,7 @@ int main (int argc, char** argv) {
 		it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
 		it->second.total_flows += 1;
 		it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
-		
+
 		// create new flow information structure
 		flow_item_t i;
 		i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
@@ -653,7 +657,7 @@ int main (int argc, char** argv) {
 
 				filename.str("");
 				filename.clear();
-				filename << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+				filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
 
 				ifstream if_test(filename.str().c_str());
 				if (!if_test){//print header
@@ -770,7 +774,7 @@ int main (int argc, char** argv) {
 
                      filename.str("");
                      filename.clear();
-                     filename << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+                     filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
 
                      ifstream if_test(filename.str().c_str());
                      if (!if_test){//print header
