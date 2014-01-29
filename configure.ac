@@ -175,6 +175,7 @@ AC_CONFIG_FILES([Makefile
                  flowdirection/Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
+                 ipv6stats/Makefile
                  logger/Makefile
 		 nfreader/Makefile
                  pca/Makefile
