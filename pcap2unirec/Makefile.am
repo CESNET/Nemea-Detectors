@@ -2,7 +2,7 @@ bin_PROGRAMS=pcap2unirec
 pcap2unirec_SOURCES=pcap2unirec.cpp \
 		    pcap2unirec.h \
 		    packet.h \
-		    packetreciever.h \
+		    packetreceiver.h \
 		    pcapreader.h \
 		    flowifc.h \
 		    flowcache.h \

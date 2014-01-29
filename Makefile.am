@@ -17,7 +17,9 @@ flowdirection \
 hoststatsnemea \
 ipspoofingdetector \
 logger \
+nfreader \
 pca \
+pcap2unirec \
 protocolcounters \
 simplebotnetdetector \
 test_threads \

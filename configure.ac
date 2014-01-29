@@ -176,6 +176,7 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  logger/Makefile
+		 nfreader/Makefile
                  pca/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
