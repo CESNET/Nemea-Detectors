@@ -77,6 +77,7 @@ trap_module_info_t module_info = {
     "   Inputs: 1 (UniRec record -- <COLLECTOR_FLOW)\n"
     "   Outputs: 1 (UniRec record -- <AMPLIFICATION_ALERT)\n"
     "Additional parameters:\n"
+    "   -p <path>        path to log files, has to be ended by \"/\"\n"
     "   -p <port>        port used for detection (53)\n"
     "   -n <num>         number of topN values chosen (10)\n"
     "   -q <step>        step of histogram (10)\n"
