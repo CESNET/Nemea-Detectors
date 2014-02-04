@@ -189,7 +189,7 @@ AC_CONFIG_FILES([Makefile
                  traffic_merger/Makefile
                  traffic_repeater/Makefile
 		 tunnel_detection/Makefile
-                 pcap2unirec/Makefile])
+                 flow_meter/Makefile])
 
 
 AC_OUTPUT

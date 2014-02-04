@@ -20,7 +20,7 @@ ipv6stats \
 logger \
 nfreader \
 pca \
-pcap2unirec \
+flow_meter \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
