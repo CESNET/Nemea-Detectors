@@ -56,36 +56,54 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include "prefix_tree.h"
+#include "parser_pcap_dns.h"
+#include "b_plus_tree.h"
+#include "tunnel_detection_dns_structs.h"
+
 
 /*!
  * \name Default values
  *  Defines macros used by DNS tunel detection 
  * \{ */
-#define HISTOGRAM_SIZE_REQUESTS 30 /*< Default number of client intefaces. */
-#define HISTOGRAM_SIZE_RESPONSE 150 /*< Default number of client intefaces. */
+#define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
+#define MAX_COUNT_OF_ROUND_IN_SUSPICTION 5 /*< Maximum round to be IP in suspiction */
+#define PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION 0.3 /*< Percent of communication to be set to suspision state */
+
 #define FILE_NAME_SUMMARY_REQUESTS "summary_requests.dat" /*< Name of file with summary requests. */
 #define TITLE_SUMMARY_REQUESTS "DNS requests histogram of communication" /*< Title of data for DNS summary requests. */
 #define FILE_NAME_SUMMARY_RESPONSES "summary_responses.dat" /*< Name of file with SUMMARY responses. */
 #define TITLE_SUMMARY_RESPONSES "DNS responses histogram of communication" /*< Title of data for DNS summary responses. */
+#define FILE_NAME_REQUEST_COUNT_LETTERS "request_letters_count.dat" /*< Name of file with count of letters. */
+#define TITLE_REQUEST_COUNT_LETTERS "Count of letters per ip" /*< Title of data for DNS summary responses. */
 #define FILE_NAME_REQUESTS "requests.dat" /*< Name of file with requests. */
 #define TITLE_REQUESTS "DNS requests histogram of communication devided by IP" /*< Title of data for DNS requests devided by IP. */ 
 #define FILE_NAME_RESPONSES "responses.dat" /*< Name of file with responses. */
 #define TITLE_RESPONSES "DNS responses histogram of communication devided by IP" /*< Title of data for DNS responses devided by IP. */ 
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
 
-/*!
- * \brief Structure containing inforamtion about each IP adress
- * Structure used to keep information about each Ip address.
- * histogram of size of packets.
- * It is a list of IP.
- */
- typedef struct ip_address_t ip_address_t ;
- struct ip_address_t {
-	uint32_t ip;
-   	unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
-   	unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */
-   	ip_address_t * next; /*!< pointer to next value */
-} ;
+#define EX_REQUEST_MAX 100 /*< Maximal value of request middle value */
+#define EX_REQUEST_MIN 70 /*< Minimal value of request middle value */
+#define VAR_REQUEST_MAX 150 /*< Maximal value of request var */
+#define VAR_REQUEST_MIN 30 /*< Minimal value of request var*/
+#define VAR_RESPONSE_MAX 10000 /*< Maximal value of response var */
+#define VAR_RESPONSE_MIN 1000 /*< Minimal value of response var*/
+#define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
+#define MIN_DNS_REQUEST_COUNT 50 /*< Minimal value of dns count of packets*/
+#define MIN_DNS_REQUEST_COUNT_TUNNEL 1 /*< Minimal value of dns count in payload analysis for tunnel*/
+#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 100 /*< Minimal value of dns count in payload analysis for other anomaly*/
+#define MIN_DNS_RESPONSE_COUNT 50 /*< Minimal value of dns count of packets*/
+#define REQUEST_MAX_COUNT_OF_USED_LETTERS 24  /*< Maximum number of used leeters for domain*/
+#define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.7 /*< Maximum percent of new subdomain, more than this can be tunel*/
+#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.2 /*< Minimum percent of new subdomain, less than this can be anomaly*/
+#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.2 /*< Minimum percent of searching unique domains, less than that can be anomaly*/
+#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.7 /*< Maximum percent of searching unique domains, more than that can be tunnel*/
+#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.2 /*< Minimum percent unique domains, less than that can be anomaly*/
+#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.8 /*< Maximum percent of searching unique domains, more than that can be tunnel*/
+#define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.2 /*< Maximum percent of numbers in domain, more than that can be tunnel*/
+
+/* /} */
+
 
 /*!
  * \brief Signal function.
@@ -149,6 +167,13 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  */
 void write_detail_result(char * record_folder, ip_address_t * list_of_ip);
 
+
+
+
+void calculate_character_statistic(char * string, character_statistic_t * stat);
+
+
+
 /*!
  * \brief Main function.
  * Main function to parse given arguments and run the DNS tunnel detection.
@@ -156,6 +181,6 @@ void write_detail_result(char * record_folder, ip_address_t * list_of_ip);
  * \param[in] argv Array of given parameters.
  * \return EXIT_SUCCESS on success, otherwise EXIT_FAILURE.
  */
-int main(int argc, char **argv);
+//int main(int argc, char **argv);
 
  #endif /* _TUNNEL_DETECTION_DNS_ */
