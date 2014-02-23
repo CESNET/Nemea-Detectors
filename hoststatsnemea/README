@@ -15,9 +15,8 @@ individual host (IP address) in the network. The statistics are searched
 for suspicious behavior using a simple ruleset. This suspicious behavior 
 is stored in a log file.
 
-Currently there are rules for detection of hosts scanning network and for
-detection of DoS attackers and victims.
-
+Currently there are rules for detection of hosts scanning network, DoS attackers
+and victims, SSH bruteforce and DNS amplification.
 
 Input interface:    1 ("<COLLECTOR_FLOW>,DIRECTION_FLAGS")
 Output interface:   1 ("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,
@@ -53,9 +52,6 @@ depends on each subprofile. Specific statistics (subprofiles) are available
 from the global statistics of each IP address that are stored in cuckoo hash
 table.
 
-Note: DNS subprofiles are still in development and therefore are
-disabled in a configuration file.
-
 The module consists of two basic threads – manipulating and checking.
     The checking thread periodically checks the statistics data in the table 
 by defined period. When a statistic record is too long in the table (active
@@ -71,10 +67,11 @@ statistics records from the table defined by the list to remove.
 3. How to use
 =============
 
-Edit the configuration file “hoststats.conf” and especially the line 
-"detection-log" with the folder path to save the event log. Use FlowDirection
-(recommended) or DedupAggregator (not ready yet) output as an input for this
-module and then run module: 
+Edit the configuration file “{nemea}/etc/hoststats.conf” and especially the line
+"detection-log" with the folder path to save the event log. If you have your own
+configuration file, you can use parameter "-c file" to load it. Then use
+FlowDirection (recommended) or DedupAggregator (not ready yet) output as 
+an input for this module and then run module: 
 
     ./hoststatsnemea -i <trap_interface>
 

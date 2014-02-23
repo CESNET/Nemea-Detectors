@@ -112,11 +112,30 @@ void Configuration::parseLine(string line)
    values[paramName] = value;
 }
 
-void Configuration::load()
+ConfigurationStatus Configuration::load()
 {
    fstream file;
    string line;
+
+   // Load configuration from a path defined by the user (only if the path is
+   // defined)
+   if (configFilePath.size()) {
+      file.open(configFilePath.c_str(), ios_base::in);
+      if (file.good()) {
+         while (file.good()) {
+            getline(file, line);
+            parseLine(line);
+         }
+         file.close();
+         return INIT_OK;
+      } else {
+         log(LOG_ERR, "Failed to open configuration file \"%s\"", 
+            configFilePath.c_str());
+         return INIT_FAILED;
+      }
+   }
    
+   // Load configuration from a path defined by Nemea directory
    file.open(SYSCONFDIR "/" INI_FILENAME, ios_base::in);
    if (file.good()) {
       while (file.good()) {
@@ -124,9 +143,10 @@ void Configuration::load()
          parseLine(line);
       }
       file.close();
-      return;
+      return INIT_OK;
    }
 
+   // Load configuration from a file in the same directory as the binary file
    file.open(INI_FILENAME, ios_base::in);
    if (file.good()) {
       while (file.good()) {
@@ -134,10 +154,10 @@ void Configuration::load()
          parseLine(line);
       }
       file.close();
-      return;
+      return INIT_OK;
    }
    
-   // Config file is not in current directory nor in /etc/, copy default config.
+   // Config file is not in current directory nor in Nemea directory, copy default config.
    log(LOG_NOTICE, INI_FILENAME " file not found, trying to load " INI_DEFAULT_FILENAME);
    
    // copy INI_DEFAULT_FILENAME to INI_FILENAME
@@ -157,17 +177,18 @@ void Configuration::load()
          parseLine(line);
       }
       file.close();
-      return;
+      return INIT_OK;
    }
    
    cerr << "Could not load configuration" << endl;
-   log(LOG_CRIT, "Could not load configuration");
+   log(LOG_ERR, "Could not load configuration");
+   return INIT_FAILED;
 }
 
 Configuration::Configuration()
 {
    pthread_mutex_init(&config_mutex, NULL);
-   load();
+   initStatus = load();
 }
 
 int Configuration::lock()
@@ -184,7 +205,7 @@ void Configuration::reload()
 {
    lock();
    clean();
-   load();
+   initStatus = load();
    unlock();
 }
 
@@ -216,17 +237,17 @@ void Configuration::freeConfiguration()
    /* This class is useless from this time! */
 }
 
+void Configuration::setConfigPath(const string &file)
+{
+   configFilePath = file;
+}
+
+ConfigurationStatus Configuration::getInitStatus()
+{
+   return initStatus;
+}
+
+string Configuration::configFilePath = "";
+ConfigurationStatus Configuration::initStatus = NOT_INIT;
 Configuration *Configuration::instance = NULL;
 pthread_mutex_t Configuration::config_mutex;
-
-#ifdef DEBUG_HS_CONFIG
-int main(int argc, char **argv)
-{
-   cout << (*Configuration::getInstance());
-
-   cout << "Found value: " << Configuration::getInstance()->getValue("rules") << endl;
-   cout << "Found value: " << Configuration::getInstance()->getValue("rles") << endl;
-
-   return 0;
-}
-#endif

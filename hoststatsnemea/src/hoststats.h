@@ -44,8 +44,6 @@
 #include <vector>
 #include <pthread.h>
 
-#include <unirec/ipaddr_cpp.h>
-
 extern "C" {
    #include <unirec/ipaddr.h>
    #include <cuckoo_hash_v2.h>
@@ -123,20 +121,6 @@ typedef ip_addr_t hosts_key_t;
 // hash table
 typedef cc_hash_table_v2_t stat_table_t;
 
-// struct class_comp {
-//    bool operator() (const ip_addr_t& first, const ip_addr_t& second) const
-//    {
-//       return IPaddr_cpp(&first) < IPaddr_cpp(&second);   
-//    }
-// };
-
-// INFO: stat_map_t was replaced by stat_table_t, but stat_map_t can be used
-//       in another functions (database, request_handler) 
-// typedef std::map<hosts_key_t, hosts_record_t, class_comp> stat_map_t;
-// typedef stat_map_t::iterator stat_map_iter;
-// typedef stat_map_t::const_iterator stat_map_citer;
-
-
 // The identification of item to remove from stat_table
 typedef struct remove_item_s {
    hosts_key_t key;
@@ -159,7 +143,7 @@ typedef struct thread_share_s {
    thread_share_s() { // Constructor
       pthread_mutex_init(&det_processing, NULL);
       pthread_mutex_init(&remove_mutex, NULL);
-      remove_vector.reserve(1024);
+      remove_vector.reserve(8192);
       remove_ready = false;
    }
 

@@ -61,7 +61,6 @@ extern "C" {
 
 using namespace std;
 
-#define SIZEOFTIMESLOT   300
 #define GET_DATA_TIMEOUT 1 //seconds
 #define MSEC             1000000
 
@@ -105,7 +104,6 @@ void alarm_handler(int signal)
 
    hs_time = time(NULL);
 
-
    if (hs_time % MainProfile->det_start_time != 0) {
       return;
    }
@@ -120,27 +118,6 @@ void alarm_handler(int signal)
 }
 
 /*
- * Specifies time when the BloomFilters are swapped
- */
-void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change, 
-                const uint32_t &current_time)
-{
-   // BloomFilter swap
-   if (current_time >= next_bf_change) {
-      MainProfile->swap_bf();
-      next_bf_change += (MainProfile->active_timeout/2);
-   }
-
-   // Is current time in new timeslot?
-   if (!(current_time >= next_ts_start)) {
-      return;
-   }
-
-   // log (LOG_INFO, "New timeslot: %d", next_ts_start);
-   next_ts_start += SIZEOFTIMESLOT;
-}
-
-/*
  * Verify the validity of flow record in cuckoo hash table
  *
  * If a record is valid and it is in the table longer than a specified 
@@ -148,41 +125,6 @@ void check_time(uint32_t &next_ts_start, uint32_t &next_bf_change,
  * detectors and invalidated.
  *
  */
-bool record_validity(HostProfile &profile, int index, thread_share_t *share)
-{
-   // Get record and check timestamps
-   const hosts_record_t &rec = profile.get_record_at_index(index);
-   if (rec.first_rec_ts + profile.active_timeout > hs_time &&
-      rec.last_rec_ts + profile.inactive_timeout > hs_time) {
-      return 0;
-   }
-
-   // Get key and check validity of record
-   const hosts_key_t &key = profile.get_key_at_index(index);
-   if (profile.is_valid(key, index) == 0) {
-      return 0;
-   }
-
-   profile.check_record(key, rec);
-
-   // Add the item to remove to vector
-   remove_item_t item = {key};
-
-   pthread_mutex_lock(&share->remove_mutex);
-   std::vector<remove_item_t>::iterator it = find(share->remove_vector.begin(),
-      share->remove_vector.end(), item);
-   if (it == share->remove_vector.end()) {
-      share->remove_vector.push_back(item);
-   }
-   pthread_mutex_unlock(&share->remove_mutex);
-
-   if (share->remove_vector.size() >= 100) {
-      share->remove_ready = true;
-      sched_yield();
-   }
-
-   return 1;
-}
 
 /////////////////////////////////////////////////////////////
 // Threads
@@ -194,7 +136,6 @@ void *data_reader_trap(void *share_struct)
 {
    int ret;
    thread_share_t *share = (thread_share_t*) (share_struct);
-   uint32_t next_timeslot_start = 0;
    uint32_t next_bf_change      = 0;
    uint32_t last_change         = 0; 
    uint32_t flow_time           = 0; // seconds from rec->first
@@ -203,22 +144,27 @@ void *data_reader_trap(void *share_struct)
       const void *data;
       uint16_t data_size;
 
-      // Get new data from TRAP
+      // Get new data from TRAP with exception catch
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, GET_DATA_TIMEOUT * MSEC);
       if (ret != TRAP_E_OK) {
-         if (ret == TRAP_E_TIMEOUT) {
-            if (next_timeslot_start) {
+         switch (ret) {
+         case TRAP_E_TIMEOUT:
+            if (flow_time != 0) {
                flow_time += GET_DATA_TIMEOUT;
-               check_time(next_timeslot_start, next_bf_change, flow_time);
+               if (flow_time >= next_bf_change) {
+                  MainProfile->swap_bf();
+                  next_bf_change += (MainProfile->active_timeout/2);
+               }
             }
             continue;
-         } else {
-            if (ret != TRAP_E_TERMINATED) {
-               log(LOG_ERR, "Error: getting new data from TRAP failed: %s)\n",
-                  trap_last_error_msg);
-            }
+         case TRAP_E_TERMINATED:
             threads_terminated = 1;
-            break;
+            continue;
+         default:
+            log(LOG_ERR, "Error: getting new data from TRAP failed: %s)\n",
+               trap_last_error_msg);
+            threads_terminated = 1;
+            continue;
          }
       }
 
@@ -232,31 +178,27 @@ void *data_reader_trap(void *share_struct)
          break;
       }
 
-      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_FIRST));
-
-      // Get time of next timeslot start from first flow data
-      if (!next_timeslot_start){
-         if (flow_time % SIZEOFTIMESLOT == 0) {
-            next_timeslot_start = flow_time + SIZEOFTIMESLOT;
-         } else {
-            next_timeslot_start = static_cast<uint32_t>
-               ((flow_time/SIZEOFTIMESLOT + 1)*SIZEOFTIMESLOT);
-         }
-
-         // Setup alarm for the activation of a time counter (hs_time) 
+      // First flow
+      if (flow_time == 0) {
+         // Get time and setup alarm
          hs_time = time(NULL);
          alarm(1);
 
-         next_bf_change = flow_time + MainProfile->active_timeout/2;
-         last_change = flow_time;
+         last_change = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_FIRST));
+         next_bf_change = last_change + MainProfile->active_timeout/2;
       }
+
+      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_FIRST));
 
       if (flow_time > last_change) {
          last_change = flow_time;
-         check_time(next_timeslot_start, next_bf_change, flow_time);
+         if (flow_time >= next_bf_change) {
+            MainProfile->swap_bf();
+            next_bf_change += (MainProfile->active_timeout/2);
+         }
       }
 
-      // Remove old items
+      // Remove old records (prepared by the second thread)
       if (share->remove_ready) {
          // TODO: change lock --> try_lock 
          pthread_mutex_lock(&share->remove_mutex);
@@ -302,15 +244,51 @@ void *data_process_trap(void *share_struct)
    while (!threads_terminated) {
       // Wait on start
       pthread_mutex_lock(&detector_start);
-
       pthread_mutex_lock(&share->det_processing);
       processing_data = true;
 
-      for (int i = 0; i < MainProfile->get_table_size(); ++i) {
-         record_validity(*MainProfile, i, share);
+      /*
+       * If a record is valid and it is in the table longer than a specified 
+       * time or has not been updated for specified time then the record is 
+       * checked by detectors and invalidated. 
+       */
 
+// pragma omp parallel for schedule (dynamic)
+
+
+      for (int index = 0; index < MainProfile->get_table_size(); ++index) {
          if (threads_terminated) {
             break;
+         }
+
+         // Get record and check timestamps
+         const hosts_record_t &rec = MainProfile->get_record_at_index(index);
+         if (rec.first_rec_ts + MainProfile->active_timeout > hs_time &&
+            rec.last_rec_ts + MainProfile->inactive_timeout > hs_time) {
+            continue;
+         }
+
+         // Get key and check validity of record
+         const hosts_key_t &key = MainProfile->get_key_at_index(index);
+         if (MainProfile->is_valid(key, index) == 0) {
+            continue;
+         }
+
+         MainProfile->check_record(key, rec);
+
+         // Add the item to remove to vector
+         remove_item_t item = {key};
+         pthread_mutex_lock(&share->remove_mutex);
+         std::vector<remove_item_t>::iterator it = find(share->remove_vector.begin(),
+            share->remove_vector.end(), item);
+         if (it == share->remove_vector.end()) {
+            share->remove_vector.push_back(item);
+         }
+         pthread_mutex_unlock(&share->remove_mutex);
+
+         if (share->remove_vector.size() >= 100) {
+            share->remove_ready = true;
+            // sched_yield();
          }
       }
 

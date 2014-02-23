@@ -2,6 +2,8 @@
  * \file config.h
  * \brief Interface of the Configuration singleton
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Lukáš Huták <xhutak01@stud.fit.vutbr.cz>
+ * \date 2014
  * \date 2013
  * \date 2012
  */
@@ -57,10 +59,14 @@
 
 using namespace std;
 
+enum ConfigurationStatus {NOT_INIT, INIT_OK, INIT_FAILED};
+
 class Configuration {
 private:
    map<string, string> values;   
    static pthread_mutex_t config_mutex;
+   static string configFilePath;
+   static ConfigurationStatus initStatus;
    void parseLine(string line);
    Configuration();
    Configuration(Configuration const&){};
@@ -68,7 +74,7 @@ private:
    ~Configuration(){};
    static Configuration *instance;
    void trimString(string &text);
-   void load();
+   ConfigurationStatus load();
    void clean();
 public:
    string getValue(string paramName);
@@ -106,6 +112,18 @@ public:
     * Warning: Do not use this class after calling this method!
     */
    static void freeConfiguration();
+
+   /** 
+    * \brief Set path to user defined configuration file
+    * \param[in] file Path to configuration file
+    */
+   static void setConfigPath(const string &file);
+
+   /**
+    * \brief Info about inicialization status
+    * \return Status value
+    */
+   static ConfigurationStatus getInitStatus();
 };
 
 #endif

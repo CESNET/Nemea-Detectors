@@ -87,21 +87,14 @@ using namespace std;
 ////////////////////////////
 // Global variables
 
+string config_file = "";
 bool background = false;  // Run in background
 int log_syslog = true;   // Log into syslog
 int log_upto = LOG_ERR; // Log up to level 
 static int terminated = 0;
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
-extern pthread_mutex_t detector_start;
 extern HostProfile *MainProfile;
-
-////////////////////////////
-// Module global variables
-
-// static string server;
-// static string port;
-
 
 ///////////////////////////////////////////////////
 // Struct with information about Nemea module
@@ -111,9 +104,12 @@ trap_module_info_t module_info = {
    (char *)
       "This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)\n"
       "\n"
-      "USAGE ./hoststatsnemea TRAP_INTERFACE\n"
+      "USAGE ./hoststatsnemea TRAP_INTERFACE [-c file]\n"
       "\n"
-      "Note: Other parameters are taken from hoststats.conf by default.\n"
+      "Parameters:\n"
+      "   -c file    Load configuration from file.\n"
+      "Note: Other parameters are taken from configuration file. If configuration file\n"
+      "      is not specified, hoststats.conf is used by default.\n"
       "\n" 
       "Example of how to run this module:\n"
       "   Edit the configuration file \"hoststats.conf\" and especially the line\n"
@@ -129,56 +125,24 @@ trap_module_info_t module_info = {
    1, // Number of output TRAP interfaces
 };
 
-///////////////////////////////////////////////////////////////////////////////
-/**
- * New request from frontend
+/** \brief 
+ *
+ * \param[in,out] parametr popis
  */
-void *service(void * connectfd)
+int arguments(int argc, char *argv[])
 {
-   ssize_t n, r;
-   char buf[BUFFER];
-   string params;
-   int fd = * ((int *) connectfd);
-   int action = -1;
-   bool stop = false;
+   char opt;
    
-   // Read null-terminated message from socket
-   // while ( !stop && (n = read(fd, buf, BUFFER)) > 0) {
-   //    r = 0;
-   //    if (action == -1 && n > 0) {
-   //       action = buf[0];
-   //       r = 1;
-   //       //log(LOG_INFO, "Trap action %i", action);
-   //    }
-   //    while (r < n && buf[r] != 0) {
-   //       params += buf[r];
-   //       r++;
-   //    }
-   //    stop = (buf[r] == 0);
-   // }
-   
-   log(LOG_WARNING, "Request handler doesn't work in this version");
-
-   // // Message about new data available
-   // if (action == NEW_DATA) {
-   //    log(LOG_WARNING, "NEW_DATA action is not supported in the HostStatsNemea module");
-   // }
-   // // Request from frontend
-   // else if (action > 0 && action < num_request_handlers && request_handlers[action] != 0) {
-   //    log(LOG_INFO, "Request received (code: %i, params: \"%s\").", action, params.c_str());
-   //    string ret = request_handlers[action](params);
-   //    r = write(fd, ret.c_str(), ret.length());
-   //    if (r == (ssize_t) -1)
-   //       log(LOG_ERR, "Could not write reply, error status: %i", errno);
-   //    if (r != (ssize_t) ret.length())
-   //       log(LOG_ERR, "write(): Buffer written just partially");
-   //    log(LOG_INFO, "Request %i replied.", action);
-   // }
-   // else {
-   //    log(LOG_ERR, "Unknown request (code %i) received.", action);
-   // }
-   close(fd);
-   pthread_exit(NULL);
+   while ((opt = getopt(argc, argv, "c:")) != -1) {
+      switch (opt) {
+      case 'c':  // configuration file
+         Configuration::setConfigPath(string(optarg));
+         break;
+      default:  // invalid arguments
+         return 0;
+      }
+   }
+   return 1;
 }
 
 void parse_logmask(string &mask);
@@ -236,15 +200,25 @@ void parse_logmask(string &mask)
 
 int main(int argc, char *argv[])
 {
+   /* Inicialization and processing arguments */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info)
 
-   if (argc > 1) {
+   if (arguments(argc, argv) == 0) {
       fprintf(stderr, "ERROR: unrecognized parameter(s). Use \"-h\" for help\n");
       TRAP_DEFAULT_FINALIZATION();
       return 1;
    }
 
-   // UniRec template
+   // Initialize Configuration singleton
+   Configuration *config = Configuration::getInstance();
+   if (Configuration::getInitStatus() != INIT_OK) {
+      Configuration::freeConfiguration();
+      fprintf(stderr, "ERROR: failed to load configuration.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
+
+   /* Create UniRec template */
    tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
    tmpl_out = ur_create_template("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
    if (tmpl_in == NULL || tmpl_out == NULL) {
@@ -256,97 +230,18 @@ int main(int argc, char *argv[])
 
    openlog(NULL, LOG_NDELAY, 0);
    log(LOG_INFO, "HostStats started");
-/*   
-   int listenfd[LISTENFDS], connectfd[LISTENFDS];
-   struct hostent *hostent;
-   struct sigaction sa;
-   int listenfds, gai_error, i, maxfd;
-   struct addrinfo hints, *res, *res0;
-   fd_set rset, allset;
-*/
-   
-   // Initialize Configuration singleton
-   Configuration *config = Configuration::getInstance();
    
    // Load default configuration from config file
    config->lock();
-   // server = config->getValue("listen-interface");
-   // port = config->getValue("listen-port");
    
    /* Set logmask if used */
    string logmask = config->getValue("log-upto-level");
    if (!logmask.empty()) {
       parse_logmask(logmask);
    }
-
    config->unlock();
 
-   // ***** Initialization done, start server *****
-/*
-   memset(&hints, 0, sizeof(hints));
-   hints.ai_family = AF_UNSPEC;
-   hints.ai_socktype = SOCK_STREAM;
-   hints.ai_flags = AI_PASSIVE;
-   
-   const char *addr;
-   if (server == "" || server == "any")
-      addr = NULL;
-   else
-      addr = server.c_str();
-   
-   // Create a linked list of addrinfo structures, one for each address
-   // corresponding to server.c_str() (e.g. IPv4 and IPv6)
-   if ((gai_error = getaddrinfo(addr, port.c_str(), &hints, &res0)) != 0)
-      errx(1, "getaddrinfo(): %s", gai_strerror(gai_error));
-   
-   // Create sockets, bind and losten on all addresses
-   listenfds = 0;
-   for (res = res0; res != NULL && listenfds < LISTENFDS; res = res->ai_next) {
-      if ((listenfd[listenfds] = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1)
-         err(1, "socket()");
-      
-      log(LOG_DEBUG, "Bind socket");
-      if (bind(listenfd[listenfds], res->ai_addr, res->ai_addrlen) == -1) {
-         warn("bind()");
-         listenfds++;
-         continue;
-      }
-      
-      if (listen(listenfd[listenfds], QUEUE) == -1)
-         warn("listen()");
-      listenfds++;
-      
-      // Print the address and port we are listening on
-      char a[48] = "err";
-      unsigned short port = 0;
-      if (res->ai_family == AF_INET) {
-         inet_ntop(res->ai_family, (void*)(&((struct sockaddr_in*)res->ai_addr)->sin_addr), a, 48);
-         port = ntohs(((struct sockaddr_in*)res->ai_addr)->sin_port);
-      }
-      else if (res->ai_family == AF_INET6) {
-         inet_ntop(res->ai_family, (void*)(&((struct sockaddr_in6*)res->ai_addr)->sin6_addr), a, 48);
-         port = ntohs(((struct sockaddr_in6*)res->ai_addr)->sin6_port);
-      }
-      
-      // if ANY address, break (otherwise next bind says "address already in use")
-//       if (addr == NULL) {
-//          log(LOG_INFO, "Listening on ANY port %hu", a, port);
-//          break;
-//       }
-      log(LOG_INFO, "Listening on %s port %hu", a, port);
-   }
-   if (listenfds == 0)
-      errx(1, "getaddrinfo(): Interface not found");
-   freeaddrinfo(res0);
-*/
-   // Switch to background (daemonize)
-   // if (background) {
-   //    log(LOG_INFO, "Entering daemon mode");
-   //    // Do not change current working directory, redirect std* to /dev/null
-   //    daemon(1, 0);
-   // }
-
-
+   /* Create structure for storing flow records */
    MainProfile = new HostProfile();
 
    /* termination signals */
@@ -386,55 +281,6 @@ int main(int argc, char *argv[])
       trap_terminate();
       terminated = 1;
    }
-
-/*
-   // Create services for requests from frontend
-   maxfd = 0;
-   FD_ZERO(&allset);
-   for (i = 0; i < listenfds; i++) {
-      if (listenfd[i] > maxfd)
-         maxfd = listenfd[i];
-      FD_SET(listenfd[i], &allset);
-   }
-
-   rc = 0;
-   while (1) {
-      if (terminated == 1) {
-         break;
-      }
-#ifdef USE_SLEEP
-      log(LOG_INFO, "sleep(%d)", SLEEP);
-      sleep(SLEEP);
-#endif
-      //log(LOG_INFO, "Listening on %s:%s ...\n", server.c_str(), port.c_str());
-      rset = allset;
-      if (select(maxfd + 1, &rset, NULL, NULL, NULL) == -1) {
-         log(LOG_NOTICE, "Select() - %s", strerror(errno));
-         continue;
-      }
-      for (i = 0; i < listenfds; i++) {
-         pthread_t servicethread;
-         if (FD_ISSET(listenfd[i], &rset)) {
-            //log(LOG_INFO, "Waiting for a new client");
-            if ((connectfd[i] = accept(listenfd[i], NULL, NULL)) == -1)
-               err(1, "accept()");
-            rc = pthread_create(&servicethread, NULL, &service, (void *) &connectfd[i]);
-            pthread_detach(servicethread);
-            if (rc) {
-               log(LOG_ERR, "ERROR: return code from pthread_create() is %d", rc);
-               close(listenfd[i]);
-               break;
-            }
-         }
-      }
-   }
-   
-   // ***** Server part end, do cleanup and exit *****
-   log(LOG_INFO, "Exiting...");
-   for (i = 0; i < listenfds; i++) {
-      close(listenfd[i]);
-   }
-*/
 
    // Wait until end of TRAP threads
    pthread_join(share.data_process_thread, NULL);

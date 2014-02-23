@@ -2,13 +2,13 @@
 
 # Subprofiles (set to 1 to enable)
 ssh = 1
-dns = 0
+dns = 1
 # Note: DNS subprofile is under development (disabled by default)
 
 # Detection rules (set to 1 to enable)
 rules-generic = 1
 rules-ssh = 1
-rules-dns = 0
+rules-dns = 1
 
 # Directory for detection log files
 detection-log     = /data/hoststatsnemea/log/
@@ -21,7 +21,7 @@ log-upto-level    = LOG_INFO
 #log-upto-level    = LOG_DEBUG
 
 # Size of cuckoo hash table (== maximum number of records)
-table-size = 500000
+table-size = 4000000
 
 # A record is released, when it is in the table longer than this time. [seconds]
 timeout-active    = 300

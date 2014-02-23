@@ -39,6 +39,9 @@
 #include "aux_func.h"
 #include "detectionrules.h"
 
+//TODO: remove - only for testing
+#include <unirec/ipaddr_cpp.h>
+
 // Macros
 #define ADD(dst, src) \
    dst = safe_add(dst, src);
@@ -51,7 +54,25 @@
 #define SF  2  // single flow
 #define NRC 1  // not recognize
 
+
+/* How to add new subprofile:
+   1) Create new class in subprofiles(.cpp/.h) with static methods corresponding
+      to function pointers sp_update, sp_check, sp_delete (see subprofiles.h). 
+      If new subprofile requires its own BloomFilter, implement a method derived
+      from function pointer sp_bf_config.
+   2) Your subprofile should have a flow filtering function. Call this function
+      at the start of your new update function to ensure that only the desired
+      flows will be stored.
+   3) Create "const sp_pointers_t your_class_name" structure in subprofiles.h 
+      with name of functions corresponding to sp_update, sp_check, sp_delete and
+      sp_bf_config. If you have not implemented BloomFilter use NULL instead of
+      sp_bf_config function.
+   4) In constructor of HostProfile (profile.cpp) add your identificator of 
+      new subprofile (created in step 3) to sp_list.
+
+
 /******************************* DNS subprofile *******************************/
+#define DNS_BYTES_OVERLIMIT 1000
 /* 
  * flow_filter()
  * Check if the flow data belongs to subprofile.
@@ -76,20 +97,22 @@ bool DNSHostProfile::flow_filter(const void *data, const ur_template_t *tmplt)
  * DNS records are updated if the new flow data belongs to DNS subprofile. 
  * If record(s) does not exist, new one is created.
  * 
- * @param ips Array of two IP addresses (not used in this module - should be NULL)
+ * @param ips Structure of two IP addresses (not used in this module - can be NULL)
  * @param src_record Source record to update
  * @param dst_record Destination record to update
  * @param data New data from TRAP
  * @param tmplt Pointer to input interface template
  * @return True when data belongs to subprofile, false otherwise
  */
-bool DNSHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_record, 
+bool DNSHostProfile::update(bloom_key_t *ips, hosts_record_t &src_record, 
       hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt)
 {
    // DNS flow filter
    if (!flow_filter(data, tmplt)) {
       return 0;
    }
+
+   uint8_t dir_flags = ur_get(tmplt, data, UR_DIRECTION_FLAGS);
 
    // create new DNS record(s)
    if (src_record.dnshostprofile == NULL) {
@@ -103,11 +126,12 @@ bool DNSHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_recor
    dns_record_t &src_host_rec = src_record.dnshostprofile->record;
    dns_record_t &dst_host_rec = dst_record.dnshostprofile->record;
 
-   // source --------------------------------
-   src_host_rec.out_dns_flows++;
-
-   // destination ---------------------------
-   dst_host_rec.in_dns_flows++;
+   if (dir_flags & RSP && ur_get(tmplt, data, UR_BYTES) >= DNS_BYTES_OVERLIMIT) {
+      // source --------------------------------
+      INC(src_host_rec.out_rsp_overlimit_cnt);
+      // destination ---------------------------
+      INC(dst_host_rec.in_rsp_overlimit_cnt);
+   }
 
    return 1;
 }
@@ -125,7 +149,13 @@ bool DNSHostProfile::check_record(const hosts_key_t &key, const hosts_record_t &
    if (record.dnshostprofile == NULL)
       return 0;
 
-   // TODO: call detector here!!! 
+   check_new_rules_dns(key, record);
+
+   // cout << IPaddr_cpp(&key) << endl;
+   // dns_record_t &ssh = record.dnshostprofile->record;
+   // cout << "OUT RSP OVERLIMIT:  " << ssh.out_rsp_overlimit_cnt   << endl;
+   // cout << "IN RSP OVERLIMIT:   " << ssh.in_rsp_overlimit_cnt    << endl;
+   // cout << "------------------------------------------"   << endl;
 
    return 1;
 }
@@ -180,14 +210,14 @@ bool SSHHostProfile::flow_filter(const void *data, const ur_template_t *tmplt)
  * SSH records are updated if the new flow data belongs to SSH subprofile. 
  * If record(s) does not exist, new one is created.
  * 
- * @param ips Array of two IP addresses [source IP, destination IP]
+ * @param ips Structure of two IP addresses [source IP, destination IP] + timestamp
  * @param src_record Source record to update
  * @param dst_record Destination record to update
  * @param data New data from TRAP
  * @param tmplt Pointer to input interface template
  * @return True when data belongs to subprofile, false otherwise
  */
-bool SSHHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_record, 
+bool SSHHostProfile::update(bloom_key_t *ips, hosts_record_t &src_record, 
       hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt)
 {
    // SSH flow filter
@@ -196,9 +226,20 @@ bool SSHHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_recor
    }
 
    // find/add record in the BloomFilter
-   bool present = false;
-   present = ssh_bf_active->containsinsert((const unsigned char *) (*ips), 32);
-   ssh_bf_learn->insert((const unsigned char *) (*ips), 32);
+   bool src_present = false;
+   bool dst_present = false;
+   
+   ips->rec_time = src_record.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
+   ips->rec_time &= ((1 << 15) - 1);
+   src_present = ssh_bf_active->containsinsert((const unsigned char *) ips,
+      sizeof(bloom_key_t));
+   ssh_bf_learn->insert((const unsigned char *) ips, sizeof(bloom_key_t));
+
+   ips->rec_time = dst_record.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
+   ips->rec_time |= (1 << 15);
+   dst_present = ssh_bf_active->containsinsert((const unsigned char *) ips,
+      sizeof(bloom_key_t));
+   ssh_bf_learn->insert((const unsigned char *) ips, sizeof(bloom_key_t));
 
    uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
    uint8_t dir_flags = ur_get(tmplt, data, UR_DIRECTION_FLAGS);
@@ -216,7 +257,7 @@ bool SSHHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_recor
    ssh_record_t &dst_host_rec = dst_record.sshhostprofile->record;
 
    // source ------------------------------------------
-   if (!present) INC(src_host_rec.out_all_uniqueips);
+   if (!src_present) INC(src_host_rec.out_all_uniqueips);
 
    if (dir_flags & REQ) {
       // request flows
@@ -229,7 +270,7 @@ bool SSHHostProfile::update(const ip_addr_t (*ips)[2], hosts_record_t &src_recor
    }
 
    // destination -------------------------------------
-   if (!present) INC(dst_host_rec.in_all_uniqueips);
+   if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
 
    if (dir_flags & REQ) {
       // request flows
@@ -286,9 +327,10 @@ bool SSHHostProfile::delete_record(hosts_record_t &record)
  *    BF_SWAP:    Clear active BloomFilter and swap active and learning BloomFilter
  *    BF_DESTROY: (destructor) delete active and learning BloomFilter
  *
- * @param[in] arg Type of operation
+ * @param[in] arg  Type of operation
+ * @param[in] size Size of BloomFilter (used only if arg is BF_CREATE)
  */
-void SSHHostProfile::bloom_filter_config(sp_bf_action arg)
+void SSHHostProfile::bloom_filter_config(sp_bf_action arg, int size)
 {
    switch (arg) {
    case BF_CREATE: {
@@ -297,7 +339,7 @@ void SSHHostProfile::bloom_filter_config(sp_bf_action arg)
       }
 
       bloom_parameters ssh_bp;
-      ssh_bp.projected_element_count = 1000000;
+      ssh_bp.projected_element_count = size;
       ssh_bp.false_positive_probability = 0.01;
       ssh_bp.compute_optimal_parameters();
 

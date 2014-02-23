@@ -56,9 +56,15 @@ typedef enum {
    BF_DESTROY  
 } sp_bf_action;
 
+// BloomFilter key
+struct bloom_key_t {
+   ip_addr_t src_ip;
+   ip_addr_t dst_ip;
+   uint16_t rec_time;
+} __attribute__((packed));
 
 // Function pointer to update the subprofile
-typedef bool (*sp_update)(const ip_addr_t (*)[2],hosts_record_t&, hosts_record_t&, 
+typedef bool (*sp_update)(bloom_key_t *, hosts_record_t&, hosts_record_t&, 
    const void *, const ur_template_t *);
 
 // Function pointer to check a record of the subprofile
@@ -68,7 +74,7 @@ typedef bool (*sp_check)(const hosts_key_t&, const hosts_record_t&);
 typedef bool (*sp_delete)(hosts_record_t&);
 
 // Function pointers to manipulation with subprofile's BloomFilter
-typedef void (*sp_bf_config)(sp_bf_action);
+typedef void (*sp_bf_config)(sp_bf_action, int);
 
 // General stucture for subprofile pointers
 typedef struct sp_pointers_s {
@@ -112,25 +118,25 @@ struct subprofile_t{
 /******************************* DNS subprofile *******************************/
 // record structure
 struct dns_record_t {
-   uint32_t in_dns_flows;
-   uint32_t out_dns_flows;
+   uint32_t in_rsp_overlimit_cnt;
+   uint32_t out_rsp_overlimit_cnt;
 
    dns_record_t() {
       memset(this, 0, sizeof(dns_record_t));
    }
-} __attribute((packed));
+} __attribute__((packed));
 
 // class
 class DNSHostProfile {
 private:
-   dns_record_t record;
-
    // Flow filter for update function
    static bool flow_filter(const void *data, const ur_template_t *tmplt);
 
 public:
+   dns_record_t record;
+
    // Update a DNS subprofile
-   static bool update(const ip_addr_t (*ips)[2], hosts_record_t &src_record, 
+   static bool update(bloom_key_t *, hosts_record_t &src_record, 
       hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt);
 
    // Check rules in a DNS subprofile
@@ -165,7 +171,7 @@ struct ssh_record_t {
    ssh_record_t() {
       memset(this, 0, sizeof(ssh_record_t));
    }
-} __attribute((packed));
+} __attribute__((packed));
 
 // class
 class SSHHostProfile {
@@ -182,7 +188,7 @@ public:
    ssh_record_t record;
 
    // Update a SSH subprofile
-   static bool update(const ip_addr_t (*ips)[2], hosts_record_t &src_record, 
+   static bool update(bloom_key_t *, hosts_record_t &src_record, 
       hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt);
 
    // Check rules in a SSH subprofile
@@ -192,7 +198,7 @@ public:
    static bool delete_record(hosts_record_t &record);
 
    // Create/swap/destroy BloomFilters
-   static void bloom_filter_config(sp_bf_action arg);
+   static void bloom_filter_config(sp_bf_action arg, int size);
 };
 
 const sp_pointers_t ssh_pointers = {

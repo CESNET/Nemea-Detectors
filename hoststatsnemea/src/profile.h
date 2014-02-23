@@ -86,9 +86,6 @@ public:
    // Destructor
    ~HostProfile();
 
-   // Do what is needed after configuration is reloaded
-   int reload_config();
-
    // Update the main profile and subprofiles
    void update(const void *record, const ur_template_t *tmplt,
       bool subprofiles = true);

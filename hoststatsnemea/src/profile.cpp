@@ -37,16 +37,15 @@
 
 #include "profile.h"
 #include "aux_func.h"
-
 #include "processdata.h"
+#include <limits>
 
 using namespace std;
-
-#define DEF_SIZE (1000000)
 
 extern uint32_t hs_time;
 
 // DEFAULT VALUES OF THE MAIN PROFILE (in seconds)
+#define DEF_SIZE (1000000)
 #define D_ACTIVE_TIMEOUT   300   // default value (in seconds)
 #define D_INACTIVE_TIMEOUT 30    // default value (in seconds)
 #define D_DET_START_PAUSE  5     // default time between starts of detector (in seconds)
@@ -82,7 +81,7 @@ HostProfile::HostProfile()
 
    // Create BloomFilters
    bloom_parameters bp;
-   bp.projected_element_count = 5000000;
+   bp.projected_element_count = 2 * table_size;
    bp.false_positive_probability = 0.01;
    bp.compute_optimal_parameters();
    //log(LOG_INFO, "process_data: Creating Bloom Filter, table size: %d, hashes: %d",
@@ -118,24 +117,9 @@ HostProfile::~HostProfile()
    // Delete all BloomFilters in subprofiles
    for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
       if (it->pointers.bf_config_ptr != NULL) {
-         it->pointers.bf_config_ptr(BF_DESTROY);
+         it->pointers.bf_config_ptr(BF_DESTROY, 0);
       }
    }
-}
-
-int HostProfile::reload_config()
-{
-   // FIXME: pozastavit všechna ostatní vlákna během vykonávání této funkce,
-   //       dostat je do neutrálního stavu... hrozí zvětšování tabulky,
-   //       a změna jiných kritických parametrů vedoucích až k pádu...
-
-   apply_config();
-
-   if (table_size != stat_table_ptr->table_size) {
-      return rehash_v2(stat_table_ptr);
-   }
-
-   return 0;
 }
 
 /*
@@ -166,11 +150,9 @@ void HostProfile::apply_config()
          continue;
       }
 
-      // Create/destroy subprofile's BloomFilters
+      // Create subprofile's BloomFilters
       if (it->sp_status) {
-         it->pointers.bf_config_ptr(BF_CREATE);
-      } else {
-         it->pointers.bf_config_ptr(BF_DESTROY);
+         it->pointers.bf_config_ptr(BF_CREATE, 2 * table_size);
       }
    }
 
@@ -193,16 +175,40 @@ void HostProfile::apply_config()
 void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       bool subprofiles)
 {
-   // find/add record in the BloomFilter
-   ip_addr_t bkey[2] = {ur_get(tmpl_in, record, UR_SRC_IP),
-                        ur_get(tmpl_in, record, UR_DST_IP)};
-   bool present = false;
-   present = bf_active->containsinsert((const unsigned char *) bkey, 32);
-   bf_learn->insert((const unsigned char *) bkey, 32);
+   // create key for the BloomFilter
+   bloom_key_t bloom_key;
+   bloom_key.src_ip = ur_get(tmpl_in, record, UR_SRC_IP);
+   bloom_key.dst_ip = ur_get(tmpl_in, record, UR_DST_IP);
 
-   // get flows records
-   hosts_record_t& src_host_rec = get_record(bkey[0]);
-   hosts_record_t& dst_host_rec = get_record(bkey[1]);
+   // get flows records and set/update timestamps
+   hosts_record_t& src_host_rec = get_record(bloom_key.src_ip);
+   hosts_record_t& dst_host_rec = get_record(bloom_key.dst_ip);
+
+   if (!src_host_rec.in_all_flows && !src_host_rec.out_all_flows) {
+      src_host_rec.first_rec_ts = hs_time;
+   }
+   src_host_rec.last_rec_ts = hs_time;
+
+   if (!dst_host_rec.in_all_flows && !dst_host_rec.out_all_flows) {
+      dst_host_rec.first_rec_ts = hs_time;
+   }
+   dst_host_rec.last_rec_ts = hs_time;
+
+   // find/add records in the BloomFilters (get info about presence of this flow)
+   bool src_present = false;
+   bool dst_present = false;
+
+   bloom_key.rec_time = src_host_rec.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
+   bloom_key.rec_time &= ((1 << 15) - 1);
+   src_present = bf_active->containsinsert((const unsigned char *) &bloom_key, 
+      sizeof(bloom_key_t));
+   bf_learn->insert((const unsigned char *) &bloom_key, sizeof(bloom_key_t));
+
+   bloom_key.rec_time = dst_host_rec.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
+   bloom_key.rec_time |= (1 << 15);
+   dst_present = bf_active->containsinsert((const unsigned char *) &bloom_key, 
+      sizeof(bloom_key_t));
+   bf_learn->insert((const unsigned char *) &bloom_key, sizeof(bloom_key_t));
 
    uint8_t tcp_flags = ur_get(tmpl_in, record, UR_TCP_FLAGS);
    uint8_t dir_flags = ur_get(tmpl_in, record, UR_DIRECTION_FLAGS);
@@ -215,15 +221,10 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       value = safe_inc(value);
 
    // source --------------------------------------------------------
-   if (!src_host_rec.in_all_flows && !src_host_rec.out_all_flows)
-      src_host_rec.first_rec_ts = hs_time;
-
-   src_host_rec.last_rec_ts = hs_time;
-
    // all flows
    ADD(src_host_rec.out_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
    ADD(src_host_rec.out_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
-   if (!present) INC(src_host_rec.out_all_uniqueips);
+   if (!src_present) INC(src_host_rec.out_all_uniqueips);
    INC(src_host_rec.out_all_flows);
 
    if (tcp_flags & 0x1)  INC(src_host_rec.out_all_fin_cnt);
@@ -239,7 +240,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       // request flows
       ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
-      if (!present) INC(src_host_rec.out_req_uniqueips);
+      if (!src_present) INC(src_host_rec.out_req_uniqueips);
       INC(src_host_rec.out_req_flows);
 
       if (tcp_flags & 0x2)  INC(src_host_rec.out_req_syn_cnt);
@@ -256,15 +257,10 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    }
 
    // destination ---------------------------------------------------
-   if (!dst_host_rec.in_all_flows && !dst_host_rec.out_all_flows)
-      dst_host_rec.first_rec_ts = hs_time;
-
-   dst_host_rec.last_rec_ts = hs_time;
-
    // all flows
    ADD(dst_host_rec.in_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
    ADD(dst_host_rec.in_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
-   if (!present) INC(dst_host_rec.in_all_uniqueips);
+   if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
    INC(dst_host_rec.in_all_flows);
 
    if (tcp_flags & 0x1)  INC(dst_host_rec.in_all_fin_cnt);
@@ -280,7 +276,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       // request flows
       ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
-      if (!present) INC(dst_host_rec.in_req_uniqueips);
+      if (!dst_present) INC(dst_host_rec.in_req_uniqueips);
       INC(dst_host_rec.in_req_flows);
 
       if (tcp_flags & 0x4)  INC(dst_host_rec.in_req_rst_cnt);
@@ -302,7 +298,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (!it->sp_status)
          break;
 
-      it->pointers.update_ptr(&bkey, src_host_rec, dst_host_rec, record, tmpl_in);
+      it->pointers.update_ptr(&bloom_key, src_host_rec, dst_host_rec, record, tmpl_in);
    }
 }
 
@@ -364,7 +360,7 @@ void HostProfile::swap_bf()
          continue;
       }
 
-      it->pointers.bf_config_ptr(BF_SWAP);
+      it->pointers.bf_config_ptr(BF_SWAP, 0);
    }
 }
 
