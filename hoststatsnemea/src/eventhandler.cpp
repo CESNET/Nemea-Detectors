@@ -109,12 +109,6 @@ void reportEvent(const Event& event)
    string h = timeslot.substr(8,2);
    string n = timeslot.substr(10,2);
    
-
-   #pragma omp critical
-   {
-
-
-
    if (!path.empty()) {
       // Fill in year, month, day, hour and minute
 //       replace(path, "%y", timeslot.substr(0,4));
@@ -212,10 +206,6 @@ void reportEvent(const Event& event)
    trap_send_data(0, rec, ur_rec_static_size(tmpl_out), TRAP_NO_WAIT);
 
    ur_free(rec);
-
-
-
-   } //end of pragma omp critical
 }
 
 
