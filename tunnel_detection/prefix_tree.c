@@ -73,7 +73,7 @@ int map_chatecter_to_number(char  letter){
 		return 66;
 	}*/
 	else{
-		//printf("this letter canot be used in domain: %c, in dec %d\n", letter ,letter);
+		printf("this letter canot be used in domain: %c, in dec %d\n", letter ,letter);
 		return COUNT_OF_LETTERS_IN_DOMAIN-1;
 	}
 
@@ -410,6 +410,47 @@ prefix_tree_domain_t * add_to_prefix_tree_recursive(prefix_tree_inner_node_t * n
 	
 }
 
+int is_it_in_exception(prefix_tree_t * tree, char * string, int length){
+	int i, index, map_number;
+	prefix_tree_inner_node_t *node;
+	node = tree->root;
+	index = length - 1;
+	
+	while(node != NULL){
+			for(i=0; i < node->length; i++){
+				if(index >= 0 && node->string[i] == string[index]){
+					index--;
+				}
+				else{
+					return 0;
+				}
+			}
+			if(index < 0 || string[index]=='.'){
+				if(node->domain == NULL){
+					return 0;
+				}
+				else if(node->domain->exception == 1){
+					printf("jop neco delam %s\n",string );
+					return 1;
+				}
+				else if(index < 0){
+					return 0;
+				}
+				index--;
+				node = node->domain->child;	
+			}
+			else{
+				if(node->child == NULL){
+					return 0;
+				}
+				map_number = map_chatecter_to_number(string[index]);
+				node = node->child[map_number];
+			}
+	}
+	return 0;
+
+}
+
 prefix_tree_domain_t * add_to_prefix_tree(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat){
 	prefix_tree_domain_t * found, * iter;
 	int index;
@@ -511,6 +552,8 @@ prefix_tree_domain_t * add_to_prefix_tree(prefix_tree_t * tree, char * string, i
 	//add or sort in list count_of_different_subdomains
 	return found;
 }
+
+
 
 prefix_tree_domain_t * add_exception_to_prefix_tree(prefix_tree_t * tree, char * string, int length){
 	prefix_tree_domain_t * found, * iter;

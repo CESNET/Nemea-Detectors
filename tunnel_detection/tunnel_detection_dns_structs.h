@@ -126,38 +126,74 @@ typedef struct prefix_tree_t prefix_tree_t ;
 #define HISTOGRAM_SIZE_RESPONSE 150 /*< Default number of client intefaces. */
 
 #define STATE_NEW              0b00000000
-#define STATE_TUNNEL           0b00000001
-#define STATE_OTHER_ANOMALY    0b00000010
-#define STATE_SUSPISION        0b01000000
+#define STATE_SUSPISION        0b00000001
+#define STATE_ATTACK           0b00000010
 #define STATE_OK               0b10000000
 
- typedef struct ip_address_suspision_request_t ip_address_suspision_request_t ;
- struct ip_address_suspision_request_t {
+ typedef struct ip_address_suspision_request_other_t ip_address_suspision_request_other_t ;
+ struct ip_address_suspision_request_other_t {
     unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, which prefix tree should be used */
-    prefix_tree_t * tunnel_suspision;
     prefix_tree_t * other_suspision;
+    unsigned int round_in_suspiction;
  } ;
 
-
+ typedef struct ip_address_suspision_request_tunnel_t ip_address_suspision_request_tunnel_t ;
+ struct ip_address_suspision_request_tunnel_t {
+    prefix_tree_t * tunnel_suspision;
+    unsigned int round_in_suspiction;
+ } ;
 
 #define TXT_TUNNEL      0b00000001
 #define CNAME_TUNNEL    0b00000010
 #define MX_TUNNEL       0b00000100
 #define NS_TUNNEL       0b00001000
 
-typedef struct ip_address_suspision_response_t ip_address_suspision_response_t ;
- struct ip_address_suspision_response_t {
-    unsigned char  state_response_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, which prefix tree should be used */
+typedef struct ip_address_suspision_response_tunnel_t ip_address_suspision_response_tunnel_t ;
+ struct ip_address_suspision_response_tunnel_t {
     prefix_tree_t * txt_suspision;
     prefix_tree_t * cname_suspision;
     prefix_tree_t * mx_suspision;
     prefix_tree_t * ns_suspision;
     unsigned char state_type;
+    unsigned int round_in_suspiction;
  } ;
 
 
 #define IP_VERSION_4 4
 #define IP_VERSION_6 6
+
+
+ typedef struct counter_request_t counter_request_t ;
+ struct counter_request_t {
+    unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
+    unsigned long histogram_dns_request_sum_for_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
+    unsigned long histogram_dns_request_ex_sum_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size. 
+                                                                                            At first it is sum, but on the end it has to be devided
+                                                                                            by count of requests */    
+    unsigned long dns_request_count; /*!< count of requests */
+    unsigned long dns_request_string_count; /*!< count of requests string */
+    unsigned long sum_Xi_request; /*!< Sum of sizes request */
+    unsigned long sum_Xi2_request; /*!< Sum of sizes^2 request */
+    unsigned long sum_Xi3_request; /*!< Sum of sizes^3 request */
+    unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
+    unsigned int request_without_string; /*!< count of requests without string */
+
+    unsigned char round_in_suspiction_request; /*!< number of round which Ip is in suspiction */   
+};
+
+
+ typedef struct counter_response_t counter_response_t ;
+ struct counter_response_t {
+    unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */   
+    unsigned long dns_response_count; /*!< count of responses */
+    unsigned long sum_Xi_response; /*!< Sum of sizes respone */
+    unsigned long sum_Xi2_response; /*!< Sum of sizes^2 respone */
+    unsigned long sum_Xi3_response; /*!< Sum of sizes^3 respone */
+    unsigned long sum_Xi4_response; /*!< Sum of sizes^4 respone */
+
+    unsigned char round_in_suspiction_response; /*!< number of round which Ip is in suspiction */    
+};
+
 
 /*!
  * \brief Structure containing inforamtion about each IP adress
@@ -168,31 +204,19 @@ typedef struct ip_address_suspision_response_t ip_address_suspision_response_t ;
  typedef struct ip_address_t ip_address_t ;
  struct ip_address_t {
     unsigned char ip_version;
-   	unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
-   	unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */
-    unsigned long histogram_dns_request_sum_for_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
-    unsigned long histogram_dns_request_ex_sum_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size. 
-                                                                                            At first it is sum, but on the end it has to be devided
-                                                                                            by count of requests */
-    ip_address_suspision_request_t * suspision_request;
-    ip_address_suspision_response_t * suspision_response;    
-   	unsigned long dns_response_count; /*!< count of responses */
-    unsigned long dns_request_count; /*!< count of requests */
-    unsigned long dns_request_string_count; /*!< count of requests string */
-    unsigned long sum_Xi_response; /*!< Sum of sizes respone */
-    unsigned long sum_Xi_request; /*!< Sum of sizes request */
-    unsigned long sum_Xi2_response; /*!< Sum of sizes^2 respone */
-    unsigned long sum_Xi2_request; /*!< Sum of sizes^2 request */
-    unsigned long sum_Xi3_response; /*!< Sum of sizes^3 respone */
-    unsigned long sum_Xi3_request; /*!< Sum of sizes^3 request */
-    unsigned long sum_Xi4_response; /*!< Sum of sizes^4 respone */
-    unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
-    unsigned int request_without_string; /*!< count of requests without string */
-    unsigned char state_request; /*!< state of finding tunnel in requests */
-    unsigned char state_response; /*!< state of finding tunnel in response */
-    unsigned char round_in_suspiction_request; /*!< number of round which Ip is in suspiction */
-    unsigned char round_in_suspiction_response; /*!< number of round which Ip is in suspiction */
-   	ip_address_t * next; /*!< pointer to next value */
+    counter_request_t counter_request;
+    counter_response_t counter_response;
+
+    ip_address_suspision_request_tunnel_t * suspision_request_tunnel;
+    ip_address_suspision_request_other_t * suspision_request_other;
+    ip_address_suspision_response_tunnel_t * suspision_response_tunnel;
+
+    unsigned char state_request_other; /*!< state of finding tunnel in requests */
+    unsigned char state_request_tunnel; /*!< state of finding tunnel in requests */
+    unsigned char state_response_other; /*!< state of finding tunnel in response */
+    unsigned char state_response_tunnel; /*!< state of finding tunnel in response */
+   	
+    ip_address_t * next; /*!< pointer to next value */
    	void * paret_in_b_plus_tree; /*!< parent value in b_plus tree */
 } ;
 

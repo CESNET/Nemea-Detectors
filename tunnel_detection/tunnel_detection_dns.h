@@ -95,9 +95,9 @@
 #define VAR_RESPONSE_MAX 50000 /*< Maximal value of response var */
 #define VAR_RESPONSE_MIN 200 /*< Minimal value of response var*/
 #define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
-#define MIN_DNS_REQUEST_COUNT 50 /*< Minimal value of dns count of packets */
+#define MIN_DNS_REQUEST_COUNT 200 /*< Minimal value of dns count of packets */
 #define MIN_DNS_REQUEST_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
-#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 100 /*< Minimal value of dns count in payload analysis for other anomaly */
+#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 200 /*< Minimal value of dns count in payload analysis for other anomaly */
 #define MIN_DNS_RESPONSE_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
 #define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 200 /*< Minimal value of dns count of packets */
 #define REQUEST_MAX_COUNT_OF_USED_LETTERS 24  /*< Maximum number of used leeters for domain */
@@ -111,9 +111,12 @@
 #define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.2 /*< Maximum percent of numbers in domain, more than that can be tunnel */
 #define MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST 0.3 /*< Maximum percent of mallformed packet in requests */
 #define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 12 /*< Maximum count of numbers in domain, more than that can be tunnel */
-#define REQUEST_PART                0b00000001 /*< Define request part for suspision */
-#define RESPONSE_PART               0b00000010 /*< Define request part for suspision */
-#define REQUEST_AND_RESPONSE_PART   0b00000011 /*< Define request and response part for suspision*/
+#define REQUEST_PART_TUNNEL         0b00000001 /*< Define request part for suspision */
+#define REQUEST_PART_OTHER          0b00000010 /*< Define request part for suspision */
+#define RESPONSE_PART_TUNNEL        0b00000100 /*< Define request part for suspision */
+#define RESPONSE_PART_OTHER         0b00001000 /*< Define request part for suspision */
+
+#define REQUEST_AND_RESPONSE_PART   0b00001111 /*< Define request and response part for suspision*/
 /* /} */
 
 
