@@ -1,23 +1,64 @@
+/*!
+ * \file b_plus_tree.h
+ * \brief B+ tree data structure for saving information about Ip adresses
+ * \author Zdenek Rosa <rosazden@fit.cvut.cz>
+ * \date 2014
+ */
+/*
+ * Copyright (C) 2014 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 #ifndef _B_PLUS_TREE_
 #define _B_PLUS_TREE_
-
-#include <cstdlib>
-#include <cstdio>
-#include <ctime>
-#include <iostream>
-#include <fstream>
-#include <cassert>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
 #include "tunnel_detection_dns_structs.h"
-using namespace std;
 
+
+ #ifdef __cplusplus
+
+
+using namespace std;
+ extern "C" {
+ #endif
 
 void * inicialize_b_plus_tree(unsigned int size);
 
-ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint32_t ip);
+ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint64_t * ip);
 
 ip_address_t * get_list(void * t);
 
@@ -26,32 +67,32 @@ void  destroy_b_plus_tree(void * tree);
 void  delete_item_b_plus_tree(void * tree, ip_address_t * delete_item );
 
 
+#ifdef __cplusplus
+}
+#endif
 
+#ifdef __cplusplus
 
 class C_key {
-  uint32_t *value;
+  uint64_t * value;
 public:
-  C_key (uint32_t v = 0);
+  C_key (uint64_t * v) ;
 
-  C_key (uint32_t *v);
 
   ~C_key ();
 
-  uint32_t get_value () const;
-  void set_value (int v);
 
-  C_key & operator = (const C_key & i) {
-    if (this != &i)
-      value = i.value;
-    return *this;
-  }
+  uint64_t * get_value () const;
+  void set_value (uint64_t * v );
 
-  bool operator == (const C_key & i) const { return *value == *i.value; }
-  bool operator != (const C_key & i) const { return *value != *i.value; }
-  bool operator <  (const C_key & i) const { return *value <  *i.value; }
-  bool operator >  (const C_key & i) const { return *value >  *i.value; }
-  bool operator >= (const C_key & i) const { return *value >= *i.value; }
-  bool operator <= (const C_key & i) const { return *value <= *i.value; }
+ C_key & operator = (const C_key & i);
+
+  bool operator == (const C_key & i) const;
+  bool operator != (const C_key & i) const;
+  bool operator <  (const C_key & i) const;
+  bool operator >  (const C_key & i) const;
+  bool operator >= (const C_key & i) const;
+  bool operator <= (const C_key & i) const;
 
 
 };
@@ -60,7 +101,7 @@ class C_leaf_node;
 class C_value {
   ip_address_t *value;
   public:
-    C_value (uint32_t v = 0);
+    C_value (uint64_t * v);
     C_value (const C_key & i);
     C_value (const C_key & i,  const C_leaf_node * leaf=NULL);
     ~C_value ();
@@ -73,20 +114,9 @@ class C_value {
 
     C_key * create_key();
 
-    C_value & operator = (const C_value & i) {
-      if (this != &i)
-        value = i.value;
-      return *this;
-    }
+    C_value & operator = (const C_value & i);
 
-  /*
-    bool operator == (const C_value & i) const { return *value == *i.value; }
-    bool operator != (const C_value & i) const { return *value != *i.value; }
-    bool operator <  (const C_value & i) const { return *value <  *i.value; }
-    bool operator >  (const C_value & i) const { return *value >  *i.value; }
-    bool operator >= (const C_value & i) const { return *value >= *i.value; }
-    bool operator <= (const C_value & i) const { return *value <= *i.value; }
-  */
+
 
 };
 
@@ -191,6 +221,8 @@ class C_b_tree_plus {
       void check_repair( );
 
   };
+
+#endif
 //-------------------------------------------------------------------------------------------
  
 

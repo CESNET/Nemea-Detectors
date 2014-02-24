@@ -2,10 +2,10 @@
  * \file tunnel_detection_dns_structs.h
  * \brief Modul that detects DNS tunnels.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2013
+ * \date 2014
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -55,7 +55,7 @@ typedef struct character_statistic_t character_statistic_t ;
 } ;
 
 //********* prefix tree *********
-#define COUNT_OF_LETTERS_IN_DOMAIN 68
+#define COUNT_OF_LETTERS_IN_DOMAIN 95
 #define MAX_SIZE_OF_DOMAIN 256
 #define MAX_SIZE_OF_DEEGRE 5
 #define ADD_TO_LIST_FROM_COUNT_OF_SEARCH 20
@@ -76,7 +76,8 @@ typedef struct character_statistic_t character_statistic_t ;
 
 
  struct prefix_tree_domain_t {
- 	unsigned char deegree;
+ 	unsigned char exception;
+    unsigned char deegree;
 	unsigned int count_of_search;
 	unsigned int count_of_different_subdomains;
 	unsigned char count_of_different_letters;
@@ -108,6 +109,9 @@ typedef struct prefix_tree_t prefix_tree_t ;
 } ;
 
 
+
+
+
 //********* ip address record *********
 
 /*!
@@ -118,22 +122,39 @@ typedef struct prefix_tree_t prefix_tree_t ;
 #define HISTOGRAM_SIZE_REQUESTS 30 /*< Default number of client intefaces. */
 #define HISTOGRAM_SIZE_RESPONSE 150 /*< Default number of client intefaces. */
 
-#define STATE_NEW 0
-#define STATE_OK 1
-#define STATE_SUSPISION 2
-#define STATE_TUNNEL 3
-#define STATE_OTHER_ANOMALY 4
-#define STATE_TUNNEL_AND_OTHER_ANOMALY 5
+#define STATE_NEW              0b00000000
+#define STATE_TUNNEL           0b00000001
+#define STATE_OTHER_ANOMALY    0b00000010
+#define STATE_SUSPISION        0b01000000
+#define STATE_OK               0b10000000
 
-
-
- typedef struct ip_address_suspision_t ip_address_suspision_t ;
- struct ip_address_suspision_t {
+ typedef struct ip_address_suspision_request_t ip_address_suspision_request_t ;
+ struct ip_address_suspision_request_t {
     unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, which prefix tree should be used */
     prefix_tree_t * tunnel_suspision;
     prefix_tree_t * other_suspision;
  } ;
 
+
+
+#define TXT_TUNNEL      0b00000001
+#define CNAME_TUNNEL    0b00000010
+#define MX_TUNNEL       0b00000100
+#define NS_TUNNEL       0b00001000
+
+typedef struct ip_address_suspision_response_t ip_address_suspision_response_t ;
+ struct ip_address_suspision_response_t {
+    unsigned char  state_response_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, which prefix tree should be used */
+    prefix_tree_t * txt_suspision;
+    prefix_tree_t * cname_suspision;
+    prefix_tree_t * mx_suspision;
+    prefix_tree_t * ns_suspision;
+    unsigned char state_type;
+ } ;
+
+
+#define IP_VERSION_4 4
+#define IP_VERSION_6 6
 
 /*!
  * \brief Structure containing inforamtion about each IP adress
@@ -143,14 +164,16 @@ typedef struct prefix_tree_t prefix_tree_t ;
  */
  typedef struct ip_address_t ip_address_t ;
  struct ip_address_t {
-	uint32_t ip;
+	uint64_t ip[2];
+    unsigned char ip_version;
    	unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
    	unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */
     unsigned long histogram_dns_request_sum_for_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
     unsigned long histogram_dns_request_ex_sum_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size. 
                                                                                             At first it is sum, but on the end it has to be devided
                                                                                             by count of requests */
-    ip_address_suspision_t * suspision;
+    ip_address_suspision_request_t * suspision_request;
+    ip_address_suspision_response_t * suspision_response;    
    	unsigned long dns_response_count; /*!< count of responses */
     unsigned long dns_request_count; /*!< count of requests */
     unsigned long dns_request_string_count; /*!< count of requests string */
@@ -162,6 +185,7 @@ typedef struct prefix_tree_t prefix_tree_t ;
     unsigned long sum_Xi3_request; /*!< Sum of sizes^3 request */
     unsigned long sum_Xi4_response; /*!< Sum of sizes^4 respone */
     unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
+    unsigned int request_without_string; /*!< count of requests without string */
     float ex_response; /*!< middle value respone */
     float ex_request; /*!< middle value respone */
     float ex_request_count_of_different_letters; /*!< middle value of count letters */
@@ -172,8 +196,10 @@ typedef struct prefix_tree_t prefix_tree_t ;
     float skewness_response; /*!< skewness response */
     float kurtosis_request; /*!< kurtosis request */
     float kurtosis_response; /*!< kurtosis response */
-    unsigned char state; /*!< state of finding tunnel*/
-    unsigned char round_in_suspiction; /*!< number of round which Ip is in suspiction */
+    unsigned char state_request; /*!< state of finding tunnel in requests */
+    unsigned char state_response; /*!< state of finding tunnel in response */
+    unsigned char round_in_suspiction_request; /*!< number of round which Ip is in suspiction */
+    unsigned char round_in_suspiction_response; /*!< number of round which Ip is in suspiction */
    	ip_address_t * next; /*!< pointer to next value */
    	void * paret_in_b_plus_tree; /*!< parent value in b_plus tree */
 } ;
@@ -195,6 +221,62 @@ typedef struct calulated_result_t calulated_result_t ;
     float kurtosis_response; /*!< kurtosis response */
 } ;
 
+//********* packet from parser *********
+
+#define MAX_SIZE_OF_REQUEST_DOMAIN 255
+#define MAX_SIZE_OF_RESPONSE_STRING 1024
+/*!
+ * \brief Structure containing packet DNS
+ * Structure used to keep information about DNS packet.
+ */
+ typedef struct packet_t packet_t ;
+ struct packet_t {
+    double time;
+    uint64_t src_ip[2];
+    uint64_t dst_ip[2];
+    unsigned char ip_version;
+    unsigned int size;
+    char is_response;
+    char  request_string[MAX_SIZE_OF_REQUEST_DOMAIN];
+    int request_length;
+    char mx_response[MAX_SIZE_OF_RESPONSE_STRING];
+    char ns_response[MAX_SIZE_OF_RESPONSE_STRING];
+    char cname_response[MAX_SIZE_OF_RESPONSE_STRING];
+    char txt_response[MAX_SIZE_OF_RESPONSE_STRING];
+} ;
+
+
+//********* values for searching anomaly *********
+
+ typedef struct values_t values_t ;
+ struct values_t {
+
+unsigned int ex_request_max;    /*< maximal value of request middle value */
+unsigned int ex_request_min;    /*< minimal value of request middle value */
+unsigned int ex_response_max;   /*< maximal value of response middle value */
+unsigned int ex_response_min;   /*< minimal value of response middle value */
+unsigned int var_request_max;   /*< maximal value of request var */
+unsigned int var_request_min;   /*< minimal value of request var*/
+unsigned int var_response_max;  /*< maximal value of response var */
+unsigned int var_response_min;  /*< minimal value of response var*/
+unsigned int kurtosis_request_min;  /*< maximal value of request var */
+unsigned int min_dns_request_count; /*< minimal value of dns count of packets */
+unsigned int min_dns_request_count_tunnel;  /*< minimal value of dns count in payload analysis for tunnel */
+unsigned int min_dns_request_count_other_anomaly;   /*< minimal value of dns count in payload analysis for other anomaly */
+unsigned int min_dns_response_count_tunnel; /*< minimal value of dns count in payload analysis for tunnel */
+unsigned int min_dns_response_count_other_anomaly;  /*< minimal value of dns count in payload analysis for other anomaly */
+unsigned int request_max_count_of_used_letters; /*< maximum number of used leeters for domain */
+unsigned int response_max_count_of_used_letters;    /*< maximum number of used leeters for domain */
+float max_percent_of_new_subdomains;    /*< maximum percent of new subdomain, more than this can be tunel */
+float min_percent_of_new_subdomains;    /*< minimum percent of new subdomain, less than this can be anomaly */
+float min_percent_of_domain_searching_just_once;    /*< minimum percent of searching unique domains, less than that can be anomaly */
+float max_percent_of_domain_searching_just_once;    /*< maximum percent of searching unique domains, more than that can be tunnel */
+float min_percent_of_unique_domains;    /*< minimum percent unique domains, less than that can be anomaly */
+float max_percent_of_unique_domains;    /*< maximum percent of searching unique domains, more than that can be tunne l*/
+float max_percent_of_numbers_in_domain_prefix_tree_filter;  /*< maximum percent of numbers in domain, more than that can be tunnel */
+float max_percent_of_mallformed_packet_request; /*< maximum percent of mallformed packet in requests */
+unsigned int max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
+};
 
 
 

@@ -1,3 +1,46 @@
+/*!
+ * \file b_plus_tree.cpp
+ * \brief B+ tree data structure for saving information about Ip adresses
+ * \author Zdenek Rosa <rosazden@fit.cvut.cz>
+ * \date 2014
+ */
+/*
+ * Copyright (C) 2014 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <cstdlib> 
 #include <cstdio> 
 #include <ctime> 
@@ -12,36 +55,72 @@ using namespace std;
 
 
 
-  C_key::C_key (uint32_t v) 
+  C_key::C_key (uint64_t * v) 
   {
-    value = &v;
-  }
-
-  C_key::C_key (uint32_t *v) {
     value = v;
   }
 
+
   C_key::~C_key () {}
 
-  uint32_t C_key::get_value () const { return *this->value; }
-  void C_key::set_value (int v) { *value = v; }
+  uint64_t * C_key::get_value () const { return this->value; }
+  void C_key::set_value (uint64_t * v) { 
+    value = v;
+  }
+
+ C_key & C_key::operator = (const C_key & i) {
+    if (this != &i){
+      value = i.value;
+    }
+    return *this;
+  }
+
+
+  bool C_key::operator == (const C_key & i) const { 
+    return (value[0] == i.value[0] &&  value[1] == i.value[1]); 
+  }
+  bool C_key::operator != (const C_key & i) const { 
+    return (value[0] != i.value[0] ||  value[1] != i.value[1]); 
+  }
+
+  bool C_key::operator <  (const C_key & i) const { 
+    return ((value[0] < i.value[0]) || ((value[0] == i.value[0]) && (value[1] < i.value[1]))); 
+  }
+
+  bool C_key::operator >  (const C_key & i) const { 
+    return ((value[0] > i.value[0]) || ((value[0] == i.value[0]) && (value[1] > i.value[1]))); 
+  }
+
+  bool C_key::operator >= (const C_key & i) const { 
+    return !(*this < i); 
+  }
+  bool C_key::operator <= (const C_key & i) const { 
+    return !(*this > i); 
+  }
+
 
 // ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  == 
-  C_value::C_value (uint32_t v)    : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
+  C_value::C_value (uint64_t * v)    : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
   {
-    value->state = STATE_NEW;
-    value->ip = v;
+    value->state_request = STATE_NEW;
+    value->state_response = STATE_NEW;
+    value->ip[1] = v[1];
+    value->ip[0] = v[0];
     value->paret_in_b_plus_tree = this;
   }
   C_value::C_value (const C_key & i) : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
   {
-    value->ip =  i.get_value ();
-    value->state = STATE_NEW;
+    value->ip[0] =  (i.get_value()[0]);
+    value->ip[1] =  (i.get_value()[1]);
+    value->state_request = STATE_NEW;
+    value->state_response = STATE_NEW;
   }
   C_value::C_value (const C_key & i,  const C_leaf_node * leaf)    : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
   {
-    value->state = STATE_NEW;
-    value->ip =  i.get_value ();
+    value->state_request = STATE_NEW;
+    value->state_response = STATE_NEW;
+    value->ip[0] =  (i.get_value()[0]);
+    value->ip[1] =  (i.get_value()[1]);
     value->paret_in_b_plus_tree = (void*)leaf;
   }  
   C_value::~C_value () {     
@@ -57,11 +136,15 @@ using namespace std;
   void C_value::set_value (ip_address_t * v) { value = v; }
 
   C_key * C_value::create_key(){
-    return new C_key(&(value->ip));
+    return new C_key(value->ip);
   }
 
 
-
+    C_value & C_value::operator = (const C_value & i) {
+      if (this != &i)
+        value = i.value;
+      return *this;
+    }
 
 
 
@@ -765,7 +848,7 @@ cout << endl;
         cout << "list ";
         for (int i = 0; i < item->count - 1; i++ )
 
-        cout << item->key[i]->get_value() << " ";
+        cout << item->key[i]->get_value()[1] << " ";
 
         cout << endl;
          for (int i = 0; i < item->count; i++ )
@@ -799,7 +882,7 @@ cout << endl;
         while(first)
         {
             for (int i = 0; i < first->count - 1;i++ )
-                cout << first->key[i]->get_value() << " ";
+                cout << first->key[i]->get_value()[1] << " ";
             first = first->get_next_leaf();
         }
 
@@ -835,7 +918,7 @@ void * inicialize_b_plus_tree(unsigned int size){
   return ((void*)tree);
 }
 
-ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint32_t ip){
+ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint64_t * ip){
   return((C_b_tree_plus*)tree)->b_tree_plus_insert(ip)->get_value();
 }
 

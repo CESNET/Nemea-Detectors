@@ -2,10 +2,10 @@
  * \file tunnel_detection_dns.h
  * \brief Modul that detects DNS tunnels.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2013
+ * \date 2014
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -67,9 +67,10 @@
  *  Defines macros used by DNS tunel detection 
  * \{ */
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
-#define MAX_COUNT_OF_ROUND_IN_SUSPICTION 5 /*< Maximum round to be IP in suspiction */
+#define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum round to be IP in suspiction */
 #define PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION 0.3 /*< Percent of communication to be set to suspision state */
 
+#define FILE_NAME_FOUND_ANOMALY "founded_anomaly.txt" /*< Name of file with fouded anomaly described */
 #define FILE_NAME_SUMMARY_REQUESTS "summary_requests.dat" /*< Name of file with summary requests. */
 #define TITLE_SUMMARY_REQUESTS "DNS requests histogram of communication" /*< Title of data for DNS summary requests. */
 #define FILE_NAME_SUMMARY_RESPONSES "summary_responses.dat" /*< Name of file with SUMMARY responses. */
@@ -84,24 +85,32 @@
 
 #define EX_REQUEST_MAX 100 /*< Maximal value of request middle value */
 #define EX_REQUEST_MIN 70 /*< Minimal value of request middle value */
+#define EX_RESPONSE_MAX 600 /*< Maximal value of response middle value */
+#define EX_RESPONSE_MIN 70 /*< Minimal value of response middle value */
 #define VAR_REQUEST_MAX 150 /*< Maximal value of request var */
 #define VAR_REQUEST_MIN 30 /*< Minimal value of request var*/
-#define VAR_RESPONSE_MAX 10000 /*< Maximal value of response var */
-#define VAR_RESPONSE_MIN 1000 /*< Minimal value of response var*/
+#define VAR_RESPONSE_MAX 50000 /*< Maximal value of response var */
+#define VAR_RESPONSE_MIN 200 /*< Minimal value of response var*/
 #define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
-#define MIN_DNS_REQUEST_COUNT 50 /*< Minimal value of dns count of packets*/
-#define MIN_DNS_REQUEST_COUNT_TUNNEL 1 /*< Minimal value of dns count in payload analysis for tunnel*/
-#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 100 /*< Minimal value of dns count in payload analysis for other anomaly*/
-#define MIN_DNS_RESPONSE_COUNT 50 /*< Minimal value of dns count of packets*/
-#define REQUEST_MAX_COUNT_OF_USED_LETTERS 24  /*< Maximum number of used leeters for domain*/
-#define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.7 /*< Maximum percent of new subdomain, more than this can be tunel*/
-#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.2 /*< Minimum percent of new subdomain, less than this can be anomaly*/
-#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.2 /*< Minimum percent of searching unique domains, less than that can be anomaly*/
-#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.7 /*< Maximum percent of searching unique domains, more than that can be tunnel*/
-#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.2 /*< Minimum percent unique domains, less than that can be anomaly*/
-#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.8 /*< Maximum percent of searching unique domains, more than that can be tunnel*/
-#define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.2 /*< Maximum percent of numbers in domain, more than that can be tunnel*/
-
+#define MIN_DNS_REQUEST_COUNT 50 /*< Minimal value of dns count of packets */
+#define MIN_DNS_REQUEST_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 100 /*< Minimal value of dns count in payload analysis for other anomaly */
+#define MIN_DNS_RESPONSE_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 200 /*< Minimal value of dns count of packets */
+#define REQUEST_MAX_COUNT_OF_USED_LETTERS 24  /*< Maximum number of used leeters for domain */
+#define RESPONSE_MAX_COUNT_OF_USED_LETTERS 30  /*< Maximum number of used leeters for domain */
+#define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.7 /*< Maximum percent of new subdomain, more than this can be tunel */
+#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.2 /*< Minimum percent of new subdomain, less than this can be anomaly */
+#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.2 /*< Minimum percent of searching unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.7 /*< Maximum percent of searching unique domains, more than that can be tunnel */
+#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.2 /*< Minimum percent unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.8 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
+#define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.2 /*< Maximum percent of numbers in domain, more than that can be tunnel */
+#define MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST 0.3 /*< Maximum percent of mallformed packet in requests */
+#define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 12 /*< Maximum count of numbers in domain, more than that can be tunnel */
+#define REQUEST_PART                0b00000001 /*< Define request part for suspision */
+#define RESPONSE_PART               0b00000010 /*< Define request part for suspision */
+#define REQUEST_AND_RESPONSE_PART   0b00000011 /*< Define request and response part for suspision*/
 /* /} */
 
 
@@ -119,7 +128,7 @@ void signal_handler(int signal);
  * \param[in] next pointer to next item
  * \return new item of a list 
  */
-ip_address_t * crete_new_ip_address_struc( uint32_t * ip, ip_address_t * next);
+ip_address_t * crete_new_ip_address_struc( uint64_t * ip, ip_address_t * next);
 
 /*!
  * \brief Find IP address in list
@@ -129,7 +138,7 @@ ip_address_t * crete_new_ip_address_struc( uint32_t * ip, ip_address_t * next);
  * \param[in] struc pointer to list.
  * \return struc of item. Null if address is not found
  */
-ip_address_t * find_ip(uint32_t * search_ip, ip_address_t * struc);
+ip_address_t * find_ip(uint64_t * search_ip, ip_address_t * struc);
 
 /*!
  * \brief Update counters function
@@ -141,7 +150,7 @@ ip_address_t * find_ip(uint32_t * search_ip, ip_address_t * struc);
  * \param[in] request, if it is 1, then it is request, if it is 0, then response. 
  * \return address to updated list.
  */
-ip_address_t * add_to_list( ip_address_t * listOfIp, uint32_t * ip_in_packet, int size, char request);
+ip_address_t * add_to_list( ip_address_t * list_of_ip, uint64_t * ip_in_packet, int size, char request);
 
 /*!
  * \brief Clean function
@@ -172,7 +181,9 @@ void write_detail_result(char * record_folder, ip_address_t * list_of_ip);
 
 void calculate_character_statistic(char * string, character_statistic_t * stat);
 
+void print_suspision_ip(FILE * file,ip_address_t *item);
 
+void print_results(char * record_folder_name, ip_address_t *list_of_ip);
 
 /*!
  * \brief Main function.

@@ -1,14 +1,55 @@
-
+/*!
+ * \file prefix_tree.c
+ * \brief Prefix tree data structure for saving informaticons about domains.
+ * \author Zdenek Rosa <rosazden@fit.cvut.cz>
+ * \date 2014
+ */
+/*
+ * Copyright (C) 2014 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 #include "prefix_tree.h"
 
 
 
 int map_chatecter_to_number(char  letter){
 	//numbers are on position 0 to 9 from 48 -57
-	if(letter >= '0' && letter <= '9'){
-		return (letter) -'0';
+	if(letter >= ' ' && letter <= '~'){
+		return (letter) -' ';
 	}
-	//big letters are on position 10-34 from 65-90
+	/*//big letters are on position 10-34 from 65-90
 	else if (letter >='A' && letter <='Z'){
 		return (letter) - 'A' + 10;
 	}
@@ -30,10 +71,10 @@ int map_chatecter_to_number(char  letter){
 	}
 	else if(letter ==' '){
 		return 66;
-	}
+	}*/
 	else{
-		printf("this letter canot be used in domain: %c\n", letter );
-		return 67;
+		//printf("this letter canot be used in domain: %c, in dec %d\n", letter ,letter);
+		return COUNT_OF_LETTERS_IN_DOMAIN-1;
 	}
 
 }
@@ -87,9 +128,7 @@ void destroy_prefix_tree(prefix_tree_t * tree){
 	free(tree);
 }
 
-prefix_tree_domain_t * add_exception_prefix_tree(char * string, char * begin){
 
-}
 
 
 
@@ -222,8 +261,7 @@ prefix_tree_inner_node_t * merge_node_into_two(prefix_tree_inner_node_t * node, 
 	char * second_string;
 	int map_number;
 	//first node, must be created
-	first_node = new_node(node->parent, map_chatecter_to_number(*(node->string)));
-
+	first_node = new_node(node->parent, map_chatecter_to_number(*(node->string)));	
 	add_children_array(first_node);
 	first_node->string = (char*) calloc(sizeof(char), index);
 	memcpy(first_node->string, node->string, sizeof(char) * (index));
@@ -283,20 +321,12 @@ prefix_tree_domain_t * add_to_prefix_tree_recursive(prefix_tree_inner_node_t * n
 			break;
 		}
 	}
-	//common part is same length
-	/*if(index == 0 && node->length == length){
-		printf("zasah ----------------\n");
-		//non existing domain
-		if(node->domain ==NULL){
-			new_domain(node, domain_parent);
-		}
-		return node->domain;
-	}
 
 	//common part does not exist at all
-	else*/ if(i==0){
+	if(i==0){
 		int map_number;
 		map_number = map_chatecter_to_number(string[index]);
+
 		//new record, create new nodes
 		if(node->child ==NULL){
 			add_children_array(node);
@@ -347,6 +377,9 @@ prefix_tree_domain_t * add_to_prefix_tree_recursive(prefix_tree_inner_node_t * n
 			if(node->domain == NULL){
 				new_domain(node, domain_parent, tree);
 			}
+			else if(node->domain->exception){
+				return NULL;		
+			}
 			if(index < 0){
 				return (node->domain);
 			}
@@ -380,9 +413,17 @@ prefix_tree_domain_t * add_to_prefix_tree_recursive(prefix_tree_inner_node_t * n
 prefix_tree_domain_t * add_to_prefix_tree(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat){
 	prefix_tree_domain_t * found, * iter;
 	int index;
+//*************
+	if(length <=0){
+		printf("zde je chyba %d\n", length );
+	}
+//*************		
+
 	found = add_to_prefix_tree_recursive(tree->root, tree->root->domain, string, length, tree);
-	/*if(found == NULL)
-		return found;*/
+	//exception or error
+	if(found == NULL){
+		return NULL;
+	}
 	
 	found->count_of_search++;
 	tree->count_of_searching++;
@@ -468,11 +509,12 @@ prefix_tree_domain_t * add_to_prefix_tree(prefix_tree_t * tree, char * string, i
 	}
 
 	//add or sort in list count_of_different_subdomains
-	
-
-
-
 	return found;
+}
 
-
+prefix_tree_domain_t * add_exception_to_prefix_tree(prefix_tree_t * tree, char * string, int length){
+	prefix_tree_domain_t * found, * iter;
+	int index;
+	found = add_to_prefix_tree_recursive(tree->root, tree->root->domain, string, length, tree);
+	found->exception = 1;
 }
