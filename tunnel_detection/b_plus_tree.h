@@ -43,11 +43,17 @@
 #ifndef _B_PLUS_TREE_
 #define _B_PLUS_TREE_
 
+
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
 #include "tunnel_detection_dns_structs.h"
 
+
+
+#define EQUAL 0
+#define LESS 1
+#define MORE 2
 
  #ifdef __cplusplus
 
@@ -56,15 +62,18 @@ using namespace std;
  extern "C" {
  #endif
 
-void * inicialize_b_plus_tree(unsigned int size);
+void * inicialize_b_plus_tree(unsigned int size, int (*comp)(void *, void *), int size_of_value, int size_of_key);
 
-ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint64_t * ip);
+void * create_or_find_struct_b_plus_tree(void * tree, void * key, b_plus_tree_item * item);
 
-ip_address_t * get_list(void * t);
 
 void  destroy_b_plus_tree(void * tree);
 
-void  delete_item_b_plus_tree(void * tree, ip_address_t * delete_item );
+int  delete_item_b_plus_tree(void * tree, b_plus_tree_item * delete_item );
+
+int  get_list(void * t, b_plus_tree_item * item);
+
+int get_next_item_from_list(void * t, b_plus_tree_item * item);
 
 
 #ifdef __cplusplus
@@ -73,17 +82,26 @@ void  delete_item_b_plus_tree(void * tree, ip_address_t * delete_item );
 
 #ifdef __cplusplus
 
-class C_key {
-  uint64_t * value;
-public:
-  C_key (uint64_t * v) ;
 
+//==================================================================================================
+class C_leaf_node;
+class C_key {
+  void * key;
+  void * value;
+  int (*compare)(void *, void *);
+public:
+  C_leaf_node * leaf;
+  
+  C_key (const C_key & v, int (*comp)(void *, void *), int size_to_value, int size_of_key) ;
+  C_key (void * v, int (*comp)(void *, void *)) ;
 
   ~C_key ();
 
 
-  uint64_t * get_value () const;
-  void set_value (uint64_t * v );
+  void * get_value () const;
+  void * get_key () const;
+  void set_value (void * v );
+  void change_parent(C_leaf_node *parent);
 
  C_key & operator = (const C_key & i);
 
@@ -97,7 +115,7 @@ public:
 
 };
 //==================================================================================================
-class C_leaf_node;
+/*
 class C_value {
   ip_address_t *value;
   public:
@@ -112,13 +130,13 @@ class C_value {
 
     void set_value (ip_address_t * v);
 
-    C_key * create_key();
+    //C_key * create_key();
 
     C_value & operator = (const C_value & i);
 
 
 
-};
+};*/
 
 
 //==================================================================================================
@@ -153,16 +171,14 @@ class C_node {
     public:
       C_leaf_node(int m);
       ~C_leaf_node();
-      C_value & get_value(int index) const;
       C_leaf_node* get_next_leaf() const;
 
-      C_value * add_key_value ( const C_key & a_key);
+      C_key * add_key_value ( const C_key & a_key, int (*comp)(void *, void *), int size_of_value, int size_of_key);
       int del_key_on_index(const int &index);
       bool is_new_key_added ( );
 
       C_leaf_node   *   left;
       C_leaf_node   *   right;
-      C_value     **   value;
     private:
       bool  new_key_added; 
 
@@ -191,13 +207,16 @@ class C_node {
 class C_b_tree_plus {
     private:
         int m;
+        int size_of_value;
+        int size_of_key;
     public:
         C_node *root;
+        int (*comp)(void *, void *);
 
 
    // public:
-      C_b_tree_plus(int m);
-      C_value * b_tree_plus_insert(const C_key& key);
+      C_b_tree_plus(int m, int (*comp)(void *, void *), int size_of_value, int size_of_key);
+      C_key * b_tree_plus_insert(const C_key& key);
       int b_tree_plus_search(const C_key& key, C_leaf_node** val);
       bool b_tree_plus_delete(const C_key& key);
       bool b_tree_plus_delete_know_leaf(const C_key& key, C_leaf_node * leaf_del);
@@ -219,7 +238,7 @@ class C_b_tree_plus {
       C_leaf_node * get_most_left_leaf( C_node  *item) const;
       int get_dimension_of_tree ()  const;
       void check_repair( );
-
+      int get_m(){return m;}
   };
 
 #endif

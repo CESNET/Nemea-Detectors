@@ -55,17 +55,33 @@ using namespace std;
 
 
 
-  C_key::C_key (uint64_t * v) 
+  C_key::C_key (const C_key & v, int (*comp)(void *, void *), int size_to_value, int size_of_key) : value ((void *) calloc(size_to_value,1)) 
   {
+    compare = comp;
+    key = ((void *) calloc(size_of_key,1));
+    memcpy(key,v.get_key(), size_of_key);
+  }
+
+  C_key::C_key (void * v, int (*comp)(void *, void *)) 
+  {
+    key = v;
+    compare = comp;
+  }
+
+  C_key::~C_key () {
+    //free(value);
+    //free(key);
+  }
+
+  void * C_key::get_value () const { return this->value; }
+  void * C_key::get_key () const { return this->key; } 
+  void C_key::set_value (void * v) { 
     value = v;
   }
 
 
-  C_key::~C_key () {}
-
-  uint64_t * C_key::get_value () const { return this->value; }
-  void C_key::set_value (uint64_t * v) { 
-    value = v;
+  void C_key::change_parent(C_leaf_node *parent){
+    leaf = parent;
   }
 
  C_key & C_key::operator = (const C_key & i) {
@@ -77,41 +93,48 @@ using namespace std;
 
 
   bool C_key::operator == (const C_key & i) const { 
-    return (value[0] == i.value[0] &&  value[1] == i.value[1]); 
+    return compare (this->key, i.get_key()) == EQUAL; 
+    //return (value[0] == i.value[0] &&  value[1] == i.value[1]); 
   }
+
   bool C_key::operator != (const C_key & i) const { 
-    return (value[0] != i.value[0] ||  value[1] != i.value[1]); 
+    return compare (this->key, i.get_key()) != EQUAL; 
+    //return (value[0] != i.value[0] ||  value[1] != i.value[1]);
   }
 
   bool C_key::operator <  (const C_key & i) const { 
-    return ((value[0] < i.value[0]) || ((value[0] == i.value[0]) && (value[1] < i.value[1]))); 
+    return compare (this->key, i.get_key()) == LESS;
+    //return ((value[0] < i.value[0]) || ((value[0] == i.value[0]) && (value[1] < i.value[1]))); 
   }
 
-  bool C_key::operator >  (const C_key & i) const { 
-    return ((value[0] > i.value[0]) || ((value[0] == i.value[0]) && (value[1] > i.value[1]))); 
+  bool C_key::operator >  (const C_key & i) const {
+    return compare (this->key, i.get_key()) == MORE;
+    //return ((value[0] > i.value[0]) || ((value[0] == i.value[0]) && (value[1] > i.value[1]))); 
   }
 
   bool C_key::operator >= (const C_key & i) const { 
-    return !(*this < i); 
+    int a = compare (this->key, i.get_key());
+    return (a == EQUAL || a == MORE); 
   }
   bool C_key::operator <= (const C_key & i) const { 
-    return !(*this > i); 
+    int a = compare (this->key, i.get_key());
+    return (a == EQUAL || a == LESS); 
   }
 
 
 // ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  == 
-  C_value::C_value (uint64_t * v)    : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
+ /* C_value::C_value (uint64_t * v)    : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
   {
     value->state_request = STATE_NEW;
     value->state_response = STATE_NEW;
-    value->ip[1] = v[1];
-    value->ip[0] = v[0];
+    //value->ip[1] = v[1];
+    //value->ip[0] = v[0];
     value->paret_in_b_plus_tree = this;
   }
   C_value::C_value (const C_key & i) : value ((ip_address_t *) calloc(sizeof(ip_address_t),1)) 
   {
-    value->ip[0] =  (i.get_value()[0]);
-    value->ip[1] =  (i.get_value()[1]);
+    //value->ip[0] =  (i.get_value()[0]);
+    //value->ip[1] =  (i.get_value()[1]);
     value->state_request = STATE_NEW;
     value->state_response = STATE_NEW;
   }
@@ -119,8 +142,8 @@ using namespace std;
   {
     value->state_request = STATE_NEW;
     value->state_response = STATE_NEW;
-    value->ip[0] =  (i.get_value()[0]);
-    value->ip[1] =  (i.get_value()[1]);
+    //value->ip[0] =  (i.get_value()[0]);
+    //value->ip[1] =  (i.get_value()[1]);
     value->paret_in_b_plus_tree = (void*)leaf;
   }  
   C_value::~C_value () {     
@@ -135,9 +158,7 @@ using namespace std;
   ip_address_t * C_value::get_value () const { return this->value; }
   void C_value::set_value (ip_address_t * v) { value = v; }
 
-  C_key * C_value::create_key(){
-    return new C_key(value->ip);
-  }
+  
 
 
     C_value & C_value::operator = (const C_value & i) {
@@ -146,7 +167,7 @@ using namespace std;
       return *this;
     }
 
-
+*/
 
 // ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  == 
   C_node::C_node ( int m)
@@ -210,7 +231,6 @@ using namespace std;
 
   C_leaf_node::C_leaf_node(int m):C_node(m)
   {
-      value = new C_value * [m];
       left = 0;
       right = 0;
       leaf = 1;
@@ -222,18 +242,15 @@ using namespace std;
 
       for (int i = 0; i < count - 1;i++ )
       {
-      delete key[i];
-      delete value[i];
+        free(key[i]->get_value());
+        free(key[i]->get_key());
+        delete key[i];
       }
       delete [] key;
-      delete [] value;
 
   }
 //------------------------------------------------------------------------------------------- 
-  C_value& C_leaf_node::get_value(int index) const 
-  {
-    return *value[index - 1];
-  }
+
 //------------------------------------------------------------------------------------------- 
   C_leaf_node* C_leaf_node::get_next_leaf() const {
     return right;
@@ -242,13 +259,13 @@ using namespace std;
 
   int C_leaf_node::del_key_on_index(const int &index)
   {
+      free(key[index]->get_value());
+      free(key[index]->get_key());
       delete key[index];
-      delete value[index];
 
       for (int i = index; i < count - 2; i++ )
       {
           key[i] = key[i + 1];
-          value[i] = value[i + 1];
       }
       count-- ;
       return count - 1;
@@ -256,7 +273,7 @@ using namespace std;
   }
 
 //------------------------------------------------------------------------------------------- 
-  C_value * C_leaf_node::add_key_value ( const C_key & a_key )
+  C_key * C_leaf_node::add_key_value ( const C_key & a_key, int (*comp)(void *, void *), int size_of_value, int size_of_key)
   {
       int i;
       i = find_index_key(a_key);
@@ -264,7 +281,7 @@ using namespace std;
       if (i != - 1) //klic se jiz v listu nachazi
       {
           new_key_added = false;
-          return value[i];
+          return key[i];
       }
         //nalezne kam vlozit klic a hodnotu a vlozime
       i = count - 2; //index posledniho prvku
@@ -272,17 +289,16 @@ using namespace std;
       while (i >= 0 && *key[i] > a_key)
       {
          key[i + 1] = key[i];
-         value[i + 1] = value[i];
          i-- ;
 
 
       }
-      value[i + 1] = new C_value(a_key, this);
-      key[i + 1] = value[i + 1]->create_key();
+      key[i + 1] = new C_key(a_key, comp, size_of_value, size_of_key) ;//value[i + 1]->create_key();
+      key[i + 1]->leaf = this; 
       new_key_added = true;
       count++;
 
-      return value[i + 1];
+      return key[i + 1];
   }
 //------------------------------------------------------------------------------------------- 
   bool C_leaf_node::is_new_key_added ( )
@@ -332,9 +348,12 @@ using namespace std;
   }
 // ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  == 
 
-  C_b_tree_plus::C_b_tree_plus(int m):m(m)
+  C_b_tree_plus::C_b_tree_plus(int m, int (*comp)(void *, void *), int size_of_value, int size_of_key):m(m)
   {
       root = new C_leaf_node(m);
+      this->comp= comp;
+      this->size_of_value = size_of_value;
+      this->size_of_key = size_of_key;
   }
 //------------------------------------------------------------------------------------------- 
   C_b_tree_plus::~C_b_tree_plus()
@@ -460,12 +479,16 @@ cout << endl;
             goRight = 0;
             for (int i = 0; i < pos2->count - 1; i++ )
             {
-                if (f_key <= *pos2->key[i])
-                    {
-                        pos = pos2->child[i];
-                        goRight = 1;
-                        break;
-                    }
+                if (f_key < *pos2->key[i])
+                {
+                    pos = pos2->child[i];
+                    goRight = 1;
+                    break;
+                }
+                else if(f_key == *pos2->key[i])
+                {
+                  return pos2->key[i]->leaf;
+                }
             }
             if ( ! goRight)
                 pos = pos2->child[pos->count - 1];
@@ -475,13 +498,13 @@ cout << endl;
         return 0;
     }
 //------------------------------------------------------------------------------------------- 
-    C_value * C_b_tree_plus::b_tree_plus_insert(const C_key& key)
+    C_key * C_b_tree_plus::b_tree_plus_insert(const C_key& key)
     {
         C_leaf_node * leaf_to_insert;
         int size;
-        C_value * added_or_found_value;
+        C_key * added_or_found_value;
         leaf_to_insert = find_leaf(key);
-        added_or_found_value = leaf_to_insert->add_key_value(key);
+        added_or_found_value = leaf_to_insert->add_key_value(key, comp, size_of_value, size_of_key);
         size = leaf_to_insert->count;
         if (leaf_to_insert->is_new_key_added() == false) //pouze se prepsala hodnota
         {
@@ -505,9 +528,10 @@ cout << endl;
         int insert = 0;
         for (int i = splitVal; i < size; i++ )
         {
-            r_leaf->key[insert] = leaf_to_insert->key[i];
-            r_leaf->value[insert++ ] = leaf_to_insert->value[i];
-            leaf_to_insert->value[i]->change_parent((void*)r_leaf);
+            leaf_to_insert->key[i]->change_parent(r_leaf);
+            r_leaf->key[insert++] = leaf_to_insert->key[i];
+            
+
         }
         r_leaf->count = insert + 1;
         leaf_to_insert->count = splitVal + 1;
@@ -581,11 +605,9 @@ cout << endl;
         }
         parent_index = find_my_index_in_parent(leaf_del);
         size = leaf_del->del_key_on_index(index);
-
         if (size >= ((m - 1) / 2) || root->leaf)
         {
             //pocet je dostacujici, pouze zkontrolujeme rodice;
-            //check_repair( );
             check_and_change_key(leaf_del);
             return true;
         }
@@ -600,14 +622,14 @@ cout << endl;
                 for (int i = leaf_del->count - 2; i >= 0; i-- )
                 {
                     leaf_del->key[i + 1] = leaf_del->key[i];
-                    leaf_del->value[i + 1] = leaf_del->value[i];
                 }
                 leaf_del->count++;
                 leaf_del->key[0] = brother->key[brother->count - 2];
-                leaf_del->value[0] = brother->value[brother->count - 2];
-                leaf_del->value[0]->change_parent((void*)leaf_del);
+                leaf_del->key[0]->change_parent(leaf_del);
                 brother->count-- ;
                 check_and_change_key(brother);
+                if(index == leaf_del->count-2)
+                    check_and_change_key(leaf_del);
 
             }
             else if ( parent_index < leaf_del->parent->count - 1 && ((leaf_del->parent->child[parent_index + 1]->count) - 1) > (m - 1) / 2)
@@ -618,13 +640,11 @@ cout << endl;
 
                 leaf_del->count++;
                 leaf_del->key[leaf_del->count - 2] = brother->key[0];
-                leaf_del->value[leaf_del->count - 2] = brother->value[0];
-                leaf_del->value[leaf_del->count - 2]->change_parent((void*)leaf_del);
+                leaf_del->key[leaf_del->count - 2]->change_parent(leaf_del);
                 brother->count-- ;
                 for (int i = 0; i < brother->count - 1;i++ )
                 {
                     brother->key[i] = brother->key[i + 1];
-                    brother->value[i] = brother->value[i + 1];
                 }
                 check_and_change_key(leaf_del);
             }
@@ -635,8 +655,7 @@ cout << endl;
                 for (int i = 0; i < leaf_del->count - 1;i++ )
                 {
                     brother->key[(++ brother->count) - 2] = leaf_del->key[i];
-                    brother->value[brother->count - 2] = leaf_del->value[i];
-                    brother->value[brother->count - 2]->change_parent((void*)brother);
+                    brother->key[brother->count - 2]->change_parent(brother);
                 }
                 brother->right = leaf_del->right;
                 if (leaf_del->right)
@@ -665,8 +684,7 @@ cout << endl;
                 for (int i = 0; i < brother->count - 1;i++ )
                 {
                     leaf_del->key[(++ leaf_del->count) - 2] = brother->key[i];
-                    leaf_del->value[leaf_del->count - 2] = brother->value[i];
-                    leaf_del->value[leaf_del->count - 2]->change_parent((void*)leaf_del);
+                    leaf_del->key[leaf_del->count - 2]->change_parent(leaf_del);
                 }
                 leaf_del->right = brother->right;
                 if (brother->right)
@@ -687,7 +705,7 @@ cout << endl;
                 delete brother;
             }
         }
-        check_repair( );
+        //check_repair( );
         return true;
 
 
@@ -848,7 +866,7 @@ cout << endl;
         cout << "list ";
         for (int i = 0; i < item->count - 1; i++ )
 
-        cout << item->key[i]->get_value()[1] << " ";
+        //cout << item->key[i]->get_value()[1] << " ";
 
         cout << endl;
          for (int i = 0; i < item->count; i++ )
@@ -882,7 +900,7 @@ cout << endl;
         while(first)
         {
             for (int i = 0; i < first->count - 1;i++ )
-                cout << first->key[i]->get_value()[1] << " ";
+               // cout << first->key[i]->get_value()[1] << " ";
             first = first->get_next_leaf();
         }
 
@@ -913,13 +931,17 @@ int C_b_tree_plus::get_dimension_of_tree () const
 // ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  ==  == 
 
 
-void * inicialize_b_plus_tree(unsigned int size){
-  C_b_tree_plus *tree = new C_b_tree_plus(size);
+void * inicialize_b_plus_tree(unsigned int size, int (*comp)(void *, void *), int size_of_value, int size_of_key){
+  C_b_tree_plus *tree = new C_b_tree_plus(size, comp, size_of_value, size_of_key);
   return ((void*)tree);
 }
 
-ip_address_t * create_or_find_struct_b_plus_tree(void * tree, uint64_t * ip){
-  return((C_b_tree_plus*)tree)->b_tree_plus_insert(ip)->get_value();
+void * create_or_find_struct_b_plus_tree(void * tree, void * key, b_plus_tree_item * item){
+  C_key * found;
+  found = ((C_b_tree_plus*)tree)->b_tree_plus_insert(C_key(key, ((C_b_tree_plus*)tree)->comp));
+  item->value = found->get_value();
+  item->key = found->get_key();
+  return item->value;
 }
 
 
@@ -929,48 +951,64 @@ void  destroy_b_plus_tree(void * tree){
   delete ((C_b_tree_plus*)tree);
 }
 
-void  delete_item_b_plus_tree(void * tree, ip_address_t * delete_item ){
+int  delete_item_b_plus_tree(void * tree, b_plus_tree_item * delete_item ){
+    void * key_to_del;
+    C_leaf_node * leaf_del;
+    int is_there_next;
+    key_to_del = delete_item->key;
+    leaf_del = ((C_key*)delete_item->c_key)->leaf;
+    is_there_next = get_next_item_from_list(tree,delete_item);
 
-  ((C_b_tree_plus*)tree)->b_tree_plus_delete_know_leaf(delete_item->ip, (C_leaf_node*)delete_item->paret_in_b_plus_tree);
-/*
-  C_b_tree_plus *new_tree,
-            *oldtree;
-    oldtree = (C_b_tree_plus*)tree;
-   new_tree = new C_b_tree_plus( oldtree->get_dimension_of_tree());
-   while(list_of_suspision != NULL){
-    new_tree->b_tree_plus_insert()
-   }*/
+    ((C_b_tree_plus*)tree)->b_tree_plus_delete_know_leaf(C_key(key_to_del, ((C_b_tree_plus*)tree)->comp), leaf_del);
+    if(is_there_next == 0)
+      return is_there_next;
+
+    delete_item->i = ((C_key*)delete_item->c_key)->leaf->find_index_key(*((C_key*)delete_item->c_key));
+    return is_there_next;
+
 }
 
 
 
 
-ip_address_t * get_list(void * t){
+int  get_list(void * t, b_plus_tree_item * item){
         C_b_tree_plus * tree;
-        ip_address_t * ip;
-        ip_address_t * previous = NULL;
         tree = (C_b_tree_plus*)t;
 
         C_leaf_node *node;
-        C_leaf_node *first;
+        node = tree->get_most_left_leaf(tree->root);
+        if(node == NULL && node->count!=0)
+          return 0;
+        item->i=0;
+        item->c_key = (void *)node->key[0];
+        item->key = node->key[0]->get_key();
+        item->value = node->key[0]->get_value();
+        return 1;
 
-        first = tree->get_most_left_leaf(tree->root);
-        node = first;
-        while(node)
-        {
 
-            for(int i = 0; i < node->count - 1; i++ ){
-              ip = node->value[i]->get_value();
-              if(previous != NULL){
-                previous->next = ip;
-              }
-              previous = ip;
-            }
-            
-            node = node->get_next_leaf();
-        }
+}
 
-  return first->value[0]->get_value();    
+int get_next_item_from_list(void * t, b_plus_tree_item * item){
+  C_leaf_node *node;
+  C_key * key;
+  key = (C_key*)(item->c_key);
+  node = (key->leaf);
+  if(item->i < node->count - 2){
+    item->key = node->key[++item->i]->get_key();
+    item->value = node->key[item->i]->get_value();
+    item->c_key = (void*)node->key[item->i];
+    return 1;
+  }
+  else if(node->get_next_leaf() != NULL){
+    node= node->get_next_leaf();
+    item->key = node->key[0]->get_key();
+    item->value = node->key[0]->get_value();
+    item->c_key = (void*)node->key[0];
+    item->i = 0;
+    return 1;
+  } 
+  return 0;
+
 }
 
 

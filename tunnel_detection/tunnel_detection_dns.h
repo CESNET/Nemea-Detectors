@@ -174,16 +174,16 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  * It is histogram of DNS requests and responses of each ip address separately.
  * \param[in] list_of_ip pointer list of ip histogram structure.
  */
-void write_detail_result(char * record_folder, ip_address_t * list_of_ip);
+void write_detail_result(char * record_folder_name, void * b_plus_tree);
 
 
 
 
 void calculate_character_statistic(char * string, character_statistic_t * stat);
 
-void print_suspision_ip(FILE * file,ip_address_t *item);
+void print_suspision_ip(FILE * file, void * b_plus_tree);
 
-void print_results(char * record_folder_name, ip_address_t *list_of_ip);
+void print_results(char * record_folder_name, void * b_plus_tree);
 
 /*!
  * \brief Main function.

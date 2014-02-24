@@ -47,6 +47,16 @@
 
 
 
+
+typedef struct b_plus_tree_item b_plus_tree_item ;
+ struct b_plus_tree_item {
+    void * value;
+    void * key;
+    void * c_key;
+    unsigned int i;
+} ;
+
+
 typedef struct character_statistic_t character_statistic_t ;
  struct character_statistic_t {
     unsigned int count_of_different_letters;
@@ -164,7 +174,6 @@ typedef struct ip_address_suspision_response_t ip_address_suspision_response_t ;
  */
  typedef struct ip_address_t ip_address_t ;
  struct ip_address_t {
-	uint64_t ip[2];
     unsigned char ip_version;
    	unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
    	unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */
@@ -186,16 +195,6 @@ typedef struct ip_address_suspision_response_t ip_address_suspision_response_t ;
     unsigned long sum_Xi4_response; /*!< Sum of sizes^4 respone */
     unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
     unsigned int request_without_string; /*!< count of requests without string */
-    float ex_response; /*!< middle value respone */
-    float ex_request; /*!< middle value respone */
-    float ex_request_count_of_different_letters; /*!< middle value of count letters */
-    float var_response; /*!< diffusion respone */
-    float var_request; /*!< diffusion request */
-    float var_request_count_letters; /*!< middle value of count letters */
-    float skewness_request; /*!< skewness request */
-    float skewness_response; /*!< skewness response */
-    float kurtosis_request; /*!< kurtosis request */
-    float kurtosis_response; /*!< kurtosis response */
     unsigned char state_request; /*!< state of finding tunnel in requests */
     unsigned char state_response; /*!< state of finding tunnel in response */
     unsigned char round_in_suspiction_request; /*!< number of round which Ip is in suspiction */
