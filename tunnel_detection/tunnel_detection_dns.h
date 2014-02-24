@@ -81,7 +81,10 @@
 #define TITLE_REQUESTS "DNS requests histogram of communication devided by IP" /*< Title of data for DNS requests devided by IP. */ 
 #define FILE_NAME_RESPONSES "responses.dat" /*< Name of file with responses. */
 #define TITLE_RESPONSES "DNS responses histogram of communication devided by IP" /*< Title of data for DNS responses devided by IP. */ 
+#define FILE_NAME_SUSPISION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
+#define TITLE_SUSPISION_LIST "IP in SUSPISION STATE"/*< Title of suspision list. */ 
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
+
 
 #define EX_REQUEST_MAX 100 /*< Maximal value of request middle value */
 #define EX_REQUEST_MIN 70 /*< Minimal value of request middle value */
@@ -174,16 +177,16 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  * It is histogram of DNS requests and responses of each ip address separately.
  * \param[in] list_of_ip pointer list of ip histogram structure.
  */
-void write_detail_result(char * record_folder_name, void * b_plus_tree);
+void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree);
 
 
 
 
 void calculate_character_statistic(char * string, character_statistic_t * stat);
 
-void print_suspision_ip(FILE * file, void * b_plus_tree);
+void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file);
 
-void print_results(char * record_folder_name, void * b_plus_tree);
+void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file);
 
 /*!
  * \brief Main function.

@@ -113,10 +113,12 @@ ip_address_t * find_ip(uint64_t * search_ip, ip_address_t * struc){
  void get_ip_str_from_ip_struct(ip_address_t * item, void * key,  char * ip_buff){
    ip_addr_t ip_to_translate;
    //*ip_buff=0;
-   uint64_t * ip = (uint64_t *)key;
+   
    if(item->ip_version == IP_VERSION_4){
-      ip_to_translate = ip_from_int(ip[1]);
+      uint32_t * ip = (uint32_t *)key;
+      ip_to_translate = ip_from_int(*ip);
    }else{
+      uint64_t * ip = (uint64_t *)key;
       ip_to_translate = ip_from_16_bytes_be((char*)&ip[0]);
    }
    ip_to_str(&ip_to_translate ,ip_buff);
@@ -168,15 +170,14 @@ int filter_trafic_to_save_in_prefix_tree_tunnel_suspiction( character_statistic_
 }
 
 
-void add_to_bplus_tree( void * tree, uint64_t * ip_in_packet, int size, char request, packet_t * packet){
+void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request, packet_t * packet){
    ip_address_t * found;
-   b_plus_tree_item  item;
    float size2;
    int index_to_histogram;
    character_statistic_t char_stat;
    size2=size*size;
    //found or create in b plus tree
-   found = (ip_address_t*)create_or_find_struct_b_plus_tree(tree, (void*)ip_in_packet, &item);
+   found = (ip_address_t*)create_or_find_struct_b_plus_tree(tree,ip_in_packet);
    found->ip_version = packet->ip_version;
 
    //add to request or response
@@ -616,17 +617,18 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree){
    ip_address_t * item;
    ip_address_t * previous = NULL;
    ip_address_t * start;
-   b_plus_tree_item b_item;
+   b_plus_tree_item * b_item;
    int is_there_next=0;
    unsigned char payload_state_request = STATE_OK, 
                  traffic_state_request = STATE_OK,
                  payload_state_response = STATE_OK, 
                  traffic_state_response = STATE_OK;
    calulated_result_t result;
-   is_there_next = get_list(b_plus_tree, &b_item);
+   b_item = create_list_item(b_plus_tree);
+   is_there_next = get_list(b_plus_tree, b_item);
 
    while(is_there_next == 1){
-      item = (ip_address_t*)b_item.value;
+      item = (ip_address_t*)b_item->value;
 
       calculate_statistic(item, &result);
       //without anomaly
@@ -647,57 +649,28 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree){
 
       if(item->state_request == STATE_NEW && item->state_response == STATE_NEW){
          ip_address_t * item_to_delete;
-         /*
-         if(previous == NULL){
-            start = item->next;
-            //free(item);
-            item_to_delete = item;
-            item = item->next;
-         }
-         else{
-            previous->next=item->next;
-            //free(item);
-            item_to_delete = item;
-            item=previous->next;
-         }*/
-         is_there_next = delete_item_b_plus_tree(b_plus_tree, &b_item);
 
+         is_there_next = delete_item_b_plus_tree(b_plus_tree, b_item);
       }
       //with anomaly
       else{
          /*previous=item;
          item=item->next;*/
-         is_there_next = get_next_item_from_list(b_plus_tree, &b_item);
+         is_there_next = get_next_item_from_list(b_plus_tree, b_item);
       }
    }
+   destroy_list_item(b_item);
    //return anomaly items
    //return start;
 }
 
-void print_results(char * record_folder_name, void * b_plus_tree){
+void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
    prefix_tree_domain_t *dom;
-   FILE *file;
-   char file_path [255];
-   char ip_buff[100] = {0};
-   ip_address_t *item;
-   b_plus_tree_item b_item;
-   int is_there_next;
-   //open files
-   strcpy(file_path, record_folder_name);
-   strcat(file_path, "/" FILE_NAME_FOUND_ANOMALY);
-   file = fopen(file_path, "w");
-   if(file == NULL){
-      return;
-   }   
    char str[1024];
-   //printing result
-   is_there_next = get_list(b_plus_tree, &b_item);
-   while(is_there_next == 1){
-      item = (ip_address_t*)b_item.value;
+   
 
       if(item->state_request & STATE_TUNNEL || item->state_request & STATE_OTHER_ANOMALY || item->state_response & STATE_OTHER_ANOMALY || item->state_request & STATE_TUNNEL){
-         get_ip_str_from_ip_struct(item,b_item.key, ip_buff);
-         fprintf(file, "\n%s\n", ip_buff);
+         fprintf(file, "\n%s\n", ip_address);
       }
       //print founded anomaly tunnel
       if(item->state_request & STATE_TUNNEL){
@@ -792,32 +765,13 @@ void print_results(char * record_folder_name, void * b_plus_tree){
          calulated_result_t result;
          calculate_statistic(item, &result);
          fprintf(file, "\tReseponse anomaly found:\tEX: %f.\tVAR: %f.\tCount of responses %lu.\n", result.ex_response, result.var_response, item->dns_response_count);
-         }
-      
-
-      
-      is_there_next = get_next_item_from_list(b_plus_tree, &b_item);
-   }
-   print_suspision_ip(file, b_plus_tree);   
-   fclose(file);
+      }
 }
 
-void print_suspision_ip(FILE * file, void * b_plus_tree){
-   char ip_buff[100] = {0};
-   b_plus_tree_item b_item;
-   int is_there_next;
-   ip_address_t * ip_item;
-   is_there_next = get_list(b_plus_tree, &b_item);
-   fprintf(file, "\nIP in SUSPISION STATE\n");
-   while(is_there_next == 1){
-      ip_item = (ip_address_t*)b_item.value;
-      if(ip_item->state_request & STATE_SUSPISION){
-         get_ip_str_from_ip_struct(ip_item ,b_item.key, ip_buff);
-         fprintf(file, "%s\n", ip_buff);
-      }
-      is_there_next = get_next_item_from_list(b_plus_tree, &b_item);
+void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file){
+   if(ip_item->state_request & STATE_SUSPISION){
+      fprintf(file, "%s\n", ip_address);
    }
-
 }
 
 
@@ -826,7 +780,8 @@ void write_summary_result(char * record_folder_name, unsigned long * histogram_d
    char file_path [255];
    strcpy(file_path, record_folder_name);
    strcat(file_path, "/" FILE_NAME_SUMMARY_REQUESTS);
-   //requests
+
+//requests
    file = fopen(file_path, "w");
    //print title 
    fprintf(file, TITLE_SUMMARY_REQUESTS "\n");
@@ -846,7 +801,8 @@ void write_summary_result(char * record_folder_name, unsigned long * histogram_d
 
    strcpy(file_path, record_folder_name);
    strcat(file_path, "/" FILE_NAME_SUMMARY_RESPONSES);
-   //responses
+
+//responses
    file = fopen(file_path, "w");
    //print title 
    fprintf(file, TITLE_SUMMARY_RESPONSES "\n");
@@ -865,92 +821,152 @@ void write_summary_result(char * record_folder_name, unsigned long * histogram_d
    fclose(file);
    
 }
-void write_detail_result(char * record_folder_name, void * b_plus_tree){
+
+
+void print_histogram_values (char *ip_address, ip_address_t *ip_item, FILE *file_requests, FILE *file_responses, FILE *file_requests_count_letters){
+   calulated_result_t result;
+
+   //count statistic values
+   calculate_statistic(ip_item, &result);
+   //requests
+   fprintf(file_requests, "%s__EX=%f__VarX=%f__skewness=%f__kurtosis=%f\t", ip_address, result.ex_request, result.var_request, result.skewness_request, result.kurtosis_request);
+   for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
+      fprintf(file_requests, "%lu\t",ip_item->histogram_dns_requests[i]);
+   }    
+   fprintf(file_requests, "%lu\n", ip_item->histogram_dns_requests[HISTOGRAM_SIZE_REQUESTS - 1]);  
+   //requests count letter
+   fprintf(file_requests_count_letters, "%s__EX=%f__VarX=%f\t", ip_address, result.ex_request_count_of_different_letters, result.var_request_count_letters);
+   for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
+      fprintf(file_requests_count_letters, "%lu\t",result.histogram_dns_request_ex_cout_of_used_letter[i]);
+   }
+   fprintf(file_requests_count_letters, "%lu\n", result.histogram_dns_request_ex_cout_of_used_letter[HISTOGRAM_SIZE_REQUESTS - 1]); 
+   //response
+   fprintf(file_responses, "%s__EX=%f__VarX=%f__skewness=%f__kurtosis=%f\t", ip_address, result.ex_response, result.var_response, result.skewness_response, result.kurtosis_response);
+   for(int i=0;i<HISTOGRAM_SIZE_RESPONSE - 1; i++){
+      fprintf(file_responses, "%lu\t",ip_item->histogram_dns_response[i]);
+   }
+   fprintf(file_responses, "%lu\n", ip_item->histogram_dns_response[HISTOGRAM_SIZE_RESPONSE - 1]);    
+}
+
+void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree){
    FILE *file_requests, 
         *file_responses,
-        *file_requests_count_letters;
+        *file_requests_count_letters,
+        *file_suspision,
+        *file_anomaly;
    char ip_buff[100] = {0};
    char file_path [255];
-   calulated_result_t result;
+   int i;
+   
    int is_there_next;
-   b_plus_tree_item b_item;
-   ip_address_t * ip_item;
-
-   //open files
+   b_plus_tree_item *b_item;
+   ip_address_t *ip_item;
+//requests
+   //open file
    strcpy(file_path, record_folder_name);
    strcat(file_path, "/" FILE_NAME_REQUESTS);
    file_requests = fopen(file_path, "w");
    if(file_requests == NULL){
       return;
    }
-   strcpy(file_path, record_folder_name);
-   strcat(file_path, "/" FILE_NAME_RESPONSES);
-   file_responses = fopen(file_path, "w");  
-   if(file_responses == NULL){
-      return;
-   } 
-   strcpy(file_path, record_folder_name);
-   strcat(file_path, "/" FILE_NAME_REQUEST_COUNT_LETTERS);
-   file_requests_count_letters = fopen(file_path, "w"); 
-   if(file_requests_count_letters == NULL){
-      return;
-   }
    //print titles 
    fprintf(file_requests, TITLE_REQUESTS "\n");
-   fprintf(file_requests_count_letters, TITLE_REQUEST_COUNT_LETTERS "\n");
-   fprintf(file_responses, TITLE_RESPONSES "\n");
    //print range to requests
    fprintf(file_requests,  "ip__EX__VarX__Skewness__Kurtosis\t");
    for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
 
       fprintf(file_requests, "%d-%d\t",i * 10, (i + 1) * 10);
    }
-   fprintf(file_requests, "%d-inf\n",(HISTOGRAM_SIZE_REQUESTS-1) * 10);
-   //print range to requests count letter 
-   fprintf(file_requests_count_letters,  "ip__EX__VarX\t");
-   for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
-      fprintf(file_requests_count_letters, "%d-%d\t",i * 10, (i + 1) * 10);
-   }
-   fprintf(file_requests_count_letters, "%d-inf\n",(HISTOGRAM_SIZE_REQUESTS-1) * 10);
+   fprintf(file_requests, "%d-inf\n",(HISTOGRAM_SIZE_REQUESTS-1) * 10);   
+
+//responses
+   //open file
+   strcpy(file_path, record_folder_name);
+   strcat(file_path, "/" FILE_NAME_RESPONSES);
+   file_responses = fopen(file_path, "w");  
+   if(file_responses == NULL){
+      return;
+   } 
+   //print titles
+   fprintf(file_responses, TITLE_RESPONSES "\n");
    //print range to respones
    fprintf(file_responses,  "ip__EX__VarX__Skewness__Kurtosis\t");
    for(int i=0;i<HISTOGRAM_SIZE_RESPONSE - 1; i++){
       fprintf(file_responses, "%d-%d\t",i * 10, (i + 1) * 10);
    }
    fprintf(file_responses, "%d-inf\n",(HISTOGRAM_SIZE_RESPONSE-1) * 10);
+
+//count letters
+   //open file
+   strcpy(file_path, record_folder_name);
+   strcat(file_path, "/" FILE_NAME_REQUEST_COUNT_LETTERS);
+   file_requests_count_letters = fopen(file_path, "w"); 
+   if(file_requests_count_letters == NULL){
+      return;
+   }
+   //print titles
+   fprintf(file_requests_count_letters, TITLE_REQUEST_COUNT_LETTERS "\n");
+   //print range to requests count letter 
+   fprintf(file_requests_count_letters,  "ip__EX__VarX\t");
+   for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
+      fprintf(file_requests_count_letters, "%d-%d\t",i * 10, (i + 1) * 10);
+   }
+   fprintf(file_requests_count_letters, "%d-inf\n",(HISTOGRAM_SIZE_REQUESTS-1) * 10);
+
+//found anomaly
+   //open file
+   strcpy(file_path, record_folder_name);
+   strcat(file_path, "/" FILE_NAME_FOUND_ANOMALY);
+   file_anomaly = fopen(file_path, "w");
+   if(file_anomaly == NULL){
+      return;
+   }   
+
+//suspision list
+   //open files
+   strcpy(file_path, record_folder_name);
+   strcat(file_path, "/" FILE_NAME_SUSPISION_LIST);
+   file_suspision = fopen(file_path, "w");
+   if(file_suspision == NULL){
+      return;
+   }   
+   //print title
+   fprintf(file_suspision, TITLE_SUSPISION_LIST "\n");
+   
+
+
+
+
    //print histogram of each IP
    //for each item in list
-   is_there_next = get_list(b_plus_tree, &b_item);
-   while(is_there_next == 1){
-      ip_item = (ip_address_t*)b_item.value;
-      //translate ip int to str 
-      get_ip_str_from_ip_struct(ip_item, b_item.key, ip_buff);
-      //count ex value
-      calculate_statistic(ip_item, &result);
-      //requests
-      fprintf(file_requests, "%s__EX=%f__VarX=%f__skewness=%f__kurtosis=%f\t", ip_buff, result.ex_request, result.var_request, result.skewness_request, result.kurtosis_request);
-      for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
-         fprintf(file_requests, "%lu\t",ip_item->histogram_dns_requests[i]);
-      }    
-      fprintf(file_requests, "%lu\n", ip_item->histogram_dns_requests[HISTOGRAM_SIZE_REQUESTS - 1]);  
-      //requests count letter
-      fprintf(file_requests_count_letters, "%s__EX=%f__VarX=%f\t", ip_buff, result.ex_request_count_of_different_letters, result.var_request_count_letters);
-      for(int i=0;i<HISTOGRAM_SIZE_REQUESTS - 1; i++){
-         fprintf(file_requests_count_letters, "%lu\t",result.histogram_dns_request_ex_cout_of_used_letter[i]);
+   for(i =0; i < count_of_btree; i++){
+      b_item = create_list_item(b_plus_tree[i]);
+      is_there_next = get_list(b_plus_tree[i], b_item);
+      while(is_there_next == 1){
+         //value from bplus item structure
+         ip_item = (ip_address_t*)b_item->value;
+         //translate ip int to str 
+         get_ip_str_from_ip_struct(ip_item, b_item->key, ip_buff);
+
+         //print histogram values
+         print_histogram_values(ip_buff, ip_item, file_requests, file_responses, file_requests_count_letters);
+         //print fouded anomaly
+         print_founded_anomaly(ip_buff, ip_item, file_anomaly);
+         //print suspision
+         print_suspision_ip(ip_buff, ip_item, file_suspision);
+
+
+         //next item
+         is_there_next = get_next_item_from_list(b_plus_tree[i], b_item);
       }
-      fprintf(file_requests_count_letters, "%lu\n", result.histogram_dns_request_ex_cout_of_used_letter[HISTOGRAM_SIZE_REQUESTS - 1]); 
-      //response
-      fprintf(file_responses, "%s__EX=%f__VarX=%f__skewness=%f__kurtosis=%f\t", ip_buff, result.ex_response, result.var_response, result.skewness_response, result.kurtosis_response);
-      for(int i=0;i<HISTOGRAM_SIZE_RESPONSE - 1; i++){
-         fprintf(file_responses, "%lu\t",ip_item->histogram_dns_response[i]);
-      }
-      fprintf(file_responses, "%lu\n", ip_item->histogram_dns_response[HISTOGRAM_SIZE_RESPONSE - 1]); 
-      //next item
-      is_there_next = get_next_item_from_list(b_plus_tree, &b_item);
+      destroy_list_item(b_item);
    }
+
    fclose(file_requests);
    fclose(file_requests_count_letters);
    fclose(file_responses);
+   fclose(file_anomaly);
+   fclose(file_suspision);
 
 }
 
@@ -977,6 +993,22 @@ int compare_ipv6(void * a, void * b){
       return MORE;
    }
 
+}
+
+int compare_ipv4(void * a, void * b){
+   uint32_t *h1, *h2;
+
+   h1 = (uint32_t*)a;
+   h2 = (uint32_t*)b;
+   if (*h1 == *h2){
+         return EQUAL;
+   } 
+   else if(*h1 < *h2){
+      return LESS;
+   }
+   else if(*h1 > *h2){
+      return MORE;
+   }
 }
 
 void load_default_values(){
@@ -1009,8 +1041,8 @@ void load_default_values(){
 
 int main(int argc, char **argv)
 {
-   int ret;
-   void * btree;
+   int ret, i;
+   void * btree_ver4, *btree_ver6, *btree[2];
    prefix_tree_t * preftree;
    unsigned long cnt_flows = 0;
    unsigned long cnt_packets = 0;
@@ -1021,7 +1053,6 @@ int main(int argc, char **argv)
    char write_summary = 0;
    memset(histogram_dns_requests, 0, HISTOGRAM_SIZE_REQUESTS * sizeof(unsigned long));
    memset(histogram_dns_response, 0, HISTOGRAM_SIZE_RESPONSE * sizeof(unsigned long));
-
    //load default values from defined constants
    load_default_values();
    // ***** TRAP initialization *****
@@ -1130,9 +1161,14 @@ int main(int argc, char **argv)
       return 4;
    }
 
-   
+   //inicialize b+ tree ipv4
+   btree_ver4 = inicialize_b_plus_tree(5, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));   
    //inicialize b+ tree ipv6
-   btree = inicialize_b_plus_tree(5, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
+   btree_ver6 = inicialize_b_plus_tree(5, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
+   //add trees to array, you can work with it in cycle
+   btree[0] = btree_ver4;
+   btree[1] = btree_ver6;
+
 
    //inicialize prefix tree
    preftree = inicialize_prefix_tree();
@@ -1276,14 +1312,24 @@ int main(int argc, char **argv)
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
                   if(packet.request_length == 0 || add_to_prefix_tree(preftree, packet.request_string, packet.request_length, NULL) != NULL){
-                     add_to_bplus_tree(btree, packet.src_ip, packet.size, 1, &packet);
+                     if(packet.ip_version == IP_VERSION_4){
+                        add_to_bplus_tree(btree_ver4, (&packet.src_ip_v4), packet.size, 1, &packet);
+                     }
+                     else{
+                        add_to_bplus_tree(btree_ver6, packet.src_ip_v6, packet.size, 1, &packet);
+                     }
                   }
                histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
             }
             //is it source port of DNS (Port 53)
             else{
                // Update counters
-               add_to_bplus_tree(btree, packet.dst_ip, packet.size, 0, &packet);
+               if(packet.ip_version == IP_VERSION_4){
+                  add_to_bplus_tree(btree_ver4, (&packet.dst_ip_v4), packet.size, 0, &packet);
+               }
+               else{
+                  add_to_bplus_tree(btree_ver6, packet.dst_ip_v6, packet.size, 0, &packet);
+               }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
             if (stats == 1) {
@@ -1301,7 +1347,8 @@ int main(int argc, char **argv)
          packet_time=0;
          printf("end \n");
          //list_of_ip = get_list(btree);
-         calculate_statistic_and_choose_anomaly(btree);
+         calculate_statistic_and_choose_anomaly(btree_ver4);
+         calculate_statistic_and_choose_anomaly(btree_ver6);
          //stop=1;         
 
       }
@@ -1352,13 +1399,9 @@ int main(int argc, char **argv)
 
    // *****  Write into file ******
    if (write_summary){
-      //list_of_ip = get_list(btree);
-      if(list_of_ip != NULL){
-         //list_of_ip=calculate_statistic_and_choose_anomaly(list_of_ip, btree);
+
          write_summary_result(record_folder_name, histogram_dns_requests, histogram_dns_response);
-         write_detail_result(record_folder_name, btree);
-         print_results(record_folder_name, btree); 
-      }
+         write_detail_result(record_folder_name, btree, 2);
 
    }
    
@@ -1366,14 +1409,25 @@ int main(int argc, char **argv)
 
 
    // ***** Cleanup *****
-   while(list_of_ip!=NULL){
-      check_and_delete_suspision(list_of_ip, REQUEST_AND_RESPONSE_PART);
-      list_of_ip = list_of_ip->next;
+   //clean values in b plus tree
+   b_plus_tree_item *b_item;
+
+   //clean btree ver4 and ver6
+   for(i = 0; i<2; i++){
+      b_item = create_list_item(btree[i]);
+      int is_there_next = get_list(btree[i], b_item);
+      while(is_there_next == 1){
+         check_and_delete_suspision((ip_address_t*)b_item->value, REQUEST_AND_RESPONSE_PART);
+         is_there_next = get_next_item_from_list(btree[i], b_item);
+      }
+      destroy_list_item(b_item);
+      destroy_b_plus_tree(btree[i]);
    }
-   destroy_b_plus_tree(btree);
+
+   //clean prefix tred
    destroy_prefix_tree(preftree);
 
-   //free_ip_list(list_of_ip);
+
    // Do all necessary cleanup before exiting
 failed_trap:
    //TRAP_DEFAULT_FINALIZATION();

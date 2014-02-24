@@ -1,5 +1,5 @@
 bin_PROGRAMS=tunnel_detection_dns
-tunnel_detection_dns_SOURCES=b_plus_tree.cpp \
+tunnel_detection_dns_SOURCES=b_plus_tree.c \
 			b_plus_tree.h\
 			tunnel_detection_dns.c \
 			tunnel_detection_dns.h \

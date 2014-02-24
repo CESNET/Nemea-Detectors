@@ -179,11 +179,10 @@ int read_packet(FILE *file, packet_t * create){
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
-		create->src_ip[0] = 0;
-		create->src_ip[1] = read_ip_address_v4(file);
+		
+		create->src_ip_v4 = read_ip_address_v4(file);
 		sign = fgetc(file);
-		create->dst_ip[0] = 0;
-		create->dst_ip[1] = read_ip_address_v4(file);
+		create->dst_ip_v4 = read_ip_address_v4(file);
 		sign = fgetc(file);
 		create->ip_version = IP_VERSION_4;
 	}
@@ -191,9 +190,9 @@ int read_packet(FILE *file, packet_t * create){
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
-		read_ip_address_v6(file, create->src_ip);
+		read_ip_address_v6(file, create->src_ip_v6);
 		sign = fgetc(file);
-		read_ip_address_v6(file, create->dst_ip);
+		read_ip_address_v6(file, create->dst_ip_v6);
 		sign = fgetc(file);
 		create->ip_version = IP_VERSION_6;
 	}

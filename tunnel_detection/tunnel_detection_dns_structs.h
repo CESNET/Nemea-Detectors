@@ -48,13 +48,6 @@
 
 
 
-typedef struct b_plus_tree_item b_plus_tree_item ;
- struct b_plus_tree_item {
-    void * value;
-    void * key;
-    void * c_key;
-    unsigned int i;
-} ;
 
 
 typedef struct character_statistic_t character_statistic_t ;
@@ -231,8 +224,10 @@ typedef struct calulated_result_t calulated_result_t ;
  typedef struct packet_t packet_t ;
  struct packet_t {
     double time;
-    uint64_t src_ip[2];
-    uint64_t dst_ip[2];
+    uint64_t src_ip_v6[2];
+    uint64_t dst_ip_v6[2];
+    uint64_t src_ip_v4;
+    uint64_t dst_ip_v4;
     unsigned char ip_version;
     unsigned int size;
     char is_response;
