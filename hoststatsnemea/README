@@ -18,6 +18,11 @@ is stored in a log file.
 Currently there are rules for detection of hosts scanning network, DoS attackers
 and victims, SSH bruteforce and DNS amplification.
 
+Module can operate in two different modes - online and offline. The online mode 
+is used for analysis of the current network traffic in real time. On the other
+hand, the offline mode used for analysis of the already captured network 
+traffic. By default, this module is in the online mode.
+
 Input interface:    1 ("<COLLECTOR_FLOW>,DIRECTION_FLAGS")
 Output interface:   1 ("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,
                         PROTOCOL,EVENT_SCALE") (more details below)
@@ -52,7 +57,8 @@ depends on each subprofile. Specific statistics (subprofiles) are available
 from the global statistics of each IP address that are stored in cuckoo hash
 table.
 
-The module consists of two basic threads – manipulating and checking.
+In ONLINE mode the module consists of two basic threads – manipulating and 
+checking.
     The checking thread periodically checks the statistics data in the table 
 by defined period. When a statistic record is too long in the table (active
 timeout) or it wasn't updated during specific time (inactive timeout), record is
@@ -60,8 +66,15 @@ searched for suspicious behavior using the simple ruleset and added to a list
 to remove. Period and active/inactive timeout can be set in the configuration 
 file.
     The manipulating thread receives data from the TRAP and updates the global
-statistics and statistics in active subprofiles. This thread also removes 
-statistics records from the table defined by the list to remove.
+statistics and statistics in active subprofiles. This thread also removes old
+records defined by the list to remove from the table.
+
+In OFFLINE mode the module "simulates" the behavior of online mode and it does
+not use separete threads. This module recieves data from the TRAP and updates 
+the statistic. At specified time suspend recieving and start analysis of the 
+statistics data (same way as in the online mode) in the table. The list to 
+remove is not used. The records are directly removed. When analysis is complete
+data reading is restored. This activity is repeated until the input is ended.
 
 
 3. How to use

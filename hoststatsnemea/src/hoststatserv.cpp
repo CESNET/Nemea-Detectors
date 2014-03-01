@@ -88,10 +88,10 @@ using namespace std;
 // Global variables
 
 string config_file = "";
-bool background = false;  // Run in background
-int log_syslog = true;   // Log into syslog
-int log_upto = LOG_ERR; // Log up to level 
-static int terminated = 0;
+bool background = false;   // Run in background
+bool offline_mode = false; // Run in offline mode
+int log_syslog = true;     // Log into syslog
+int log_upto = LOG_ERR;    // Log up to level 
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
 extern HostProfile *MainProfile;
@@ -104,10 +104,13 @@ trap_module_info_t module_info = {
    (char *)
       "This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)\n"
       "\n"
-      "USAGE ./hoststatsnemea TRAP_INTERFACE [-c file]\n"
+      "USAGE ./hoststatsnemea TRAP_INTERFACE [-c file] [-F]\n"
       "\n"
       "Parameters:\n"
-      "   -c file    Load configuration from file.\n"
+      "   -c file  Load configuration from file.\n"
+      "   -F       Run module in OFFLINE mode. It is used for analysis of already\n"
+      "            captured flows. As a source can be used mudule such as nfreader,\n"
+      "            trapreplay, etc.\n"
       "Note: Other parameters are taken from configuration file. If configuration file\n"
       "      is not specified, hoststats.conf is used by default.\n"
       "\n" 
@@ -120,7 +123,7 @@ trap_module_info_t module_info = {
       "TRAP Interfaces:\n"
       "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
       "   Outputs: 1 (\"EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,\n"
-      "                 EVENT_SCALE\") \n",
+      "                EVENT_SCALE\") \n",
    1, // Number of input TRAP interfaces
    1, // Number of output TRAP interfaces
 };
@@ -133,10 +136,13 @@ int arguments(int argc, char *argv[])
 {
    char opt;
    
-   while ((opt = getopt(argc, argv, "c:")) != -1) {
+   while ((opt = getopt(argc, argv, "c:F")) != -1) {
       switch (opt) {
       case 'c':  // configuration file
          Configuration::setConfigPath(string(optarg));
+         break;
+      case 'F':
+         offline_mode = true;
          break;
       default:  // invalid arguments
          return 0;
@@ -159,15 +165,12 @@ void terminate_daemon(int signal)
       cf->reload();
       logmask = cf->getValue("log-upto-level");
       parse_logmask(logmask);
-      //TODO: call MainProfile funcion reload_config()
       break;
    case SIGTERM:
-      terminated = 1;
       trap_terminate();
       log(LOG_NOTICE, "Cought TERM signal...");
       break;
    case SIGINT:
-      terminated = 1;
       trap_terminate();
       log(LOG_NOTICE, "Cought INT signal...");
       break;
@@ -229,7 +232,7 @@ int main(int argc, char *argv[])
    }
 
    openlog(NULL, LOG_NDELAY, 0);
-   log(LOG_INFO, "HostStats started");
+   log(LOG_INFO, "HostStatsNemea started");
    
    // Load default configuration from config file
    config->lock();
@@ -250,41 +253,48 @@ int main(int argc, char *argv[])
    /* reload configuration signal: */
    signal(SIGHUP, terminate_daemon);
 
-   // Create threads for data from TRAP
-   thread_share_t share;
+   if (!offline_mode) {
+      // ONLINE MODE -----------------------------------------------------------
+      log(LOG_INFO, "HostStatsNemea: ONLINE mode");
+      pthread_t data_reader_thread;
+      pthread_t data_process_thread;
 
-   int rc;
-   rc = pthread_create(&share.data_reader_thread, NULL, &data_reader_trap, 
-      (void *) &share);
-   if (rc) {
-      trap_terminate();
-      terminated = 1;
-   }
+      int rc = 0;
+      bool failed = false;
 
-   if (terminated != 1) {
-      rc = pthread_create(&share.data_process_thread, NULL, &data_process_trap, 
-         (void *) &share);
+      rc = pthread_create(&data_reader_thread, NULL, &data_reader_trap, NULL);
       if (rc) {
          trap_terminate();
-         terminated = 1;
+         failed = true;
       }
+
+      if (!failed) {
+         rc = pthread_create(&data_process_thread, NULL, &data_process_trap, NULL);
+         if (rc) {
+            trap_terminate();
+            failed = true;
+         }
+      }
+
+      // Block signal SIGALRM
+      sigset_t signal_mask;
+      sigemptyset(&signal_mask);
+      sigaddset(&signal_mask, SIGALRM);
+
+      rc = pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
+      if (rc != 0) {
+         trap_terminate();
+         failed = true;
+      }
+
+      // Wait until end of TRAP threads
+      pthread_join(data_process_thread, NULL);
+      pthread_join(data_reader_thread, NULL);
+   } else {
+      // OFFLINE MODE ----------------------------------------------------------
+      log(LOG_INFO, "HostStatsNemea: OFFLINE mode");
+      offline_analyzer();
    }
-
-   // ***** Server *****
-   // Block signal SIGALRM
-   sigset_t signal_mask;
-   sigemptyset(&signal_mask);
-   sigaddset(&signal_mask, SIGALRM);
-
-   rc = pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
-   if (rc != 0) {
-      trap_terminate();
-      terminated = 1;
-   }
-
-   // Wait until end of TRAP threads
-   pthread_join(share.data_process_thread, NULL);
-   pthread_join(share.data_reader_thread, NULL);
 
    // Delete all records
    delete MainProfile;

@@ -73,11 +73,15 @@ HostProfile::HostProfile()
    int rc;
    rc = ht_init_v2(&stat_table, table_size, sizeof(hosts_record_t), sizeof(hosts_key_t));
    if (rc != 0) {
-      // TODO: ukončení programu
+      // TODO: end of module
       return;
    }
 
    stat_table_ptr = &stat_table;
+
+   old_rec_ready = false;
+   old_rec_list.reserve(8192);
+   pthread_mutex_init(&old_rec_list_mutex, NULL);
 
    // Create BloomFilters
    bloom_parameters bp;
@@ -110,6 +114,8 @@ HostProfile::~HostProfile()
    // Delete cuckoo hash table (v2)
    ht_destroy_v2(stat_table_ptr);
 
+   pthread_mutex_destroy(&old_rec_list_mutex);
+
    // Delete BloomFilters
    delete bf_active;
    delete bf_learn;
@@ -122,8 +128,7 @@ HostProfile::~HostProfile()
    }
 }
 
-/*
- * apply_config()
+/** \brief Load configuration
  * Load configuration data and update profile (and subprofiles) variables 
  */
 void HostProfile::apply_config()
@@ -160,17 +165,15 @@ void HostProfile::apply_config()
    std::sort(sp_list.begin(), sp_list.end());
 }
 
-/*
- * update()
- * Update records in the stat_table by data from TRAP input interface
+/** \brief Update records in the stat_table by data from TRAP input interface
  *
  * Find two host records according to source and destination address of the 
  * flow and update these records (and subprofiles).
  * Note: uses global variable hs_time with current system time 
  *
- * @param record Pointer to the data from the TRAP
- * @param tmpl_in Pointer to the TRAP input interface
- * @param subprofiles When True update active subprofiles
+ * \param record Pointer to the data from the TRAP
+ * \param tmpl_in Pointer to the TRAP input interface
+ * \param subprofiles When True update active subprofiles
  */
 void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       bool subprofiles)
@@ -302,11 +305,9 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    }
 }
 
-/*
- * remove_by_key()
+/** \brief Remove the record by the key
  * Remove the record from cuckoo_hash table. 
- * 
- * @param key Key to remove from the table
+ * \param key Key to remove from the table
  */
 void HostProfile::remove_by_key(const hosts_key_t &key)
 {
@@ -318,8 +319,7 @@ void HostProfile::remove_by_key(const hosts_key_t &key)
    ht_remove_by_key_v2(stat_table_ptr, (char *) key.bytes);
 }
 
-/*
- * release()
+/**
  * Remove subprofiles and clean cuckoo_hash table
  */
 void HostProfile::release()
@@ -342,8 +342,7 @@ void HostProfile::release()
    ht_clear_v2(stat_table_ptr);
 }
 
-/*
- * swap_bf()
+/** \brief Swap/clean BloomFilters
  * Clear active BloomFilter and swap active and learning BloomFilter
  */
 void HostProfile::swap_bf()
@@ -364,13 +363,12 @@ void HostProfile::swap_bf()
    }
 }
 
-/*
- * check_record()
+/**
  * Check whether there are any incidents in the record
  *
- * @param key Key of the record
- * @param record Record to check
- * @param subprofiles When True check active subprofiles with active detector
+ * \param key Key of the record
+ * \param record Record to check
+ * \param subprofiles When True check active subprofiles with active detector
  */
 void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &record, 
    bool subprofiles)
@@ -394,16 +392,14 @@ void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &rec
    }
 }
 
-/*
- * get_record()
- * Get a reference to a record from the table
+/** \brief Get a reference to a record from the table
  * 
  * Find the record in the table. If the record does not exist, create new empty
  * one. Sometime when the empty record is saved, another record is kicked off
  * and sent to the detector. (more info in cuckoo_hash files)
  *
- * @params key Key of the record
- * @return Referece to the record
+ * \params key Key of the record
+ * \return Referece to the record
  */
 hosts_record_t& HostProfile::get_record(const hosts_key_t& key)
 {
@@ -430,4 +426,36 @@ hosts_record_t& HostProfile::get_record(const hosts_key_t& key)
    return *((hosts_record_t *)stat_table_ptr->data[index]);
 }
 
+/** \brief Inserts a record key into the list to remove
+ * Add new key into the list only if it's not already present.
+ * \param[in] key Old record key
+ */ 
+void HostProfile::old_rec_list_insert(const hosts_key_t &key)
+{
+   old_rec_item_t item = {key};
+   pthread_mutex_lock(&old_rec_list_mutex);
+   if (find(old_rec_list.begin(), old_rec_list.end(), item) == old_rec_list.end()) {
+      old_rec_list.push_back(item);
+   }
 
+   if (old_rec_list.size() >= 100) {
+      old_rec_ready = true;
+   }
+   
+   pthread_mutex_unlock(&old_rec_list_mutex);
+}
+
+/** \brief Remove prepared old records
+ * For each item in the list, removes the corresponding record from the flow table.
+ */
+void HostProfile::old_rec_list_clean()
+{
+   pthread_mutex_lock(&old_rec_list_mutex);
+   while(!old_rec_list.empty()) {
+      remove_by_key((old_rec_list.back()).key);
+      old_rec_list.pop_back();
+   }
+
+   old_rec_ready = false;
+   pthread_mutex_unlock(&old_rec_list_mutex);
+}

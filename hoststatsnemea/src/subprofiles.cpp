@@ -60,6 +60,7 @@
       to function pointers sp_update, sp_check, sp_delete (see subprofiles.h). 
       If new subprofile requires its own BloomFilter, implement a method derived
       from function pointer sp_bf_config.
+   2) Add this class pointer to "hosts_record_t" in hoststats.h
    2) Your subprofile should have a flow filtering function. Call this function
       at the start of your new update function to ensure that only the desired
       flows will be stored.

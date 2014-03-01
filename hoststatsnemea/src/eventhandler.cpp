@@ -36,7 +36,6 @@
  */
 
 #include "eventhandler.h"
-#include "wardenreport.h"
 #include "config.h"
 #include "aux_func.h"
 
@@ -100,7 +99,6 @@ void reportEvent(const Event& event)
    Configuration *config = Configuration::getInstance();
    config->lock();
    string path = config->getValue("detection-log");
-   string warden_script = config->getValue("warden-send-script");
    config->unlock();
    
    string y = timeslot.substr(0,4);
@@ -132,33 +130,6 @@ void reportEvent(const Event& event)
       }
    }
    
-   // Send event report to Warden (if appropriate type and if source is known)
-   //                               TODO: what to do when there are more sources/ports/protocols?
-   if (!warden_script.empty() && event.src_addr.size() == 1) {
-      WardenReport wr;
-      wr.time = y+"-"+m+"-"+d+"T"+h+":"+n+":00";
-      wr.source = IPaddr_cpp(&event.src_addr[0]).toString();
-      if (event.proto.size() == 1)
-         wr.target_proto = getProtoString(event.proto[0]);
-      if (event.dst_port.size() == 1)
-         wr.target_port = event.dst_port[0];
-      wr.attack_scale = event.scale;
-      wr.note = event.note;   
-      
-      if (event.type == PORTSCAN || event.type == PORTSCAN_H || event.type == PORTSCAN_V) {
-         wr.type = "portscan";
-         wr.send(warden_script);
-      }
-      else if (event.type == DOS || event.type == DDOS) {
-         wr.type = "dos";
-         wr.send(warden_script);
-      }
-      else if (event.type == BRUTEFORCE) {
-         wr.type = "bruteforce";
-         wr.send(warden_script);
-      }
-   }
-
    // Send event report to TRAP output interface (HALF_WAIT)
    void *rec = ur_create(tmpl_out, 0);
 

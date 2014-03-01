@@ -53,6 +53,14 @@ extern "C" {
    #include <unirec/unirec.h>
 }
 
+// The identification of item to remove
+typedef struct old_rec_item_s {
+   hosts_key_t key;
+   bool operator== (const old_rec_item_s& second) const
+   {
+      return (memcmp(&key, &second.key, sizeof(hosts_key_t)) == 0);   
+   }
+} old_rec_item_t;
 
 // List of subprofiles 
 typedef std::vector<subprofile_t> sp_list_v;
@@ -62,11 +70,17 @@ typedef sp_list_v::iterator sp_list_iter;
 
 class HostProfile {
 private:
-   stat_table_t stat_table;
+   stat_table_t stat_table;   // cuckoo_hash table
    stat_table_t *stat_table_ptr;
-   bloom_filter *bf_active, *bf_learn;
-   int table_size;
-   bool detector_status;   // main profile detector active / inactive
+
+   bloom_filter *bf_active, *bf_learn; // pointer to active/learning BloomFilter
+   int table_size;            // size of cuckoo_hash table
+   bool detector_status;      // main profile detector active / inactive
+   sp_list_v sp_list;         // list of avaiable subprofiles
+
+   pthread_mutex_t old_rec_list_mutex;
+   std::vector<old_rec_item_t> old_rec_list;
+   bool old_rec_ready;
 
    // Get the reference of record from the table 
    hosts_record_t& get_record(const hosts_key_t& key);
@@ -78,7 +92,6 @@ public:
    int active_timeout;
    int inactive_timeout;
    int det_start_time;
-   sp_list_v sp_list;
 
    // Constructor
    HostProfile();
@@ -125,6 +138,22 @@ public:
    inline bool is_valid(const hosts_key_t& key, int index)
       {return ht_is_valid_v2(this->stat_table_ptr, (char*)key.bytes, index);}
 
+   // Inserts a record into the list to remove
+   void old_rec_list_insert(const hosts_key_t &key);
+
+   // Delete prepared old items
+   void old_rec_list_clean();
+
+   // Check if in the list is at least minimal amount of items
+   inline bool is_old_rec_list_ready()
+      {return old_rec_ready;}
+
+   // Set old_rec_ready to true, mean that it can remove old records
+   inline void set_old_rec_ready() {
+      pthread_mutex_lock(&old_rec_list_mutex);
+      old_rec_ready = true;
+      pthread_mutex_unlock(&old_rec_list_mutex);
+   }
 };
 
 #endif
