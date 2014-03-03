@@ -50,7 +50,7 @@ if test -z "$TRAPLIB"; then
 	# Check for TRAP toolkit as a superproject.
 	if test -d "$srcdir/../libtrap"; then
 	TRAPINC='$(top_srcdir)/../libtrap/include'
-	TRAPLIB='$(top_builddir)/../libtrap'
+	TRAPLIB='$(top_builddir)/../libtrap/src/.libs'
 	fi
 	# AC_SUBST command line variables from TRAPLIB and TRAPINC.
 	if test -n "$TRAPLIB"; then
