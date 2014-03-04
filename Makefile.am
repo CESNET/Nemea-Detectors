@@ -27,7 +27,6 @@ simplebotnetdetector \
 test_threads \
 timestamp_checker \
 traffic_merger \
-test \
 traffic_repeater \
 transitfilter \
 trapdump \
