@@ -177,6 +177,7 @@ AC_CONFIG_FILES([Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
+                 merger/Makefile
 		 nfreader/Makefile
                  pca/Makefile
                  protocolcounters/Makefile
@@ -187,6 +188,7 @@ AC_CONFIG_FILES([Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
                  traffic_merger/Makefile
+                 test/Makefile
                  traffic_repeater/Makefile
 		 tunnel_detection/Makefile
                  flow_meter/Makefile])

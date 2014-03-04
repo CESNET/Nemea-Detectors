@@ -18,6 +18,7 @@ hoststatsnemea \
 ipspoofingdetector \
 ipv6stats \
 logger \
+merger \
 nfreader \
 pca \
 flow_meter \
@@ -26,6 +27,7 @@ simplebotnetdetector \
 test_threads \
 timestamp_checker \
 traffic_merger \
+test \
 traffic_repeater \
 transitfilter \
 trapdump \
