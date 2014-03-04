@@ -178,6 +178,7 @@ AC_CONFIG_FILES([Makefile
                  ipv6stats/Makefile
                  logger/Makefile
 		 nfreader/Makefile
+		 p2pbotnet_detection/Makefile
                  pca/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile

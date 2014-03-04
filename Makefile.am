@@ -21,6 +21,7 @@ logger \
 nfreader \
 pca \
 flow_meter \
+p2pbotnet_detection \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
