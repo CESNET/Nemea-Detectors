@@ -18,6 +18,7 @@ hoststatsnemea \
 ipspoofingdetector \
 ipv6stats \
 logger \
+merger \
 nfreader \
 pca \
 flow_meter \
