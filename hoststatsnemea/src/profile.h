@@ -144,6 +144,9 @@ public:
    // Delete prepared old items
    void old_rec_list_clean();
 
+   // Checks if a key exists in the list
+   bool old_rec_list_present(const hosts_key_t &key);
+
    // Check if in the list is at least minimal amount of items
    inline bool is_old_rec_list_ready()
       {return old_rec_ready;}

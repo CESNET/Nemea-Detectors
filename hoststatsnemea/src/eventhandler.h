@@ -44,6 +44,7 @@
 #include <cstdarg>
 
 #include "aux_func.h"
+#include "hoststats.h"
 #include <unirec/unirec.h>
 
 enum EventType {PORTSCAN, PORTSCAN_H, PORTSCAN_V, DOS, DDOS, BRUTEFORCE, OTHER};
@@ -57,15 +58,15 @@ class Event
 {
 public:
    EventType type;
-   uint32_t timeslot;
+   uint32_t time_first, time_last;
    std::vector<ip_addr_t> src_addr, dst_addr;
    std::vector<uint16_t> src_port, dst_port;
    std::vector<uint8_t> proto;
-   int scale;
+   uint32_t scale;
    std::string note;
    
-   Event(const uint32_t &timeslot, EventType type)
-    : type(type), timeslot(timeslot)
+   Event(const uint32_t &time_first, const uint32_t &time_last, EventType type)
+    : type(type), time_first(time_first), time_last(time_last)
    { }
    
    // Methods to set parameters
@@ -94,7 +95,7 @@ public:
       this->proto.push_back(proto);
       return *this;
    }
-   Event& setScale(int scale)
+   Event& setScale(uint32_t scale)
    {
       this->scale = scale;
       return *this;
@@ -116,7 +117,7 @@ public:
    }
 };
 
-void reportEvent(const Event& event);
+void reportEvent(const hosts_key_t &ip, const Event& event);
 
 
 #endif

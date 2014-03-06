@@ -122,8 +122,8 @@ trap_module_info_t module_info = {
       "\n"
       "TRAP Interfaces:\n"
       "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
-      "   Outputs: 1 (\"EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,\n"
-      "                EVENT_SCALE\") \n",
+      "   Outputs: 1 (\"EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,\n"
+      "                DST_PORT,PROTOCOL,EVENT_SCALE\") \n",
    1, // Number of input TRAP interfaces
    1, // Number of output TRAP interfaces
 };
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 
    /* Create UniRec template */
    tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
-   tmpl_out = ur_create_template("EVENT_TYPE,TIMESLOT,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
+   tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
    if (tmpl_in == NULL || tmpl_out == NULL) {
       log(LOG_ERR, "Error when creating UniRec template.\n");
       if (tmpl_in == NULL) ur_free_template(tmpl_in);
