@@ -44,18 +44,6 @@
 using namespace std;
 
 
-const std::string get_rec_time(const hosts_record_t &rec)
-{
-   time_t temp = rec.first_rec_ts;
-   struct tm *timeinfo;
-   char buff[13]; //12 signs + '/0'
-
-   timeinfo = localtime(&temp);
-   strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo); 
-
-   return string(buff);
-}
-
 #define SYN_SCAN_TRESHOLD 200
 #define SYN_SCAN_SYN_TO_ACK_RATIO 20
 #define SYN_SCAN_REQUEST_TO_RESPONSE_RATIO 5
@@ -83,11 +71,11 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        rec.out_req_uniqueips >= SYN_SCAN_IPS && // a lot of different destinations
        rec.out_req_syn_cnt > rec.out_all_flows/2) // it is more than half of total outgoing traffic of this address
    {
-      Event evt(rec.first_rec_ts, PORTSCAN_H);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, PORTSCAN_H);
       evt.addProto(TCP).addSrcAddr(addr);
       evt.setScale(rec.out_all_syn_cnt - rec.out_all_ack_cnt);
       evt.setNote("horizontal SYN scan");
-      reportEvent(evt);
+      reportEvent(addr, evt);
    }
    
    // DoS/DDoS (victim)
@@ -99,7 +87,7 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        est_in_req_packets < DOS_VICTIM_PACKET_RATIO * est_in_req_flows && // packets per flow < 2
        est_out_rsp_flows < est_in_req_flows/2) // less than half of requests are replied
    {
-      Event evt(rec.first_rec_ts, DOS);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, DOS);
       evt.addProto(TCP).addDstAddr(addr);
       evt.setScale(rec.in_all_flows);
       evt.setNote("in: %u flows, %u packets; out: %u flows, %u packets; approx. %u source addresses",
@@ -109,7 +97,7 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
       if (rec.in_all_flows < 2*rec.in_all_uniqueips) {
          evt.note += " (probably spoofed)";
       }
-      reportEvent(evt);
+      reportEvent(addr, evt);
    }
    
    // DoS/DDoS (attacker)
@@ -121,12 +109,12 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        est_out_req_packets < DOS_ATTACKER_PACKET_RATIO * est_out_req_flows && // packets per flow < 2
        est_in_rsp_flows < est_out_req_flows/2) // less than half of requests are replied
    {
-      Event evt(rec.first_rec_ts, DOS);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, DOS);
       evt.addProto(TCP).addSrcAddr(addr);
       evt.setScale(rec.out_all_flows);
       evt.setNote("out: %u flows, %u packets; in: %u flows, %u packets; approx. %u destination addresses",
                   rec.out_all_flows, rec.out_all_packets, rec.in_all_flows, rec.in_all_packets, rec.out_all_uniqueips);
-      reportEvent(evt);
+      reportEvent(addr, evt);
    }
 }
 
@@ -178,11 +166,11 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
    )
    && (ssh_rec.out_rsp_syn_cnt > BRUTEFORCE_IPS_RATIO * ssh_rec.out_all_uniqueips) // alespon 30x odpovidal stejne adrese
    ) {
-      Event evt(rec.first_rec_ts, BRUTEFORCE);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addDstAddr(addr);
       evt.setScale(ssh_rec.in_req_syn_cnt);
       evt.setNote("victim");
-      reportEvent(evt);
+      reportEvent(addr, evt);
    }
    
    // SSH bruteforce (output = attacking address)
@@ -216,11 +204,11 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
    )
    )
    {
-      Event evt(rec.first_rec_ts, BRUTEFORCE);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addSrcAddr(addr);
       evt.setScale(ssh_rec.out_req_syn_cnt);
       evt.setNote("attacker");
-      reportEvent(evt);
+      reportEvent(addr, evt);
    } 
 }
 
@@ -233,18 +221,18 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
    const dns_record_t &dns_rec = rec.dnshostprofile->record;
 
    if (dns_rec.out_rsp_overlimit_cnt > 10000) {
-      Event evt(rec.first_rec_ts, OTHER);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, OTHER);
       evt.addDstPort(53).addSrcAddr(addr);
       evt.setScale(dns_rec.out_rsp_overlimit_cnt);
       evt.setNote("DNS amplification - amplificator");
-      reportEvent(evt);
+      reportEvent(addr, evt);
    } 
 
    if (dns_rec.in_rsp_overlimit_cnt > 10000) {
-      Event evt(rec.first_rec_ts, OTHER);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, OTHER);
       evt.addDstPort(53).addDstAddr(addr);
       evt.setScale(dns_rec.in_rsp_overlimit_cnt);
       evt.setNote("DNS amplification - victim");
-      reportEvent(evt);
+      reportEvent(addr, evt);
    }
 }

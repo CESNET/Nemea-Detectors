@@ -459,3 +459,21 @@ void HostProfile::old_rec_list_clean()
    old_rec_ready = false;
    pthread_mutex_unlock(&old_rec_list_mutex);
 }
+
+/** \brief Checks if a key exists in the list
+ * \param[in] key Record key
+ * \return True if the key is found, false otherwise
+ */
+bool HostProfile::old_rec_list_present(const hosts_key_t &key)
+{
+   bool present = false;
+   old_rec_item_t item = {key};
+
+   pthread_mutex_lock(&old_rec_list_mutex);
+   if (find(old_rec_list.begin(), old_rec_list.end(), item) != old_rec_list.end()) {
+      present = true;
+   }
+
+   pthread_mutex_unlock(&old_rec_list_mutex);
+   return present;
+}

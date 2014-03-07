@@ -38,6 +38,7 @@
 #include "eventhandler.h"
 #include "config.h"
 #include "aux_func.h"
+#include "profile.h"
 
 #include <fstream>
 extern "C" {
@@ -49,18 +50,27 @@ extern "C" {
 using namespace std;
 
 extern ur_template_t *tmpl_out;
+extern HostProfile *MainProfile;
 
 string getProtoString(uint8_t proto);
 string getTypeString(EventType type);
 string getTimeString(const uint32_t &timestamp);
 
-void reportEvent(const Event& event)
+void reportEvent(const hosts_key_t &ip, const Event& event)
 {
-   string timeslot = getTimeString(event.timeslot);
+   // Check if the event has already been reported -> double detection
+   if (MainProfile->old_rec_list_present(ip)) {
+      log(LOG_DEBUG, "Event report skipped. It has already been reported");
+      return;
+   }
+
+   string first_t = getTimeString(event.time_first);
+   string last_t = getTimeString(event.time_last);
+
 
    // Print info about event into a string 
    stringstream line;
-   line << timeslot << ';';
+   line << first_t << ';' << last_t << ';';
    line << getTypeString(event.type) << ';';
    for (vector<uint8_t>::const_iterator it = event.proto.begin(); it != event.proto.end(); ++it) {
       if (it != event.proto.begin())
@@ -101,20 +111,13 @@ void reportEvent(const Event& event)
    string path = config->getValue("detection-log");
    config->unlock();
    
-   string y = timeslot.substr(0,4);
-   string m = timeslot.substr(4,2);
-   string d = timeslot.substr(6,2);
-   string h = timeslot.substr(8,2);
-   string n = timeslot.substr(10,2);
+   string y = first_t.substr(0,4);
+   string m = first_t.substr(4,2);
+   string d = first_t.substr(6,2);
+   string h = first_t.substr(8,2);
+   string n = first_t.substr(10,2);
    
-   if (!path.empty()) {
-      // Fill in year, month, day, hour and minute
-//       replace(path, "%y", timeslot.substr(0,4));
-//       replace(path, "%m", timeslot.substr(4,2));
-//       replace(path, "%d", timeslot.substr(6,2));
-//       replace(path, "%H", timeslot.substr(8,2));
-//       replace(path, "%M", timeslot.substr(10,2));
-      
+   if (!path.empty()) {     
       if (path[path.size()-1] != '/')
          path += '/';
       path += y + m + d + ".log";
@@ -134,7 +137,8 @@ void reportEvent(const Event& event)
    void *rec = ur_create(tmpl_out, 0);
 
    ur_set(tmpl_out, rec, UR_EVENT_TYPE, event.type);
-   ur_set(tmpl_out, rec, UR_TIMESLOT, event.timeslot);
+   ur_set(tmpl_out, rec, UR_TIME_FIRST, ur_time_from_sec_msec(event.time_first,0));
+   ur_set(tmpl_out, rec, UR_TIME_LAST, ur_time_from_sec_msec(event.time_last, 0));
 
    // SRC IP ADDRESS
    if (!event.src_addr.empty()) {
@@ -172,7 +176,7 @@ void reportEvent(const Event& event)
       ur_set(tmpl_out, rec, UR_PROTOCOL, 0);
    }
 
-   ur_set(tmpl_out, rec, UR_EVENT_SCALE, double(event.scale));
+   ur_set(tmpl_out, rec, UR_EVENT_SCALE, event.scale);
 
    trap_send_data(0, rec, ur_rec_static_size(tmpl_out), TRAP_NO_WAIT);
 
@@ -208,37 +212,9 @@ string getProtoString(uint8_t proto)
 
 std::string getTimeString(const uint32_t &timestamp)
 {
-   time_t temp = timestamp;
-   struct tm *timeinfo;
+   const time_t temp = timestamp;
    char buff[13]; //12 signs + '/0'
-
-   timeinfo = localtime(&temp);
-   strftime(buff, 13, "%4Y%2m%2d%2H%2M", timeinfo); 
+   strftime(buff, 13, "%4Y%2m%2d%2H%2M", gmtime(&temp)); 
 
    return string(buff);
 }
-
-
-/*
-int main()
-{
-   IPAddr ip1,ip2,ip3,ip4;
-//    str2ip("0.1.2.3", ip1);
-//    str2ip("1.2.3.4", ip2);
-//    str2ip("100.0.0.3", ip3);
-//    str2ip("100.0.0.4", ip4);
-   
-   Event evt("201303271000", PORTSCAN);
-   evt.addSrcAddr(ip1).addProto(6);
-   evt.addDstPort(21).addDstPort(22).addDstPort(23).addDstPort(24).addDstPort(25);
-   evt.setScale(1000);
-   reportEvent(evt);
-   
-   evt = Event("201303271005", DOS);
-   evt.addDstAddr(ip4).addProto(6).addDstPort(80);
-   evt.setScale(50000);
-   reportEvent(evt);
-   
-   return 0;
-}
-*/
