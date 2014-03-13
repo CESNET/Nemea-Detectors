@@ -210,7 +210,7 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
   void c_b_tree_plus_del_all_node (C_node * del);
  
 
-  int c_b_tree_plus_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree);
+  int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree);
  
   //find index of certain child in parent
   int  c_b_tree_plus_find_my_index_in_parent  (C_node * son);
@@ -220,14 +220,12 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
   //find leaf where is key, or where to add key
   C_node *  c_b_tree_plus_find_leaf (void *key, C_b_tree_plus * btree);
  
-  void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree);
+  void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int search);
 
  
   C_node * c_b_tree_plus_get_rightest_leaf (C_node * inner);
  
   void c_b_tree_plus_check_and_change_key (C_node * leaf_del, C_b_tree_plus * btree );
-
-  int c_b_tree_plus_b_tree_plus_delete(void * key, C_b_tree_plus * btree);
 
   int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index, C_node * leaf_del, C_b_tree_plus * btree);
 
@@ -237,25 +235,35 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
 
   C_node * c_b_tree_plus_get_most_left_leaf( C_node  *item);
 
-  void * inicialize_b_plus_tree(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
-
-  void * create_or_find_struct_b_plus_tree(void * btree, void * key);
-
-  unsigned long int get_count_of_values(void * btree);
-
-  void  destroy_b_plus_tree(void * tree);
-
-  int  delete_item_b_plus_tree(void * btree, b_plus_tree_item * delete_item );
 
 
 
-  int  get_list(void * t, b_plus_tree_item * item);
+  void * b_plus_tree_inicialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
 
-  b_plus_tree_item * create_list_item (void * btree);
+  void * b_plus_tree_insert_or_find_item(void * btree, void * key);
 
-  void destroy_list_item(b_plus_tree_item * item);
+  void * b_plus_tree_insert_item(void * btree, void * key);
 
-  int get_next_item_from_list(void * t, b_plus_tree_item * item);
+  void * b_plus_tree_search(void * btree, void * key);
+
+  unsigned long int b_plus_tree_get_count_of_values(void * btree);
+
+
+
+  void  b_plus_tree_destroy(void * tree);
+
+  int  b_plus_tree_delete_item(void * btree, void * key );
+
+  int  b_plus_tree_delete_item_from_list(void * btree, b_plus_tree_item * delete_item );
+   
+
+  int  b_plus_tree_get_list(void * t, b_plus_tree_item * item);
+
+  b_plus_tree_item * b_plus_tree_create_list_item (void * btree);
+
+  void b_plus_tree_destroy_list_item(b_plus_tree_item * item);
+
+  int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item);
  
 
  #endif /* _B_PLUS_TREE_ */

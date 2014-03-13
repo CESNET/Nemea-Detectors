@@ -81,10 +81,10 @@ typedef struct character_statistic_t character_statistic_t ;
  struct prefix_tree_domain_t {
  	unsigned char exception;
     unsigned char deegree;
-	unsigned int count_of_search;
+	unsigned int count_of_insert;
 	unsigned int count_of_different_subdomains;
 	unsigned char count_of_different_letters;
-    character_statistic_t * char_stat;
+    //character_statistic_t * char_stat;
 	prefix_tree_inner_node_t * parent;
 	prefix_tree_domain_t * parent_domain;
 	prefix_tree_inner_node_t *child;
@@ -100,8 +100,8 @@ typedef struct prefix_tree_t prefix_tree_t ;
  struct prefix_tree_t {
 	prefix_tree_inner_node_t * root;
 	unsigned int count_of_domain_searched_just_ones;
-	unsigned int count_of_searching;
-    unsigned int count_of_searching_for_just_ones;
+	unsigned int count_of_inserting;
+    unsigned int count_of_inserting_for_just_ones;
 	unsigned int count_of_different_domains;
 	prefix_tree_domain_t * list_of_most_used_domains;
 	prefix_tree_domain_t * list_of_most_used_domains_end;
@@ -132,30 +132,44 @@ typedef struct prefix_tree_t prefix_tree_t ;
 
  typedef struct ip_address_suspision_request_other_t ip_address_suspision_request_other_t ;
  struct ip_address_suspision_request_other_t {
-    unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, which prefix tree should be used */
-    prefix_tree_t * other_suspision;
-    unsigned int round_in_suspiction;
+    unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, for every size to store in prefix tree */
+    prefix_tree_t * other_suspision;    /*!< pointer to prefix tree */
+    unsigned int round_in_suspiction;   /*!< count of round in SUSPICTION state */
  } ;
 
  typedef struct ip_address_suspision_request_tunnel_t ip_address_suspision_request_tunnel_t ;
  struct ip_address_suspision_request_tunnel_t {
-    prefix_tree_t * tunnel_suspision;
-    unsigned int round_in_suspiction;
+    unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, for every size to store in prefix tree */
+    prefix_tree_t * tunnel_suspision;   /*!< pointer to prefix tree */
+    unsigned int round_in_suspiction;   /*!< count of round in SUSPICTION state */
  } ;
 
-#define TXT_TUNNEL      0b00000001
-#define CNAME_TUNNEL    0b00000010
-#define MX_TUNNEL       0b00000100
-#define NS_TUNNEL       0b00001000
+
+
+ typedef struct ip_address_suspision_response_other_t ip_address_suspision_response_other_t ;
+ struct ip_address_suspision_response_other_t {
+    unsigned char  state_response_size [HISTOGRAM_SIZE_RESPONSE]; /*!< state, for every size to store in prefix tree */
+    prefix_tree_t * other_suspision;    /*!< pointer to prefix tree */
+    unsigned int round_in_suspiction;   /*!< count of round in SUSPICTION state */
+    unsigned int without_string; /*!< count of response without request string */
+    unsigned int packet_in_suspiction;  /*!< count of responses in suspiction */
+ } ;
+
+#define TXT_TUNNEL              0b00000001
+#define CNAME_TUNNEL            0b00000010
+#define MX_TUNNEL               0b00000100
+#define NS_TUNNEL               0b00001000
+#define REQUEST_STRING_TUNNEL   0b00010000 
 
 typedef struct ip_address_suspision_response_tunnel_t ip_address_suspision_response_tunnel_t ;
  struct ip_address_suspision_response_tunnel_t {
-    prefix_tree_t * txt_suspision;
-    prefix_tree_t * cname_suspision;
-    prefix_tree_t * mx_suspision;
-    prefix_tree_t * ns_suspision;
-    unsigned char state_type;
-    unsigned int round_in_suspiction;
+    prefix_tree_t * txt_suspision;      /*!< pointer to prefix tree */
+    prefix_tree_t * cname_suspision;    /*!< pointer to prefix tree */
+    prefix_tree_t * mx_suspision;       /*!< pointer to prefix tree */
+    prefix_tree_t * ns_suspision;       /*!< pointer to prefix tree */
+    prefix_tree_t * request_suspision;  /*!< pointer to prefix tree */    
+    unsigned char state_type;           /*!< records to store */
+    unsigned int round_in_suspiction;   /*!< count of round in SUSPICTION state */
  } ;
 
 
@@ -203,21 +217,19 @@ typedef struct ip_address_suspision_response_tunnel_t ip_address_suspision_respo
  */
  typedef struct ip_address_t ip_address_t ;
  struct ip_address_t {
-    unsigned char ip_version;
-    counter_request_t counter_request;
-    counter_response_t counter_response;
+    unsigned char ip_version;            /*!< version of ip */
+    counter_request_t counter_request;   /*!< counter struct for requests */
+    counter_response_t counter_response; /*!< counter struct for responses */
 
-    ip_address_suspision_request_tunnel_t * suspision_request_tunnel;
-    ip_address_suspision_request_other_t * suspision_request_other;
-    ip_address_suspision_response_tunnel_t * suspision_response_tunnel;
+    ip_address_suspision_request_tunnel_t * suspision_request_tunnel;   /*!< suspiction struc - finding tunnel in requests */
+    ip_address_suspision_request_other_t * suspision_request_other;     /*!< state of finding other anomaly in requests */
+    ip_address_suspision_response_tunnel_t * suspision_response_tunnel; /*!< state of finding tunnel in response */
+    ip_address_suspision_response_other_t * suspision_response_other;     /*!< state of finding other anomaly in responses */
 
-    unsigned char state_request_other; /*!< state of finding tunnel in requests */
+    unsigned char state_request_other;  /*!< state of finding other anomaly in requests */
     unsigned char state_request_tunnel; /*!< state of finding tunnel in requests */
-    unsigned char state_response_other; /*!< state of finding tunnel in response */
-    unsigned char state_response_tunnel; /*!< state of finding tunnel in response */
-   	
-    ip_address_t * next; /*!< pointer to next value */
-   	void * paret_in_b_plus_tree; /*!< parent value in b_plus tree */
+    unsigned char state_response_other; /*!< state of finding other anomaly in response */
+    unsigned char state_response_tunnel;/*!< state of finding tunnel in response */
 } ;
 
 typedef struct calulated_result_t calulated_result_t ;
@@ -293,6 +305,7 @@ float min_percent_of_unique_domains;    /*< minimum percent unique domains, less
 float max_percent_of_unique_domains;    /*< maximum percent of searching unique domains, more than that can be tunne l*/
 float max_percent_of_numbers_in_domain_prefix_tree_filter;  /*< maximum percent of numbers in domain, more than that can be tunnel */
 float max_percent_of_mallformed_packet_request; /*< maximum percent of mallformed packet in requests */
+float max_percent_of_subdomains_in_main_domain; /*< Maximal value of request middle value */
 unsigned int max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
 };
 

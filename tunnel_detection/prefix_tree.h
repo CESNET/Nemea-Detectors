@@ -60,11 +60,11 @@
 
 int map_chatecter_to_number(char  letter);
 
-prefix_tree_t * inicialize_prefix_tree();
+prefix_tree_t * prefix_tree_inicialize();
 
-void destroy_prefix_tree_recursive(prefix_tree_inner_node_t *  node);
+void prefix_tree_destroy_recursive(prefix_tree_inner_node_t *  node);
 
-void destroy_prefix_tree(prefix_tree_t * tree);
+void prefix_tree_destroy(prefix_tree_t * tree);
 
 void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t * tree);
 
@@ -80,16 +80,18 @@ int count_to_dot(char * string, int length);
 
 prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree_domain_t * domain , char * string, int length, prefix_tree_t * tree);
 
-prefix_tree_inner_node_t * merge_node_into_two(prefix_tree_inner_node_t * node, int index);
+prefix_tree_inner_node_t * split_node_into_two(prefix_tree_inner_node_t * node, int index);
 
 char * read_doamin(prefix_tree_domain_t * domain, char * string);
 
-prefix_tree_domain_t * add_to_prefix_tree_recursive(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, char * string, int length, prefix_tree_t * tree);
+prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, char * string, int length, prefix_tree_t * tree);
 
-prefix_tree_domain_t * add_to_prefix_tree(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat);
+prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat);
 
-prefix_tree_domain_t * add_exception_to_prefix_tree(prefix_tree_t * tree, char * string, int length);
+prefix_tree_domain_t * prefix_tree_add_domain_exception(prefix_tree_t * tree, char * string, int length);
 
+
+double most_used_domain_percent_of_subdomains(prefix_tree_t * tree, int depth);
 
 
 

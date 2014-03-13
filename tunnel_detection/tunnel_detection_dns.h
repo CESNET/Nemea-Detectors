@@ -86,6 +86,8 @@
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
 
 
+#define DEPTH_TUNNEL_SUSPICTION 2 /*< Depth of domain to be tunnel*/
+#define MAX_PERCENT_OF_SUBDOMAINS_IN_MAIN_DOMAIN 0.8 /*< Max percent of subdomains in main domain */
 #define EX_REQUEST_MAX 100 /*< Maximal value of request middle value */
 #define EX_REQUEST_MIN 70 /*< Minimal value of request middle value */
 #define EX_RESPONSE_MAX 600 /*< Maximal value of response middle value */

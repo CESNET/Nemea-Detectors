@@ -308,7 +308,7 @@ void c_b_tree_plus_del_all_node (C_node * del)
 }
  
 
-    int c_b_tree_plus_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree)
+    int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree)
     {
         int result;
         C_node * node;
@@ -433,7 +433,7 @@ void c_b_tree_plus_del_all_node (C_node * del)
         return NULL;
     }
  
-    void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree)
+    void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int search)
     {
         C_node * node_to_insert, * r_node;
         C_leaf_node * leaf_to_insert, * r_leaf;
@@ -445,6 +445,8 @@ void c_b_tree_plus_del_all_node (C_node * del)
         //key is already in tree
         if (index_of_new_key == -1) 
         {
+            if(search == 0)
+              return NULL;
             return added_or_found_value;
         }
         btree->count_of_values++;
@@ -534,14 +536,7 @@ void c_b_tree_plus_del_all_node (C_node * del)
             }
     }
  
-    int c_b_tree_plus_b_tree_plus_delete(void * key, C_b_tree_plus * btree)
-    {
-        int index;
-        C_node * leaf_del;
-        leaf_del = c_b_tree_plus_find_leaf(key, btree);
-        index = c_node_find_index_key(key, leaf_del, btree);
-        return c_b_tree_plus_b_tree_plus_delete_know_leaf( index, leaf_del, btree);
-    }
+
  
     int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_b_tree_plus * btree){
         int  parent_index, size, i;   
@@ -900,26 +895,46 @@ void c_b_tree_plus_del_all_node (C_node * del)
 
 
 
-void * inicialize_b_plus_tree(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key)
+void * b_plus_tree_inicialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key)
 {
   C_b_tree_plus *tree = c_b_tree_plus_create(size_of_btree_node, comp, size_of_value, size_of_key);
   return ((void*)tree);
 }
 
-void * create_or_find_struct_b_plus_tree(void * btree, void * key)
+void * b_plus_tree_insert_or_find_item(void * btree, void * key)
 {
-  return c_b_tree_plus_b_tree_plus_insert(key, (C_b_tree_plus*)btree);
+  return c_b_tree_plus_b_tree_plus_insert(key, (C_b_tree_plus*)btree, 1);
+}
+
+void * b_plus_tree_insert_item(void * btree, void * key){
+  return c_b_tree_plus_b_tree_plus_insert(key, (C_b_tree_plus*)btree, 0);
+}
+void * b_plus_tree_search(void * btree, void * key){
+  C_leaf_node *leaf;
+  int index;
+  index = c_b_tree_plus_search(key, &leaf, (C_b_tree_plus*)btree);
+  if(index == -1){
+    return NULL;
+  }
+  return leaf->value[index];
 }
 
 
-
-
-void  destroy_b_plus_tree(void * tree)
+void  b_plus_tree_destroy(void * tree)
 {
   c_b_tree_plus_destroy((C_b_tree_plus*)tree);
 }
 
-int  delete_item_b_plus_tree(void * btree, b_plus_tree_item * delete_item )
+int  b_plus_tree_delete_item(void * btree, void * key ){
+    int index;
+    C_node * leaf_del;
+    leaf_del = c_b_tree_plus_find_leaf(key, (C_b_tree_plus*)btree);
+    index = c_node_find_index_key(key, leaf_del, (C_b_tree_plus*)btree);
+    return c_b_tree_plus_b_tree_plus_delete_know_leaf( index, leaf_del, (C_b_tree_plus*)btree);
+}
+
+
+int  b_plus_tree_delete_item_from_list(void * btree, b_plus_tree_item * delete_item )
 {
 
     C_node * leaf_del;
@@ -929,7 +944,7 @@ int  delete_item_b_plus_tree(void * btree, b_plus_tree_item * delete_item )
     index_of_delete_item = delete_item->index_of_value;
     //get next value
     //printf("%lu\n",((unsigned long int*)delete_item->key)[1] );
-    is_there_next = get_next_item_from_list(btree,delete_item);
+    is_there_next = b_plus_tree_get_next_item_from_list(btree,delete_item);
 //printf(" detele item %lu\n",((unsigned long int*)key_to_del)[1] );
 
     c_b_tree_plus_b_tree_plus_delete_know_leaf(index_of_delete_item, leaf_del,(C_b_tree_plus*)btree);
@@ -949,11 +964,11 @@ int i;
 }
 
 
-unsigned long int get_count_of_values(void * btree){
+unsigned long int b_plus_tree_get_count_of_values(void * btree){
   return ((C_b_tree_plus*)btree)->count_of_values;
 }
 
-int  get_list(void * t, b_plus_tree_item * item)
+int  b_plus_tree_get_list(void * t, b_plus_tree_item * item)
 {
   C_b_tree_plus * tree;
   C_node *node;
@@ -968,7 +983,7 @@ int  get_list(void * t, b_plus_tree_item * item)
   return 1;
 }
 
-b_plus_tree_item * create_list_item (void * btree)
+b_plus_tree_item * b_plus_tree_create_list_item (void * btree)
 {
   b_plus_tree_item *item;
   item = (b_plus_tree_item*)calloc(sizeof(b_plus_tree_item), 1);
@@ -976,13 +991,13 @@ b_plus_tree_item * create_list_item (void * btree)
   return item;
 }
 
-void destroy_list_item(b_plus_tree_item * item)
+void b_plus_tree_destroy_list_item(b_plus_tree_item * item)
 {
   free(item->key);
   free(item);
 }
 
-int get_next_item_from_list(void * t, b_plus_tree_item * item)
+int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item)
 {
   C_node *node;
   C_leaf_node *leaf;

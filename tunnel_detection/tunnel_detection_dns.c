@@ -98,7 +98,7 @@ ip_address_t * crete_new_ip_address_struc( uint64_t * ip, ip_address_t * next){
    ip_address_t * create;
    create = (ip_address_t *) calloc(sizeof(ip_address_t),1); 
    //write next list item
-   create->next = next;
+   //create->next = next;
    return create; 
 }
 
@@ -170,14 +170,14 @@ int filter_trafic_to_save_in_prefix_tree_tunnel_suspiction( character_statistic_
 }
 
 
-void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request, packet_t * packet){
+void collection_of_information_and_basic_payload_detection( void * tree, void * ip_in_packet, int size, char request, packet_t * packet){
    ip_address_t * found;
    float size2;
    int index_to_histogram;
    character_statistic_t char_stat;
    size2=size*size;
    //found or create in b plus tree
-   found = (ip_address_t*)create_or_find_struct_b_plus_tree(tree,ip_in_packet);
+   found = (ip_address_t*)b_plus_tree_insert_or_find_item(tree,ip_in_packet);
    found->ip_version = packet->ip_version;
 
    //add to request or response
@@ -205,16 +205,21 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
                   found->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
                }
                if(found->suspision_request_tunnel->tunnel_suspision == NULL){   
-                  found->suspision_request_tunnel->tunnel_suspision = inicialize_prefix_tree();
+                  found->suspision_request_tunnel->tunnel_suspision = prefix_tree_inicialize();
                }
-               add_to_prefix_tree(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);
+               prefix_tree_add_domain(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);
                found->state_request_tunnel = STATE_SUSPISION;
             }
-            //add to prefix tree, if ip is in suspision state
+            //add to prefix tree, if ip is in suspision state, other anomaly
             if(found->state_request_other == STATE_SUSPISION && found->suspision_request_other && found->suspision_request_other->state_request_size[index_to_histogram] == STATE_ATTACK){
                //printf(" add request %s %d\n", packet->request_string, char_stat.length);
-               add_to_prefix_tree(found->suspision_request_other->other_suspision, packet->request_string, char_stat.length, &char_stat);          
+               prefix_tree_add_domain(found->suspision_request_other->other_suspision, packet->request_string, char_stat.length, &char_stat);          
             }
+            //add to prefix tree, if ip is in suspision state, tunnel anomaly
+            if(found->state_request_tunnel == STATE_SUSPISION && found->suspision_request_tunnel && found->suspision_request_tunnel->state_request_size[index_to_histogram] == STATE_ATTACK){
+               //printf(" add request %s %d\n", packet->request_string, char_stat.length);
+               prefix_tree_add_domain(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);          
+            }            
          }
          else{
             found->counter_request.request_without_string++;
@@ -233,8 +238,37 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
       found->counter_response.sum_Xi3_response += size2*size;
       found->counter_response.sum_Xi4_response += size2*size2;
 
+
+      if(found->state_response_other == STATE_SUSPISION && found->suspision_response_other && found->suspision_response_other->state_response_size[index_to_histogram] == STATE_ATTACK){
+         //printf(" add response %s %d\n", packet->response_string, char_stat.length);
+         if(packet->request_length > 0){
+            calculate_character_statistic(packet->request_string, &char_stat);
+            prefix_tree_add_domain(found->suspision_response_other->other_suspision, packet->request_string, char_stat.length, &char_stat);    
+         }
+         else{
+            found->suspision_response_other->without_string++;
+         }
+         found->suspision_response_other->packet_in_suspiction++;
+      }
+
+
       //tunnel detection
       if(found->state_response_tunnel != STATE_ATTACK){
+         if(packet->request_length > 0){
+            calculate_character_statistic(packet->request_string, &char_stat);
+            if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
+               if(found->suspision_response_tunnel == NULL){
+                  found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
+               }
+               if(found->suspision_response_tunnel->request_suspision == NULL){
+                  found->suspision_response_tunnel->request_suspision = prefix_tree_inicialize();
+               }
+               //printf(" add txt %s %d\n", packet->txt_response, char_stat.length);
+               prefix_tree_add_domain(found->suspision_response_tunnel->request_suspision, packet->request_string, char_stat.length, &char_stat);
+               found->state_response_tunnel = STATE_SUSPISION;
+            }
+         }
+
          if(packet->txt_response[0]!=0){
             calculate_character_statistic(packet->txt_response, &char_stat);
             if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
@@ -242,10 +276,10 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel->txt_suspision == NULL){
-                  found->suspision_response_tunnel->txt_suspision = inicialize_prefix_tree();
+                  found->suspision_response_tunnel->txt_suspision = prefix_tree_inicialize();
                }
                //printf(" add txt %s %d\n", packet->txt_response, char_stat.length);
-               add_to_prefix_tree(found->suspision_response_tunnel->txt_suspision, packet->txt_response, char_stat.length, &char_stat);
+               prefix_tree_add_domain(found->suspision_response_tunnel->txt_suspision, packet->txt_response, char_stat.length, &char_stat);
                found->state_response_tunnel = STATE_SUSPISION;
             }
          }
@@ -256,10 +290,10 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel->cname_suspision == NULL){
-                  found->suspision_response_tunnel->cname_suspision = inicialize_prefix_tree();
+                  found->suspision_response_tunnel->cname_suspision = prefix_tree_inicialize();
                }
                //printf(" add cname %s %d\n", packet->cname_response, char_stat.length);
-               add_to_prefix_tree(found->suspision_response_tunnel->cname_suspision, packet->cname_response, char_stat.length, &char_stat);
+               prefix_tree_add_domain(found->suspision_response_tunnel->cname_suspision, packet->cname_response, char_stat.length, &char_stat);
                found->state_response_tunnel = STATE_SUSPISION;
             }
          }
@@ -270,10 +304,10 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }        
                if(found->suspision_response_tunnel->mx_suspision == NULL){
-                  found->suspision_response_tunnel->mx_suspision = inicialize_prefix_tree();
+                  found->suspision_response_tunnel->mx_suspision = prefix_tree_inicialize();
                }
               // printf(" add mx %s %d\n", packet->mx_response, char_stat.length);
-               add_to_prefix_tree(found->suspision_response_tunnel->mx_suspision, packet->mx_response, char_stat.length, &char_stat); 
+               prefix_tree_add_domain(found->suspision_response_tunnel->mx_suspision, packet->mx_response, char_stat.length, &char_stat); 
                found->state_response_tunnel = STATE_SUSPISION;   
             }
          }
@@ -284,10 +318,10 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                } 
                if(found->suspision_response_tunnel->ns_suspision == NULL){
-                  found->suspision_response_tunnel->ns_suspision = inicialize_prefix_tree();
+                  found->suspision_response_tunnel->ns_suspision = prefix_tree_inicialize();
                }
                //printf(" add ns %s %d\n", packet->ns_response, char_stat.length);
-               add_to_prefix_tree(found->suspision_response_tunnel->ns_suspision, packet->ns_response, char_stat.length, &char_stat);
+               prefix_tree_add_domain(found->suspision_response_tunnel->ns_suspision, packet->ns_response, char_stat.length, &char_stat);
                found->state_response_tunnel = STATE_SUSPISION;
             }
          }
@@ -299,7 +333,7 @@ void add_to_bplus_tree( void * tree, void * ip_in_packet, int size, char request
 void free_ip_list(ip_address_t * list){
       ip_address_t * next_item;
    while(list != NULL){
-      next_item = list->next;
+      //next_item = list->next;
       free(list);
       list=next_item;
    }
@@ -405,7 +439,7 @@ void check_and_delete_suspision(ip_address_t * item_to_delete, unsigned char par
    if(part & REQUEST_PART_TUNNEL){
       if(item_to_delete->suspision_request_tunnel != NULL){
          if(item_to_delete->suspision_request_tunnel->tunnel_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_request_tunnel->tunnel_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_request_tunnel->tunnel_suspision);
          }
          free(item_to_delete->suspision_request_tunnel);
          item_to_delete->suspision_request_tunnel = NULL;
@@ -414,26 +448,36 @@ void check_and_delete_suspision(ip_address_t * item_to_delete, unsigned char par
    if(part & REQUEST_PART_OTHER){
       if(item_to_delete->suspision_request_other != NULL){
          if(item_to_delete->suspision_request_other->other_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_request_other->other_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_request_other->other_suspision);
          }
          free(item_to_delete->suspision_request_other);
          item_to_delete->suspision_request_other = NULL;
       }
       memset(&item_to_delete->counter_request, 0, sizeof(counter_request_t));
    }   
+   if(part & RESPONSE_PART_OTHER){
+      if(item_to_delete->suspision_response_other != NULL){
+         if(item_to_delete->suspision_response_other->other_suspision != NULL){
+            prefix_tree_destroy(item_to_delete->suspision_response_other->other_suspision);
+         }
+         free(item_to_delete->suspision_response_other);
+         item_to_delete->suspision_response_other = NULL;
+      }
+      memset(&item_to_delete->counter_response, 0, sizeof(counter_response_t));
+   }   
    if(part & RESPONSE_PART_TUNNEL){
       if(item_to_delete->suspision_response_tunnel != NULL){
          if(item_to_delete->suspision_response_tunnel->cname_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_response_tunnel->cname_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_response_tunnel->cname_suspision);
          }
          if(item_to_delete->suspision_response_tunnel->txt_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_response_tunnel->txt_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_response_tunnel->txt_suspision);
          }
          if(item_to_delete->suspision_response_tunnel->ns_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_response_tunnel->ns_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_response_tunnel->ns_suspision);
          }
          if(item_to_delete->suspision_response_tunnel->mx_suspision != NULL){
-            destroy_prefix_tree(item_to_delete->suspision_response_tunnel->mx_suspision);
+            prefix_tree_destroy(item_to_delete->suspision_response_tunnel->mx_suspision);
          }
          free(item_to_delete->suspision_response_tunnel);
          item_to_delete->suspision_response_tunnel = NULL;
@@ -461,7 +505,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
          }
          //if it is first other suspision
          if(item->suspision_request_other->other_suspision == NULL){
-            item->suspision_request_other->other_suspision = inicialize_prefix_tree();
+            item->suspision_request_other->other_suspision = prefix_tree_inicialize();
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
@@ -479,7 +523,6 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
          item->suspision_request_other->state_request_size[max] = STATE_ATTACK;
       }
       if((double)item->counter_request.request_without_string / (double)item->counter_request.dns_request_count > values.max_percent_of_mallformed_packet_request){
-      	printf("ahoj %d\n", item->counter_request.request_without_string);
          item->state_request_other = STATE_ATTACK;
       }
    }
@@ -490,13 +533,73 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
 
 }
 
+int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t * result){
+   int i;
+   //if there is more traffic than minimum
+   if(item->state_request_tunnel != STATE_ATTACK && item->counter_request.dns_request_count > values.min_dns_request_count_other_anomaly){
+      //other anomaly can be caused, then select the peaks, which have most of communication
+      //printf("ex %f var %f\n",result->ex_request, result->var_request);
+      if( result->var_request < values.var_request_min || result->var_request > values.var_request_max || result->ex_request > values.ex_request_max /*|| result->kurtosis_request < values.kurtosis_request_min*/){
+         int max;
+         item->state_request_tunnel = STATE_SUSPISION;
+         //if it is first suspision
+         if(item->suspision_request_tunnel == NULL){
+            item->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
+         }
+         //if it is first other suspision
+         if(item->suspision_request_tunnel->tunnel_suspision == NULL){
+            item->suspision_request_tunnel->tunnel_suspision = prefix_tree_inicialize();
+         }      
+         max = 0;
+         for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
+            //selecet everything what have more than certain amount of traffic and is not in tunnel detection tree
+            if((float)item->counter_request.histogram_dns_requests[i] / (float)item->counter_request.dns_request_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION && 
+               result->histogram_dns_request_ex_cout_of_used_letter[i] < values.request_max_count_of_used_letters ){
+                  item->suspision_request_tunnel->state_request_size[i] = STATE_ATTACK;
+            }
+         }
+      }
+
+   }
+   if(item->state_request_tunnel == STATE_NEW){
+      return STATE_NEW;
+   }
+   return STATE_SUSPISION;
+
+}
+
+
+
 int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t * result){
    int i;
    //responses
    if( item->state_response_other != STATE_ATTACK && item->counter_response.dns_response_count > values.min_dns_response_count_other_anomaly){
       if( result->ex_response < values.ex_response_min || result->var_response < values.var_response_min || result->var_response > values.var_response_max || result->ex_response > values.ex_response_max /*|| result->kurtosis_request < values.kurtosis_request_min*/){
-         item->state_response_other = STATE_ATTACK;
+        int max;
+         item->state_response_other = STATE_SUSPISION;
+         //if it is first suspision
+         if(item->suspision_response_other == NULL){
+            item->suspision_response_other = (ip_address_suspision_response_other_t*)calloc(sizeof(ip_address_suspision_response_other_t),1);
+         }
+         //if it is first other suspision
+         if(item->suspision_response_other->other_suspision == NULL){
+            item->suspision_response_other->other_suspision = prefix_tree_inicialize();
+         }      
+         max = 0;
+         for(i = max; i < HISTOGRAM_SIZE_RESPONSE ; i++){
+            //select the biggest peak
+            if (item->counter_response.histogram_dns_response[i] > item->counter_response.histogram_dns_response[max]){
+               max = i;
+            }
+            //selecet everything what have more than certain amount of traffic and is not in tunnel detection tree
+            if((float)item->counter_response.histogram_dns_response[i] / (float)item->counter_response.dns_response_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION){
+                  item->suspision_response_other->state_response_size[i] = STATE_ATTACK;
+            }
+         }
+         //the biggest peak
+         item->suspision_response_other->state_response_size[max] = STATE_ATTACK;
       }
+
    }
    if(item->state_response_other == STATE_NEW){
   	  check_and_delete_suspision(item, RESPONSE_PART_OTHER);
@@ -513,9 +616,9 @@ int is_payload_on_ip_ok_request_other(ip_address_t * item){
       //other anomaly detection request  
      if(!(item->state_request_other == STATE_ATTACK) && item->suspision_request_other->other_suspision != NULL){
          tree = item->suspision_request_other->other_suspision;
-         if (tree->count_of_searching > values.min_dns_request_count_other_anomaly &&
-            (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) < values.min_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-            (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) < values.min_percent_of_unique_domains   //percent of unique domains
+         if (tree->count_of_inserting > values.min_dns_request_count_other_anomaly &&
+            (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) < values.min_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+            (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) < values.min_percent_of_unique_domains   //percent of unique domains
          ){
             item->state_request_other = STATE_ATTACK;
 
@@ -539,17 +642,72 @@ int is_payload_on_ip_ok_request_other(ip_address_t * item){
 
 }
 
+int is_payload_on_ip_ok_response_other(ip_address_t * item){
+   int i;
+   prefix_tree_t *tree;
+
+      //other anomaly detection response  
+     if(!(item->state_response_other == STATE_ATTACK) && item->suspision_response_other->other_suspision != NULL){
+         tree = item->suspision_response_other->other_suspision;
+         if (tree->count_of_inserting > values.min_dns_response_count_other_anomaly &&
+            (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) < values.min_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+            (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) < values.min_percent_of_unique_domains   //percent of unique domains
+         ){
+            item->state_response_other = STATE_ATTACK;
+         }
+         else if((double)item->suspision_response_other->without_string / (double)item->suspision_response_other->packet_in_suspiction > values.max_percent_of_mallformed_packet_request){
+         item->state_response_other = STATE_ATTACK;
+         }
+         
+         else{
+            //if there wasnt any payload problem
+           item->suspision_response_other->round_in_suspiction++;
+           //maximum round in suspiction
+           if(item->suspision_response_other->round_in_suspiction > MAX_COUNT_OF_ROUND_IN_SUSPICTION){
+              //item->suspision_response_tunnel->round_in_suspiction = 0;
+              check_and_delete_suspision(item, RESPONSE_PART_OTHER);
+              item->state_response_other = STATE_NEW;
+           }         
+         }
+      }  
+   if(item->state_response_other == STATE_NEW){
+      return STATE_NEW;
+   }
+     
+   return STATE_SUSPISION;
+
+}
+
 int is_payload_on_ip_ok_request_tunnel(ip_address_t * item){
 	prefix_tree_t *tree;
   //tunnel detection request
  	if((item->state_request_tunnel != STATE_ATTACK) && item->suspision_request_tunnel->tunnel_suspision != NULL){
 		tree = item->suspision_request_tunnel->tunnel_suspision;  
 		//percent of count of subdomains, is bigger than x percent
-		if(tree->count_of_searching > values.min_dns_request_count_tunnel &&
-		    (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-		    (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) > values.max_percent_of_unique_domains   //percent of unique domains
-		    ){  //percent of unique search
-		    item->state_request_tunnel = STATE_ATTACK;
+		if(tree->count_of_inserting > values.min_dns_request_count_tunnel &&
+		    ((
+		    (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+		    (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_unique_domains   //percent of unique domains
+		    )&&
+		    (most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain)
+		    )){  //percent of unique search
+//*********************
+ /*        printf("tunel ma hodntu %f ,%f ,%f ,%d, %d, %d\n", most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION),  (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting)  , (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting)  , most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain ,(double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains , (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once , most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain );
+		   
+   prefix_tree_domain_t *dom;
+   char str[1024];
+         printf("\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
+
+         dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
+         for(int i=0; i<5;i++){
+            str[0]=0;
+            if(dom==NULL) break;
+            printf("\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            dom= dom->most_used_domain_less;
+         }  
+*/
+//**********************
+          item->state_request_tunnel = STATE_ATTACK;
 		}
 		//if there wasnt any problem
 	  	else{
@@ -573,12 +731,22 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
    prefix_tree_t *tree;
    //tunnel detection response
    if(item->state_response_tunnel != STATE_ATTACK){
+      tree = item->suspision_response_tunnel->request_suspision;
+      //percent of count of subdomains, is bigger than x percent
+      if(tree != NULL &&
+         tree->count_of_inserting > values.min_dns_response_count_tunnel &&
+         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+         (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains   //percent of unique domains
+         ){  //percent of unique search
+         item->state_response_tunnel = STATE_ATTACK;
+         item->suspision_response_tunnel->state_type |= REQUEST_STRING_TUNNEL;
+      }
       tree = item->suspision_response_tunnel->txt_suspision;
       //percent of count of subdomains, is bigger than x percent
       if(tree != NULL &&
-         tree->count_of_searching > values.min_dns_response_count_tunnel &&
-         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-         (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) > values.max_percent_of_unique_domains   //percent of unique domains
+         tree->count_of_inserting > values.min_dns_response_count_tunnel &&
+         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+         (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains   //percent of unique domains
          ){  //percent of unique search
          item->state_response_tunnel = STATE_ATTACK;
          item->suspision_response_tunnel->state_type |= TXT_TUNNEL;
@@ -587,9 +755,9 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
       tree = item->suspision_response_tunnel->mx_suspision;
       //percent of count of subdomains, is bigger than x percent
       if(tree != NULL && 
-         tree->count_of_searching > values.min_dns_response_count_tunnel &&
-         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-         (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) > values.max_percent_of_unique_domains   //percent of unique domains
+         tree->count_of_inserting > values.min_dns_response_count_tunnel &&
+         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+         (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains   //percent of unique domains
          ){  //percent of unique search
          item->state_response_tunnel = STATE_ATTACK;
          item->suspision_response_tunnel->state_type |= MX_TUNNEL;
@@ -597,9 +765,9 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
       tree = item->suspision_response_tunnel->cname_suspision;
       //percent of count of subdomains, is bigger than x percent
       if(tree != NULL && 
-         tree->count_of_searching > values.min_dns_response_count_tunnel &&
-         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-         (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) > values.max_percent_of_unique_domains   //percent of unique domains
+         tree->count_of_inserting > values.min_dns_response_count_tunnel &&
+         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+         (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains   //percent of unique domains
          ){  //percent of unique search
          item->state_response_tunnel = STATE_ATTACK;
          item->suspision_response_tunnel->state_type |= CNAME_TUNNEL;
@@ -607,9 +775,9 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
       tree = item->suspision_response_tunnel->ns_suspision;
       //percent of count of subdomains, is bigger than x percent
       if(tree != NULL && 
-         tree->count_of_searching > values.min_dns_response_count_tunnel &&
-         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_searching) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
-         (double)(tree->count_of_different_domains) / (double)(tree->count_of_searching) > values.max_percent_of_unique_domains   //percent of unique domains
+         tree->count_of_inserting > values.min_dns_response_count_tunnel &&
+         (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
+         (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting) > values.max_percent_of_unique_domains   //percent of unique domains
          ){  //percent of unique search
          item->state_response_tunnel = STATE_ATTACK;
          item->suspision_response_tunnel->state_type |= NS_TUNNEL;
@@ -641,8 +809,8 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree){
    b_plus_tree_item * b_item;
    int is_there_next=0;
    calulated_result_t result;
-   b_item = create_list_item(b_plus_tree);
-   is_there_next = get_list(b_plus_tree, b_item);
+   b_item = b_plus_tree_create_list_item(b_plus_tree);
+   is_there_next = b_plus_tree_get_list(b_plus_tree, b_item);
 
    while(is_there_next == 1){
       item = (ip_address_t*)b_item->value;
@@ -661,26 +829,32 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree){
       if(item->state_request_tunnel == STATE_SUSPISION){
          is_payload_on_ip_ok_request_tunnel(item);
       }
+      else if(item->state_request_tunnel == STATE_NEW){
+      	is_traffic_on_ip_ok_request_tunnel(item, &result);
+      }
 
       //response payload, tunnel anomaly 
       if(item->state_response_tunnel == STATE_SUSPISION){
         is_payload_on_ip_ok_response_tunnel(item);
       }
       //response traffic, other anomaly 
-      if(item->state_response_other == STATE_NEW){
+      if(item->state_response_other == STATE_SUSPISION){
+         is_payload_on_ip_ok_response_other(item);
+      }
+      else if(item->state_response_other == STATE_NEW){
         is_traffic_on_ip_ok_response_other(item, &result);
       }
 
       //check if it can be deleted
       if(item->state_request_other == STATE_NEW && item->state_request_tunnel == STATE_NEW && item->state_response_other == STATE_NEW && item->state_response_tunnel == STATE_NEW){
-         is_there_next = delete_item_b_plus_tree(b_plus_tree, b_item);
+         is_there_next = b_plus_tree_delete_item_from_list(b_plus_tree, b_item);
       }
       else{
       	//with anomaly, in can not be deleted
-         is_there_next = get_next_item_from_list(b_plus_tree, b_item);
+         is_there_next = b_plus_tree_get_next_item_from_list(b_plus_tree, b_item);
       }
    }
-   destroy_list_item(b_item);
+   b_plus_tree_destroy_list_item(b_item);
 }
 
 void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
@@ -693,20 +867,20 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
       
       //print found anomaly tunnel
       if(item->state_request_tunnel == STATE_ATTACK){
-         fprintf(file, "\tRequest tunnel found:\tDomain searched just once: %f.\tcount of different domains: %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_searching_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_searching_for_just_ones),(item->suspision_request_tunnel->tunnel_suspision->count_of_searching) );
+         fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
 
          dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
       }
       //print founded anomaly other in request
       if(item->state_request_other == STATE_ATTACK){  
          if(item->suspision_request_other != NULL){
-            fprintf(file, "\tRequest traffic anomaly found:\tDomain searched just once: %f.\tCount of different domains: %f.\tAll recorded requests: %d.\tCount of malformed requests: %d.\n\t\tFound in sizes: ", (double)(item->suspision_request_other->other_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_other->other_suspision->count_of_searching_for_just_ones), (double)item->suspision_request_other->other_suspision->count_of_different_domains/(double)(item->suspision_request_other->other_suspision->count_of_searching_for_just_ones),(item->suspision_request_other->other_suspision->count_of_searching), item->counter_request.request_without_string  );
+            fprintf(file, "\tRequest traffic anomaly found:\tDomains searched just once: %f.\tCount of different domains: %f.\tAll recorded requests: %d.\tCount of malformed requests: %d.\n\t\tFound in sizes: ", (double)(item->suspision_request_other->other_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_other->other_suspision->count_of_different_domains/(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones),(item->suspision_request_other->other_suspision->count_of_inserting), item->counter_request.request_without_string  );
             for (int i=0; i<HISTOGRAM_SIZE_REQUESTS; i++){
                if(item->suspision_request_other->state_request_size[i] & STATE_ATTACK)
                fprintf(file, "%d-%d\t", i*10,i*10+10);
@@ -717,10 +891,9 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }
-            printf("\tMallformed packets found:\tCount of malformed responses: %d.\n", item->counter_request.request_without_string);
          }
          else{
             fprintf(file, "\tMallformed packets found:\tCount of malformed responses: %d.\n", item->counter_request.request_without_string);
@@ -730,47 +903,57 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
 
       //response tunnel
       if(item->state_response_tunnel == STATE_ATTACK){
-         //txt
-         if(item->suspision_response_tunnel->state_type & TXT_TUNNEL){
-            fprintf(file, "\tReponse TXT tunnel found:\tdomain searched just once: %f.\tcount of different domains: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_searching_for_just_ones), (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_searching_for_just_ones),(item->suspision_response_tunnel->txt_suspision->count_of_searching) );
+         if(item->suspision_response_tunnel->state_type & REQUEST_STRING_TUNNEL){
+            fprintf(file, "\tReponse tunnel found by request strings :\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->request_suspision->count_of_inserting) );
             dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               dom= dom->most_used_domain_less;
+            }        
+         }         
+         //txt
+         if(item->suspision_response_tunnel->state_type & TXT_TUNNEL){
+            fprintf(file, "\tReponse TXT tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->txt_suspision->count_of_inserting) );
+            dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+            for(int i=0; i<5;i++){
+               str[0]=0;
+               if(dom==NULL) break;
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
          //cname
          if(item->suspision_response_tunnel->state_type & CNAME_TUNNEL){
-            fprintf(file, "\tReponse CNAME tunnel found:\tdomain searched just once: %f.\tcount of different domains: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_searching_for_just_ones), (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_searching_for_just_ones),(item->suspision_response_tunnel->cname_suspision->count_of_searching) );
+            fprintf(file, "\tReponse CNAME tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->cname_suspision->count_of_inserting) );
             dom =item->suspision_response_tunnel->cname_suspision->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
          //ns
          if(item->suspision_response_tunnel->state_type & NS_TUNNEL){
-            fprintf(file, "\tReponse NS tunnel found:\tdomain searched just once: %f.\tcount of different domains: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_searching_for_just_ones), (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_searching_for_just_ones),(item->suspision_response_tunnel->ns_suspision->count_of_searching) );
+            fprintf(file, "\tReponse NS tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->ns_suspision->count_of_inserting) );
             dom =item->suspision_response_tunnel->ns_suspision->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }  
          //mx
          if(item->suspision_response_tunnel->state_type & MX_TUNNEL){
-            fprintf(file, "\tReponse MX tunnel found:\tdomain searched just once: %f.\tcount of different domains: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_searching_for_just_ones), (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_searching_for_just_ones),(item->suspision_response_tunnel->mx_suspision->count_of_searching) );
+            fprintf(file, "\tReponse MX tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->mx_suspision->count_of_inserting) );
             dom =item->suspision_response_tunnel->mx_suspision->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -779,7 +962,15 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
       if(item->state_response_other == STATE_ATTACK){  
          calulated_result_t result;
          calculate_statistic(item, &result);
-         fprintf(file, "\tReseponse anomaly found:\tEX: %f.\tVAR: %f.\tCount of responses %lu.\n", result.ex_response, result.var_response, item->counter_response.dns_response_count);
+         fprintf(file, "\tReseponse anomaly found:\tEX: %f.\tVAR: %f. \tPercent without request string %f. \tCount of responses %lu.\n", result.ex_response, result.var_response, (double)item->suspision_response_other->without_string / (double)item->suspision_response_other->packet_in_suspiction ,item->counter_response.dns_response_count);
+
+         dom =item->suspision_response_other->other_suspision->list_of_most_used_domains;
+         for(int i=0; i<5;i++){
+            str[0]=0;
+            if(dom==NULL) break;
+            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            dom= dom->most_used_domain_less;
+         }
       }
     }
 }
@@ -956,8 +1147,8 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
    //print histogram of each IP
    //for each item in list
    for(i =0; i < count_of_btree; i++){
-      b_item = create_list_item(b_plus_tree[i]);
-      is_there_next = get_list(b_plus_tree[i], b_item);
+      b_item = b_plus_tree_create_list_item(b_plus_tree[i]);
+      is_there_next = b_plus_tree_get_list(b_plus_tree[i], b_item);
       while(is_there_next == 1){
          //value from bplus item structure
          ip_item = (ip_address_t*)b_item->value;
@@ -973,9 +1164,9 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
 
 
          //next item
-         is_there_next = get_next_item_from_list(b_plus_tree[i], b_item);
+         is_there_next = b_plus_tree_get_next_item_from_list(b_plus_tree[i], b_item);
       }
-      destroy_list_item(b_item);
+      b_plus_tree_destroy_list_item(b_item);
    }
 
    fclose(file_requests);
@@ -1053,6 +1244,7 @@ void load_default_values(){
    values.max_percent_of_numbers_in_domain_prefix_tree_filter = MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER;
    values.max_percent_of_mallformed_packet_request = MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST;
    values.max_count_of_numbers_in_domain_prefix_tree_filter = MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER;
+   values.max_percent_of_subdomains_in_main_domain = MAX_PERCENT_OF_SUBDOMAINS_IN_MAIN_DOMAIN;
 }
 
 int main(int argc, char **argv)
@@ -1177,17 +1369,10 @@ int main(int argc, char **argv)
       return 4;
    }
 
-   //inicialize b+ tree ipv4
-   btree_ver4 = inicialize_b_plus_tree(5, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));   
-   //inicialize b+ tree ipv6
-   btree_ver6 = inicialize_b_plus_tree(5, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
-   //add trees to array, you can work with it in cycle
-   btree[0] = btree_ver4;
-   btree[1] = btree_ver6;
 
 
    //inicialize prefix tree
-   preftree = inicialize_prefix_tree();
+   preftree = prefix_tree_inicialize();
 
    //add exceptions to prefix tree, if the file is specified
    if(domains_exception_file_name != NULL){
@@ -1214,12 +1399,24 @@ int main(int argc, char **argv)
          }
          domain[length] = 0;
          if(length != 0){
-            add_exception_to_prefix_tree(preftree,domain ,length);
+            prefix_tree_add_domain_exception(preftree,domain ,length);
          }
          sign = fgetc(file);
       }
       fclose(file);
    }
+
+
+   //inicialize b+ tree ipv4
+   btree_ver4 = b_plus_tree_inicialize(5, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));   
+   //inicialize b+ tree ipv6
+   btree_ver6 = b_plus_tree_inicialize(5, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
+   //add trees to array, you can work with it in cycle
+   btree[0] = btree_ver4;
+   btree[1] = btree_ver6;
+
+
+
 
   
    // ***** Main processing loop *****
@@ -1327,12 +1524,12 @@ int main(int argc, char **argv)
             if(packet.is_response==0){
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || is_it_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){
+                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){
                      if(packet.ip_version == IP_VERSION_4){
-                        add_to_bplus_tree(btree_ver4, (&packet.src_ip_v4), packet.size, 1, &packet);
+                        collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), packet.size, 1, &packet);
                      }
                      else{
-                        add_to_bplus_tree(btree_ver6, packet.src_ip_v6, packet.size, 1, &packet);
+                        collection_of_information_and_basic_payload_detection(btree_ver6, packet.src_ip_v6, packet.size, 1, &packet);
                      }
                   }
                histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
@@ -1341,10 +1538,10 @@ int main(int argc, char **argv)
             else{
                // Update counters
                if(packet.ip_version == IP_VERSION_4){
-                  add_to_bplus_tree(btree_ver4, (&packet.dst_ip_v4), packet.size, 0, &packet);
+                  collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), packet.size, 0, &packet);
                }
                else{
-                  add_to_bplus_tree(btree_ver6, packet.dst_ip_v6, packet.size, 0, &packet);
+                  collection_of_information_and_basic_payload_detection(btree_ver6, packet.dst_ip_v6, packet.size, 0, &packet);
                }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
@@ -1362,10 +1559,10 @@ int main(int argc, char **argv)
          start_time=0;
          packet_time=0;
          printf("cycle %d\n", ++count_of_cycle);
-         printf("\tcount of ip's before_erase %lu\n", get_count_of_values(btree_ver4) + get_count_of_values(btree_ver6));
+         printf("\tcount of ip's before_erase %lu\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
          calculate_statistic_and_choose_anomaly(btree_ver4);
          calculate_statistic_and_choose_anomaly(btree_ver6);
-          printf("\tcount of ip's after_erase %lu\n\n", get_count_of_values(btree_ver4) + get_count_of_values(btree_ver6));
+          printf("\tcount of ip's after_erase %lu\n\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
          //stop=1;         
 
       }
@@ -1408,7 +1605,7 @@ int main(int argc, char **argv)
 
    for(int i=0; i<10;i++){
       str[0]=0;
-      printf("%s. %d\n",  read_doamin(dom, str), dom->count_of_search);
+      printf("%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
       dom= dom->most_used_domain_less;
 
    }
@@ -1432,18 +1629,18 @@ int main(int argc, char **argv)
 
    //clean btree ver4 and ver6
    for(i = 0; i<2; i++){
-      b_item = create_list_item(btree[i]);
-      int is_there_next = get_list(btree[i], b_item);
+      b_item = b_plus_tree_create_list_item(btree[i]);
+      int is_there_next = b_plus_tree_get_list(btree[i], b_item);
       while(is_there_next == 1){
          check_and_delete_suspision((ip_address_t*)b_item->value, REQUEST_AND_RESPONSE_PART);
-         is_there_next = get_next_item_from_list(btree[i], b_item);
+         is_there_next = b_plus_tree_get_next_item_from_list(btree[i], b_item);
       }
-      destroy_list_item(b_item);
-      destroy_b_plus_tree(btree[i]);
+      b_plus_tree_destroy_list_item(b_item);
+      b_plus_tree_destroy(btree[i]);
    }
 
    //clean prefix tred
-   destroy_prefix_tree(preftree);
+   prefix_tree_destroy(preftree);
 
 
    // Do all necessary cleanup before exiting
