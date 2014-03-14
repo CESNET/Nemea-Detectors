@@ -467,6 +467,9 @@ void check_and_delete_suspision(ip_address_t * item_to_delete, unsigned char par
    }   
    if(part & RESPONSE_PART_TUNNEL){
       if(item_to_delete->suspision_response_tunnel != NULL){
+         if(item_to_delete->suspision_response_tunnel->request_suspision != NULL){
+            prefix_tree_destroy(item_to_delete->suspision_response_tunnel->request_suspision);
+         }         
          if(item_to_delete->suspision_response_tunnel->cname_suspision != NULL){
             prefix_tree_destroy(item_to_delete->suspision_response_tunnel->cname_suspision);
          }
@@ -905,7 +908,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
       if(item->state_response_tunnel == STATE_ATTACK){
          if(item->suspision_response_tunnel->state_type & REQUEST_STRING_TUNNEL){
             fprintf(file, "\tReponse tunnel found by request strings :\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->request_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->request_suspision->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
