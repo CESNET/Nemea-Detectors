@@ -14,8 +14,7 @@ HOSTSTATSNEMEASRCS=src/aux_func.h \
 		   src/profile.cpp \
 		   src/profile.h \
 		   src/subprofiles.cpp \
-		   src/subprofiles.h \
-		   src/wardenreport.h
+		   src/subprofiles.h
 bin_PROGRAMS=hoststatsnemea
 hoststatsnemea_SOURCES=$(HOSTSTATSNEMEASRCS)
 hoststatsnemea_LDADD=-lnemea-common -ltrap -lunirec
