@@ -178,6 +178,7 @@ AC_CONFIG_FILES([Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
+                 logreplay/Makefile
                  merger/Makefile
 		 nfreader/Makefile
                  pca/Makefile

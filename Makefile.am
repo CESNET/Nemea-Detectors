@@ -18,6 +18,7 @@ hoststatsnemea \
 ipspoofingdetector \
 ipv6stats \
 logger \
+logreplay \
 merger \
 nfreader \
 pca \
