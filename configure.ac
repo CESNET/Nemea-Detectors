@@ -174,6 +174,7 @@ AC_CONFIG_FILES([Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
+                 heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
