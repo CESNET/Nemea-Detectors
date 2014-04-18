@@ -13,6 +13,7 @@ AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
 AM_INIT_AUTOMAKE([-Wall -Werror silent-rules])
 LT_INIT
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -173,6 +174,7 @@ AC_CONFIG_FILES([Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
+                 heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
