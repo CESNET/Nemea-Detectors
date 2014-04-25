@@ -39,6 +39,15 @@ AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
+		[enable debugging, default: no]),
+[case "${enableval}" in
+	yes) debug=true ;;
+	no)  debug=false ;;
+	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+esac], [debug=false])
+
+AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 if test -z "$TRAPLIB"; then
 	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
