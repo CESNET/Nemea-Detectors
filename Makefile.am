@@ -14,6 +14,7 @@ flow_gen \
 flow_sanity_check \
 flowcounter \
 flowdirection \
+heartbleed_detector \
 hoststatsnemea \
 ipspoofingdetector \
 ipv6stats \
@@ -32,7 +33,8 @@ traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay \
-tunnel_detection
+tunnel_detection \
+portscan_detector
 
 RPMDIR = RPMBUILD
 
