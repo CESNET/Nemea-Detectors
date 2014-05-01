@@ -4,6 +4,7 @@ SUBDIRS=anonymizer \
 astute \
 attack_gen \
 blacklistfilter \
+basic2collector \
 deduplication \
 delaybuffer \
 dns_amplification \

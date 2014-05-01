@@ -169,6 +169,7 @@ AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
 		 attack_gen/Makefile
+		 basic2collector/Makefile
 		 blacklistfilter/Makefile
 		 blacklistfilter/dnsdetect/Makefile
 		 blacklistfilter/ipdetect/Makefile
