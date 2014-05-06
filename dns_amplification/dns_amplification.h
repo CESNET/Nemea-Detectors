@@ -103,8 +103,10 @@ typedef struct config_s {
 		max_quer_flow_bytes = 40000;
 		max_resp_flow_packets = 1000;
 		max_resp_flow_bytes = 100000;
-		det_window = 3600;
-		del_time = 300;
+//		det_window = 3600;
+//		del_time = 300;
+		det_window = 900;
+		del_time = 240;
 	}
 
 } config_t;
