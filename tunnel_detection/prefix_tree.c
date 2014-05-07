@@ -79,7 +79,7 @@ int map_chatecter_to_number(char  letter){
 
 }
 
-prefix_tree_t * prefix_tree_inicialize(){
+prefix_tree_t * prefix_tree_initialize(){
 	prefix_tree_t * tree;
 	tree = (prefix_tree_t *) calloc(sizeof(prefix_tree_t),1);
 	tree->root = (prefix_tree_inner_node_t *) calloc(sizeof(prefix_tree_inner_node_t),1);

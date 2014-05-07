@@ -218,6 +218,7 @@ typedef struct ip_address_suspision_response_tunnel_t ip_address_suspision_respo
  typedef struct ip_address_t ip_address_t ;
  struct ip_address_t {
     unsigned char ip_version;            /*!< version of ip */
+    unsigned char print;                 /*!< info about printing to results */
     counter_request_t counter_request;   /*!< counter struct for requests */
     counter_response_t counter_response; /*!< counter struct for responses */
 
@@ -279,8 +280,8 @@ typedef struct calulated_result_t calulated_result_t ;
 //********* values for searching anomaly *********
 
  typedef struct values_t values_t ;
- struct values_t {
-
+ struct values_t { 
+unsigned int time_of_one_session;  /*< Time of collecting packets */
 unsigned int ex_request_max;    /*< maximal value of request middle value */
 unsigned int ex_request_min;    /*< minimal value of request middle value */
 unsigned int ex_response_max;   /*< maximal value of response middle value */

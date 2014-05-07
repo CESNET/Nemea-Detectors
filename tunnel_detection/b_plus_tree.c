@@ -895,7 +895,7 @@ void c_b_tree_plus_del_all_node (C_node * del)
 
 
 
-void * b_plus_tree_inicialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key)
+void * b_plus_tree_initialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key)
 {
   C_b_tree_plus *tree = c_b_tree_plus_create(size_of_btree_node, comp, size_of_value, size_of_key);
   return ((void*)tree);

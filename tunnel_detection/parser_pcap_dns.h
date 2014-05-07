@@ -78,7 +78,7 @@ void read_rest_of_line(FILE * file);
 
 int read_packet(FILE *file, packet_t * create);
 
-FILE * parser_inicialize(char *name);
+FILE * parser_initialize(char *name);
 
 
 void parser_end(FILE *file);

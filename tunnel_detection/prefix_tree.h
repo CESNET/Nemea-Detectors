@@ -60,7 +60,7 @@
 
 int map_chatecter_to_number(char  letter);
 
-prefix_tree_t * prefix_tree_inicialize();
+prefix_tree_t * prefix_tree_initialize();
 
 void prefix_tree_destroy_recursive(prefix_tree_inner_node_t *  node);
 

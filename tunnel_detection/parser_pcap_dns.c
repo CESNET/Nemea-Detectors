@@ -279,7 +279,7 @@ if(create->is_response){
 	return 0;
 }
 
-FILE * parser_inicialize(char *name){
+FILE * parser_initialize(char *name){
    	FILE *file = fopen ( name, "r" );
    	return file;
 }

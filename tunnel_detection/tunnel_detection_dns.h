@@ -193,6 +193,9 @@ void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file);
 
 void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file);
 
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file);
+
+
 /*!
  * \brief Main function.
  * Main function to parse given arguments and run the DNS tunnel detection.

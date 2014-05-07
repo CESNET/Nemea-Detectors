@@ -238,7 +238,7 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
 
 
 
-  void * b_plus_tree_inicialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
+  void * b_plus_tree_initialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
 
   void * b_plus_tree_insert_or_find_item(void * btree, void * key);
 
