@@ -1,4 +1,12 @@
 #!/bin/bash
+
+if [ $# -lt 4 ]; then
+   echo "$0 <filename> <start index> <stop index> <output file>"
+   echo "Module expects PCAP files with this name convention:"
+   echo "\"<filename>.pcap<index>\", where index is iterated from <start index> to <stop index>"
+   exit 0
+fi
+
 b=$1
 for (( i=$2 ; i<=$3; i=$i+1 ))
 do
