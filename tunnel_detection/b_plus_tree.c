@@ -51,22 +51,22 @@ inline void copy_key(void * to ,int index_to ,void * from , int index_from, int 
 }
 
 
-C_node * c_node_create (int size_of_key, int m){
-	C_node * node;
-	node = (C_node*) calloc (sizeof(C_node),1);
+c_node * c_node_create (int size_of_key, int m){
+	c_node * node;
+	node = (c_node*) calloc (sizeof(c_node),1);
 	node->key = (void*) calloc (size_of_key, m);
 	node->count = 1;
   return node;
 }
 
-void c_node_destroy (C_node * node){
+void c_node_destroy (c_node * node){
   int i;
   free(node->key);
 
   //free leaf
   if(node->state_extend == EXTEND_LEAF){
-    C_leaf_node * leaf;
-    leaf = (C_leaf_node *) node->extend;
+    c_leaf_node * leaf;
+    leaf = (c_leaf_node *) node->extend;
     for (i = 0; i < node->count - 1;i++ )
     {
       //free (leaf->value[i]);
@@ -82,13 +82,13 @@ void c_node_destroy (C_node * node){
     free(node);
 }
 
-unsigned char  c_node_is_key(void * key,C_node * node, C_b_tree_plus * btree){
+unsigned char  c_node_is_key(void * key,c_node * node, C_b_tree_plus * btree){
   if (c_node_find_index_key(key, node, btree) != - 1) 
     return 1;
   return 0;
 }
  
-int  c_node_find_index_key(void * key,C_node * node, C_b_tree_plus * btree) {
+int  c_node_find_index_key(void * key,c_node * node, C_b_tree_plus * btree) {
 	int i;
     for (i = 0; i < node->count - 1; i++ )
       if (btree->compare(node->key+(i * btree->size_of_key), key) == EQUAL)
@@ -96,46 +96,46 @@ int  c_node_find_index_key(void * key,C_node * node, C_b_tree_plus * btree) {
   return - 1;
 }
 
-unsigned char c_node_is_leaf(C_node * node) {
+unsigned char c_node_is_leaf(c_node * node) {
   return (node->state_extend == EXTEND_LEAF);
 }
 
 
-C_node* c_node_get_parent(C_node * node) { 
+c_node* c_node_get_parent(c_node * node) { 
   return node->parent;
 }
 
-void * c_node_get_key(C_node * node, int index, int size_of_key) {
+void * c_node_get_key(c_node * node, int index, int size_of_key) {
   return node->key + (index - 1) * size_of_key;
 }
 
-C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key){
-	C_node * node;
-	C_leaf_node * leaf;
+c_node * c_leaf_node_create(int m, int size_of_value, int size_of_key){
+	c_node * node;
+	c_leaf_node * leaf;
 	node = c_node_create(size_of_key,m);
-	leaf = (C_leaf_node*) calloc (sizeof(C_leaf_node), 1);
+	leaf = (c_leaf_node*) calloc (sizeof(c_leaf_node), 1);
 	leaf->value = (void *) calloc (sizeof(void *), m);
 	node->extend = (void*)leaf;
 	node->state_extend = EXTEND_LEAF;
   return node;
 }
 
-void * c_leaf_node_get_value(C_leaf_node * node, int index){
-  return ((C_leaf_node*)node)->value[index - 1];
+void * c_leaf_node_get_value(c_leaf_node * node, int index){
+  return ((c_leaf_node*)node)->value[index - 1];
 }
 
-C_node* c_leaf_node_get_next_leaf(C_node * node){
+c_node* c_leaf_node_get_next_leaf(c_node * node){
   if(node->state_extend != EXTEND_LEAF)
   {
     return NULL;
   }
-  return ((C_leaf_node*)node->extend)->right;
+  return ((c_leaf_node*)node->extend)->right;
 }  
 
-int c_leaf_node_del_key_on_index(C_node * node, int index, int size_of_key){
+int c_leaf_node_del_key_on_index(c_node * node, int index, int size_of_key){
 	int i;
-	C_leaf_node * leaf;
-	leaf = (C_leaf_node*)node->extend;
+	c_leaf_node * leaf;
+	leaf = (c_leaf_node*)node->extend;
 	free(leaf->value[index]);
    //memmove(node->key + index * size_of_key ,node->key + (index + 1) * size_of_key,(node->count - 2 - index) * size_of_key );
   for (i = index; i < node->count - 2; i++ )
@@ -150,11 +150,11 @@ int c_leaf_node_del_key_on_index(C_node * node, int index, int size_of_key){
 
 
   
-int c_leaf_node_add_key_value(void *key, C_node* node, C_b_tree_plus *btree, void ** return_value){
+int c_leaf_node_add_key_value(void *key, c_node* node, C_b_tree_plus *btree, void ** return_value){
 //return value is index in leaf. If it returns -1, key is already in tree
   int i;
-  C_leaf_node *leaf;
-  leaf = ((C_leaf_node*)node->extend);
+  c_leaf_node *leaf;
+  leaf = ((c_leaf_node*)node->extend);
   i = c_node_find_index_key(key, node, btree);
 
   if (i != - 1) //key is already in leaf
@@ -181,22 +181,22 @@ int c_leaf_node_add_key_value(void *key, C_node* node, C_b_tree_plus *btree, voi
   return i;
 }
 
-C_node * c_inner_node_create(int size_of_key, int m){
+c_node * c_inner_node_create(int size_of_key, int m){
 	C_inner_node * inner;
-	C_node * node;
+	c_node * node;
 	inner = (C_inner_node*)calloc(sizeof(C_inner_node),1);
-	inner->child = (C_node**)calloc(sizeof(C_node*), m + 1);
+	inner->child = (c_node**)calloc(sizeof(c_node*), m + 1);
 	node = c_node_create (size_of_key, m);
 	node->extend = (void*) inner;
 	node->state_extend = EXTEND_INNER;
 	return node;
 }
 
-C_node* c_inner_node_get_child(C_node * node ,int index) {
+c_node* c_inner_node_get_child(c_node * node ,int index) {
   return ((C_inner_node*)node->extend)->child[index - 1];
 }
 
-int c_inner_node_addKey(void * add, C_node * left, C_node * right, C_node *node, C_b_tree_plus * btree ){
+int c_inner_node_addKey(void * add, c_node * left, c_node * right, c_node *node, C_b_tree_plus * btree ){
 	int i;
   C_inner_node *inner;
 	if (c_node_is_key(add,node,btree))
@@ -237,11 +237,11 @@ void c_b_tree_plus_destroy(C_b_tree_plus * btree){
   free(btree);
 }
 
-void c_b_tree_plus_del_all_node (C_node * del){
+void c_b_tree_plus_del_all_node (c_node * del){
 	int i;
   if (del->state_extend == EXTEND_LEAF){
-    C_leaf_node * leaf;
-    leaf = (C_leaf_node*)del->extend;
+    c_leaf_node * leaf;
+    leaf = (c_leaf_node*)del->extend;
     for(i=0; i < del->count-1; i++)
     {
       free(leaf->value[i]);
@@ -262,9 +262,9 @@ void c_b_tree_plus_del_all_node (C_node * del){
 }
  
 
-int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree){
+int c_b_tree_plus_search(void * key, c_leaf_node** val, C_b_tree_plus * btree){
   int result;
-  C_node * node;
+  c_node * node;
   node = c_b_tree_plus_find_leaf (key, btree);
   result = c_node_find_index_key(key, node, btree);
   if (result == - 1)
@@ -272,12 +272,12 @@ int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree){
     *val = NULL;
     return ( - 1);
   }
-  *val = (C_leaf_node*)node->extend;
+  *val = (c_leaf_node*)node->extend;
   return result + 1;
 }
  
 
- int  c_b_tree_plus_find_my_index_in_parent  (C_node * son){
+ int  c_b_tree_plus_find_my_index_in_parent  (c_node * son){
   //find index of certain child in parent
   int i;
   if ( !(son->parent)) 
@@ -290,9 +290,9 @@ int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree){
   return ( - 2);
  }
  
-void c_b_tree_plus_add_to_node(void *key, C_node *left, C_node *right, C_b_tree_plus * btree){
+void c_b_tree_plus_add_to_node(void *key, c_node *left, c_node *right, C_b_tree_plus * btree){
   int i;
-  C_node *par;
+  c_node *par;
   par= left->parent;
   //parent does not exist, has to be created and added as a parent to his children
   if (par == NULL)
@@ -314,7 +314,7 @@ void c_b_tree_plus_add_to_node(void *key, C_node *left, C_node *right, C_b_tree_
   //size is to big, split to inner node and repeat recursivly
   else
   {
-    C_node *right_par, *righest_node_in_left_node;
+    c_node *right_par, *righest_node_in_left_node;
     int cut, insert, i;
     right_par= c_inner_node_create(btree->size_of_key, btree->m);
     cut = (par->count - 1) / 2;
@@ -338,10 +338,10 @@ void c_b_tree_plus_add_to_node(void *key, C_node *left, C_node *right, C_b_tree_
 }
  
     
-C_node *  c_b_tree_plus_find_leaf (void *key, C_b_tree_plus * btree){
+c_node *  c_b_tree_plus_find_leaf (void *key, C_b_tree_plus * btree){
   //find leaf where is key, or where to add key
 	int i;
-    C_node *pos;
+    c_node *pos;
     unsigned char go_right, result;
     go_right = 0;
     pos = btree->root;
@@ -368,8 +368,8 @@ C_node *  c_b_tree_plus_find_leaf (void *key, C_b_tree_plus * btree){
 }
  
 void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int search){
-  C_node * node_to_insert, * r_node;
-  C_leaf_node * leaf_to_insert, * r_leaf;
+  c_node * node_to_insert, * r_node;
+  c_leaf_node * leaf_to_insert, * r_leaf;
   int size, splitVal, insert, i, index_of_new_key;
   void * added_or_found_value;
   node_to_insert = c_b_tree_plus_find_leaf(key, btree);
@@ -383,7 +383,7 @@ void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int se
     return added_or_found_value;
   }
   btree->count_of_values++;
-  leaf_to_insert = (C_leaf_node*)node_to_insert->extend;
+  leaf_to_insert = (c_leaf_node*)node_to_insert->extend;
   size = node_to_insert->count;
   //new value was added, we have to chceck size of leaf
   if (size <= btree->m)
@@ -399,7 +399,7 @@ void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int se
   size-- ; //real count of values, not just default size m;
   splitVal = size / 2;
   r_node = c_leaf_node_create(btree->m, btree->size_of_value, btree->size_of_key);
-  r_leaf = (C_leaf_node*)r_node->extend;
+  r_leaf = (c_leaf_node*)r_node->extend;
   insert = 0;
   //copy half datas to new leaf node
   for (i = splitVal; i < size; i++ )
@@ -419,13 +419,13 @@ void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int se
 }
 
   
- C_node * c_b_tree_plus_get_most_right_leaf (C_node * inner) {
+ c_node * c_b_tree_plus_get_most_right_leaf (c_node * inner) {
     if (inner->state_extend == EXTEND_LEAF) 
       return inner;
     return c_b_tree_plus_get_most_right_leaf(((C_inner_node*)inner->extend)->child[inner->count - 1]);
  }
  
-void c_b_tree_plus_check_and_change_key (C_node * node, C_b_tree_plus * btree){
+void c_b_tree_plus_check_and_change_key (c_node * node, C_b_tree_plus * btree){
   int parent_index;
   parent_index = c_b_tree_plus_find_my_index_in_parent(node);
    if (parent_index < 0)
@@ -439,7 +439,7 @@ void c_b_tree_plus_check_and_change_key (C_node * node, C_b_tree_plus * btree){
   else if (parent_index == node->parent->count - 1)
   {
     //change values in all parent till, they are not on the corner(highest value) of node
-    C_node *par = node;
+    c_node *par = node;
 
     while (parent_index == par->parent->count - 1)
     {
@@ -455,7 +455,7 @@ void c_b_tree_plus_check_and_change_key (C_node * node, C_b_tree_plus * btree){
   }
 }
 
-int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_b_tree_plus * btree){
+int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  c_node * leaf_del, C_b_tree_plus * btree){
   int  parent_index, size, i;   
   //key was not found
   if (index == ( - 1)) {
@@ -472,16 +472,16 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
   }
   else
   {
-      C_node *brother;
-      C_leaf_node *brother_leaf;
-      C_leaf_node *leaf_del_leaf;
-      leaf_del_leaf = (C_leaf_node*)leaf_del->extend;
+      c_node *brother;
+      c_leaf_node *brother_leaf;
+      c_leaf_node *leaf_del_leaf;
+      leaf_del_leaf = (c_leaf_node*)leaf_del->extend;
       //size is too small, we have to resolve this
       if ( parent_index > 0 && (((C_inner_node*)leaf_del->parent->extend)->child[parent_index - 1]->count - 1) > (btree->m - 1) / 2)
       {
           //rotation of value from left brother
           brother = ((C_inner_node*)leaf_del->parent->extend)->child[parent_index - 1];
-          brother_leaf = (C_leaf_node*)brother->extend;
+          brother_leaf = (c_leaf_node*)brother->extend;
           for (i = leaf_del->count - 2; i >= 0; i-- )
           {
               //leaf_del->key[i + 1] = leaf_del->key[i];
@@ -503,7 +503,7 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
       {
           //rotation of value from rigth brother
           brother = ((C_inner_node*)leaf_del->parent->extend)->child[parent_index + 1];
-          brother_leaf = (C_leaf_node*)brother->extend;
+          brother_leaf = (c_leaf_node*)brother->extend;
 
           leaf_del->count++;
           //leaf_del->key[leaf_del->count - 2] = brother->key[0];
@@ -522,7 +522,7 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
       {
           //merge with left brother
           brother = ((C_inner_node*)leaf_del->parent->extend)->child[parent_index - 1];
-          brother_leaf = (C_leaf_node*)brother->extend;
+          brother_leaf = (c_leaf_node*)brother->extend;
 
           //copy_key(brother->key, (brother->count) - 1, leaf_del->key, 0, btree->size_of_key * (leaf_del->count - 1));
           for (i = 0; i < leaf_del->count - 1;i++ )
@@ -533,7 +533,7 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
           }
           brother_leaf->right = leaf_del_leaf->right;
           if (leaf_del_leaf->right)
-               ((C_leaf_node*)leaf_del_leaf->right->extend)->left = brother;
+               ((c_leaf_node*)leaf_del_leaf->right->extend)->left = brother;
           //move indexs in perent
           for (i = parent_index; i < leaf_del->parent->count - 2; i++ )
           {
@@ -553,7 +553,7 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
       {
           //merge with right brother
           brother = ((C_inner_node*)leaf_del->parent->extend)->child[parent_index + 1];
-          brother_leaf = (C_leaf_node*)brother->extend;
+          brother_leaf = (c_leaf_node*)brother->extend;
           //copy values
           for (i = 0; i < brother->count - 1;i++ )
           {
@@ -563,7 +563,7 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
           }
           leaf_del_leaf->right = brother_leaf->right;
           if (brother_leaf->right)
-               ((C_leaf_node*)brother_leaf->right->extend)->left = leaf_del;
+               ((c_leaf_node*)brother_leaf->right->extend)->left = leaf_del;
           for (i = parent_index + 1; i < leaf_del->parent->count - 2; i++ )
           {
               copy_key(leaf_del->parent->key, i, leaf_del->parent->key, i + 1, btree->size_of_key);
@@ -582,9 +582,9 @@ int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index,  C_node * leaf_del, C_
   return 1;
 }
  
-void c_b_tree_plus_check_inner_node (C_node * check, C_b_tree_plus *btree){
+void c_b_tree_plus_check_inner_node (c_node * check, C_b_tree_plus *btree){
     int parent_index, i;
-    C_node *brother;
+    c_node *brother;
     C_inner_node *brother_inner;
     C_inner_node *check_inner;
     if (check->count - 1 >= ((btree->m - 1) / 2))
@@ -711,7 +711,7 @@ void c_b_tree_plus_check_inner_node (C_node * check, C_b_tree_plus *btree){
 
 
 
-C_node * c_b_tree_plus_get_most_left_leaf( C_node  *item){
+c_node * c_b_tree_plus_get_most_left_leaf( c_node  *item){
   while (item->state_extend == EXTEND_INNER)
       item = ((C_inner_node*)item->extend)->child[0];
   return item;
@@ -731,7 +731,7 @@ void * b_plus_tree_insert_item(void * btree, void * key){
 }
 
 void * b_plus_tree_search(void * btree, void * key){
-  C_leaf_node *leaf;
+  c_leaf_node *leaf;
   int index;
   index = c_b_tree_plus_search(key, &leaf, (C_b_tree_plus*)btree);
   if(index == -1){
@@ -746,7 +746,7 @@ void  b_plus_tree_destroy(void * tree){
 
 int  b_plus_tree_delete_item(void * btree, void * key ){
     int index;
-    C_node * leaf_del;
+    c_node * leaf_del;
     leaf_del = c_b_tree_plus_find_leaf(key, (C_b_tree_plus*)btree);
     index = c_node_find_index_key(key, leaf_del, (C_b_tree_plus*)btree);
     return c_b_tree_plus_b_tree_plus_delete_know_leaf( index, leaf_del, (C_b_tree_plus*)btree);
@@ -755,7 +755,7 @@ int  b_plus_tree_delete_item(void * btree, void * key ){
 
 int  b_plus_tree_delete_item_from_list(void * btree, b_plus_tree_item * delete_item){
 
-    C_node * leaf_del;
+    c_node * leaf_del;
     int is_there_next, index_of_delete_item;
     leaf_del = delete_item->leaf;
     index_of_delete_item = delete_item->index_of_value;
@@ -776,13 +776,13 @@ unsigned long int b_plus_tree_get_count_of_values(void * btree){
 
 int  b_plus_tree_get_list(void * t, b_plus_tree_item * item){
   C_b_tree_plus * tree;
-  C_node *node;
+  c_node *node;
   tree = (C_b_tree_plus*)t;
   node = c_b_tree_plus_get_most_left_leaf(tree->root);
   if(node == NULL || node->count==1)
     return 0;
   item->index_of_value = 0;
-  item->value = ((C_leaf_node*)node->extend)->value[0];
+  item->value = ((c_leaf_node*)node->extend)->value[0];
   copy_key(item->key,0, node->key,0, tree->size_of_key);
   item->leaf = node;
   return 1;
@@ -801,10 +801,10 @@ void b_plus_tree_destroy_list_item(b_plus_tree_item * item){
 }
 
 int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item){
-  C_node *node;
-  C_leaf_node *leaf;
+  c_node *node;
+  c_leaf_node *leaf;
   node = item->leaf;
-  leaf = (C_leaf_node*)node->extend;
+  leaf = (c_leaf_node*)node->extend;
   if(item->index_of_value < node->count - 2){
     ++item->index_of_value;
     copy_key(item->key,0,node->key, item->index_of_value, ((C_b_tree_plus*)t)->size_of_key);
@@ -814,7 +814,7 @@ int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item){
   else if(c_leaf_node_get_next_leaf(node) != NULL){
     node = c_leaf_node_get_next_leaf(node);
     copy_key(item->key,0,node->key, 0, ((C_b_tree_plus*)t)->size_of_key);
-    item->value = ((C_leaf_node*)node->extend)->value[0];
+    item->value = ((c_leaf_node*)node->extend)->value[0];
     item->leaf = node;
     item->index_of_value = 0;
     return 1;
