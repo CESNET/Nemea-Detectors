@@ -62,64 +62,84 @@
 #include "tunnel_detection_dns_structs.h"
 
 
+/*!
+ * \name Type of node
+ *  Used to identify if the node is leaf or inner node.
+ * \{ */
 #define EXTEND_LEAF 1
 #define EXTEND_INNER 0 
+ /* /} */
 
+/*!
+ * \name Compare values
+ *  Used for compare function.
+ * \{ */ 
 #define EQUAL 0
 #define LESS 1
 #define MORE 2
+ /* /} */
 
-
-
-
-
-
-
+/*!
+ * \brief Structure - B+ tree - node structure
+ * Structure used to keep information about node and pointer to inner or leaf node. 
+ */
 typedef struct C_node C_node ;
  struct C_node{
-    void         * extend;// if is leaf then 1 else 0
-    unsigned char  state_extend;
-    C_node       * parent;
-    void          * key;
-    int              count; //pocet potomku, nikoli key  nebo value;
+    void         * extend;  /*< pointer to leaf or inner node */
+    unsigned char  state_extend;  /*< state of extended variable. leaf or inner node */
+    C_node       * parent;  /*< pointer to parent */
+    void          * key;  /*< pointer to key */
+    int              count; /*< count of descendants */
 } ;
 
+/*!
+ * \brief Structure - B+ tree - inner node structure
+ * Structure used to keep information about inner node. 
+ */
 typedef struct C_inner_node C_inner_node ;
  struct C_inner_node{
-    C_node         ** child;// if is leaf then 1 else 0
+    C_node         ** child;  /*< pointer to descendats */
 
 } ;
+
+
+/*!
+ * \brief Structure - B+ tree - leaf node structure
+ * Structure used to keep information about leaf node. 
+ */
 typedef struct C_leaf_node C_leaf_node ;
  struct C_leaf_node {
-      C_node   *   left;
-      C_node   *   right;
-      void      ** value; 
-      unsigned char  new_key_added; 
+      C_node   *   left;  /*< linked list, left value */
+      C_node   *   right; /*< linked list, right value */
+      void      ** value;  /*< array of values */
 } ;
 
+
+/*!
+ * \brief Structure - B+ tree - main structure
+ * Structure used to keep information about tree. It is main structure of tree.
+ */
 typedef struct C_b_tree_plus C_b_tree_plus;
  struct C_b_tree_plus{
-    unsigned long int count_of_values;
-    int m;
-    int size_of_value;
-    int size_of_key;
-    C_node *root;
-    int (*compare)(void *, void *);
+    unsigned long int count_of_values;  /*< count of values in tree */
+    int m;  /*< count of descendant in node */
+    int size_of_value;  /*< size of value */
+    int size_of_key;  /*< size of key */
+    C_node *root; /*< root node */
+    int (*compare)(void *, void *); /*< compare function for key */
  };
 
-
+/*!
+ * \brief Structure - B+ tree - list item structure
+ * Structure used to create list of items.
+ */
 typedef struct b_plus_tree_item b_plus_tree_item ;
  struct b_plus_tree_item {
-    void * value;
-    void * key;
-    C_node * leaf;
-    unsigned int index_of_value;
+    void * value; /*< pointer to value */
+    void * key; /*< pointer to key */
+    C_node * leaf;  /*< pointer to leaf where is item */
+    unsigned int index_of_value;  /*< index of value in leaf */
 } ;
-
-
-
-
-
 
 /*!
  * \brief Copy key 
@@ -141,20 +161,52 @@ typedef struct b_plus_tree_item b_plus_tree_item ;
  */  
   C_node * c_node_create (int size_of_key, int m);
 
+/*!
+ * \brief Destroy c_node structure 
+ * \param[in] node pointer to node
+ */  
+void c_node_destroy (C_node * node);
 
-  void c_node_destroy (C_node * node);
+/*!
+ * \brief is key in node
+ * \param[in] key 
+ * \param[in] node
+ * \param[in] btree pointer to b tree
+ * \return 1 ON SUCCESS, OTHERWISE 0
+ */  
+unsigned char  c_node_is_key (void * key,C_node * node, C_b_tree_plus * btree);
 
-  unsigned char  c_node_is_key (void * key,C_node * node, C_b_tree_plus * btree);
+/*!
+ * \brief Find index in node
+ * \param[in] key 
+ * \param[in] node
+ * \param[in] btree pointer to b tree
+ * \return index or -1 if key is not in node
+ */  
+int  c_node_find_index_key     (void * key,C_node * node, C_b_tree_plus * btree);
 
-  int  c_node_find_index_key     (void * key,C_node * node, C_b_tree_plus * btree);
+/*!
+ * \brief If node if leaf
+ * \param[in] node
+ * \return 1 ON SUCCESS, OTHERWISE 0
+ */  
+unsigned char c_node_is_leaf(C_node * node);
 
-  unsigned char c_node_is_leaf(C_node * node);
+/*!
+ * \brief Get parent of node
+ * \param[in] node
+ * \return parent of node or NULL if does not have
+ */  
+C_node* c_node_get_parent(C_node * node); 
 
-  int c_node_get_gamma(C_node * node);
-
-  C_node* c_node_get_parent(C_node * node); 
-
-  void * c_node_get_key(C_node * node, int index, int size_of_key);
+/*!
+ * \brief Return key from item
+ * \param[in] node
+ * \param[in] index index in leaf
+ * \param[in] size_of_key size of key in B
+ * \return poiter to key
+ */  
+void * c_node_get_key(C_node * node, int index, int size_of_key);
 
 
 
@@ -170,16 +222,40 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
 
 
 
+/*!
+ * \brief Return value from item
+ * \param[in] node
+ * \param[in] index index in leaf
+ * \return poiter to key
+ */  
+void * c_leaf_node_get_value(C_leaf_node * node, int index);
 
-  void * c_leaf_node_get_value(C_leaf_node * node, int index);
+/*!
+ * \brief Next leaf
+ * \param[in] node leaf
+ * \return poiter to next leaf or NULL if not exists
+ */  
+C_node* c_leaf_node_get_next_leaf(C_node * node);
 
 
+/*!
+ * \brief Delete item from node on specific index
+ * \param[in] node leaf
+ * \param[in] index item to delete
+ * \param[in] size_of_key size of key in B
+ * \return count of items in leaf
+ */ 
+int c_leaf_node_del_key_on_index(C_node * node, int index, int size_of_key);
 
-  C_node* c_leaf_node_get_next_leaf(C_node * node);
-  int c_leaf_node_del_key_on_index(C_node * node, int index, int size_of_key);
-
- //return value
- int   c_leaf_node_add_key_value ( void *key, C_node* node, C_b_tree_plus *btree, void ** return_value);
+/*!
+ * \brief Add key and value to the leaf.
+ * \param[in] key key
+ * \param[in] node leaf
+ * \param[in] btree pointer to tree
+ * \param[in] pointer to memory of item
+ * \return index in leaf
+ */ 
+int   c_leaf_node_add_key_value ( void *key, C_node* node, C_b_tree_plus *btree, void ** return_value);
 
 /*!
  * \brief Creates c_inner_node structure 
@@ -188,12 +264,26 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
  * \param[in] m count of keys and values to allocate.
  * \return pointer to created c_node stucture
  */ 
-  C_node * c_inner_node_create(int size_of_key, int m);
+C_node * c_inner_node_create(int size_of_key, int m);
 
+/*!
+ * \brief Get child on index
+ * \param[in] node 
+ * \param[in] index index of child
+ * \return pointer to child
+ */ 
+C_node* c_inner_node_get_child(C_node * node ,int index);
 
-  C_node* c_inner_node_get_child(C_node * node ,int index);
-
-  int c_inner_node_addKey(void * add, C_node * left, C_node * right, C_node *node, C_b_tree_plus * btree );
+/*!
+ * \brief Add key to inner node
+ * \param[in] add key to add 
+ * \param[in] left left brother
+ * \param[in] right right brother 
+ * \param[in] node node to insert key  
+ * \param[in] btree pointer to tree
+ * \return count of descendants
+ */ 
+int c_inner_node_addKey(void * add, C_node * left, C_node * right, C_node *node, C_b_tree_plus * btree );
 
 /*!
  * \brief Creates b plus tree 
@@ -205,65 +295,191 @@ C_node * c_leaf_node_create(int m, int size_of_value, int size_of_key);
  */ 
   C_b_tree_plus * c_b_tree_plus_create(int m, int (*compare)(void *, void *), int size_of_value, int size_of_key);
 
-  void c_b_tree_plus_destroy(C_b_tree_plus * btree);
+/*!
+ * \brief Destroy b plus tree structure 
+ * \param[in] btree pointer to tree
+ */ 
+void c_b_tree_plus_destroy(C_b_tree_plus * btree);
 
-  void c_b_tree_plus_del_all_node (C_node * del);
+/*!
+ * \brief Recursive function to delete all nodes
+ * \param[in] del node to delete
+ */ 
+void c_b_tree_plus_del_all_node (C_node * del);
+
+/*!
+ * \brief Search item in tree
+ * \param[in] key to search
+ * \param[in] val pointer to leaf where will be the key
+ * \param[in] btree pointer to tree 
+ * \return index of item in leaf
+ */ 
+int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree);
+
+/*!
+ * \brief Find index of child in parent
+ * \param[in] son node to find index of
+ * \return index of nide in parent
+ */ 
+int  c_b_tree_plus_find_my_index_in_parent  (C_node * son);
+
+
+/*!
+ * \brief Add key to inner node. For spliting node
+ * \param[in] add key to add 
+ * \param[in] left left brother
+ * \param[in] right right brother 
+ * \param[in] btree pointer to tree
+ */ 
+void c_b_tree_plus_add_to_node(void *key, C_node *left, C_node *right, C_b_tree_plus * btree);
+
+/*!
+ * \brief Search leaf where shuld be item.
+ * \param[in] key to search
+ * \param[in] btree pointer to tree
+ * \return leaf where should be item
+ */ 
+C_node *  c_b_tree_plus_find_leaf(void *key, C_b_tree_plus * btree);
+
+
+/*!
+ * \brief Find or Insert key, return pointer to item
+ * \param[in] key to insert
+ * \param[in] btree pointer to tree
+ * \param[in] search 1 - return fouded or inserted value, 0 - return value just when the key was inserted, otherwise NULL
+ * \return pointer to value
+ */ 
+void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int search);
+
+/*!
+ * \brief Found the most right leaf and return it
+ * \param[in] inner node where to seach
+ * \return pointer to leaf
+ */ 
+C_node * c_b_tree_plus_get_most_right_leaf (C_node * inner);
+
+/*!
+ * \brief check key and key in parent, it there is problem, repair it
+ * \param[in] node to check
+ * \param[in] btree pointer to tree
+ */ 
+void c_b_tree_plus_check_and_change_key (C_node * node, C_b_tree_plus * btree );
+
+/*!
+ * \brief Delete item from tree, know leaf
+ * \param[in] btree pointer to tree
+ * \param[in] index item to delete
+ * \param[in] leaf_del leaf where is item
+ * \return 1 ON SUCCESS, OTHERWISE 0
+ */ 
+int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index, C_node * leaf_del, C_b_tree_plus * btree);
+
+/*!
+ * \brief check node if has the rigth value, not small and not big
+ * \param[in] check node to check
+ * \param[in] btree pointer to tree 
+ */ 
+void c_b_tree_plus_check_inner_node (C_node * check, C_b_tree_plus *btree);
+
+/*!
+ * \brief Found the rightest leaf and return it
+ * \param[in] inner node where to seach
+ * \return pointer to leaf
+ */ 
+C_node * c_b_tree_plus_get_most_left_leaf( C_node  *item);
+
+/*!
+ * \brief Init function of tree
+ * \param[in] size_of_btree_node count of descendants in node
+ * \param[in] comp compare function for key 
+ * \param[in] size_of_value size of value
+ * \param[in] size_of_key size of key
+ * \return poiter to structure with tree
+ */ 
+void * b_plus_tree_initialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
+
+/*!
+ * \brief Insert or find item in tree
+ * \param[in] btree pointer to tree 
+ * \param[in] key key to insert
+ * \return poiter to inserted or founded item
+ */ 
+void * b_plus_tree_insert_or_find_item(void * btree, void * key);
+
+/*!
+ * \brief Insert item in tree
+ * \param[in] btree pointer to tree
+ * \param[in] key key to insert
+ * \return poiter to inserted item
+ */ 
+void * b_plus_tree_insert_item(void * btree, void * key);
+
+/*!
+ * \brief Search item in tree
+ * \param[in] btree pointer to tree 
+ * \param[in] key key to insert
+ * \return poiter to searched item
+ */ 
+void * b_plus_tree_search(void * btree, void * key);
+
+/*!
+ * \brief Get count of all items in tree
+ * \param[in] btree pointer to tree
+ * \return count of items
+ */ 
+unsigned long int b_plus_tree_get_count_of_values(void * btree);
+
+
+/*!
+ * \brief Destroy b_plus tree,
+ * \param[in] tree pointer to tree
+ */ 
+void  b_plus_tree_destroy(void * tree);
+
+/*!
+ * \brief Delete item from tree
+ * \param[in] btree pointer to tree
+ * \param[in] key key to delete
+ * \return 1 ON SUCCESS, OTHERWISE 0
+ */ 
+int  b_plus_tree_delete_item(void * btree, void * key );
+
+/*!
+ * \brief Delete item from list
+ * \param[in] btree pointer to tree
+ * \param[in] delete_item structure to list item
+ * \return 1 ON SUCCESS,  0 END OF LIST
+ */ 
+int  b_plus_tree_delete_item_from_list(void * btree, b_plus_tree_item * delete_item );
  
+/*!
+ * \brief Get list of items in tree
+ * \param[in] t pointer to tree 
+ * \param[in] item pointer to item list structure
+ * \return 1 ON SUCCESS,  0 tree is empty
+ */ 
+int  b_plus_tree_get_list(void * t, b_plus_tree_item * item);
 
-  int c_b_tree_plus_search(void * key, C_leaf_node** val, C_b_tree_plus * btree);
- 
-  //find index of certain child in parent
-  int  c_b_tree_plus_find_my_index_in_parent  (C_node * son);
- 
-  void c_b_tree_plus_add_to_node(void *key, C_node *left, C_node *right, C_b_tree_plus * btree);
- 
-  //find leaf where is key, or where to add key
-  C_node *  c_b_tree_plus_find_leaf (void *key, C_b_tree_plus * btree);
- 
-  void * c_b_tree_plus_b_tree_plus_insert(void * key, C_b_tree_plus *btree, int search);
+/*!
+ * \brief Create structure of inte list structure
+ * \param[in] btree pointer to tree 
+ * \return pointer to structure
+ */ 
+b_plus_tree_item * b_plus_tree_create_list_item (void * btree);
 
- 
-  C_node * c_b_tree_plus_get_rightest_leaf (C_node * inner);
- 
-  void c_b_tree_plus_check_and_change_key (C_node * leaf_del, C_b_tree_plus * btree );
+/*!
+ * \brief Destroy b_plus item structure
+ * \param[in] item pointer to item
+ */ 
+void b_plus_tree_destroy_list_item(b_plus_tree_item * item);
 
-  int c_b_tree_plus_b_tree_plus_delete_know_leaf(int index, C_node * leaf_del, C_b_tree_plus * btree);
-
-  void c_b_tree_plus_check_inner_node (C_node * check, C_b_tree_plus *btree);
-
-  void c_b_tree_plus_check_repair(C_b_tree_plus *btree);
-
-  C_node * c_b_tree_plus_get_most_left_leaf( C_node  *item);
-
-
-
-
-  void * b_plus_tree_initialize(unsigned int size_of_btree_node, int (*comp)(void *, void *), unsigned int size_of_value, unsigned int size_of_key);
-
-  void * b_plus_tree_insert_or_find_item(void * btree, void * key);
-
-  void * b_plus_tree_insert_item(void * btree, void * key);
-
-  void * b_plus_tree_search(void * btree, void * key);
-
-  unsigned long int b_plus_tree_get_count_of_values(void * btree);
-
-
-
-  void  b_plus_tree_destroy(void * tree);
-
-  int  b_plus_tree_delete_item(void * btree, void * key );
-
-  int  b_plus_tree_delete_item_from_list(void * btree, b_plus_tree_item * delete_item );
-   
-
-  int  b_plus_tree_get_list(void * t, b_plus_tree_item * item);
-
-  b_plus_tree_item * b_plus_tree_create_list_item (void * btree);
-
-  void b_plus_tree_destroy_list_item(b_plus_tree_item * item);
-
-  int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item);
+/*!
+ * \brief Get next intem from list
+ * \param[in] t pointer to tree
+ * \param[in] item pointer to item 
+ * \return 1 ON SUCCESS,  0 END OF LIST
+ */ 
+int b_plus_tree_get_next_item_from_list(void * t, b_plus_tree_item * item);
  
 
  #endif /* _B_PLUS_TREE_ */

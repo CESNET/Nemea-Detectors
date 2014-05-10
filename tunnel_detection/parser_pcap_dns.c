@@ -57,7 +57,6 @@ uint32_t read_ip_address_v4(FILE * file){
 			sign = fgetc(file);	
 		}
 		a[num]=0;
-		//printf("%s.",a);
 		ip |= atoi(a);
 	}
 	ungetc(sign, file);	
@@ -154,26 +153,17 @@ int read_packet(FILE *file, packet_t * create){
 	create->mx_response[0] = 0;
 	create->ns_response[0] = 0;
 
-	
 	if(file==NULL)
 		return -1;
-
 	//test if it is not on the end of file
 	sign = fgetc(file);
 	if(sign==-1)
 		return -1;
 	ungetc(sign,file);
 
-   //create = (packet_t *) calloc(sizeof(packet_t),1); 
-
 	//read time
-	/*char time[32];
-	fgets ( time, sizeof(time), file );
-	sign = fgetc(file);*/
-	//ungetc(sign,file);
 	create->time = read_double(file);
 	sign = fgetc(file);
-
 
 	//read ip address v4
 	sign = fgetc(file);
@@ -196,7 +186,6 @@ int read_packet(FILE *file, packet_t * create){
 		sign = fgetc(file);
 		create->ip_version = IP_VERSION_6;
 	}
-
 	//read type (response/request)
 	sign = fgetc(file);
 	if(sign != ';'){
@@ -204,7 +193,6 @@ int read_packet(FILE *file, packet_t * create){
 		create->is_response = read_int(file);
 		sign = fgetc(file);
 	}
-
 	//read size
 	sign = fgetc(file);
 	if(sign != ';'){
@@ -212,7 +200,6 @@ int read_packet(FILE *file, packet_t * create){
 		create->size = read_int(file);
 		sign = fgetc(file);
 	}
-
 	//read request string 
 	sign = fgetc(file);
 	if(sign != ';'){
@@ -221,16 +208,9 @@ int read_packet(FILE *file, packet_t * create){
 		sign = fgetc(file);
 	}
 
-if(create->is_response){
+	if(create->is_response){
 		//read response ip 
 		sign = fgetc(file);
-		/*while(sign != ';'){
-			if(sign != ','){
-				ungetc(sign,file);
-			}
-			read_ip_address_v4(file);
-			sign = fgetc(file);
-		}*/
 		read_item(file);
 
 		//read txt string 
@@ -240,18 +220,13 @@ if(create->is_response){
 			read_string(file, create->txt_response, MAX_SIZE_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
-		//printf("%s\n",create->txt_response );
-
 		//read cname string 
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
 			read_string(file, create->cname_response, MAX_SIZE_OF_RESPONSE_STRING);
 			sign = fgetc(file);
-		}	
-		//printf("%s\n",create->cname_response );
-
-
+		}
 		//read mx string
 		sign = fgetc(file);
 		if(sign != ';'){
@@ -259,8 +234,6 @@ if(create->is_response){
 			read_string(file, create->mx_response, MAX_SIZE_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
-		//printf("%s\n",create->mx_response );
-
 		//read ns string
 		sign = fgetc(file);
 		if(sign != ';' && sign != '\n' && sign != -1){
@@ -268,8 +241,6 @@ if(create->is_response){
 			read_string(file, create->ns_response, MAX_SIZE_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
-		//printf("%s\n",create->ns_response );
-		
 		read_rest_of_line(file);
 	}
 	else{
@@ -288,14 +259,3 @@ FILE * parser_initialize(char *name){
 void parser_end(FILE *file){
 	fclose(file);
 }
-/*
-int main(int argc, char **argv){
-	static const char filename[] = "cap10.txt";
-	packet_t * packet;
-   	FILE *file = fopen ( filename, "r" );
-   	if ( file != NULL )
-   	{
-   		packet = read_packet(file);
-   	}
-}
-*/

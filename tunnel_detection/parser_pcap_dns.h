@@ -63,24 +63,77 @@
 
 
 
-
+/*!
+ * \brief Read IPV4 from file
+ * Function reads IPv4 from file, return it in number.
+ * \param[in] file pointer to file.
+ * \return IPv4 in 32b number
+ */
 uint32_t read_ip_address_v4(FILE * file);
 
+/*!
+ * \brief Read number from file
+ * Function reads number from file, return it in number.
+ * \param[in] file pointer to file.
+ * \return int number
+ */
 int read_int(FILE * file);
 
+/*!
+ * \brief Read double from file
+ * Function reads number from file, return it in number.
+ * \param[in] file pointer to file.
+ * \return double
+ */
 double read_double(FILE * file);
 
+/*!
+ * \brief Read string from file
+ * Function reads string from file.
+ * \param[in] file pointer to file.
+ * \param[in] string pinter to memory were to save string.
+ * \param[in] maxsize max length of string.
+ * \return length of read string
+ */
 int read_string(FILE * file, char * string, int maxsize);
 
+/*!
+ * \brief Read IPV6 from file
+ * Function reads IPv6 from file, save it like 2x64b number.
+ * \param[in] file pointer to file.
+ * \param[in] pointer to memory where to save IP. 
+ */
 void read_ip_address_v6(FILE * file, uint64_t * ip);
 
+/*!
+ * \brief Read rest of line
+ * Function reads rest of line from file
+ * \param[in] file pointer to file.
+ */
 void read_rest_of_line(FILE * file);
 
+/*!
+ * \brief Read packet from file
+ * Function reads packet from file
+ * \param[in] file pointer to file.
+ * \param[in] create pointer to structure with results.
+ * \return 0 on SUCCESS, -1 on end of the file
+ */
 int read_packet(FILE *file, packet_t * create);
 
+/*!
+ * \brief Init function of parser
+ * Function inicialize parser (open file for reading)
+ * \param[in] name name of file
+ * \return pointer on file on SUCCESS, NULL on ERROR
+ */
 FILE * parser_initialize(char *name);
 
-
+/*!
+ * \brief Parser end
+ * Function close file for reading packets
+ * \param[in] file pointer to file.
+ */
 void parser_end(FILE *file);
 ;
 

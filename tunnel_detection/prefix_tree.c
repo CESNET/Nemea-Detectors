@@ -49,29 +49,6 @@ int map_chatecter_to_number(char  letter){
 	if(letter >= ' ' && letter <= '~'){
 		return (letter) -' ';
 	}
-	/*//big letters are on position 10-34 from 65-90
-	else if (letter >='A' && letter <='Z'){
-		return (letter) - 'A' + 10;
-	}
-	//big letters are on position 35+ from 65-90
-	else if (letter >='a' && letter <='z'){
-		return (letter) - 'a' + 36;
-	}
-	else if(letter =='-'){
-		return 62;
-	}
-	else if(letter =='>'){
-		return 63;
-	}
-	else if(letter =='_'){
-		return 64;
-	}
-	else if(letter ==','){
-		return 65;
-	}
-	else if(letter ==' '){
-		return 66;
-	}*/
 	else{
 		printf("this letter canot be used in domain: %c, in dec %d\n", letter ,letter);
 		return COUNT_OF_LETTERS_IN_DOMAIN-1;
@@ -87,7 +64,6 @@ prefix_tree_t * prefix_tree_initialize(){
 	tree->root->domain->count_of_insert=1;
 	tree->list_of_most_subdomains = (prefix_tree_domain_t**) calloc(sizeof(prefix_tree_domain_t*), MAX_SIZE_OF_DEEGRE);
 	tree->list_of_most_subdomains_end = (prefix_tree_domain_t**) calloc(sizeof(prefix_tree_domain_t*), MAX_SIZE_OF_DEEGRE);
-	//tree->list_of_most_used_domains = tree->list_of_most_used_domains_end = tree->root->domain;
 	return tree;
 }
 
@@ -128,20 +104,11 @@ void prefix_tree_destroy(prefix_tree_t * tree){
 	free(tree);
 }
 
-
-
-
-
-
-
 void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t * tree){
 	while(domain_parent !=NULL){
 		int index;
 		//+1 to subdomain
-		domain_parent->count_of_different_subdomains++;
-		
-
-		
+		domain_parent->count_of_different_subdomains++;		
 		index = domain_parent->deegree;
 		if(index >= MAX_SIZE_OF_DEEGRE){
 			index=MAX_SIZE_OF_DEEGRE-1;
@@ -162,7 +129,6 @@ void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t *
 						tree->list_of_most_subdomains_end[index]=domain_parent;
 					}
 				}
-
 				//if it is more used than other, than move forward
 				while(domain_parent->most_subdomains_more != NULL && domain_parent->most_subdomains_more->count_of_different_subdomains < domain_parent->count_of_different_subdomains ){
 					//printf("posun\n");
@@ -192,7 +158,6 @@ void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t *
 		}
 		//move to next item
 		domain_parent = domain_parent->parent_domain;
-
 	}
 }
 
@@ -236,8 +201,6 @@ int count_to_dot(char * string, int length){
 	return length;
 }
 
-//just because of dependece
-prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, char * string, int length, prefix_tree_t * tree);
 
 prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree_domain_t * domain , char * string, int length, prefix_tree_t * tree){
 	int count, i;
@@ -252,7 +215,6 @@ prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree
 	if(length > count){
 		return prefix_tree_add_domain_recursive(new_node_parent_is_domain(node->domain), node->domain, string, length - count - 1, tree);
 	}
-
 	return node->domain;
 }
 
@@ -283,7 +245,6 @@ char * read_doamin(prefix_tree_domain_t * domain, char * string){
 	char  *pointer_to_string;
 	prefix_tree_inner_node_t *node;
 	int i;
-	//string = (char*) calloc(sizeof(char),MAX_SIZE_OF_DOMAIN);
 	pointer_to_string=string;
 	node = domain->parent;
 	if(node->parent==NULL){
@@ -297,12 +258,10 @@ char * read_doamin(prefix_tree_domain_t * domain, char * string){
 				pointer_to_string++;
 			}
 			node = node->parent;
-
 		}
 		*pointer_to_string = '.';
 		pointer_to_string++;
 		domain = node->parent_is_domain;
-
 	}
 	pointer_to_string--;
 	*pointer_to_string=0;
@@ -321,12 +280,10 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 			break;
 		}
 	}
-
 	//common part does not exist at all
 	if(i==0){
 		int map_number;
 		map_number = map_chatecter_to_number(string[index]);
-
 		//new record, create new nodes
 		if(node->child ==NULL){
 			add_children_array(node);
@@ -466,12 +423,7 @@ double most_used_domain_percent_of_subdomains(prefix_tree_t * tree, int depth){
 
 prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat){
 	prefix_tree_domain_t * found, * iter;
-	int index;
-//*************
-	if(length <=0){
-		printf("zde je chyba %d\n", length );
-	}
-//*************		
+	int index;	
 
 	found = prefix_tree_add_domain_recursive(tree->root, tree->root->domain, string, length, tree);
 	//exception or error
@@ -561,7 +513,6 @@ prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * strin
 
 		}
 	}
-
 	//add or sort in list count_of_different_subdomains
 	return found;
 }
