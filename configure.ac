@@ -13,6 +13,7 @@ AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
 AM_INIT_AUTOMAKE([-Wall -Werror silent-rules])
 LT_INIT
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -38,6 +39,15 @@ AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
+		[enable debugging, default: no]),
+[case "${enableval}" in
+	yes) debug=true ;;
+	no)  debug=false ;;
+	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+esac], [debug=false])
+
+AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 if test -z "$TRAPLIB"; then
 	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
@@ -159,6 +169,7 @@ AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
 		 attack_gen/Makefile
+		 basic2collector/Makefile
 		 blacklistfilter/Makefile
 		 blacklistfilter/dnsdetect/Makefile
 		 blacklistfilter/ipdetect/Makefile
@@ -173,10 +184,12 @@ AC_CONFIG_FILES([Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
+                 heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
+                 logreplay/Makefile
                  merger/Makefile
 		 nfreader/Makefile
                  pca/Makefile
@@ -190,7 +203,8 @@ AC_CONFIG_FILES([Makefile
                  traffic_merger/Makefile
                  traffic_repeater/Makefile
 		 tunnel_detection/Makefile
-                 flow_meter/Makefile])
+                 flow_meter/Makefile
+                 portscan_detector/Makefile])
 
 
 AC_OUTPUT
