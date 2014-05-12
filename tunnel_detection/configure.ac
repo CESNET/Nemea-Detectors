@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([dns_tunnel_detection], [1.0.0], [rosazden@fit.cvut.cz])
+AC_INIT([tunnel_detection_dns], [1.0.0], [rosazden@fit.cvut.cz])
 AC_CONFIG_SRCDIR([tunnel_detection_dns.c])
 AM_INIT_AUTOMAKE([-Wall])
 
