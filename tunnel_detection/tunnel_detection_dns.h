@@ -77,8 +77,8 @@
 #define TITLE_REQUESTS "DNS requests histogram of communication devided by IP" /*< Title of data for DNS requests devided by IP. */ 
 #define FILE_NAME_RESPONSES "responses.dat" /*< Name of file with responses. */
 #define TITLE_RESPONSES "DNS responses histogram of communication devided by IP" /*< Title of data for DNS responses devided by IP. */ 
-#define FILE_NAME_SUSPISION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
-#define TITLE_SUSPISION_LIST "IP in SUSPISION STATE"/*< Title of suspision list. */ 
+#define FILE_NAME_SUSPICION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
+#define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */ 
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
 /* /} */
 
@@ -88,7 +88,7 @@
  * \{ */
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
 #define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum round to be IP in suspicion */
-#define PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION 0.3 /*< Percent of communication to be set to suspision state */
+#define PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION 0.3 /*< Percent of communication to be set to suspision state */
 
 #define DEPTH_TUNNEL_SUSPICTION 2 /*< Depth of domain to be tunnel*/
 #define MAX_PERCENT_OF_SUBDOMAINS_IN_MAIN_DOMAIN 0.8 /*< Max percent of subdomains in main domain */

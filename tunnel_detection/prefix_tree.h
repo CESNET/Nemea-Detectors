@@ -206,6 +206,16 @@ prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * strin
 prefix_tree_domain_t * prefix_tree_add_domain_exception(prefix_tree_t * tree, char * string, int length);
 
 /*!
+ * \brief Test domain if is in exception state
+ * Function tests domain if is in exception state.
+ * \param[in] tree pointer to the prefix tree 
+ * \param[in] string string witch should be added
+ * \param[in] length length of string
+ * \return 1 is in exception, 0 not in exception
+ */
+int prefix_tree_is_domain_in_exception(prefix_tree_t * tree, char * string, int length);
+
+/*!
  * \brief Statistic function percent od subdomains in certain depth
  * Function returns percent of subdomains in most searched domain in given depth.
  * \param[in] tree pointer to the prefix tree 

@@ -186,17 +186,17 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_request_tunnel = STATE_SUSPISION;
+               found->state_request_tunnel = STATE_SUSPICION;
             }
             //add to prefix tree, if ip is in suspision state, other anomaly
-            if(found->state_request_other == STATE_SUSPISION && found->suspision_request_other && found->suspision_request_other->state_request_size[index_to_histogram] == STATE_ATTACK){
+            if(found->state_request_other == STATE_SUSPICION && found->suspision_request_other && found->suspision_request_other->state_request_size[index_to_histogram] == STATE_ATTACK){
                prefix_tree_add_domain(found->suspision_request_other->other_suspision, packet->request_string, char_stat.length, &char_stat);  
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/     
             }
             //add to prefix tree, if ip is in suspision state, tunnel anomaly
-            if(found->state_request_tunnel == STATE_SUSPISION && found->suspision_request_tunnel && found->suspision_request_tunnel->state_request_size[index_to_histogram] == STATE_ATTACK){
+            if(found->state_request_tunnel == STATE_SUSPICION && found->suspision_request_tunnel && found->suspision_request_tunnel->state_request_size[index_to_histogram] == STATE_ATTACK){
                prefix_tree_add_domain(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);    
                #ifdef TIME
                   add_to_prefix++;
@@ -221,7 +221,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          //found->counter_response.sum_Xi4_response += size2*size2;
 
 
-      if(found->state_response_other == STATE_SUSPISION && found->suspision_response_other && found->suspision_response_other->state_response_size[index_to_histogram] == STATE_ATTACK){
+      if(found->state_response_other == STATE_SUSPICION && found->suspision_response_other && found->suspision_response_other->state_response_size[index_to_histogram] == STATE_ATTACK){
          if(packet->request_length > 0){
             calculate_character_statistic(packet->request_string, &char_stat);
             prefix_tree_add_domain(found->suspision_response_other->other_suspision, packet->request_string, char_stat.length, &char_stat); 
@@ -251,7 +251,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_response_tunnel = STATE_SUSPISION;
+               found->state_response_tunnel = STATE_SUSPICION;
             }
          }
 
@@ -268,7 +268,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_response_tunnel = STATE_SUSPISION;
+               found->state_response_tunnel = STATE_SUSPICION;
             }
          }
          if(packet->cname_response[0]!=0){
@@ -284,7 +284,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_response_tunnel = STATE_SUSPISION;
+               found->state_response_tunnel = STATE_SUSPICION;
             }
          }
          if(packet->mx_response[0]!=0){
@@ -300,7 +300,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_response_tunnel = STATE_SUSPISION;   
+               found->state_response_tunnel = STATE_SUSPICION;   
             }
          }
          if(packet->ns_response[0]!=0){
@@ -316,7 +316,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/
-               found->state_response_tunnel = STATE_SUSPISION;
+               found->state_response_tunnel = STATE_SUSPICION;
             }
          }
       }
@@ -489,7 +489,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
       //other anomaly can be caused, then select the peaks, which have most of communication
       if( result->ex_request < values.ex_request_min || result->var_request < values.var_request_min || result->var_request > values.var_request_max || result->ex_request > values.ex_request_max /*|| result->kurtosis_request < values.kurtosis_request_min*/){
          int max;
-         item->state_request_other = STATE_SUSPISION;
+         item->state_request_other = STATE_SUSPICION;
          //if it is first suspision
          if(item->suspision_request_other == NULL){
             item->suspision_request_other = (ip_address_suspision_request_other_t*)calloc(sizeof(ip_address_suspision_request_other_t),1);
@@ -505,7 +505,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
                max = i;
             }
             //select everything what have more than certain amount of traffic and is not in tunnel detection tree
-            if((float)item->counter_request.histogram_dns_requests[i] / (float)item->counter_request.dns_request_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION && 
+            if((float)item->counter_request.histogram_dns_requests[i] / (float)item->counter_request.dns_request_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION && 
                result->histogram_dns_request_ex_cout_of_used_letter[i] < values.request_max_count_of_used_letters ){
                   item->suspision_request_other->state_request_size[i] = STATE_ATTACK;
             }
@@ -520,7 +520,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
    if(item->state_request_other == STATE_NEW){
       return STATE_NEW;
    }
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 
 }
 
@@ -531,7 +531,7 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
       //other anomaly can be caused, then select the peaks, which have most of communication
       if( result->var_request < values.var_request_min || result->var_request > values.var_request_max || result->ex_request > values.ex_request_max /*|| result->kurtosis_request < values.kurtosis_request_min*/){
          int max;
-         item->state_request_tunnel = STATE_SUSPISION;
+         item->state_request_tunnel = STATE_SUSPICION;
          //if it is first suspision
          if(item->suspision_request_tunnel == NULL){
             item->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
@@ -543,7 +543,7 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
             //selecet everything what have more than certain amount of traffic and is not in tunnel detection tree
-            if((float)item->counter_request.histogram_dns_requests[i] / (float)item->counter_request.dns_request_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION && 
+            if((float)item->counter_request.histogram_dns_requests[i] / (float)item->counter_request.dns_request_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION && 
                result->histogram_dns_request_ex_cout_of_used_letter[i] < values.request_max_count_of_used_letters ){
                   item->suspision_request_tunnel->state_request_size[i] = STATE_ATTACK;
             }
@@ -554,7 +554,7 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
    if(item->state_request_tunnel == STATE_NEW){
       return STATE_NEW;
    }
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 
 }
 
@@ -566,7 +566,7 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
    if( item->state_response_other != STATE_ATTACK && item->counter_response.dns_response_count > values.min_dns_response_count_other_anomaly){
       if( result->ex_response < values.ex_response_min || result->var_response < values.var_response_min || result->var_response > values.var_response_max || result->ex_response > values.ex_response_max /*|| result->kurtosis_request < values.kurtosis_request_min*/){
         int max;
-         item->state_response_other = STATE_SUSPISION;
+         item->state_response_other = STATE_SUSPICION;
          //if it is first suspision
          if(item->suspision_response_other == NULL){
             item->suspision_response_other = (ip_address_suspision_response_other_t*)calloc(sizeof(ip_address_suspision_response_other_t),1);
@@ -582,7 +582,7 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
                max = i;
             }
             //selecet everything what have more than certain amount of traffic and is not in tunnel detection tree
-            if((float)item->counter_response.histogram_dns_response[i] / (float)item->counter_response.dns_response_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPISION){
+            if((float)item->counter_response.histogram_dns_response[i] / (float)item->counter_response.dns_response_count > PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION){
                   item->suspision_response_other->state_response_size[i] = STATE_ATTACK;
             }
          }
@@ -595,7 +595,7 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
   	  check_and_delete_suspision(item, RESPONSE_PART_OTHER);
       return STATE_NEW;
    }
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 }
 
 
@@ -629,7 +629,7 @@ int is_payload_on_ip_ok_request_other(ip_address_t * item){
       return STATE_NEW;
    }
      
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 
 }
 
@@ -667,7 +667,7 @@ int is_payload_on_ip_ok_response_other(ip_address_t * item){
       return STATE_NEW;
    }
      
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 
 }
 
@@ -700,7 +700,7 @@ int is_payload_on_ip_ok_request_tunnel(ip_address_t * item){
   	if(item->state_request_tunnel == STATE_NEW){
       return STATE_NEW;
    }
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 }
 
 int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
@@ -765,7 +765,7 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
          item->suspision_response_tunnel->state_type |= NS_TUNNEL;
       }
       //if there wasnt any payload problem
-      if(item->state_response_tunnel == STATE_SUSPISION){
+      if(item->state_response_tunnel == STATE_SUSPICION){
          item->suspision_response_tunnel->round_in_suspicion++;
          //maximum round in suspicion
          if(item->suspision_response_tunnel->round_in_suspicion > MAX_COUNT_OF_ROUND_IN_SUSPICTION){
@@ -779,7 +779,7 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item){
    if(item->state_response_tunnel == STATE_NEW){
       return STATE_OK;
    }
-   return STATE_SUSPISION;
+   return STATE_SUSPICION;
 }
 
 
@@ -802,14 +802,14 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file){
       //without anomaly
 
       //request other anomaly
-      if(item->state_request_other == STATE_SUSPISION){
+      if(item->state_request_other == STATE_SUSPICION){
          is_payload_on_ip_ok_request_other(item);
       }
       else if(item->state_request_other == STATE_NEW){
       	is_traffic_on_ip_ok_request_other(item, &result);
       }
       //request tunnel anomaly
-      if(item->state_request_tunnel == STATE_SUSPISION){
+      if(item->state_request_tunnel == STATE_SUSPICION){
          is_payload_on_ip_ok_request_tunnel(item);
       }
       else if(item->state_request_tunnel == STATE_NEW){
@@ -817,11 +817,11 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file){
       }
 
       //response payload, tunnel anomaly 
-      if(item->state_response_tunnel == STATE_SUSPISION){
+      if(item->state_response_tunnel == STATE_SUSPICION){
         is_payload_on_ip_ok_response_tunnel(item);
       }
       //response traffic, other anomaly 
-      if(item->state_response_other == STATE_SUSPISION){
+      if(item->state_response_other == STATE_SUSPICION){
          is_payload_on_ip_ok_response_other(item);
       }
       else if(item->state_response_other == STATE_NEW){
@@ -1093,7 +1093,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
 }
 
 void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file){
-   if(ip_item->state_request_other == STATE_SUSPISION || ip_item->state_request_tunnel == STATE_SUSPISION || ip_item->state_response_other == STATE_SUSPISION || ip_item->state_request_tunnel == STATE_SUSPISION){
+   if(ip_item->state_request_other == STATE_SUSPICION || ip_item->state_request_tunnel == STATE_SUSPICION || ip_item->state_response_other == STATE_SUSPICION || ip_item->state_request_tunnel == STATE_SUSPICION){
       fprintf(file, "%s\n", ip_address);
    }
 }
@@ -1249,13 +1249,13 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
 //suspision list
    //open files
    strcpy(file_path, record_folder_name);
-   strcat(file_path, "/" FILE_NAME_SUSPISION_LIST);
+   strcat(file_path, "/" FILE_NAME_SUSPICION_LIST);
    file_suspision = fopen(file_path, "w");
    if(file_suspision == NULL){
       return;
    }   
    //print title
-   fprintf(file_suspision, TITLE_SUSPISION_LIST "\n");
+   fprintf(file_suspision, TITLE_SUSPICION_LIST "\n");
    
 
 
@@ -1689,7 +1689,7 @@ int main(int argc, char **argv)
             if(packet.is_response==0){
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){
+                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){
                      if(packet.ip_version == IP_VERSION_4){
                         collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
                      }
@@ -1703,7 +1703,7 @@ int main(int argc, char **argv)
             else{
                // Update counters
                //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){               
+               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
                   if(packet.ip_version == IP_VERSION_4){
                      collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                   }
@@ -1783,7 +1783,7 @@ int main(int argc, char **argv)
             if(packet.is_response==0){
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){
+                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){
                      if(packet.ip_version == IP_VERSION_4){
                         collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
                      }
@@ -1797,7 +1797,7 @@ int main(int argc, char **argv)
             else{
                // Update counters
                //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length, NULL) == 0){               
+               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
                   if(packet.ip_version == IP_VERSION_4){
                      collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                   }

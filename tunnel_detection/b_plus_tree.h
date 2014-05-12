@@ -73,67 +73,63 @@
 #define MORE 2
  /* /} */
 
+typedef struct c_node c_node;
 /*!
  * \brief Structure - B+ tree - node structure
  * Structure used to keep information about node and pointer to inner or leaf node. 
  */
-typedef struct c_node c_node ;
- struct c_node{
+struct c_node{
     void         * extend;  /*< pointer to leaf or inner node */
     unsigned char  state_extend;  /*< state of extended variable. leaf or inner node */
     c_node       * parent;  /*< pointer to parent */
     void          * key;  /*< pointer to key */
     int              count; /*< count of descendants */
-} ;
+};
 
 /*!
  * \brief Structure - B+ tree - inner node structure
  * Structure used to keep information about inner node. 
  */
-typedef struct c_inner_node c_inner_node ;
- struct c_inner_node{
+typedef struct c_inner_node {
     c_node         ** child;  /*< pointer to descendats */
 
-} ;
+} c_inner_node;
 
 
 /*!
  * \brief Structure - B+ tree - leaf node structure
  * Structure used to keep information about leaf node. 
  */
-typedef struct c_leaf_node c_leaf_node ;
- struct c_leaf_node {
+typedef struct c_leaf_node{
       c_node   *   left;  /*< linked list, left value */
       c_node   *   right; /*< linked list, right value */
       void      ** value;  /*< array of values */
-} ;
+} c_leaf_node;
 
 
 /*!
  * \brief Structure - B+ tree - main structure
  * Structure used to keep information about tree. It is main structure of tree.
  */
-typedef struct c_b_tree_plus c_b_tree_plus;
- struct c_b_tree_plus{
+typedef struct c_b_tree_plus{
     unsigned long int count_of_values;  /*< count of values in tree */
     int m;  /*< count of descendant in node */
     int size_of_value;  /*< size of value */
     int size_of_key;  /*< size of key */
     c_node *root; /*< root node */
     int (*compare)(void *, void *); /*< compare function for key */
- };
+ }c_b_tree_plus;
 
 /*!
  * \brief Structure - B+ tree - list item structure
  * Structure used to create list of items.
  */
-typedef struct b_plus_tree_item b_plus_tree_item ;
- struct b_plus_tree_item {
+typedef struct b_plus_tree_item{
     void * value; /*< pointer to value */
     void * key; /*< pointer to key */
     c_node * leaf;  /*< pointer to leaf where is item */
     unsigned int index_of_value;  /*< index of value in leaf */
-} ;
+} b_plus_tree_item;
 
 /*!
  * \brief Copy key 
