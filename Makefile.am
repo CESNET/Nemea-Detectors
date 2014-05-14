@@ -36,7 +36,10 @@ transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
-portscan_detector
+portscan_detector \
+synflood/synfindiff \
+synflood/synrate \
+synflood/pcf
 
 RPMDIR = RPMBUILD
 
