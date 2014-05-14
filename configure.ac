@@ -205,7 +205,10 @@ AC_CONFIG_FILES([Makefile
                  traffic_repeater/Makefile
 		 tunnel_detection/Makefile
                  flow_meter/Makefile
-                 portscan_detector/Makefile])
+                 portscan_detector/Makefile
+								synflood/synfindiff/Makefile
+								synflood/synrate/Makefile
+								synflood/pcf/Makefile])
 
 
 AC_OUTPUT
