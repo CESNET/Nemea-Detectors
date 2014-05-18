@@ -457,7 +457,7 @@ void *check_dns(void *args)
 #endif
 
     if (retval) {
-        return (void *) retval;
+        pthread_exit((void *) &retval);
     }
     return NULL;
 }
@@ -580,7 +580,7 @@ void* check_ip(void *args)
 #endif
 
     if (retval != EXIT_SUCCESS) {
-        return (void *) retval;
+        pthread_exit((void *) &retval);
     }
     return NULL;
 }

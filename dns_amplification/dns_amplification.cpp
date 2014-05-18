@@ -65,6 +65,8 @@ extern "C" {
 #include "../../unirec/ipaddr.h"
 #include "dns_amplification.h"
 
+//#define DEBUG
+
 using namespace std;
 
 trap_module_info_t module_info = {
@@ -77,7 +79,7 @@ trap_module_info_t module_info = {
     "   Inputs: 1 (UniRec record -- <COLLECTOR_FLOW>)\n"
     "   Outputs: 1 (UniRec record -- <AMPLIFICATION_ALERT>)\n"
     "Additional parameters:\n"
-    "   -p <path>        path to log files, has to be ended by \"/\"\n"
+    "   -d <path>        path to log files, has to be ended by \"/\"\n"
     "   -p <port>        port used for detection (53)\n"
     "   -n <num>         number of topN values chosen (10)\n"
     "   -q <step>        step of histogram (10)\n"
@@ -102,35 +104,54 @@ static history_t model;
 /* current flow timestamp (seconds) */
 static unsigned long actual_timestamp;
 
+bool delete_inactive_flag = false;
+
+static char time_buff[25];
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
-
 
 /**
  * Deletes inactive flows stored in history. Triggered by alarm.
  *
  * @param signum received signal
  */
-void delete_inactive(int signum) {
+void mark_deletion(int signum) {
+	delete_inactive_flag = true;
+	// set next alarm
+	alarm(config.del_time);
+}
+
+void delete_inactive() {
+	delete_inactive_flag = false;
 
 	// iterators
 	history_iter iter = model.begin();
 	history_iter iterEnd = model.end();
+
+	#ifdef DEBUG
+	ofstream debug("debug_size.log");
+	debug << model.size() << "\t";
+	int cnt = 0;
+	#endif
 
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
 
 		if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
 			model.erase(iter++);
+			#ifdef DEBUG
+			cnt++;
+			#endif
 		} else {
 			++iter;
 		}
 	}
 
-	// set next alarm
-	alarm(config.del_time);
+	#ifdef DEBUG
+	debug << model.size() << "\t" << cnt << endl;
+	debug.close();
+	#endif
 }
-
 
 /**
  * Creates histogram from vector of flows
@@ -189,7 +210,6 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
 
 	return histogram_q;
 }
-
 
 /**
  * Creates normalized histogram from histogram
@@ -397,15 +417,12 @@ int max_bytes (vector<flow_item_t> &vec) {
 	return (max);
 }
 
-static char time_buff[25];
-
-char *time2str(ur_time_t t)
+void time2str(ur_time_t t)
 {
    time_t sec = ur_time_get_sec(t);
    int msec = ur_time_get_msec(t);
-   strftime(time_buff, 25, "%Y-%m-%dT%H:%M:%S", gmtime(&sec));
-   sprintf(time_buff + 19, ".%03iZ", msec);
-   return time_buff;
+   strftime(time_buff, 25, "%Y-%m-%d %H:%M:%S", gmtime(&sec));
+   sprintf(time_buff + 19, ".%03i", msec);
 }
 
 
@@ -491,10 +508,6 @@ int main (int argc, char** argv) {
 		}
 	}
 
-	// set signal for inactive flow deletion
-	signal(SIGALRM, delete_inactive);
-	alarm(config.del_time);
-
 	// declare demplates
 	ur_template_t *unirec_in = ur_create_template("<COLLECTOR_FLOW>");
 	ur_template_t* unirec_out = ur_create_template("<AMPLIFICATION_ALERT>");
@@ -516,367 +529,244 @@ int main (int argc, char** argv) {
 		return ERROR;
 	}
 
+
+	// set signal for inactive flow deletion
+	signal(SIGALRM, mark_deletion);
+	alarm(config.del_time);
+
 	// data buffer
 	const void *data;
 	uint16_t data_size;
 
 	// ***** Main processing loop *****
 	while (!stop) {
+		// retrieve data from server
+		ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+		TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
-	// retrieve data from server
-	ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
-	TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-
-	// check the data size
-	if ((data_size != ur_rec_static_size(unirec_in))) {
-		if (data_size <= 1) { // end of data
-			break;
-		} else { // data corrupted
-			fprintf(stderr, "ERROR: Wrong data size. Expected: %lu Recieved: %lu.", ur_rec_static_size(unirec_in), data_size);
-			break;
+		// check the data size
+		if ((data_size != ur_rec_static_size(unirec_in))) {
+			if (data_size <= 1) { // end of data
+				break;
+			} else { // data corrupted
+				fprintf(stderr, "ERROR: Wrong data size. Expected: %lu Recieved: %lu.", ur_rec_static_size(unirec_in), data_size);
+				break;
+			}
 		}
-	}
 
-	// get ports of flow
-	src_port = ur_get(unirec_in, data, UR_SRC_PORT);
-	dst_port = ur_get(unirec_in, data, UR_DST_PORT);
+		// get ports of flow
+		src_port = ur_get(unirec_in, data, UR_SRC_PORT);
+		dst_port = ur_get(unirec_in, data, UR_DST_PORT);
 
-	// create actualy inspected key
-	flow_key_t actual_key;
+		// create actualy inspected key
+		flow_key_t actual_key;
 
-	// check if src or dst port is expected, otherwise next flow
-	if (src_port == config.port) {
-		qr = true;
-		actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
-		actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
-	} else if (dst_port == config.port) {
-		qr = false;
-		actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
-		actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
-	} else {
-		continue;
-	}
+		// check if src or dst port is expected, otherwise next flow
+		if (src_port == config.port) {
+			qr = true;
+			actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
+			actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
+		} else if (dst_port == config.port) {
+			qr = false;
+			actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
+			actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
+		} else {
+			continue;
+		}
 
-	actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+		actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 
-	// iterator through history model
-	history_iter it;
+		// iterator through history model
+		history_iter it;
 
-	if ((it = model.find(actual_key)) != model.end()) {
+		if ((it = model.find(actual_key)) != model.end()) {
+			// record exists - update information and add flow
+			it->second.total_bytes += ur_get(unirec_in, data, UR_BYTES);
+			it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
+			it->second.total_flows += 1;
+			it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
 
-		// record exists - update information and add flow
+			// create new flow information structure
+			flow_item_t i;
+			i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			i.bytes = ur_get(unirec_in, data, UR_BYTES);
+			i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
-		it->second.total_bytes += ur_get(unirec_in, data, UR_BYTES);
-		it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
-		it->second.total_flows += 1;
-		it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			// add new flow
+			if (qr)
+				it->second.r.push_back(i);
+			else
+				it->second.q.push_back(i);
 
-		// create new flow information structure
-		flow_item_t i;
-		i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
-		i.bytes = ur_get(unirec_in, data, UR_BYTES);
-		i.packets = ur_get(unirec_in, data, UR_PACKETS);
+			long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+			long t2 = ur_time_get_sec(it->second.first_t);
+			long t = t1 - t2;
+			/// -------------------------------------------------------------------
+			/// ---- Detection ---- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+			// check if detection window for the key is met
+			if (t > config.det_window) {
+				// create histograms
+				histogram_t hvqb, hvqp, hvrb, hvrp;
+				histogram_norm_t hvrb_n;
+				hvqb = createHistogram(it->second, BYTES, QUERY);
+				hvqp = createHistogram(it->second, PACKETS, QUERY);
+				hvrb = createHistogram(it->second, BYTES, RESPONSE);
+				hvrp = createHistogram(it->second, PACKETS, RESPONSE);
 
-		// add new flow
-		if (qr)
-			it->second.r.push_back(i);
-		else
-			it->second.q.push_back(i);
+				bool report_this = false;
+				//int report_this = NO;
 
-		long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
-		long t2 = ur_time_get_sec(it->second.first_t);
-		long t = t1 - t2;
+				if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
+					report_this = true;
+					//report_this = COND1;
+				} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
+					if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
+						if (sum(topnHistogram(hvqb), BYTES) > 0) {
+							if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
+								report_this = true;
+								//report_this = COND2;
+							} //if (det. - cond4)
+						} //if (det. - cond3)
+					} //if (det. - cond2)
+				} //if (det. - cond1)
 
-		// check if detection window for the key is met
-		if (t > config.det_window) {
+				/// Report event >>>
+				if (report_this){
+					ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
+					ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
+					ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
+					ur_set(unirec_out, detection, UR_FLOWS, it->second.total_flows);
+					ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
+					ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
+					ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
+					ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+					ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
-			// create histograms
-			histogram_t hvqb, hvqp, hvrb, hvrp;
-			histogram_norm_t hvrb_n;
-			hvqb = createHistogram(it->second, BYTES, QUERY);
-			hvqp = createHistogram(it->second, PACKETS, QUERY);
-			hvrb = createHistogram(it->second, BYTES, RESPONSE);
-			hvrp = createHistogram(it->second, PACKETS, RESPONSE);
+					// send alert
+					trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
 
-//			printf("!1! %f %f %d %d\n", sumN(topnNormHistogram(normalizeHistogram(hvrb))), config.min_flows_norm, sum(topnHistogram(hvrb), VALUE),config.min_flows);
-
-			// detection algorithm
-			if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
-//				cout << max_packets(it->second.q) << endl;
-//				cout << max_bytes(it->second.r) << endl;
-//				char addr_buff[INET6_ADDRSTRLEN];
-//				ip_to_str(&actual_key.src, addr_buff);
-//				cout << "Abused server IP: " << addr_buff;
-//				ip_to_str(&actual_key.dst, addr_buff);
-//				cout << "   Target IP: " << addr_buff << "\n";
-				// set detection alert template fields
-				ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
-				ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
-				ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-				ur_set(unirec_out, detection, UR_FLOWS, (it->second.q.size()+it->second.r.size()));
-				ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
-				ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
-				ur_set(unirec_out, detection, UR_TIME_FIRST, ur_time_from_sec_msec(it->second.first_t, 0));
-				ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
-				ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
-
-				// send alert
-				trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
-
-				// LOG QUERY/RESPONSE VECTORS
-				size_t pos[2] = {0,0};
-				int shorter;
-				int longer;
-				tm *rec_time;
-				char time_buff[40];
-				ur_time_t tmp_t_r = 0;
-				ur_time_t tmp_t_q = 0;
-				ur_time_t sooner_end;
-				ur_time_t later_end;
-				for (vector<flow_item_t>::iterator iter2 = it->second.q.begin(); iter2 != it->second.q.end(); ++iter2) {
-					if (iter2->t > tmp_t_q) {
-						tmp_t_q = iter2->t;
+					// LOG QUERY/RESPONSE VECTORS
+					size_t pos[2] = {0,0};
+					int shorter;
+					int longer;
+					ur_time_t tmp_t_r = 0;
+					ur_time_t tmp_t_q = 0;
+					ur_time_t sooner_end;
+					ur_time_t later_end;
+					for (vector<flow_item_t>::iterator it_end = it->second.q.begin(); it_end != it->second.q.end(); ++it_end) {
+						if (it_end->t > tmp_t_q) {
+							tmp_t_q = it_end->t;
+						}
 					}
-				}
-				for (vector<flow_item_t>::iterator iter2 = it->second.r.begin(); iter2 != it->second.r.end(); ++iter2) {
-					if (iter2->t > tmp_t_r) {
-						tmp_t_r = iter2->t;
+					for (vector<flow_item_t>::iterator it_end  = it->second.r.begin(); it_end  != it->second.r.end(); ++it_end ) {
+						if (it_end ->t > tmp_t_r) {
+							tmp_t_r = it_end ->t;
+						}
 					}
-				}
 
-				if (tmp_t_r < tmp_t_q){
-					shorter = RESPONSE;
-					longer = QUERY;
-					sooner_end = it->second.r.size();
-					later_end = it->second.q.size();
-				} else {
-					shorter = QUERY;
-					longer = RESPONSE;
-					sooner_end = it->second.q.size();
-					later_end = it->second.r.size();
-				}
+					if (tmp_t_r < tmp_t_q){
+						shorter = RESPONSE;
+						longer = QUERY;
+						sooner_end = it->second.r.size();
+						later_end = it->second.q.size();
+					} else {
+						shorter = QUERY;
+						longer = RESPONSE;
+						sooner_end = it->second.q.size();
+						later_end = it->second.r.size();
+					}
 
-				filename.str("");
-				filename.clear();
-				filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+					filename.str("");
+					filename.clear();
+					filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
 
-				ifstream if_test(filename.str().c_str());
-				if (!if_test){//print header
-					// prepare log file
-					char addr_buff[INET6_ADDRSTRLEN];
-					log.open(filename.str().c_str());
+					log.open(filename.str().c_str(), ofstream::app);
+
 					if (log.is_open()){
-						// print header
+						///TMP
+						char addr_buff[INET6_ADDRSTRLEN];
 						ip_to_str(&actual_key.src, addr_buff);
 						log << "Abused server IP: " << addr_buff;
 						ip_to_str(&actual_key.dst, addr_buff);
 						log << "   Target IP: " << addr_buff << "\n";
-						log << "Time\tDirection\tPackets\tBytes" << endl;
+						///TMP
+						while (pos[shorter] < sooner_end){
+							if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
+								time2str(it->second.q[pos[QUERY]].t);
+								log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+								++pos[QUERY];
+							} else {
+								time2str(it->second.r[pos[RESPONSE]].t);
+								log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+								++pos[RESPONSE];
+							}
+						}
+						for (pos[longer] = pos[shorter]; pos[longer] < later_end; ++pos[longer]) {
+							if (longer == QUERY){
+								time2str(it->second.q[pos[QUERY]].t);
+								log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+							} else {
+								time2str(it->second.r[pos[RESPONSE]].t);
+								log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+							}
+						}
 						log.close();
 					} else {
 						cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
 					}
-				} else {
-					if_test.close();
 				}
+				/// Report event <<<
+				/// DELETION OF WINDOW
+				// delete flows from queries
+				for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
 
-				log.open(filename.str().c_str(), ofstream::app);
-
-				if (log.is_open()){
-					while (pos[shorter] < sooner_end){
-						if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
-							rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
-							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-							log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-							++pos[QUERY];
-						} else {
-							rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
-							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-							log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
-							++pos[RESPONSE];
-						}
-					}
-					for (pos[shorter]; pos[shorter] < later_end; ++pos[shorter]) {
-						if (shorter == QUERY){
-							rec_time = gmtime((time_t *) &it->second.q[pos[QUERY]].t);
-							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-							log << time_buff << "\tQ:\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-						} else {
-							rec_time = gmtime((time_t *) &it->second.r[pos[RESPONSE]].t);
-							strftime(time_buff, 40, "%d-%m-%Y-%H:%M:%S", rec_time);
-							log << time_buff << "\tR:\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
-						}
-					}
-
-					log.close();
-				} else {
-					cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
-				}
-			} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
-
-//				printf("!2! %f %d %f %d %f %d\n", sum_average(topnHistogram(hvrp)), config.min_flows, sum_average(topnHistogram(hvrb)),config.min_resp_bytes, sum_average(topnHistogram(hvqb)),config.max_quer_bytes);
-
-				if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
-
-//					cout << "!3! " << sum(topnHistogram(hvrb), KEY) << " " << sum(topnHistogram(hvqb), KEY) << " " << config.min_a << endl;
-
-					if (sum(topnHistogram(hvqb), BYTES) > 0) {
-
-						if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
-
-							//send(<AMPLIFICATION_ALERT>);
-
-//							cout << "!4!" << endl;
-
-							// set detection alert template fields
-							ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
-							ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
-							ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-							ur_set(unirec_out, detection, UR_FLOWS, it->second.total_flows);
-							ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
-							ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
-							ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
-							ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
-							ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
-
-							// send alert
-							trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
-
-                     // LOG QUERY/RESPONSE VECTORS
-                     size_t pos[2] = {0,0};
-                     int shorter;
-                     int longer;
-                     ur_time_t tmp_t_r = 0;
-                     ur_time_t tmp_t_q = 0;
-                     ur_time_t sooner_end;
-                     ur_time_t later_end;
-                     for (vector<flow_item_t>::iterator iter2 = it->second.q.begin(); iter2 != it->second.q.end(); ++iter2) {
-                        if (iter2->t > tmp_t_q) {
-                           tmp_t_q = iter2->t;
-                        }
-                     }
-                     for (vector<flow_item_t>::iterator iter2 = it->second.r.begin(); iter2 != it->second.r.end(); ++iter2) {
-                        if (iter2->t > tmp_t_r) {
-                           tmp_t_r = iter2->t;
-                        }
-                     }
-
-                     if (tmp_t_r < tmp_t_q){
-                        shorter = RESPONSE;
-                        longer = QUERY;
-                        sooner_end = it->second.r.size();
-                        later_end = it->second.q.size();
-                     } else {
-                        shorter = QUERY;
-                        longer = RESPONSE;
-                        sooner_end = it->second.q.size();
-                        later_end = it->second.r.size();
-                     }
-
-                     filename.str("");
-                     filename.clear();
-                     filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
-
-                     ifstream if_test(filename.str().c_str());
-                     if (!if_test){//print header
-                        // prepare log file
-                        char addr_buff[INET6_ADDRSTRLEN];
-                        log.open(filename.str().c_str());
-                        if (log.is_open()){
-                           // print header
-                           ip_to_str(&actual_key.src, addr_buff);
-                           log << "Abused server IP: " << addr_buff;
-                           ip_to_str(&actual_key.dst, addr_buff);
-                           log << "   Target IP: " << addr_buff << "\n";
-                           log << "Time\tDirection\tPackets\tBytes" << endl;
-                           log.close();
-                        } else {
-                           cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
-                        }
-                     } else {
-                        if_test.close();
-                     }
-
-                     log.open(filename.str().c_str(), ofstream::app);
-
-                     if (log.is_open()){
-                        while (pos[shorter] < sooner_end){
-                           if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
-                              char *time_str = time2str(it->second.q[pos[QUERY]].t);
-                              log << time_str << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-                              ++pos[QUERY];
-                           } else {
-                              char *time_str = time2str(it->second.r[pos[RESPONSE]].t);
-                              log << time_str << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
-                              ++pos[RESPONSE];
-                           }
-                        }
-                        for (pos[shorter]; pos[shorter] < later_end; ++pos[shorter]) {
-                           if (shorter == QUERY){
-                              char *time_str = time2str(it->second.q[pos[QUERY]].t);
-                              log << time_str << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-                           } else {
-                              char *time_str = time2str(it->second.r[pos[RESPONSE]].t);
-                              log << time_str << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
-                           }
-                        }
-
-                        log.close();
-                     } else {
-                        cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
-                     }
-						}
+					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+						it->second.total_bytes -= del->bytes;
+						it->second.total_packets -= del->packets;
+						it->second.total_flows -= 1;
+						del = it->second.q.erase(del);
+					} else {
+						++del;
 					}
 				}
-			}
 
-			// DELETION OF WINDOW
-			// delete flows from queries
-			for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
+				// delete flows from responses
+				for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
 
-				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-					del = it->second.q.erase(del);
-				} else {
-					++del;
+					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+						it->second.total_bytes -= del->bytes;
+						it->second.total_packets -= del->packets;
+						it->second.total_flows -= 1;
+						del = it->second.r.erase(del);
+					} else {
+						++del;
+					}
 				}
-			}
 
-			// delete flows from responses
-			for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
-
-				if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-					del = it->second.r.erase(del);
+				if (it->second.r.empty() || it->second.q.empty()){
+					model.erase(it);
 				} else {
-					++del;
+					// determine new first time of key was spotted
+					ur_time_t min_time = ur_get(unirec_in, data, UR_TIME_FIRST);
+
+					for (vector<flow_item_t>::iterator it_min = it->second.q.begin(); it_min != it->second.q.end(); it_min++) {
+						if (it_min->t < min_time) {
+							min_time = it_min->t;
+						}
+					}
+
+					for (vector<flow_item_t>::iterator it_min = it->second.r.begin(); it_min != it->second.r.end(); it_min++) {
+						if (it_min->t < min_time) {
+							min_time = it_min->t;
+						}
+					}
+
+					it->second.first_t = min_time;
 				}
-			}
-
-			if (it->second.r.empty() || it->second.q.empty()){
-			   model.erase(it);
-			} else {
-            // determine new first time of key was spotted
-            ur_time_t min_time = ur_get(unirec_in, data, UR_TIME_FIRST);
-
-            for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); del++) {
-
-               if (del->t < min_time) {
-                  min_time = del->t;
-               }
-            }
-
-            for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); del++) {
-
-               if (del->t < min_time) {
-                  min_time = del->t;
-               }
-            }
-
-            it->second.first_t = min_time;
-            }
-         }
-
+			} //if (time > detection_window)
+			/// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<---- Detection ----
+			/// -------------------------------------------------------------------
 		} else {	// does not exist - create new one
-
 			// create flow data structure and fill it
 			flow_data_t d;
 
@@ -904,6 +794,10 @@ int main (int argc, char** argv) {
 
 			// assign key to history model
 			model[actual_key] = d;
+		}
+
+		if (delete_inactive_flag){
+			delete_inactive();
 		}
 	}
 

@@ -4,6 +4,7 @@ SUBDIRS=anonymizer \
 astute \
 attack_gen \
 blacklistfilter \
+basic2collector \
 deduplication \
 delaybuffer \
 dns_amplification \
@@ -19,10 +20,12 @@ hoststatsnemea \
 ipspoofingdetector \
 ipv6stats \
 logger \
+logreplay \
 merger \
 nfreader \
 pca \
 flow_meter \
+p2pbotnet_detection \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
@@ -33,9 +36,20 @@ transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
-portscan_detector
+portscan_detector \
+synflood/synfindiff \
+synflood/synrate \
+synflood/pcf
 
 RPMDIR = RPMBUILD
+
+if DEBUG
+AM_CFLAGS = -g -O0
+AM_CXXFLAGS = -g -O0
+else
+AM_CFLAGS = -O2
+AM_CXXFLAGS = -O2
+endif
 
 if MAKE_RPMS
 RPMFILENAME=$(PACKAGE_NAME)-$(VERSION)
