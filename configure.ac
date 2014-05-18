@@ -168,19 +168,20 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
-		 attack_gen/Makefile
-		 basic2collector/Makefile
-		 blacklistfilter/Makefile
-		 blacklistfilter/dnsdetect/Makefile
-		 blacklistfilter/ipdetect/Makefile
-		 blacklistfilter/urldetect/Makefile
-		 deduplication/Makefile
+                 attack_gen/Makefile
+                 basic2collector/Makefile
+                 blacklistfilter/Makefile
+                 blacklistfilter/dnsdetect/Makefile
+                 blacklistfilter/ipdetect/Makefile
+                 blacklistfilter/urldetect/Makefile
+                 deduplication/Makefile
                  delaybuffer/Makefile
-		 dns_amplification/Makefile
-		 dns_amp_twente/Makefile
-		 entropy_module/Makefile
+                 dns_amp_twente/Makefile
+                 dns_amplification/Makefile
+                 entropy_module/Makefile
                  example/Makefile
                  flow_gen/Makefile
+                 flow_meter/Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
@@ -191,20 +192,24 @@ AC_CONFIG_FILES([Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
-		 nfreader/Makefile
+                 nemea-modules.spec
+                 nfreader/Makefile
+                 p2pbotnet_detection/Makefile
                  pca/Makefile
+                 portscan_detector/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
+                 synflood/pcf/Makefile
+                 synflood/synfindiff/Makefile
+                 synflood/synrate/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
+                 traffic_merger/Makefile
+                 traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
-                 traffic_merger/Makefile
-                 traffic_repeater/Makefile
-		 tunnel_detection/Makefile
-                 flow_meter/Makefile
-                 portscan_detector/Makefile])
+                 tunnel_detection/Makefile])
 
 
 AC_OUTPUT

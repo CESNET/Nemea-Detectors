@@ -128,15 +128,29 @@ void delete_inactive() {
 	history_iter iter = model.begin();
 	history_iter iterEnd = model.end();
 
+	#ifdef DEBUG
+	ofstream debug("debug_size.log");
+	debug << model.size() << "\t";
+	int cnt = 0;
+	#endif
+
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
 
 		if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
 			model.erase(iter++);
+			#ifdef DEBUG
+			cnt++;
+			#endif
 		} else {
 			++iter;
 		}
 	}
+
+	#ifdef DEBUG
+	debug << model.size() << "\t" << cnt << endl;
+	debug.close();
+	#endif
 }
 
 /**
@@ -515,6 +529,11 @@ int main (int argc, char** argv) {
 		return ERROR;
 	}
 
+
+	// set signal for inactive flow deletion
+	signal(SIGALRM, mark_deletion);
+	alarm(config.del_time);
+
 	// data buffer
 	const void *data;
 	uint16_t data_size;
@@ -661,25 +680,22 @@ int main (int argc, char** argv) {
 					filename.clear();
 					filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
 
-					#ifdef DEBUG
-					cout << sooner_end << ", " << later_end << ", " << it->second.q.size() << ", " << it->second.r.size() << endl;
-					cout << "Shorter: " << shorter << "( Q=" << QUERY << ",R=" << RESPONSE << ")" << endl;
-					#endif
 					log.open(filename.str().c_str(), ofstream::app);
 
 					if (log.is_open()){
+						///TMP
+						char addr_buff[INET6_ADDRSTRLEN];
+						ip_to_str(&actual_key.src, addr_buff);
+						log << "Abused server IP: " << addr_buff;
+						ip_to_str(&actual_key.dst, addr_buff);
+						log << "   Target IP: " << addr_buff << "\n";
+						///TMP
 						while (pos[shorter] < sooner_end){
 							if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
-								#ifdef DEBUG
-								cout << "Q: " << pos[QUERY] << endl;
-								#endif
 								time2str(it->second.q[pos[QUERY]].t);
 								log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
 								++pos[QUERY];
 							} else {
-								#ifdef DEBUG
-								cout << "R: " << pos[RESPONSE] << endl;
-								#endif
 								time2str(it->second.r[pos[RESPONSE]].t);
 								log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
 								++pos[RESPONSE];
@@ -687,15 +703,9 @@ int main (int argc, char** argv) {
 						}
 						for (pos[longer] = pos[shorter]; pos[longer] < later_end; ++pos[longer]) {
 							if (longer == QUERY){
-								#ifdef DEBUG
-								cout << "Q: " << pos[QUERY] << endl;
-								#endif
 								time2str(it->second.q[pos[QUERY]].t);
 								log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
 							} else {
-								#ifdef DEBUG
-								cout << "R: " << pos[RESPONSE] << endl;
-								#endif
 								time2str(it->second.r[pos[RESPONSE]].t);
 								log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
 							}

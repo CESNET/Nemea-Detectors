@@ -64,7 +64,7 @@ extern "C" {
 #define OK 		1
 
 #define LOG_FILE_PREFIX ""
-#define LOG_FILE_SUFFIX "-TEST"
+#define LOG_FILE_SUFFIX ".log"
 using namespace std;
 
 
@@ -106,7 +106,7 @@ typedef struct config_s {
 //		det_window = 3600;
 //		del_time = 300;
 		det_window = 900;
-		del_time = 240;
+		del_time = 300;
 	}
 
 } config_t;
