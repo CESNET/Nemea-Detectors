@@ -64,7 +64,7 @@ extern "C" {
 #define OK 		1
 
 #define LOG_FILE_PREFIX ""
-#define LOG_FILE_SUFFIX "-TEST"
+#define LOG_FILE_SUFFIX ".log"
 using namespace std;
 
 
@@ -103,7 +103,9 @@ typedef struct config_s {
 		max_quer_flow_bytes = 40000;
 		max_resp_flow_packets = 1000;
 		max_resp_flow_bytes = 100000;
-		det_window = 3600;
+//		det_window = 3600;
+//		del_time = 300;
+		det_window = 900;
 		del_time = 300;
 	}
 

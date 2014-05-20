@@ -39,6 +39,15 @@ AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
+		[enable debugging, default: no]),
+[case "${enableval}" in
+	yes) debug=true ;;
+	no)  debug=false ;;
+	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+esac], [debug=false])
+
+AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 if test -z "$TRAPLIB"; then
 	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
@@ -159,41 +168,57 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  astute/Makefile
-		 attack_gen/Makefile
-		 blacklistfilter/Makefile
-		 blacklistfilter/dnsdetect/Makefile
-		 blacklistfilter/ipdetect/Makefile
-		 blacklistfilter/urldetect/Makefile
-		 deduplication/Makefile
+                 attack_gen/Makefile
+                 basic2collector/Makefile
+                 blacklistfilter/Makefile
+                 blacklistfilter/dnsdetect/Makefile
+                 blacklistfilter/ipdetect/Makefile
+                 blacklistfilter/urldetect/Makefile
+                 deduplication/Makefile
                  delaybuffer/Makefile
-		 dns_amplification/Makefile
-		 dns_amp_twente/Makefile
-		 entropy_module/Makefile
+                 dns_amp_twente/Makefile
+                 dns_amplification/Makefile
+                 entropy_module/Makefile
                  example/Makefile
                  flow_gen/Makefile
+                 flow_meter/Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
+                 heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
+                 logreplay/Makefile
                  merger/Makefile
-		 nfreader/Makefile
+                 nemea-modules.spec
+                 nfreader/Makefile
+                 p2pbotnet_detection/Makefile
                  pca/Makefile
+                 portscan_detector/Makefile
                  protocolcounters/Makefile
                  simplebotnetdetector/Makefile
+                 synflood/pcf/Makefile
+                 synflood/synfindiff/Makefile
+                 synflood/synrate/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
+                 traffic_merger/Makefile
+                 traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
+<<<<<<< HEAD
                  traffic_merger/Makefile
                  traffic_repeater/Makefile
 		 tunnel_detection/Makefile
                  flow_meter/Makefile
 		p2pdetector/Makefile
 					])
+=======
+                 tunnel_detection/Makefile])
+>>>>>>> 09fcc00f8be36201526b5ca88354fa077cd5108f
 
 
 AC_OUTPUT
