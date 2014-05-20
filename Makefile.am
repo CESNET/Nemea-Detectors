@@ -31,7 +31,8 @@ traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay \
-tunnel_detection
+tunnel_detection \
+p2pdetector
 
 RPMDIR = RPMBUILD
 
