@@ -210,10 +210,7 @@ AC_CONFIG_FILES([Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
 <<<<<<< HEAD
-                 traffic_merger/Makefile
-                 traffic_repeater/Makefile
 		 tunnel_detection/Makefile
-                 flow_meter/Makefile
 		p2pdetector/Makefile
 					])
 =======
