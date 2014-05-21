@@ -195,6 +195,7 @@ AC_CONFIG_FILES([Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  p2pbotnet_detection/Makefile
+                 p2pdetector/Makefile
                  pca/Makefile
                  portscan_detector/Makefile
                  protocolcounters/Makefile
@@ -209,13 +210,8 @@ AC_CONFIG_FILES([Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
-<<<<<<< HEAD
-		 tunnel_detection/Makefile
-		p2pdetector/Makefile
-					])
-=======
-                 tunnel_detection/Makefile])
->>>>>>> 09fcc00f8be36201526b5ca88354fa077cd5108f
+                 tunnel_detection/Makefile
+               ])
 
 
 AC_OUTPUT
