@@ -581,9 +581,6 @@ int main (int argc, char** argv) {
 
 		if ((it = model.find(actual_key)) != model.end()) {
 			// record exists - update information and add flow
-			it->second.total_bytes += ur_get(unirec_in, data, UR_BYTES);
-			it->second.total_packets += ur_get(unirec_in, data, UR_PACKETS);
-			it->second.total_flows += 1;
 			it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
 
 			// create new flow information structure
@@ -593,10 +590,19 @@ int main (int argc, char** argv) {
 			i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
 			// add new flow
-			if (qr)
+			if (qr){
+				it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
+				it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
+				it->second.total_flows[RESPONSE] += 1;
+
 				it->second.r.push_back(i);
-			else
+			} else {
+				it->second.total_bytes[QUERY] += ur_get(unirec_in, data, UR_BYTES);
+				it->second.total_packets[QUERY] += ur_get(unirec_in, data, UR_PACKETS);
+				it->second.total_flows[QUERY] += 1;
+
 				it->second.q.push_back(i);
+			}
 
 			long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
 			long t2 = ur_time_get_sec(it->second.first_t);
@@ -635,9 +641,12 @@ int main (int argc, char** argv) {
 					ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
 					ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
 					ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-					ur_set(unirec_out, detection, UR_FLOWS, it->second.total_flows);
-					ur_set(unirec_out, detection, UR_PACKETS, it->second.total_packets);
-					ur_set(unirec_out, detection, UR_BYTES, it->second.total_bytes);
+					ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
+					ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
+					ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
+					ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
+					ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
+					ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
 					ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
 					ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
 					ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
@@ -721,9 +730,9 @@ int main (int argc, char** argv) {
 				for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
 
 					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-						it->second.total_bytes -= del->bytes;
-						it->second.total_packets -= del->packets;
-						it->second.total_flows -= 1;
+						it->second.total_bytes[QUERY] -= del->bytes;
+						it->second.total_packets[QUERY] -= del->packets;
+						it->second.total_flows[QUERY] -= 1;
 						del = it->second.q.erase(del);
 					} else {
 						++del;
@@ -734,9 +743,9 @@ int main (int argc, char** argv) {
 				for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
 
 					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-						it->second.total_bytes -= del->bytes;
-						it->second.total_packets -= del->packets;
-						it->second.total_flows -= 1;
+						it->second.total_bytes[RESPONSE] -= del->bytes;
+						it->second.total_packets[RESPONSE] -= del->packets;
+						it->second.total_flows[RESPONSE] -= 1;
 						del = it->second.r.erase(del);
 					} else {
 						++del;
@@ -770,25 +779,36 @@ int main (int argc, char** argv) {
 			// create flow data structure and fill it
 			flow_data_t d;
 
-			d.total_bytes = ur_get(unirec_in, data, UR_BYTES);
-			d.total_packets = ur_get(unirec_in, data, UR_PACKETS);
-			d.total_flows = 1;
 			d.first_t = ur_get(unirec_in, data, UR_TIME_FIRST);
-			d.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			d.last_t = d.first_t;
 			d.last_logged = 0;
 			d.identifier = unique_id;
 			++unique_id;
 
 			// create flow item
 			flow_item_t i;
-			i.t = d.first_t;
-			i.bytes = d.total_bytes;
-			i.packets = d.total_packets;
+			i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			i.bytes = ur_get(unirec_in, data, UR_BYTES);
+			i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
 			// add flow item
 			if (qr) {
+				d.total_bytes[RESPONSE] = ur_get(unirec_in, data, UR_BYTES);
+				d.total_packets[RESPONSE] = ur_get(unirec_in, data, UR_PACKETS);
+				d.total_flows[RESPONSE] = 1;
+				d.total_bytes[QUERY] = 0;
+				d.total_packets[QUERY] = 0;
+				d.total_flows[QUERY] = 0;
+
 				d.r.push_back(i);
 			} else {
+				d.total_bytes[QUERY] = ur_get(unirec_in, data, UR_BYTES);
+				d.total_packets[QUERY] = ur_get(unirec_in, data, UR_PACKETS);
+				d.total_flows[QUERY] = 1;
+				d.total_bytes[RESPONSE] = 0;
+				d.total_packets[RESPONSE] = 0;
+				d.total_flows[RESPONSE] = 0;
+
 				d.q.push_back(i);
 			}
 

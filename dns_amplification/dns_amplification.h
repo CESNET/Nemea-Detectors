@@ -145,9 +145,9 @@ struct flow_data_t {
 
 	vector<flow_item_t> q;		// vector of query flows
 	vector<flow_item_t> r;		// vector of response flows
-	int total_bytes;		// total bytes of flows
-	int total_packets;		// total packets of flows
-	int total_flows;		// total number of flows
+	uint64_t total_bytes [2];		// total bytes of flows
+	uint32_t total_packets [2];		// total packets of flows
+	uint32_t total_flows [2];		// total number of flows
 	ur_time_t first_t;		// timestamp of first flow
 	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
 	uint32_t identifier;		// unique identifier
