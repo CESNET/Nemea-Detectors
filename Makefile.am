@@ -36,12 +36,12 @@ traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay \
-p2pdetector \
 tunnel_detection \
 portscan_detector \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf
+
 
 RPMDIR = RPMBUILD
 
