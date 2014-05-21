@@ -209,14 +209,9 @@ AC_CONFIG_FILES([Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
-<<<<<<< HEAD
-		 tunnel_detection/Makefile
-		p2pdetector/Makefile
+		   p2pdetector/Makefile
+		   tunnel_detection/Makefile
 					])
-=======
-                 tunnel_detection/Makefile])
->>>>>>> 09fcc00f8be36201526b5ca88354fa077cd5108f
-
 
 AC_OUTPUT
 
