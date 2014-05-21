@@ -26,6 +26,7 @@ nfreader \
 pca \
 flow_meter \
 p2pbotnet_detection \
+p2pdetector \
 protocolcounters \
 simplebotnetdetector \
 test_threads \
@@ -37,14 +38,10 @@ trapdump \
 trapreplay \
 p2pdetector \
 tunnel_detection \
-<<<<<<< HEAD
-
-=======
 portscan_detector \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf
->>>>>>> 09fcc00f8be36201526b5ca88354fa077cd5108f
 
 RPMDIR = RPMBUILD
 
