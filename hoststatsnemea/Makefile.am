@@ -1,5 +1,4 @@
 HOSTSTATSNEMEASRCS=src/aux_func.h \
-		   src/BloomFilter.hpp \
 		   src/config.cpp \
 		   src/config.h \
 		   src/detectionrules.cpp \

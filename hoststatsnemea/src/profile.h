@@ -42,7 +42,8 @@
 #include <vector>
 
 #include "config.h"
-#include "BloomFilter.hpp"
+/* BloomFilter from nemea-common */
+#include <BloomFilter.hpp>
 #include "hoststats.h"
 // #include "database.h"
 #include "detectionrules.h"

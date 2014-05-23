@@ -43,7 +43,8 @@
 
 #include "config.h"
 #include "hoststats.h"
-#include "BloomFilter.hpp"
+/* BloomFilter from nemea-common */
+#include <BloomFilter.hpp>
 
 extern "C" {
    #include <unirec/unirec.h>
