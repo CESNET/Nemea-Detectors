@@ -77,11 +77,13 @@ private:
    bloom_filter *bf_active, *bf_learn; // pointer to active/learning BloomFilter
    int table_size;            // size of cuckoo_hash table
    bool detector_status;      // main profile detector active / inactive
+   bool port_flowdir;         // flow direction based on port value (0[off]/1[on]) 
    sp_list_v sp_list;         // list of avaiable subprofiles
 
    pthread_mutex_t old_rec_list_mutex;
    std::vector<old_rec_item_t> old_rec_list;
    bool old_rec_ready;
+
 
    // Get the reference of record from the table 
    hosts_record_t& get_record(const hosts_key_t& key);

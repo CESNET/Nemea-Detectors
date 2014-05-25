@@ -140,6 +140,7 @@ void HostProfile::apply_config()
    inactive_timeout = atoi(conf->getValue("timeout-inactive").c_str());
    det_start_time =   atoi(conf->getValue("det_start_time").c_str());
    detector_status =  (conf->getValue("rules-generic") == "1"); 
+   port_flowdir =     (conf->getValue("port-flowdir") == "1");
    conf->unlock();
 
    if (table_size <= 0)       table_size       = DEF_SIZE;
@@ -214,7 +215,25 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    bf_learn->insert((const unsigned char *) &bloom_key, sizeof(bloom_key_t));
 
    uint8_t tcp_flags = ur_get(tmpl_in, record, UR_TCP_FLAGS);
-   uint8_t dir_flags = ur_get(tmpl_in, record, UR_DIRECTION_FLAGS);
+
+   uint8_t dir_flags;
+   if (port_flowdir) {
+      // ignore flowdir from record and create custom
+      dir_flags = NRC;
+      uint16_t src_port = ur_get(tmpl_in, record, UR_SRC_PORT);
+      uint16_t dst_port = ur_get(tmpl_in, record, UR_DST_PORT);
+
+      if (((src_port < 10000) || (dst_port < 10000)) && (src_port != dst_port)) {
+         if (src_port < dst_port) {
+            dir_flags = RSP;
+         } else {
+            dir_flags = REQ;
+         }
+      }
+   } else {
+      // use flowdir from record (unirec)
+      dir_flags = ur_get(tmpl_in, record, UR_DIRECTION_FLAGS);
+   }
 
    // Macros
    #define ADD(dst, src) \
@@ -301,7 +320,8 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (!it->sp_status)
          break;
 
-      it->pointers.update_ptr(&bloom_key, src_host_rec, dst_host_rec, record, tmpl_in);
+      it->pointers.update_ptr(&bloom_key, src_host_rec, dst_host_rec, record, 
+         tmpl_in, dir_flags);
    }
 }
 

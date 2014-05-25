@@ -66,7 +66,7 @@ struct bloom_key_t {
 
 // Function pointer to update the subprofile
 typedef bool (*sp_update)(bloom_key_t *, hosts_record_t&, hosts_record_t&, 
-   const void *, const ur_template_t *);
+   const void *, const ur_template_t *, uint16_t);
 
 // Function pointer to check a record of the subprofile
 typedef bool (*sp_check)(const hosts_key_t&, const hosts_record_t&);
@@ -138,7 +138,8 @@ public:
 
    // Update a DNS subprofile
    static bool update(bloom_key_t *, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt);
+      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
+      uint16_t dir_flags);
 
    // Check rules in a DNS subprofile
    static bool check_record(const hosts_key_t &key, const hosts_record_t &record);
@@ -190,7 +191,8 @@ public:
 
    // Update a SSH subprofile
    static bool update(bloom_key_t *, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt);
+      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
+      uint16_t dir_flags);
 
    // Check rules in a SSH subprofile
    static bool check_record(const hosts_key_t &key, const hosts_record_t &record);

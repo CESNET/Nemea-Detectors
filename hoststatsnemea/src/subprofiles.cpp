@@ -106,14 +106,13 @@ bool DNSHostProfile::flow_filter(const void *data, const ur_template_t *tmplt)
  * @return True when data belongs to subprofile, false otherwise
  */
 bool DNSHostProfile::update(bloom_key_t *ips, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt)
+      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
+      uint16_t dir_flags)
 {
    // DNS flow filter
    if (!flow_filter(data, tmplt)) {
       return 0;
    }
-
-   uint8_t dir_flags = ur_get(tmplt, data, UR_DIRECTION_FLAGS);
 
    // create new DNS record(s)
    if (src_record.dnshostprofile == NULL) {
@@ -219,7 +218,8 @@ bool SSHHostProfile::flow_filter(const void *data, const ur_template_t *tmplt)
  * @return True when data belongs to subprofile, false otherwise
  */
 bool SSHHostProfile::update(bloom_key_t *ips, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt)
+      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
+      uint16_t dir_flags)
 {
    // SSH flow filter
    if (!flow_filter(data, tmplt)) {
@@ -243,7 +243,6 @@ bool SSHHostProfile::update(bloom_key_t *ips, hosts_record_t &src_record,
    ssh_bf_learn->insert((const unsigned char *) ips, sizeof(bloom_key_t));
 
    uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
-   uint8_t dir_flags = ur_get(tmplt, data, UR_DIRECTION_FLAGS);
 
    // create new SSH record(s)
    if (src_record.sshhostprofile == NULL) {
