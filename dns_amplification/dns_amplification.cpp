@@ -443,7 +443,7 @@ int main (int argc, char** argv) {
 
 	uint16_t src_port;		// actual source port
 	uint16_t dst_port;		// actual destination flows
-	bool qr;			// query=false, response=true
+	bool qr;
 
 	// initialize TRAP interface
 	TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
@@ -563,11 +563,11 @@ int main (int argc, char** argv) {
 
 		// check if src or dst port is expected, otherwise next flow
 		if (src_port == config.port) {
-			qr = true;
+			qr = BOOL_RESPONSE;
 			actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
 			actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
 		} else if (dst_port == config.port) {
-			qr = false;
+			qr = BOOL_QUERY;
 			actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
 			actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
 		} else {
@@ -590,7 +590,7 @@ int main (int argc, char** argv) {
 			i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
 			// add new flow
-			if (qr){
+			if (qr == BOOL_RESPONSE){
 				it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
 				it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
 				it->second.total_flows[RESPONSE] += 1;
@@ -619,22 +619,28 @@ int main (int argc, char** argv) {
 				hvrb = createHistogram(it->second, BYTES, RESPONSE);
 				hvrp = createHistogram(it->second, PACKETS, RESPONSE);
 
-				bool report_this = false;
+				int report_this = DO_NOT_REPORT;
 				//int report_this = NO;
 
-				if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
-					report_this = true;
-					//report_this = COND1;
-				} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
-					if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
-						if (sum(topnHistogram(hvqb), BYTES) > 0) {
-							if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
-								report_this = true;
-								//report_this = COND2;
-							} //if (det. - cond4)
-						} //if (det. - cond3)
-					} //if (det. - cond2)
-				} //if (det. - cond1)
+				if (it->second.total_flows[QUERY] && it->second.total_flows[RESPONSE]){
+					if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
+						//if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
+						if (it->second.r.size() > 0 && it->second.q.size() > 0)
+						if ((max_bytes(it->second.r) / max_bytes(it->second.q)) > config.min_a) {
+							report_this = REPORT_BIG;
+							//report_this = COND1;
+						}
+					} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
+						if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
+							if (sum(topnHistogram(hvqb), BYTES) > 0) {
+								if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
+									report_this = REPORT_COMPLEX;
+									//report_this = COND2;
+								} //if (det. - cond4)
+							} //if (det. - cond3)
+						} //if (det. - cond2)
+					} //if (det. - cond1)
+				}
 
 				/// Report event >>>
 				if (report_this){
@@ -687,7 +693,11 @@ int main (int argc, char** argv) {
 
 					filename.str("");
 					filename.clear();
-					filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+					if (report_this == REPORT_BIG){
+						filename << log_path << "BIG/" << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+					} else {
+						filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
+					}
 
 					log.open(filename.str().c_str(), ofstream::app);
 
@@ -792,7 +802,7 @@ int main (int argc, char** argv) {
 			i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
 			// add flow item
-			if (qr) {
+			if (qr == BOOL_RESPONSE) {
 				d.total_bytes[RESPONSE] = ur_get(unirec_in, data, UR_BYTES);
 				d.total_packets[RESPONSE] = ur_get(unirec_in, data, UR_PACKETS);
 				d.total_flows[RESPONSE] = 1;

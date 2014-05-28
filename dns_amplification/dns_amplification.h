@@ -65,8 +65,17 @@ extern "C" {
 
 #define LOG_FILE_PREFIX ""
 #define LOG_FILE_SUFFIX ".log"
+
+#define BOOL_QUERY false
+#define BOOL_RESPONSE true
+
 using namespace std;
 
+enum report_codes{
+	DO_NOT_REPORT = 0,
+	REPORT_BIG,
+	REPORT_COMPLEX,
+};
 
 /**
  * Configuration structure keeping module's settings from parameters
