@@ -15,6 +15,7 @@ flow_gen \
 flow_sanity_check \
 flowcounter \
 flowdirection \
+flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
 ipspoofingdetector \
