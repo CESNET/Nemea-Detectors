@@ -118,10 +118,14 @@ trap_module_info_t module_info = {
       "   Edit the configuration file \"hoststats.conf\" and especially the line\n"
       "   \"detection-log\" with the folder path to save the event log.\n"
       "   Use FlowDirection or DedupAggregator output as an input for this module.\n"
-      "   Run module: ./hoststatsnemea -i \"t;localhost,12345\"\n"
+      "   Run module: ./hoststatsnemea -i \"tt;localhost,12345;12346,5\"\n"
       "\n"
       "TRAP Interfaces:\n"
-      "   Inputs: 1 (\"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
+      "   Inputs: 1 \n"
+      "      (port-flowdir = 0: \"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
+      "      (port-flowdir = 1: \"<COLLECTOR_FLOW>\")\n"
+      "      Note: port-flowdir is a parameter in \"hoststats.conf\"\n"
+      "             \n"
       "   Outputs: 1 (\"EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,\n"
       "                DST_PORT,PROTOCOL,EVENT_SCALE\") \n",
    1, // Number of input TRAP interfaces
@@ -221,29 +225,39 @@ int main(int argc, char *argv[])
       return 1;
    }
 
-   /* Create UniRec template */
-   tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
-   tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
-   if (tmpl_in == NULL || tmpl_out == NULL) {
-      log(LOG_ERR, "Error when creating UniRec template.\n");
-      if (tmpl_in == NULL) ur_free_template(tmpl_in);
-      if (tmpl_out == NULL) ur_free_template(tmpl_out);
-      return 1;
-   }
 
    openlog(NULL, LOG_NDELAY, 0);
    log(LOG_INFO, "HostStatsNemea started");
    
    // Load default configuration from config file
    config->lock();
-   
+      
    /* Set logmask if used */
    string logmask = config->getValue("log-upto-level");
    if (!logmask.empty()) {
       parse_logmask(logmask);
    }
+
+   /* Create UniRec template */
+   tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE");
+   
+   if (config->getValue("port-flowdir") == "0") {
+      tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
+   } else {
+      tmpl_in = ur_create_template("<COLLECTOR_FLOW>");
+   }
+   
+   if (tmpl_in == NULL || tmpl_out == NULL) {
+      log(LOG_ERR, "Error when creating UniRec template.\n");
+      if (tmpl_in != NULL) ur_free_template(tmpl_in);
+      if (tmpl_out != NULL) ur_free_template(tmpl_out);
+      config->unlock();
+      return 1;
+   }
+
    config->unlock();
 
+   
    /* Create structure for storing flow records */
    MainProfile = new HostProfile();
 
