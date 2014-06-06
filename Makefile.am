@@ -39,6 +39,7 @@ trapdump \
 trapreplay \
 tunnel_detection \
 portscan_detector \
+sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf

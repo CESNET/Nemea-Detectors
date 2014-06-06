@@ -212,6 +212,7 @@ AC_CONFIG_FILES([Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
+                 sshcure/Makefile
                  tunnel_detection/Makefile
                ])
 
