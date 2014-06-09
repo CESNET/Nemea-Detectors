@@ -104,8 +104,6 @@ void reportEvent(const hosts_key_t &ip, const Event& event)
    line << ';';
    line << event.scale << ';';
    line << event.note << '\n';
-
-   cout << line.str();
    
    // Write the line to a log file
    Configuration *config = Configuration::getInstance();
