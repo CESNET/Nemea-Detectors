@@ -128,29 +128,15 @@ void delete_inactive() {
 	history_iter iter = model.begin();
 	history_iter iterEnd = model.end();
 
-	#ifdef DEBUG
-	ofstream debug("debug_size.log");
-	debug << model.size() << "\t";
-	int cnt = 0;
-	#endif
-
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
 
 		if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
 			model.erase(iter++);
-			#ifdef DEBUG
-			cnt++;
-			#endif
 		} else {
 			++iter;
 		}
 	}
-
-	#ifdef DEBUG
-	debug << model.size() << "\t" << cnt << endl;
-	debug.close();
-	#endif
 }
 
 /**
@@ -623,12 +609,14 @@ int main (int argc, char** argv) {
 				//int report_this = NO;
 
 				if (it->second.total_flows[QUERY] && it->second.total_flows[RESPONSE]){
-					if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
-						//if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
-						if (it->second.r.size() > 0 && it->second.q.size() > 0)
-						if ((max_bytes(it->second.r) / max_bytes(it->second.q)) > config.min_a) {
-							report_this = REPORT_BIG;
-							//report_this = COND1;
+					if (it->second.total_packets[QUERY] >= 30 && (it->second.total_packets[RESPONSE] / it->second.total_packets[QUERY]) >= 5){
+						if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
+							//if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
+							if (it->second.r.size() > 0 && it->second.q.size() > 0)
+							if ((max_bytes(it->second.r) / max_bytes(it->second.q)) > config.min_a) {
+								report_this = REPORT_BIG;
+								//report_this = COND1;
+							}
 						}
 					} else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
 						if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
@@ -644,22 +632,23 @@ int main (int argc, char** argv) {
 
 				/// Report event >>>
 				if (report_this){
-					ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
-					ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
-					ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-					ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
-					ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
-					ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
-					ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
-					ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
-					ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
-					ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
-					ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
-					ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
+					if (report_this == REPORT_COMPLEX){
+						ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
+						ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
+						ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
+						ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
+						ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
+						ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
+						ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
+						ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
+						ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
+						ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
+						ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+						ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
-					// send alert
-					trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
-
+						// send alert
+						trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
+					}
 					// LOG QUERY/RESPONSE VECTORS
 					size_t pos[2] = {0,0};
 					int shorter;
@@ -702,13 +691,11 @@ int main (int argc, char** argv) {
 					log.open(filename.str().c_str(), ofstream::app);
 
 					if (log.is_open()){
-						///TMP
 						char addr_buff[INET6_ADDRSTRLEN];
 						ip_to_str(&actual_key.src, addr_buff);
 						log << "Abused server IP: " << addr_buff;
 						ip_to_str(&actual_key.dst, addr_buff);
 						log << "   Target IP: " << addr_buff << "\n";
-						///TMP
 						while (pos[shorter] < sooner_end){
 							if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
 								time2str(it->second.q[pos[QUERY]].t);
