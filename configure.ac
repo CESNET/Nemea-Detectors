@@ -125,7 +125,7 @@ AC_CHECK_HEADER(idna.h,
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
 # Checks for libraries.
-AC_CHECK_LIB(nfdump, stringprep_check_version, [libnfdump=yes], AC_MSG_WARN([libnfdump not found. The nfreader module will not be compiled.]))
+AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes], AC_MSG_WARN([libnfdump not found. The nfreader module will not be compiled.]))
 AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
 
 # Checks for header files.
