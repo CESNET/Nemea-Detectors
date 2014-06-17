@@ -632,25 +632,28 @@ int main (int argc, char** argv) {
 
 				/// Report event >>>
 				if (report_this){
+
 					if (it->second.identifier == 0){
 						it->second.identifier = ++unique_id;
 					}
 
-					ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
-					ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
-					ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-					ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
-					ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
-					ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
-					ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
-					ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
-					ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
-					ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
-					ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
-					ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
+					if (report_this == REPORT_COMPLEX){
+						ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
+						ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
+						ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
+						ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
+						ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
+						ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
+						ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
+						ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
+						ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
+						ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
+						ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+						ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
-					// send alert
-					trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
+						// send alert
+						trap_send_data(0, detection, ur_rec_size(unirec_out, detection), TRAP_HALFWAIT);
+					}
 
 					// LOG QUERY/RESPONSE VECTORS
 					size_t pos[2] = {0,0};
