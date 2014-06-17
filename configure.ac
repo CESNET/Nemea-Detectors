@@ -120,11 +120,13 @@ if test -z "$NEMEACOMMONLIB"; then
 fi
 
 AC_CHECK_HEADER(idna.h,
-         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module form blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
+         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module from blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
 # Checks for libraries.
+AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes], AC_MSG_WARN([libnfdump not found. The nfreader module will not be compiled.]))
+AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])

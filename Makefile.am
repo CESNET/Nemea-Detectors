@@ -23,7 +23,6 @@ ipv6stats \
 logger \
 logreplay \
 merger \
-nfreader \
 pca \
 flow_meter \
 p2pbotnet_detection \
@@ -44,6 +43,11 @@ synflood/synfindiff \
 synflood/synrate \
 synflood/pcf
 
+
+EXTRA_DIST = email_reporter report_handler python_example nfreader
+if HAVE_LIBNFDUMP
+SUBDIRS += nfreader
+endif
 
 RPMDIR = RPMBUILD
 
