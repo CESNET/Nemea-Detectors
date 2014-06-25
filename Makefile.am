@@ -28,6 +28,7 @@ flow_meter \
 p2pbotnet_detection \
 p2pdetector \
 protocolcounters \
+sampler \
 simplebotnetdetector \
 test_threads \
 timestamp_checker \

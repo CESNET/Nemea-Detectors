@@ -202,6 +202,7 @@ AC_CONFIG_FILES([Makefile
                  pca/Makefile
                  portscan_detector/Makefile
                  protocolcounters/Makefile
+                 sampler/Makefile
                  simplebotnetdetector/Makefile
                  slowthreatdetector/Makefile
                  synflood/pcf/Makefile
