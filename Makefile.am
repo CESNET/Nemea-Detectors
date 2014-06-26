@@ -24,7 +24,6 @@ logger \
 logreplay \
 merger \
 pca \
-flow_meter \
 p2pbotnet_detection \
 p2pdetector \
 protocolcounters \
@@ -38,16 +37,18 @@ transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
-portscan_detector \
 sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf
 
 
-EXTRA_DIST = email_reporter report_handler python_example nfreader
+EXTRA_DIST = email_reporter report_handler python_example nfreader flow_meter portscan_detector
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
+endif
+if HAVE_LIBPCAP
+SUBDIRS += flow_meter portscan_detector
 endif
 
 RPMDIR = RPMBUILD

@@ -128,6 +128,11 @@ AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes], AC_MSG_WARN([libnfdump not found. The nfreader module will not be compiled.]))
 AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
 
+AC_CHECK_HEADER(pcap.h,
+	AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
 
