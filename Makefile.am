@@ -31,6 +31,7 @@ sampler \
 simplebotnetdetector \
 test_threads \
 timestamp_checker \
+traffic_delayer \
 traffic_merger \
 traffic_repeater \
 transitfilter \

@@ -215,6 +215,7 @@ AC_CONFIG_FILES([Makefile
                  synflood/synrate/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
+                 traffic_delayer/Makefile
                  traffic_merger/Makefile
                  traffic_repeater/Makefile
                  transitfilter/Makefile
