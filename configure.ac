@@ -219,6 +219,7 @@ AC_CONFIG_FILES([Makefile
                  timestamp_checker/Makefile
                  traffic_delayer/Makefile
                  traffic_merger/Makefile
+                 report_handler/Makefile
                  traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
