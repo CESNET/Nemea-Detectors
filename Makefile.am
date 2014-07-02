@@ -10,6 +10,7 @@ delaybuffer \
 dns_amplification \
 dns_amp_twente \
 entropy_module \
+email_reporter \
 example \
 flow_gen \
 flow_sanity_check \
@@ -27,23 +28,28 @@ pca \
 p2pbotnet_detection \
 p2pdetector \
 protocolcounters \
+python_example \
+report_handler \
 sampler \
 simplebotnetdetector \
 test_threads \
 timestamp_checker \
+traffic_delayer \
 traffic_merger \
 traffic_repeater \
 transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
+slowthreatdetector \
 sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf
 
 
-EXTRA_DIST = email_reporter report_handler python_example nfreader flow_meter portscan_detector
+EXTRA_DIST = nfreader flow_meter portscan_detector
+
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
 endif

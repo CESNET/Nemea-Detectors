@@ -185,6 +185,7 @@ AC_CONFIG_FILES([Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile
                  dns_amplification/Makefile
+                 email_reporter/Makefile
                  entropy_module/Makefile
                  example/Makefile
                  flow_gen/Makefile
@@ -207,6 +208,7 @@ AC_CONFIG_FILES([Makefile
                  pca/Makefile
                  portscan_detector/Makefile
                  protocolcounters/Makefile
+                 python_example/Makefile
                  sampler/Makefile
                  simplebotnetdetector/Makefile
                  slowthreatdetector/Makefile
@@ -215,7 +217,9 @@ AC_CONFIG_FILES([Makefile
                  synflood/synrate/Makefile
                  test_threads/Makefile
                  timestamp_checker/Makefile
+                 traffic_delayer/Makefile
                  traffic_merger/Makefile
+                 report_handler/Makefile
                  traffic_repeater/Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
