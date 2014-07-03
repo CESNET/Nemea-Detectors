@@ -53,20 +53,13 @@ extern ur_template_t *tmpl_out;
 extern HostProfile *MainProfile;
 
 string getProtoString(uint8_t proto);
-string getTypeString(EventType type);
+string getTypeString(uint8_t type);
 string getTimeString(const uint32_t &timestamp);
 
-void reportEvent(const hosts_key_t &ip, const Event& event)
+void reportEvent(const Event& event)
 {
-   // Check if the event has already been reported -> double detection
-   if (MainProfile->old_rec_list_present(ip)) {
-      log(LOG_DEBUG, "Event report skipped. It has already been reported");
-      return;
-   }
-
    string first_t = getTimeString(event.time_first);
    string last_t = getTimeString(event.time_last);
-
 
    // Print info about event into a string 
    stringstream line;
@@ -184,16 +177,17 @@ void reportEvent(const hosts_key_t &ip, const Event& event)
 }
 
 
-string getTypeString(EventType type)
+string getTypeString(uint8_t type)
 {
    switch (type)
    {
-      case PORTSCAN:   return "portscan";
-      case PORTSCAN_H: return "portscan_h";
-      case PORTSCAN_V: return "portscan_v";
-      case BRUTEFORCE: return "bruteforce";
-      case DOS:        return "dos";
-      case OTHER:      return "other";
+      case UR_EVT_T_PORTSCAN:   return "portscan";
+      case UR_EVT_T_PORTSCAN_H: return "portscan_h";
+      case UR_EVT_T_PORTSCAN_V: return "portscan_v";
+      case UR_EVT_T_BRUTEFORCE: return "bruteforce";
+      case UR_EVT_T_DOS:        return "dos";
+      case UR_EVT_T_DNSAMP:     return "dnsamp";
+      case UR_EVT_T_SYNFLOOD:   return "synflood";
       default: return string("type_")+int2str((int)type);
    }
 }

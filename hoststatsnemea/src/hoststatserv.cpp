@@ -59,28 +59,12 @@
 #include "aux_func.h"
 #include "processdata.h"
 #include "config.h"
-// #include "requesthandlers.h"
 #include "detectionrules.h"
-//#include "sshdetection.h"
 
 //TRAP
 extern "C" {
    #include <libtrap/trap.h>
 }
-
-
-#define BUFFER    (1024)
-#define QUEUE     (2)
-#define SLEEP     (10)
-#define LISTENFDS (16)
-
-#define UNKNOWN "unknown"
-
-#define HASHMAPSIZE 100000
-#define SHMSZ    1000
-
-/* define FG_MODE for skip daemon() mode */
-// #define FG_MODE
 
 using namespace std;
 
@@ -132,9 +116,9 @@ trap_module_info_t module_info = {
    1, // Number of output TRAP interfaces
 };
 
-/** \brief 
- *
- * \param[in,out] parametr popis
+/** \brief Parse arguments
+ * \param[in] argc Argument count
+ * \param[in] argv Argument values
  */
 int arguments(int argc, char *argv[])
 {
@@ -225,7 +209,6 @@ int main(int argc, char *argv[])
       return 1;
    }
 
-
    openlog(NULL, LOG_NDELAY, 0);
    log(LOG_INFO, "HostStatsNemea started");
    
@@ -310,6 +293,8 @@ int main(int argc, char *argv[])
       offline_analyzer();
    }
 
+   log(LOG_DEBUG, "Exiting... releasing memory");
+   
    // Delete all records
    delete MainProfile;
 

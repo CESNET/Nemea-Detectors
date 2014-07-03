@@ -168,7 +168,7 @@ ConfigurationStatus Configuration::load()
       log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
       file.open(INI_FILENAME, ios_base::in);
    } else {
-      syslog(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME, ", using default file directly.");
+      syslog(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME ", using default file directly.");
       file.open(SYSCONFDIR "/" INI_DEFAULT_FILENAME, ios_base::in);
    }
    if (file.good()) {

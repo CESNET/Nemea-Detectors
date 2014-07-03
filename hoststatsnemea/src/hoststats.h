@@ -46,7 +46,7 @@
 
 extern "C" {
    #include <unirec/ipaddr.h>
-   #include <cuckoo_hash_v2.h>
+   #include <fast_hash_table.h>
 }
 
 /////////////////////////////////////////////////////////////////
@@ -116,15 +116,26 @@ struct hosts_record_t {
 } __attribute__((packed));
 
 
+// key
 typedef ip_addr_t hosts_key_t;
 
 // hash table
-typedef cc_hash_table_v2_t stat_table_t;
+typedef fht_table_t stat_table_t;
 
 ////////////////////////////////////
 
-// Status information
-//TODO: check if this still exists
-extern bool processing_data;
+// BloomFilter key
+struct bloom_key_t {
+   ip_addr_t src_ip;
+   ip_addr_t dst_ip;
+   uint16_t rec_time;
+} __attribute__((packed));
+
+// Type of operations with BloomFilter
+typedef enum {
+   BF_CREATE,
+   BF_SWAP,
+   BF_DESTROY  
+} sp_bf_action;
 
 #endif

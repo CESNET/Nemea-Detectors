@@ -47,8 +47,6 @@
 #include "hoststats.h"
 #include <unirec/unirec.h>
 
-enum EventType {PORTSCAN, PORTSCAN_H, PORTSCAN_V, DOS, DDOS, BRUTEFORCE, OTHER};
-
 #define ICMP 1
 #define TCP 6
 #define UDP 17
@@ -57,7 +55,7 @@ enum EventType {PORTSCAN, PORTSCAN_H, PORTSCAN_V, DOS, DDOS, BRUTEFORCE, OTHER};
 class Event
 {
 public:
-   EventType type;
+   uint8_t type;
    uint32_t time_first, time_last;
    std::vector<ip_addr_t> src_addr, dst_addr;
    std::vector<uint16_t> src_port, dst_port;
@@ -65,7 +63,7 @@ public:
    uint32_t scale;
    std::string note;
    
-   Event(const uint32_t &time_first, const uint32_t &time_last, EventType type)
+   Event(const uint32_t &time_first, const uint32_t &time_last, uint8_t type)
     : type(type), time_first(time_first), time_last(time_last)
    { }
    
@@ -117,7 +115,7 @@ public:
    }
 };
 
-void reportEvent(const hosts_key_t &ip, const Event& event);
+void reportEvent(const Event& event);
 
 
 #endif

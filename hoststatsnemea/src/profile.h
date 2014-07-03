@@ -42,15 +42,13 @@
 #include <vector>
 
 #include "config.h"
-/* BloomFilter from nemea-common */
 #include <BloomFilter.hpp>
 #include "hoststats.h"
-// #include "database.h"
 #include "detectionrules.h"
 #include "subprofiles.h"
 
 extern "C" {
-   #include <cuckoo_hash_v2.h>
+   #include <fast_hash_table.h>
    #include <unirec/unirec.h>
 }
 
@@ -71,22 +69,16 @@ typedef sp_list_v::iterator sp_list_iter;
 
 class HostProfile {
 private:
-   stat_table_t stat_table;   // cuckoo_hash table
-   stat_table_t *stat_table_ptr;
-
+   stat_table_t *stat_table;   // hash table
+    
    bloom_filter *bf_active, *bf_learn; // pointer to active/learning BloomFilter
-   int table_size;            // size of cuckoo_hash table
+   int table_size;            // size of table
    bool detector_status;      // main profile detector active / inactive
    bool port_flowdir;         // flow direction based on port value (0[off]/1[on]) 
    sp_list_v sp_list;         // list of avaiable subprofiles
 
-   pthread_mutex_t old_rec_list_mutex;
-   std::vector<old_rec_item_t> old_rec_list;
-   bool old_rec_ready;
-
-
    // Get the reference of record from the table 
-   hosts_record_t& get_record(const hosts_key_t& key);
+   hosts_record_t& get_record(const hosts_key_t& key, int8_t **lock);
 
    // Check changes in configuration file
    void apply_config();
@@ -94,8 +86,8 @@ private:
 public:
    int active_timeout;
    int inactive_timeout;
-   int det_start_time;
-
+   int det_start_time; 
+    
    // Constructor
    HostProfile();
 
@@ -115,51 +107,12 @@ public:
    // Clear active BloomFilter and swap pointers
    void swap_bf();
 
-   // Run detectors on the record (for kicked items from table)
+   // Run detectors on the record
    void check_record(const hosts_key_t &key, const hosts_record_t &record, 
       bool subprofiles = true);
-
-   // A reference to the record at position n in cuckoo_hash table.
-   inline const hosts_record_t& get_record_at_index(int n) 
-      {return *(hosts_record_t*)stat_table_ptr->data[n];}
-
-   // A reference to the key at position n in cuckoo_hash table.
-   inline const hosts_key_t& get_key_at_index(int n)
-      {return *(hosts_key_t*)stat_table_ptr->keys[n];}
-
-   // Current table size      
-   inline const int get_table_size() {return table_size;}
-
-   /*
-    * is_valid()
-    * Check record validity by key and supposed index of the item.
-    *
-    * @param key Key of checked item
-    * @param index Supposed index of item
-    * @return 1 if item is on the given index in table, 0 otherwise.
-    */
-   inline bool is_valid(const hosts_key_t& key, int index)
-      {return ht_is_valid_v2(this->stat_table_ptr, (char*)key.bytes, index);}
-
-   // Inserts a record into the list to remove
-   void old_rec_list_insert(const hosts_key_t &key);
-
-   // Delete prepared old items
-   void old_rec_list_clean();
-
-   // Checks if a key exists in the list
-   bool old_rec_list_present(const hosts_key_t &key);
-
-   // Check if in the list is at least minimal amount of items
-   inline bool is_old_rec_list_ready()
-      {return old_rec_ready;}
-
-   // Set old_rec_ready to true, mean that it can remove old records
-   inline void set_old_rec_ready() {
-      pthread_mutex_lock(&old_rec_list_mutex);
-      old_rec_ready = true;
-      pthread_mutex_unlock(&old_rec_list_mutex);
-   }
+   
+   // Run detectors on each record in table
+   void check_table(bool check_all);
 };
 
 #endif

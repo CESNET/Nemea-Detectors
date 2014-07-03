@@ -50,23 +50,9 @@ extern "C" {
    #include <unirec/unirec.h>
 }
 
-// Type of operations with BloomFilter over 
-typedef enum {
-   BF_CREATE,
-   BF_SWAP,
-   BF_DESTROY  
-} sp_bf_action;
-
-// BloomFilter key
-struct bloom_key_t {
-   ip_addr_t src_ip;
-   ip_addr_t dst_ip;
-   uint16_t rec_time;
-} __attribute__((packed));
-
 // Function pointer to update the subprofile
-typedef bool (*sp_update)(bloom_key_t *, hosts_record_t&, hosts_record_t&, 
-   const void *, const ur_template_t *, uint16_t);
+typedef bool (*sp_update)(bloom_key_t *, hosts_record_t&, const void *, 
+    const ur_template_t *, uint16_t);
 
 // Function pointer to check a record of the subprofile
 typedef bool (*sp_check)(const hosts_key_t&, const hosts_record_t&);
@@ -79,7 +65,8 @@ typedef void (*sp_bf_config)(sp_bf_action, int);
 
 // General stucture for subprofile pointers
 typedef struct sp_pointers_s {
-   sp_update update_ptr;
+   sp_update update_src_ptr;
+   sp_update update_dst_ptr;
    sp_check check_ptr;
    sp_delete delete_ptr;
    sp_bf_config bf_config_ptr;
@@ -134,12 +121,16 @@ private:
    static bool flow_filter(const void *data, const ur_template_t *tmplt);
 
 public:
+   // DNS record
    dns_record_t record;
 
-   // Update a DNS subprofile
-   static bool update(bloom_key_t *, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
-      uint16_t dir_flags);
+   // Update DNS subprofile (source IP address)
+   static bool update_src_ip(bloom_key_t *, hosts_record_t &src_record,
+      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
+   
+   // Update DNS subprofile (destination IP address)
+   static bool update_dst_ip(bloom_key_t *, hosts_record_t &dst_record,
+      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
 
    // Check rules in a DNS subprofile
    static bool check_record(const hosts_key_t &key, const hosts_record_t &record);
@@ -149,7 +140,8 @@ public:
 };
 
 const sp_pointers_t dns_pointers = {
-   DNSHostProfile::update,
+   DNSHostProfile::update_src_ip,
+   DNSHostProfile::update_dst_ip,
    DNSHostProfile::check_record,
    DNSHostProfile::delete_record,
    NULL
@@ -189,10 +181,13 @@ public:
    // SSH record 
    ssh_record_t record;
 
-   // Update a SSH subprofile
-   static bool update(bloom_key_t *, hosts_record_t &src_record, 
-      hosts_record_t &dst_record, const void *data, const ur_template_t *tmplt,
-      uint16_t dir_flags);
+   // Update SSH subprofile (source IP address)
+   static bool update_src_ip(bloom_key_t *, hosts_record_t &src_record, 
+      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
+   
+   // Update SSH subprofile (destination IP address)
+   static bool update_dst_ip(bloom_key_t *, hosts_record_t &dst_record, 
+      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
 
    // Check rules in a SSH subprofile
    static bool check_record(const hosts_key_t &key, const hosts_record_t &record);
@@ -205,7 +200,8 @@ public:
 };
 
 const sp_pointers_t ssh_pointers = {
-   SSHHostProfile::update,
+   SSHHostProfile::update_src_ip,
+   SSHHostProfile::update_dst_ip,
    SSHHostProfile::check_record,
    SSHHostProfile::delete_record,
    SSHHostProfile::bloom_filter_config

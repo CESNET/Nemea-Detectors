@@ -5,7 +5,6 @@ HOSTSTATSNEMEASRCS=src/aux_func.h \
 		   src/detectionrules.h \
 		   src/eventhandler.cpp \
 		   src/eventhandler.h \
-		   src/filter.h \
 		   src/hoststatserv.cpp \
 		   src/hoststats.h \
 		   src/processdata.cpp \

@@ -36,21 +36,16 @@
  */
 
 #include <iostream>
-#include <sstream>
-#include <map>
 #include <string>
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h> // uint8_t, uint16_t, uint32_t, uint64_t
-#include <arpa/inet.h> // inet_pton(), AF_INET, AF_INET6
-#include <assert.h>
 #include <time.h>
 #include <signal.h>
 
 #include "processdata.h"
 #include "aux_func.h" // various simple conversion functions
-// #include "database.h"
 #include "eventhandler.h"
 #include "detectionrules.h"
 
@@ -67,14 +62,12 @@ using namespace std;
 // Global variables
 extern ur_template_t *tmpl_in;
 extern ur_template_t *tmpl_out;
-extern bool offline_mode;
 
 HostProfile *MainProfile       = NULL; // Global profile
 uint32_t hs_time               = 0; 
 
 // Status information
 bool processing_data = false;
-string last_timeslot = "not available in this version";
 
 static bool terminated  = false;     // TRAP terminated by the user
 static bool end_of_steam = false;   // TRAP the end of stream (no new data)
@@ -89,7 +82,7 @@ static pthread_mutex_t det_processing = PTHREAD_MUTEX_INITIALIZER;
 /** \brief Signal alarm handling
  * Use only in ONLINE mode!
  * Based on the alarm signal runs in regular (user defined) intervals thread
- * that goes throught the content of cuckoo hash table with flow records and 
+ * that goes throught the content of hosts stats table with flow records and 
  * checks flow validity.
  *
  * \param signal Signal for processing
@@ -116,57 +109,8 @@ void alarm_handler(int signal)
       return;
    }
 
-   log(LOG_DEBUG, "Starting detectors.");
+   log(LOG_DEBUG, "Starting detectors...");
    pthread_mutex_unlock(&detector_start);
-}
-
-/** \breif Check all flow records in table
- * If a record is valid and it is in the table longer than a specified 
- * time or has not been updated for specified time then the record is 
- * checked by detectors and invalidated. 
- * Warning: using global variable "offline_mode" to change behavior. 
- *    If offline_mode is true, removes old records directly, otherwise stores 
- *    records to the old_rec_list in MainProfile.
- * \param check_all If true, ignore time and check every valid flow
- */
-void check_flow_table(bool check_all) 
-{
-   for (int index = 0; index < MainProfile->get_table_size(); ++index) {
-      if (terminated) {
-         break;
-      }
-
-      // Get record and check timestamps
-      const hosts_record_t &rec = MainProfile->get_record_at_index(index);
-      if (!check_all &&
-         rec.first_rec_ts + MainProfile->active_timeout > hs_time &&
-         rec.last_rec_ts + MainProfile->inactive_timeout > hs_time) {
-         continue;
-      }
-
-      // Get key and check validity of record
-      const hosts_key_t &key = MainProfile->get_key_at_index(index);
-      if (MainProfile->is_valid(key, index) == 0) {
-         continue;
-      }
-
-      MainProfile->check_record(key, rec);
-
-      if (!offline_mode) {
-         // ONLINE MODE
-         // Add the item to remove to vector
-         MainProfile->old_rec_list_insert(key);
-      } else {
-         // OFFLINE MODE
-         // Delete item immediately
-         MainProfile->remove_by_key(key);
-      }
-   }
-
-   // no new items for now... remove all
-   if (!offline_mode) {
-      MainProfile->set_old_rec_ready();
-   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -187,7 +131,7 @@ void *data_reader_trap(void *args)
       const void *data;
       uint16_t data_size;
 
-      // Get new data from TRAP with exception catch
+      // Get new data from TRAP with exception handling
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, GET_DATA_TIMEOUT * MSEC);
       if (ret != TRAP_E_OK) {
          switch (ret) {
@@ -198,7 +142,6 @@ void *data_reader_trap(void *args)
                   MainProfile->swap_bf();
                   next_bf_change += (MainProfile->active_timeout/2);
                }
-               MainProfile->old_rec_list_clean();
             }
             continue;
          case TRAP_E_TERMINATED:
@@ -244,17 +187,13 @@ void *data_reader_trap(void *args)
          }
       }
 
-      // Remove old records (prepared by the checking thread)
-      if (MainProfile->is_old_rec_list_ready()) {
-         MainProfile->old_rec_list_clean();
-      }
-
       // Update main profile and subprofiles
       MainProfile->update(data, tmpl_in, true);
    }
 
    // TRAP TERMINATED, exiting... 
-   log(LOG_INFO, "Reading from the TRAP ended.");
+   log(LOG_INFO, "Reading from the TRAP ended. Please wait until the HostStats "
+      "is finished processing");
 
    // Wait until the end of the current processing and run it again (to end)
    pthread_mutex_lock(&det_processing);
@@ -282,7 +221,7 @@ void *data_process_trap(void *args)
       pthread_mutex_lock(&det_processing);
       processing_data = true;
 
-      check_flow_table(false);
+      MainProfile->check_table(false);
 
       processing_data = false;
       pthread_mutex_unlock(&det_processing);
@@ -291,7 +230,7 @@ void *data_process_trap(void *args)
    // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting... 
    if (!terminated && end_of_steam) {
       log(LOG_INFO, "Main profile processing ended. Checking the remaining records");
-      check_flow_table(true);
+      MainProfile->check_table(true);
    } else {
       log(LOG_INFO, "Main profile processing terminated.");
    }
@@ -372,13 +311,13 @@ void offline_analyzer()
       }
 
       // Check records in table
-      check_flow_table(false);
+      MainProfile->check_table(false);
       check_time += MainProfile->det_start_time;
    }
 
    // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting... 
    if (!terminated && end_of_steam) {
       log(LOG_INFO, "Reading from the TRAP ended. Checking the remaining records.");
-      check_flow_table(true);
+      MainProfile->check_table(true);
    }
 }
