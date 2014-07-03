@@ -158,8 +158,11 @@ void *data_reader_trap(void *args)
       // Check the correctness of recieved data
       if (data_size < ur_rec_static_size(tmpl_in)) {
          if (data_size > 1) {
-            log(LOG_ERR, "Error: data with wrong size received (expected size: %lu,\
-               received size: %i)\n", ur_rec_static_size(tmpl_in), data_size);
+            log(LOG_ERR, "Error: data with wrong size received (expected size: "
+               "%lu, received size: %i.)\nHint: if you are using this module "
+               "without flowdirection module change value 'port-flowdir' in "
+               "the configuration file (hoststats.conf by default)", 
+               ur_rec_static_size(tmpl_in), data_size);
             terminated = true;
          }
          end_of_steam = true;
@@ -193,7 +196,7 @@ void *data_reader_trap(void *args)
 
    // TRAP TERMINATED, exiting... 
    log(LOG_INFO, "Reading from the TRAP ended. Please wait until the HostStats "
-      "is finished processing");
+      "is finished processing.");
 
    // Wait until the end of the current processing and run it again (to end)
    pthread_mutex_lock(&det_processing);
@@ -277,8 +280,8 @@ void offline_analyzer()
       // Check the correctness of recieved data
       if (data_size < ur_rec_static_size(tmpl_in)) {
          if (data_size > 1) {
-            log(LOG_ERR, "Error: data with wrong size received (expected size: %lu,\
-               received size: %i)\n", ur_rec_static_size(tmpl_in), data_size);
+            log(LOG_ERR, "Error: data with wrong size received (expected size: "
+               "%lu, received size: %i)", ur_rec_static_size(tmpl_in), data_size);
             return;
          }
          end_of_steam = true;

@@ -93,7 +93,7 @@ trap_module_info_t module_info = {
       "Parameters:\n"
       "   -c file  Load configuration from file.\n"
       "   -F       Run module in OFFLINE mode. It is used for analysis of already\n"
-      "            captured flows. As a source can be used mudule such as nfreader,\n"
+      "            captured flows. As a source can be used module such as nfreader,\n"
       "            trapreplay, etc.\n"
       "Note: Other parameters are taken from configuration file. If configuration file\n"
       "      is not specified, hoststats.conf is used by default.\n"
