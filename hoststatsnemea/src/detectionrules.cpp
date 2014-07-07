@@ -79,9 +79,9 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
    }
    
    // DoS/DDoS (victim)
-   uint64_t est_out_rsp_flows = rec.out_rsp_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))/DOS_RSP_REQ_EST_RATIO;
+   uint64_t est_out_rsp_flows = rec.out_rsp_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
    uint64_t est_in_req_flows = rec.in_req_flows + (rec.in_all_flows - (rec.in_req_flows + rec.in_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_in_req_packets = rec.in_req_packets + (rec.in_all_packets - (rec.in_req_packets + rec.in_rsp_packets))/DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_in_req_packets = rec.in_req_packets + (rec.in_all_packets - (rec.in_req_packets + rec.in_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
 
    if (est_in_req_flows > DOS_VICTIM_CONNECTIONS && // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
        est_in_req_packets < DOS_VICTIM_PACKET_RATIO * est_in_req_flows && // packets per flow < 2
@@ -101,9 +101,9 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
    }
    
    // DoS/DDoS (attacker)
-   uint64_t est_out_req_flows = rec.out_req_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))/DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_out_req_packets = rec.out_req_packets + (rec.out_all_packets - (rec.out_req_packets + rec.out_rsp_packets))/DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_in_rsp_flows = rec.in_rsp_flows + (rec.in_all_flows - (rec.in_req_flows + rec.in_rsp_flows))/DOS_RSP_REQ_EST_RATIO;
+   uint64_t est_out_req_flows = rec.out_req_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_out_req_packets = rec.out_req_packets + (rec.out_all_packets - (rec.out_req_packets + rec.out_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_in_rsp_flows = rec.in_rsp_flows + (rec.in_all_flows - (rec.in_req_flows + rec.in_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
  
    if (est_out_req_flows / DOS_ATTACKER_CONNECTIONS >= max(rec.out_all_uniqueips,(uint16_t)1U) && // number of connection requests per target
        est_out_req_packets < DOS_ATTACKER_PACKET_RATIO * est_out_req_flows && // packets per flow < 2
@@ -220,7 +220,7 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
 {
    const dns_record_t &dns_rec = rec.dnshostprofile->record;
 
-   if (dns_rec.out_rsp_overlimit_cnt > 10000) {
+   if (dns_rec.out_rsp_overlimit_cnt > DNS_AMPLIF_THRESHOLD) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DNSAMP);
       evt.addDstPort(53).addSrcAddr(addr);
       evt.setScale(dns_rec.out_rsp_overlimit_cnt);
@@ -228,7 +228,7 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
       reportEvent(evt);
    } 
 
-   if (dns_rec.in_rsp_overlimit_cnt > 10000) {
+   if (dns_rec.in_rsp_overlimit_cnt > DNS_AMPLIF_THRESHOLD) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DNSAMP);
       evt.addDstPort(53).addDstAddr(addr);
       evt.setScale(dns_rec.in_rsp_overlimit_cnt);

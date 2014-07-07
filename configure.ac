@@ -159,6 +159,9 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([alarm clock_gettime floor gettimeofday localeconv memset mkdir pow setlocale sqrt strchr strdup strerror strstr strtol strtoul])
 
+# Check for sigaction
+AC_CHECK_FUNC(sigaction, AC_DEFINE(HAVE_SIGACTION, 1, [Define if you have the 'sigaction' function]))
+
 #RPM & Doxygen
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
