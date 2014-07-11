@@ -5,6 +5,7 @@ astute \
 attack_gen \
 blacklistfilter \
 basic2collector \
+brute_force_detector \
 deduplication \
 delaybuffer \
 dns_amplification \

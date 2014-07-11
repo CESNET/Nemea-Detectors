@@ -184,6 +184,7 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/dnsdetect/Makefile
                  blacklistfilter/ipdetect/Makefile
                  blacklistfilter/urldetect/Makefile
+                 brute_force_detector/Makefile
                  deduplication/Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile
