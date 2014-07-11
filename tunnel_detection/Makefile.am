@@ -1,6 +1,5 @@
 bin_PROGRAMS=tunnel_detection_dns
-tunnel_detection_dns_SOURCES=
-			tunnel_detection_dns.c \
+tunnel_detection_dns_SOURCES=tunnel_detection_dns.c \
 			tunnel_detection_dns.h \
 			parser_pcap_dns.c \
 			parser_pcap_dns.h \
