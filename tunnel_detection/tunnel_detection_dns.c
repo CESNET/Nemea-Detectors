@@ -46,7 +46,6 @@
 #include <time.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
-#include "b_plus_tree.h"
 #include "prefix_tree.h"
 
 /* ****************************** Modify here ****************************** */
