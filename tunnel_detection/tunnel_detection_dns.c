@@ -46,7 +46,7 @@
 #include <time.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
-#include "prefix_tree.h"
+//#include "prefix_tree.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module

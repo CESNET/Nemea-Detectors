@@ -42,11 +42,10 @@
  */
 #include "prefix_tree.h"
 
-
-
-int map_chatecter_to_number(char  letter){
-	//numbers are on position 0 to 9 from 48 -57
+int map_chatecter_to_number(char  letter)
+{
 	if(letter >= ' ' && letter <= '~'){
+		//numbers are on position 0 to 9 from 48 -57
 		return (letter) -' ';
 	}
 	else{
@@ -56,22 +55,39 @@ int map_chatecter_to_number(char  letter){
 
 }
 
-prefix_tree_t * prefix_tree_initialize(){
+prefix_tree_t * prefix_tree_initialize()
+{
 	prefix_tree_t * tree;
 	tree = (prefix_tree_t *) calloc(sizeof(prefix_tree_t),1);
+	if (tree == NULL){
+		return (NULL);
+	}
 	tree->root = (prefix_tree_inner_node_t *) calloc(sizeof(prefix_tree_inner_node_t),1);
+	if (tree->root == NULL){
+		return (NULL);
+	}
 	tree->root->domain = (prefix_tree_domain_t *) calloc(sizeof(prefix_tree_domain_t),1);
-	tree->root->domain->count_of_insert=1;
+	if (tree->root->domain == NULL){
+		return (NULL);
+	}
+	tree->root->domain->count_of_insert = 1;
 	tree->list_of_most_subdomains = (prefix_tree_domain_t**) calloc(sizeof(prefix_tree_domain_t*), MAX_SIZE_OF_DEEGRE);
+	if (tree->list_of_most_subdomains == NULL){
+		return (NULL);
+	}	
 	tree->list_of_most_subdomains_end = (prefix_tree_domain_t**) calloc(sizeof(prefix_tree_domain_t*), MAX_SIZE_OF_DEEGRE);
+	if (tree->list_of_most_subdomains_end == NULL){
+		return (NULL);
+	}		
 	return tree;
 }
 
 
 
-void prefix_tree_destroy_recursive(prefix_tree_inner_node_t *  node){
+void prefix_tree_destroy_recursive(prefix_tree_inner_node_t *  node)
+{
 	//for all nodes
-	if(node!=NULL){
+	if(node != NULL){
 		//for all children in node
 		if(node->child != NULL){
 			int i;
@@ -97,14 +113,22 @@ void prefix_tree_destroy_recursive(prefix_tree_inner_node_t *  node){
 	}
 }
 
-void prefix_tree_destroy(prefix_tree_t * tree){
-	prefix_tree_destroy_recursive(tree->root);
-	free(tree->list_of_most_subdomains);
-	free(tree->list_of_most_subdomains_end);
-	free(tree);
+void prefix_tree_destroy(prefix_tree_t * tree)
+{
+	if(tree != NULL){
+		prefix_tree_destroy_recursive(tree->root);
+		if(tree->list_of_most_subdomains != NULL){
+			free(tree->list_of_most_subdomains);
+		}
+		if(tree->list_of_most_subdomains_end != NULL){
+			free(tree->list_of_most_subdomains_end);
+		}
+		free(tree);
+	}
 }
 
-void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t * tree){
+void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t * tree)
+{
 	while(domain_parent !=NULL){
 		int index;
 		//+1 to subdomain
@@ -152,8 +176,6 @@ void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t *
 					if(help->most_subdomains_less == NULL)
 						tree->list_of_most_subdomains_end[index] = help;
 				}
-
-
 			}
 		}
 		//move to next item
@@ -161,8 +183,12 @@ void recursive_plus_domain(prefix_tree_domain_t * domain_parent, prefix_tree_t *
 	}
 }
 
-prefix_tree_domain_t * new_domain(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, prefix_tree_t * tree){
+prefix_tree_domain_t * new_domain(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, prefix_tree_t * tree)
+{
 	node->domain = (prefix_tree_domain_t*) calloc(sizeof(prefix_tree_domain_t),1);
+	if(node->domain == NULL){
+		return (NULL);
+	}
 	node->domain->parent_domain = domain_parent;
 	node->domain->parent = node;
 	if(domain_parent){
@@ -173,27 +199,43 @@ prefix_tree_domain_t * new_domain(prefix_tree_inner_node_t * node, prefix_tree_d
 	return node->domain;	
 }
 
-prefix_tree_inner_node_t * new_node(prefix_tree_inner_node_t * parent, int map_number){
+prefix_tree_inner_node_t * new_node(prefix_tree_inner_node_t * parent, int map_number)
+{
 	parent->child[map_number] = (prefix_tree_inner_node_t*) calloc(sizeof(prefix_tree_inner_node_t),1);
+	if(parent->child[map_number] == NULL){
+		return (NULL);
+	}
 	parent->child[map_number]->parent = parent;	
 	return parent->child[map_number];
 }
 
-prefix_tree_inner_node_t * add_children_array(prefix_tree_inner_node_t * parent){
+prefix_tree_inner_node_t * add_children_array(prefix_tree_inner_node_t * parent)
+{
 	parent->child = (prefix_tree_inner_node_t **) calloc(sizeof(prefix_tree_inner_node_t*),COUNT_OF_LETTERS_IN_DOMAIN);
+	if(parent->child == NULL){
+		return (NULL);
+	}
 	return parent;
+	
 }
 
-prefix_tree_inner_node_t * new_node_parent_is_domain(prefix_tree_domain_t * domain){
+prefix_tree_inner_node_t * new_node_parent_is_domain(prefix_tree_domain_t * domain)
+{
 	domain->child = (prefix_tree_inner_node_t*) calloc(sizeof(prefix_tree_inner_node_t),1);
+	if(domain->child == NULL){
+		return (NULL);
+	}	
 	domain->child->parent_is_domain = domain;
-	add_children_array(domain->child);
+	if(add_children_array(domain->child) == NULL){
+		return (NULL);
+	}
 	return domain->child;
 }
 
-int count_to_dot(char * string, int length){
+int count_to_dot(char * string, int length)
+{
 	int i;
-	for(i=length-1; i >=0 ; i-- ){
+	for(i=length-1; i >=0 ; i--){
 		if(string[i] == '.'){
 			return length - i - 1;
 		}
@@ -202,7 +244,8 @@ int count_to_dot(char * string, int length){
 }
 
 
-prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree_domain_t * domain , char * string, int length, prefix_tree_t * tree){
+prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree_domain_t * domain , char * string, int length, prefix_tree_t * tree)
+{
 	int count, i;
 	count = count_to_dot(string,length);
 	node->string = (char*) calloc(sizeof(char),count);
@@ -218,20 +261,34 @@ prefix_tree_domain_t * add_new_item(prefix_tree_inner_node_t * node ,prefix_tree
 	return node->domain;
 }
 
-prefix_tree_inner_node_t * split_node_into_two(prefix_tree_inner_node_t * node, int index){
+prefix_tree_inner_node_t * split_node_into_two(prefix_tree_inner_node_t * node, int index)
+{
 	prefix_tree_inner_node_t * first_node;
 	char * second_string;
 	int map_number;
 	//first node, must be created
 	first_node = new_node(node->parent, map_chatecter_to_number(*(node->string)));	
-	add_children_array(first_node);
+	if(first_node == NULL){
+		return (NULL);
+	}
+	if(add_children_array(first_node) == NULL){
+		return (NULL);
+	}
 	first_node->string = (char*) calloc(sizeof(char), index);
+	if(first_node->string == NULL){
+		return (NULL);
+	}
 	memcpy(first_node->string, node->string, sizeof(char) * (index));
 	first_node->length = index;
 	//second node must be edited
 	second_string = (char*) calloc(sizeof(char), node->length - index);
+	if(second_string == NULL){
+		return (NULL);
+	}
 	memcpy(second_string, node->string+index,sizeof(char) * (node->length - index));
-	free(node->string);
+	if(node->string != NULL){
+		free(node->string);
+	}
 	node->string = second_string;
 	node->length = node->length - index;
 	node->parent = first_node;
@@ -241,15 +298,13 @@ prefix_tree_inner_node_t * split_node_into_two(prefix_tree_inner_node_t * node, 
 }
 
 
-char * read_doamin(prefix_tree_domain_t * domain, char * string){
+char * read_doamin(prefix_tree_domain_t * domain, char * string)
+{
 	char  *pointer_to_string;
 	prefix_tree_inner_node_t *node;
 	int i;
 	pointer_to_string=string;
 	node = domain->parent;
-	if(node->parent==NULL){
-
-	}
 	while (domain!=NULL && domain->parent!=NULL){
 		node = domain->parent;
 		while(node->parent != NULL){
@@ -268,7 +323,8 @@ char * read_doamin(prefix_tree_domain_t * domain, char * string){
 	return string;
 }
 
-prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, char * string, int length, prefix_tree_t * tree){
+prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t * node, prefix_tree_domain_t * domain_parent, char * string, int length, prefix_tree_t * tree)
+{
 	//read common part;
 	int i, index;
 	index = length-1;
@@ -286,10 +342,14 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 		map_number = map_chatecter_to_number(string[index]);
 		//new record, create new nodes
 		if(node->child ==NULL){
-			add_children_array(node);
+			if(add_children_array(node) == NULL){
+				return (NULL);
+			}
 		}
 		if(node->child[map_number] == NULL){
-			new_node(node, map_number);
+			if(new_node(node, map_number) == NULL){
+				return (NULL);
+			}
 			return add_new_item(node->child[map_number],domain_parent , string, length, tree); 
 		}
 		//link exists
@@ -301,10 +361,15 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 	else if(i < node->length){
 		//split node into two nodes, on index where it is not common
 		node = split_node_into_two(node, i);
+		if(node == NULL){
+			return (NULL);
+		}
 		//domain
 		if(index == -1 || string[index] == '.'){
 			if(node->domain == NULL){
-				new_domain(node, domain_parent, tree);
+				if(new_domain(node, domain_parent, tree) == NULL){
+					return (NULL);
+				}
 			}
 			if(index <= 0){
 				return (node->domain);
@@ -318,10 +383,14 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 			int map_number;
 			map_number = map_chatecter_to_number(string[index]);
 			if(node->child == NULL){
-				add_children_array(node);
+				if(add_children_array(node) == NULL){
+					return (NULL);
+				}					
 			}
 			if(node->child[map_number] == NULL){
-				new_node(node,map_number);
+				if(new_node(node,map_number) == NULL){
+					return (NULL);
+				}	
 				return add_new_item(node->child[map_number],domain_parent, string, index+1, tree);
 			}
 			return prefix_tree_add_domain_recursive(node->child[map_number], domain_parent, string, index+1, tree);
@@ -332,7 +401,9 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 		int map_number;
 		if(index < 0 || string[index]=='.'){
 			if(node->domain == NULL){
-				new_domain(node, domain_parent, tree);
+				if(new_domain(node, domain_parent, tree) == NULL){
+					return (NULL);
+				}	
 			}
 			else if(node->domain->exception){
 				return NULL;		
@@ -350,10 +421,14 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 		
 		map_number = map_chatecter_to_number(string[index]);
 		if(node->child == NULL){
-			add_children_array(node);
+			if(add_children_array(node) == NULL){
+				return (NULL);
+			}	
 		}
 		if(node->child[map_number] == NULL){
-			new_node(node,map_number);
+			if(new_node(node,map_number) == NULL){
+				return (NULL);
+			}	
 			return add_new_item(node->child[map_number],domain_parent, string, index+1, tree);
 		}
 		else{
@@ -367,7 +442,8 @@ prefix_tree_domain_t * prefix_tree_add_domain_recursive(prefix_tree_inner_node_t
 	
 }
 
-int prefix_tree_is_domain_in_exception(prefix_tree_t * tree, char * string, int length){
+int prefix_tree_is_domain_in_exception(prefix_tree_t * tree, char * string, int length)
+{
 	int i, index, map_number;
 	prefix_tree_inner_node_t *node;
 	node = tree->root;
@@ -404,11 +480,11 @@ int prefix_tree_is_domain_in_exception(prefix_tree_t * tree, char * string, int 
 			}
 	}
 	return 0;
-
 }
 
 
-double most_used_domain_percent_of_subdomains(prefix_tree_t * tree, int depth){
+double most_used_domain_percent_of_subdomains(prefix_tree_t * tree, int depth)
+{
 	prefix_tree_domain_t *dom;
 	dom = tree->root->domain;
 	if(depth >= MAX_SIZE_OF_DEEGRE)
@@ -421,22 +497,24 @@ double most_used_domain_percent_of_subdomains(prefix_tree_t * tree, int depth){
 }
 
 
-prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat){
+prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * string, int length,  character_statistic_t * char_stat)
+{
 	prefix_tree_domain_t * found, * iter;
 	int index;	
 
 	found = prefix_tree_add_domain_recursive(tree->root, tree->root->domain, string, length, tree);
-	//exception or error
 	if(found == NULL){
+		//exception or error
 		return NULL;
 	}
 	
 	found->count_of_insert++;
 	tree->count_of_inserting++;
-	iter=found;
-	//just one search
-	//Because of the speed, it is better to devide used and unused list. The unused list is not sorted, and used is sorted
+	iter = found;
+
 	if(found->count_of_insert == 1){
+		//just one search
+		//Because of the speed, it is better to devide used and unused list. The unused list is not sorted, and used is sorted
 		if(char_stat != NULL){
 			found->count_of_different_letters = char_stat->count_of_different_letters;
 		}
@@ -467,14 +545,15 @@ prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * strin
 			iter->most_used_domain_less->most_used_domain_more = iter->most_used_domain_more;
 		}
 		iter->most_used_domain_less = iter->most_used_domain_more = NULL;
-	}else if(found->count_of_insert > MAX_COUNT_TO_BE_IN_JUST_ONE_SEARCHER){
+	}
+	else if(found->count_of_insert > MAX_COUNT_TO_BE_IN_JUST_ONE_SEARCHER){
 		tree->count_of_inserting_for_just_ones++;
 	}
 
-	//add or sort in list count_of_insert
 	if(found->count_of_insert > ADD_TO_LIST_FROM_COUNT_OF_SEARCH){
-		//on the begeing set the best, and the worse
+		//add or sort in list count_of_insert
 		if(tree->list_of_most_used_domains == NULL && tree->list_of_most_used_domains_end == NULL ){
+			//on the begeing set the best, and the worse
 			tree->list_of_most_used_domains=iter;
 			tree->list_of_most_used_domains_end=iter;
 		}
@@ -509,8 +588,6 @@ prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * strin
 				if(help->most_used_domain_less == NULL)
 					tree->list_of_most_used_domains_end = help;
 			}
-
-
 		}
 	}
 	//add or sort in list count_of_different_subdomains
@@ -519,9 +596,13 @@ prefix_tree_domain_t * prefix_tree_add_domain(prefix_tree_t * tree, char * strin
 
 
 
-prefix_tree_domain_t * prefix_tree_add_domain_exception(prefix_tree_t * tree, char * string, int length){
+prefix_tree_domain_t * prefix_tree_add_domain_exception(prefix_tree_t * tree, char * string, int length)
+{
 	prefix_tree_domain_t * found, * iter;
 	int index;
 	found = prefix_tree_add_domain_recursive(tree->root, tree->root->domain, string, length, tree);
-	found->exception = 1;
+	if(found != NULL){
+		found->exception = 1;
+	}
+	return found;
 }
