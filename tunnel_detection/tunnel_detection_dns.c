@@ -46,7 +46,6 @@
 #include <time.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
-//#include "prefix_tree.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -681,7 +680,7 @@ int is_payload_on_ip_ok_request_tunnel(ip_address_t * item){
 		    (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
 		    (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_unique_domains   //percent of unique domains
 		    )&&
-		    (most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain)
+		    (prefix_tree_most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain)
 		    )){  //percent of unique search
           item->state_request_tunnel = STATE_ATTACK;
           item->print |= REQUEST_PART_TUNNEL;
@@ -862,13 +861,13 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
       
       //print found anomaly tunnel
       if(item->state_request_tunnel == STATE_ATTACK && item->print & REQUEST_PART_TUNNEL){
-         fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
+         fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
 
          dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
       }
@@ -886,7 +885,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }
          }
@@ -904,7 +903,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }         
@@ -915,7 +914,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -926,7 +925,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -937,7 +936,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }  
@@ -948,7 +947,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -963,7 +962,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }
       }
@@ -983,13 +982,13 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
       
       //print found anomaly tunnel
       if(item->state_request_tunnel == STATE_ATTACK){
-         fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
+         fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
 
          dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
       }
@@ -1007,7 +1006,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }
          }
@@ -1025,7 +1024,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }         
@@ -1036,7 +1035,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1047,7 +1046,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1058,7 +1057,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }  
@@ -1069,7 +1068,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1084,7 +1083,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file){
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }
       }
