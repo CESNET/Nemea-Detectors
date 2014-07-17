@@ -230,6 +230,7 @@ AC_CONFIG_FILES([Makefile
                  trapreplay/Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
+                 warden_collector/Makefile
                ])
 
 
