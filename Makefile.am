@@ -47,7 +47,8 @@ slowthreatdetector \
 sshcure \
 synflood/synfindiff \
 synflood/synrate \
-synflood/pcf
+synflood/pcf \
+warden_collector
 
 
 EXTRA_DIST = nfreader flow_meter portscan_detector
