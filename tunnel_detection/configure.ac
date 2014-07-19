@@ -18,6 +18,29 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([trap], [main])
 # FIXME: Replace `main' with a function in `-lunirec':
 AC_CHECK_LIB([unirec], [main])
+# Checks for library nemea-common
+if test -z "$NEMEACOMMONLIB"; then
+	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
+	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
+	LIBS="$NEMEACOMMON_LIBS $LIBS"
+	CFLAGS="$NEMEACOMMON_CFLAGS $CFLAGS"
+	CXXFLAGS="$NEMEACOMMON_CFLAGS $CXXFLAGS"
+fi
+if test -z "$NEMEACOMMONLIB"; then
+	# Check for NEMEACOMMON toolkit as a superproject.
+	if test -d "$srcdir/../common"; then
+	NEMEACOMMONINC='$(top_srcdir)/../common/include'
+	NEMEACOMMONLIB='$(top_builddir)/../common'
+	fi
+	# AC_SUBST command line variables from NEMEACOMMONLIB and NEMEACOMMONINC.
+	if test -n "$NEMEACOMMONLIB"; then
+	AC_SUBST([NEMEACOMMON_LTLIB], ["$NEMEACOMMONLIB/libnemea-common.la"])
+	AC_SUBST([NEMEACOMMON_INCLUDE], ["-I$NEMEACOMMONINC"])
+	LDFLAGS="-L$NEMEACOMMONLIB $LDFLAGS"
+	CFLAGS="-I$NEMEACOMMONINC $CFLAGS"
+	CXXFLAGS="-I$NEMEACOMMONINC $CXXFLAGS"
+	fi
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([inttypes.h stdint.h stdlib.h string.h])
