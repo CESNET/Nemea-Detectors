@@ -11,7 +11,7 @@ USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
-AM_INIT_AUTOMAKE([-Wall -Werror silent-rules])
+AM_INIT_AUTOMAKE([-Wall silent-rules subdir-objects])
 LT_INIT
 AM_SILENT_RULES([yes])
 
