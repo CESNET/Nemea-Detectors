@@ -184,10 +184,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
                }
                if(found->suspision_request_tunnel != NULL && found->suspision_request_tunnel->tunnel_suspision == NULL){   
-                  found->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize();
+                  found->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_request_tunnel != NULL && found->suspision_request_tunnel->tunnel_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);
+                  prefix_tree_insert(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length);
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -196,14 +196,14 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
             }
             //add to prefix tree, if ip is in suspision state, other anomaly
             if(found->state_request_other == STATE_SUSPICION && found->suspision_request_other && found->suspision_request_other->state_request_size[index_to_histogram] == STATE_ATTACK){
-               prefix_tree_add_domain(found->suspision_request_other->other_suspision, packet->request_string, char_stat.length, &char_stat);  
+               prefix_tree_insert(found->suspision_request_other->other_suspision, packet->request_string, char_stat.length);  
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/     
             }
             //add to prefix tree, if ip is in suspision state, tunnel anomaly
             if(found->state_request_tunnel == STATE_SUSPICION && found->suspision_request_tunnel && found->suspision_request_tunnel->state_request_size[index_to_histogram] == STATE_ATTACK){
-               prefix_tree_add_domain(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length, &char_stat);    
+               prefix_tree_insert(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length);    
                #ifdef TIME
                   add_to_prefix++;
                #endif /*TIME*/      
@@ -230,7 +230,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
       if(found->state_response_other == STATE_SUSPICION && found->suspision_response_other && found->suspision_response_other->state_response_size[index_to_histogram] == STATE_ATTACK){
          if(packet->request_length > 0){
             calculate_character_statistic(packet->request_string, &char_stat);
-            prefix_tree_add_domain(found->suspision_response_other->other_suspision, packet->request_string, char_stat.length, &char_stat); 
+            prefix_tree_insert(found->suspision_response_other->other_suspision, packet->request_string, char_stat.length); 
             #ifdef TIME
                add_to_prefix++;
             #endif /*TIME*/              
@@ -251,10 +251,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->request_suspision == NULL){
-                  found->suspision_response_tunnel->request_suspision = prefix_tree_initialize();
+                  found->suspision_response_tunnel->request_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->request_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_response_tunnel->request_suspision, packet->request_string, char_stat.length, &char_stat);
+                  prefix_tree_insert(found->suspision_response_tunnel->request_suspision, packet->request_string, char_stat.length);
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -270,10 +270,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->txt_suspision == NULL){
-                  found->suspision_response_tunnel->txt_suspision = prefix_tree_initialize();
+                  found->suspision_response_tunnel->txt_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->txt_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_response_tunnel->txt_suspision, packet->txt_response, char_stat.length, &char_stat);
+                  prefix_tree_insert(found->suspision_response_tunnel->txt_suspision, packet->txt_response, char_stat.length);
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -288,10 +288,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->cname_suspision == NULL){
-                  found->suspision_response_tunnel->cname_suspision = prefix_tree_initialize();
+                  found->suspision_response_tunnel->cname_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->cname_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_response_tunnel->cname_suspision, packet->cname_response, char_stat.length, &char_stat);
+                  prefix_tree_insert(found->suspision_response_tunnel->cname_suspision, packet->cname_response, char_stat.length);
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -306,10 +306,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }        
                if(found->suspision_response_tunnel !=NULL && found->suspision_response_tunnel->mx_suspision == NULL){
-                  found->suspision_response_tunnel->mx_suspision = prefix_tree_initialize();
+                  found->suspision_response_tunnel->mx_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_response_tunnel !=NULL && found->suspision_response_tunnel->mx_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_response_tunnel->mx_suspision, packet->mx_response, char_stat.length, &char_stat); 
+                  prefix_tree_insert(found->suspision_response_tunnel->mx_suspision, packet->mx_response, char_stat.length); 
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -324,10 +324,10 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                } 
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->ns_suspision == NULL){
-                  found->suspision_response_tunnel->ns_suspision = prefix_tree_initialize();
+                  found->suspision_response_tunnel->ns_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->ns_suspision != NULL){
-                  prefix_tree_add_domain(found->suspision_response_tunnel->ns_suspision, packet->ns_response, char_stat.length, &char_stat);
+                  prefix_tree_insert(found->suspision_response_tunnel->ns_suspision, packet->ns_response, char_stat.length);
                }
                #ifdef TIME
                   add_to_prefix++;
@@ -515,7 +515,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
          }
          //if it is first other suspision
          if(item->suspision_request_other != NULL && item->suspision_request_other->other_suspision == NULL){
-            item->suspision_request_other->other_suspision = prefix_tree_initialize();
+            item->suspision_request_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
@@ -558,7 +558,7 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
          }
          //if it is first other suspision
          if(item->suspision_request_tunnel != NULL && item->suspision_request_tunnel->tunnel_suspision == NULL){
-            item->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize();
+            item->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
@@ -594,7 +594,7 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
          }
          //if it is first other suspision
          if(item->suspision_response_other != NULL && item->suspision_response_other->other_suspision == NULL){
-            item->suspision_response_other->other_suspision = prefix_tree_initialize();
+            item->suspision_response_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_RESPONSE ; i++){
@@ -889,7 +889,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision ,dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
       }
@@ -907,7 +907,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }
          }
@@ -923,7 +923,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }         
@@ -934,7 +934,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -945,7 +945,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -956,7 +956,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }  
@@ -967,7 +967,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -981,7 +981,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }
       }
@@ -1007,7 +1007,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
       }
@@ -1025,7 +1025,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }
          }
@@ -1043,7 +1043,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }         
@@ -1054,7 +1054,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1065,7 +1065,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1076,7 +1076,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }  
@@ -1087,7 +1087,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
-               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+               fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
             }        
          }
@@ -1102,7 +1102,7 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
-            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_doamin(dom, str), dom->count_of_insert);
+            fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }
       }
@@ -1541,7 +1541,7 @@ int main(int argc, char **argv)
       return 4;
    }
    //initialize prefix tree
-   preftree = prefix_tree_initialize();
+   preftree = prefix_tree_initialize(SUFFIX ,0,'.');
    //add exceptions to prefix tree, if the file is specified
    if(exception_file != NULL){
       int sign;
@@ -1560,7 +1560,7 @@ int main(int argc, char **argv)
          }
          domain[length] = 0;
          if(length != 0){
-            prefix_tree_add_domain_exception(preftree,domain ,length);
+            prefix_tree_add_string_exception(preftree,domain ,length);
          }
          sign = fgetc(exception_file);
       }
@@ -1688,7 +1688,7 @@ int main(int argc, char **argv)
             if(packet.is_response==0){
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){
+                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){
                      if(packet.ip_version == IP_VERSION_4){
                         collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
                      }
@@ -1702,7 +1702,7 @@ int main(int argc, char **argv)
             else{
                // Update counters
                //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
+               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
                   if(packet.ip_version == IP_VERSION_4){
                      collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                   }
@@ -1774,7 +1774,7 @@ int main(int argc, char **argv)
             if(packet.is_response==0){
                // Update counters
                   //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){
+                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){
                      if(packet.ip_version == IP_VERSION_4){
                         collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
                      }
@@ -1788,7 +1788,7 @@ int main(int argc, char **argv)
             else{
                // Update counters
                //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_domain_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
+               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
                   if(packet.ip_version == IP_VERSION_4){
                      collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                   }
