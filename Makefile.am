@@ -50,7 +50,7 @@ synflood/pcf \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
@@ -83,5 +83,3 @@ rpm-clean:
 	rm -rf $(RPMDIR)
 else
 endif
-#pca/pca-test-receiver 
-#cpd_module 
