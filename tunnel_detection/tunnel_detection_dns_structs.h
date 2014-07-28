@@ -70,6 +70,17 @@
 
 
 /*!
+ * \brief Structure - statistic information about string
+ * Structure used to keep statistic information about string.
+ */
+typedef struct character_statistic_t{
+    unsigned int count_of_different_letters;    /*< Count of different letters in string  */
+    unsigned int count_of_numbers_in_string;    /*< Count of stored numbers in string */
+    unsigned int length;    /*< Length of string */
+} character_statistic_t;
+
+
+/*!
  * \brief Structure - type detection request other anomaly
  * Structure used to keep information about type detection request other anomaly
  */
