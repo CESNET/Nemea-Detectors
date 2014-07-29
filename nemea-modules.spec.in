@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} -q --enable-silent-rules;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules;
 make -j5
 
 %install
@@ -29,10 +29,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/*
-%{_docdir}/nemea-modules/anonymizer/README
-%{_docdir}/nemea-modules/entropy/README
-%{_docdir}/nemea-modules/hoststatsnemea/README
-%{_docdir}/nemea-modules/pca/README
-%{_docdir}/nemea-modules/trapdreplay/README
-%{_docdir}/nemea-modules/trapdump/README
+%{_docdir}/nemea-modules/*/README
+%{_sysconfdir}/nemea/*
 
