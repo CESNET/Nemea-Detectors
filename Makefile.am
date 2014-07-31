@@ -5,6 +5,7 @@ astute \
 attack_gen \
 blacklistfilter \
 basic2collector \
+brute_force_detector \
 deduplication \
 delaybuffer \
 dns_amplification \
@@ -45,10 +46,11 @@ slowthreatdetector \
 sshcure \
 synflood/synfindiff \
 synflood/synrate \
-synflood/pcf
+synflood/pcf \
+warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
@@ -81,5 +83,3 @@ rpm-clean:
 	rm -rf $(RPMDIR)
 else
 endif
-#pca/pca-test-receiver 
-#cpd_module 

@@ -1,4 +1,4 @@
-******************* Simple DNSAmplification module for NEMEA ****************
+************** Simple DNS amplification detection module for NEMEA *************
 
 
 Table of Contents
@@ -11,7 +11,7 @@ Table of Contents
     5. Compilation and linking
 
 
-1. Module desctiption
+1. Module description
 =====================
 
     Module implements simple DNS Amplification attacks detection, based
@@ -31,7 +31,7 @@ are also deleted after some time.
 Detection method is based on the amount of packets/bytes in the traffic. It uses
 several thresholds specified in the section of Additional parameters. Method
 calculates histograms of different monitored data, which are used to determine
-the most occured values.
+the most occurred values.
 
 Module input:	<COLLECTOR-FLOW>
 Module output:	<AMPLIFICATION-ALERT>
@@ -51,9 +51,9 @@ At first, 4 histograms from the stored data in the history model are generated:
 
 Now we can use these histograms in the detection algorithm along with functions
 which are required for detection. It is important that we are able to transform
-histogram to normalized histogram, count number of occurences of flow, sum
+histogram to normalized histogram, count number of occurrences of flow, sum
 number of packets or bytes and compute average value of histogram. Very
-important is that we can take only N of most occuring values sorted descending.
+important is that we can take only N of most occurring values sorted descending.
 
 Algorithm is demonstrated by this pseudocode:
  
@@ -66,13 +66,13 @@ if (sum(topn(norm(hvrb),<N>) > <I> && sum(topn(hvrb),<N>) > <T> ) {
 }
 
 In first condition we normalize the histogram of flow sizes in bytes for response 
-direction, then we take N most occuring values from the histogram and we sum 
-the occurences of pair. This value must be higher than threshold I.
-Also we take top-N of the same histogram and we sum the occurence of pair, 
+direction, then we take N most occurring values from the histogram and we sum 
+the occurrences of pair. This value must be higher than threshold I.
+Also we take top-N of the same histogram and we sum the occurrence of pair, 
 comparing it to the threshold T.
 
-Second condition is created from three similiar parts. We take three histograms,
-get tje top-N from each of them and then we compute their average values. Each
+Second condition is created from three similar parts. We take three histograms,
+get the top-N from each of them and then we compute their average values. Each
 of these values must be higher or lower than certain threshold.
 
 Then the third condition computes the amplification effect from summing the 

@@ -11,7 +11,7 @@ USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
-AM_INIT_AUTOMAKE([-Wall -Werror silent-rules])
+AM_INIT_AUTOMAKE([-Wall silent-rules subdir-objects])
 LT_INIT
 AM_SILENT_RULES([yes])
 
@@ -159,6 +159,9 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([alarm clock_gettime floor gettimeofday localeconv memset mkdir pow setlocale sqrt strchr strdup strerror strstr strtol strtoul])
 
+# Check for sigaction
+AC_CHECK_FUNC(sigaction, AC_DEFINE(HAVE_SIGACTION, 1, [Define if you have the 'sigaction' function]))
+
 #RPM & Doxygen
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
@@ -181,6 +184,7 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/dnsdetect/Makefile
                  blacklistfilter/ipdetect/Makefile
                  blacklistfilter/urldetect/Makefile
+                 brute_force_detector/Makefile
                  deduplication/Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile
@@ -226,6 +230,7 @@ AC_CONFIG_FILES([Makefile
                  trapreplay/Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
+                 warden_collector/Makefile
                ])
 
 

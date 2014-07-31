@@ -1,0 +1,7 @@
+Nemea-2.0:
+	* added new modules (see ChangeLog for the list)
+	* replaced "script" by Supervisor to control and monitor Nemea
+	* extended libnemea-common
+	* extended libunirec
+	* bugfixes of libtrap
+
