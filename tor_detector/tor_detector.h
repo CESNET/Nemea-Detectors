@@ -44,5 +44,14 @@
 
 
 
+#define ALLOC_STEP_COUNT 50
+
+
+
+typedef struct {
+   ip_addr_t *ip_ar;
+   int count;
+   int allocated;
+} tor_list_t;
 
 

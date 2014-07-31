@@ -107,15 +107,101 @@ void unirec_copy(ur_template_t *tmplt_dst, void *data_dst, ur_template_t *tmplt_
 }
 
 
-uint8_t check_ips(ur_template_t *tmplt, const void *data)
+tor_list_t *init_tor_list(void)
+{
+   tor_list_t *tor_list;
+
+   tor_list = malloc(sizeof(tor_list_t)); // TODO: kontrolovat malloc
+   tor_list->count = 0;
+
+   tor_list->ip_ar = malloc(sizeof(ip_addr_t) * ALLOC_STEP_COUNT);
+   tor_list->allocated = ALLOC_STEP_COUNT;
+
+   return tor_list;
+}
+
+
+void update_tor_list(tor_list_t *tor_list)
+{
+   FILE *fp;
+   char buffer[64] = {0};
+
+   tor_list->count = 0; // No need to free data, we just owrite them with new
+
+   fp = fopen("update.txt", "r");
+
+   while(fgets(buffer, 63, fp) != NULL) {
+      // Trim newline character if is present
+      if (buffer[strlen(buffer) - 1] == '\n') {
+         buffer[strlen(buffer) - 1] = 0;
+      }
+
+      // Realloc memory if needed
+      if (tor_list->count >= tor_list->allocated) {
+         tor_list->ip_ar = realloc(tor_list->ip_ar, sizeof(ip_addr_t) * (tor_list->allocated + ALLOC_STEP_COUNT));
+         tor_list->allocated += ALLOC_STEP_COUNT;
+      }
+
+      ip_from_str(buffer, &tor_list->ip_ar[tor_list->count]);
+      tor_list->count++;
+   }
+
+   fclose(fp);
+}
+
+
+
+
+
+uint8_t ip_binary_search(ip_addr_t *ip, tor_list_t *tor_list)
+{
+   int begin, end, mid, result;
+
+   begin = 0;
+   end = tor_list->count;
+
+   while (begin <= end) {
+      mid = (begin + end) >> 1;
+
+      result = memcmp(&(tor_list->ip_ar[mid].ui32[2]), &(ip->ui32[2]), 4);
+
+      if (result < 0) {
+         begin = mid + 1;
+      }
+      else if (result > 0) {
+         end = mid - 1;
+      } else {
+         break;
+      }
+   }
+
+   if (result == 0) {
+      return 1;
+   }
+
+   return 0;
+}
+
+
+
+uint8_t check_ips(ur_template_t *tmplt, const void *data, tor_list_t *tor_list)
 {
    // IPv6 is not supported at the moment
    if (ip_is6(ur_get_ptr(tmplt, data, UR_SRC_IP))) {
       return 0;
    }
 
+   uint8_t flag = 0;
 
-   return 0;
+   if (ip_binary_search(ur_get_ptr(tmplt, data, UR_SRC_IP), tor_list)) {
+      flag |= 1;
+   }
+
+   if (ip_binary_search(ur_get_ptr(tmplt, data, UR_DST_IP), tor_list)) {
+      flag |= 2;
+   }
+
+   return flag;
 }
 
 /*
@@ -124,13 +210,14 @@ uint8_t check_ips(ur_template_t *tmplt, const void *data)
 int main(int argc, char **argv)
 {
    int ret;
+   tor_list_t *tor_list = NULL;
    char *page = "http://torstatus.blutmagie.de/ip_list_exit.php";
    char *file = "update.txt";
 
    pid_t c_id = bl_down_init(&page, &file, 1);
 
    // ***** TRAP initialization *****
-   //TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info); 
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info); 
    signal(SIGTERM, signal_handler);
    signal(SIGINT,  signal_handler);
    signal(SIGUSR1, signal_handler);
@@ -141,9 +228,9 @@ int main(int argc, char **argv)
       return 1;
    }
 
-///* DEBUG TODO: DELETE
-   printf("Waiting for update...\n");
-   for (int i = 0; i < 5; i++) {
+/* DEBUG TODO: DELETE
+   printf("Waiting for update from %d...\n", c_id);
+   for (int i = 0; i < 120; i++) {
       if (update) {
          printf("New update has arived\n");
          update = 0;
@@ -156,7 +243,15 @@ int main(int argc, char **argv)
    printf("TOR Detector exiting, send signal to downloader...\n");
    kill(c_id, SIGINT); // Signal child that we are closing
    exit(1);
-//*/
+*/
+
+   // ***** Initialize TOR IP list structure
+   tor_list = init_tor_list();
+   while (!update) { // Wait for initial update
+      sleep(1);
+   }
+   update = 0;
+   update_tor_list(tor_list);
 
 
    // ***** Create UniRec template *****
@@ -221,13 +316,17 @@ int main(int argc, char **argv)
 
       // ********** DETECT TOR IP ADDRESSES ********
       unirec_copy(tmplt_out, data_out, tmplt, data);
-      tor_flag = check_ips(tmplt, data);
+      tor_flag = check_ips(tmplt, data, tor_list);
       ur_set(tmplt_out, data_out, UR_TOR_FLAGS, tor_flag);
+   if (!tor_flag) continue;
+
       trap_send_data(0, data_out, ur_rec_size(tmplt_out, data_out), TRAP_NO_WAIT);
       // ******************************************
       
  
    }
+
+   printf("TOR Detector exiting...\n");
 
    // Send 1 Byte sized data to output interface to signalize end
    char dummy[1] = {0};
