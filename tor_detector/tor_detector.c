@@ -234,7 +234,7 @@ int main(int argc, char **argv)
    tor_list_t *tor_list = NULL;
    
    // ***** Initialize Blacklist Downloader *****
-   pid_t c_id = bl_down_init(&BLACKLIST_URL, &UPDATE_FILE_NAME, 1);
+   pid_t c_id = bl_down_init(&BLACKLIST_URL, &UPDATE_FILE_NAME, 1, UPDATE_DELAY_TIME);
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info); 
