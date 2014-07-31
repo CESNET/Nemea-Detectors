@@ -56,8 +56,6 @@
 #include <ctype.h>
 
 #include "tor_detector.h"
-//#include <blacklist_downloader.h>
-//#include "../../common/include/nemea-common.h"
 #include <nemea-common.h>
 
 /* ****************************** Modify here ****************************** */
@@ -99,7 +97,6 @@ void unirec_copy(ur_template_t *tmplt_dst, void *data_dst, ur_template_t *tmplt_
          if (ur_is_dynamic(id)) {
             ur_set_dyn(tmplt_dst, data_dst, id, ur_get_dyn(tmplt_src, data_src, id), ur_get_dyn_size(tmplt_src, data_src, id));
          } else {
-            //ur_set(tmplt_dst, data_dst, id, ur_get(tmplt_src, data_src, id));
             memcpy(ur_get_ptr_by_id(tmplt_dst, data_dst, id), ur_get_ptr_by_id(tmplt_src, data_src, id), ur_get_size_by_id(id));
          }
       }
@@ -111,10 +108,18 @@ tor_list_t *init_tor_list(void)
 {
    tor_list_t *tor_list;
 
-   tor_list = malloc(sizeof(tor_list_t)); // TODO: kontrolovat malloc
-   tor_list->count = 0;
+   tor_list = malloc(sizeof(tor_list_t));
+   if (tor_list == NULL) {
+      return NULL;
+   }
 
    tor_list->ip_ar = malloc(sizeof(ip_addr_t) * ALLOC_STEP_COUNT);
+   if (tor_list->ip_ar == NULL) {
+      free(tor_list);
+      return NULL;
+   }
+
+   tor_list->count = 0;
    tor_list->allocated = ALLOC_STEP_COUNT;
 
    return tor_list;
@@ -128,7 +133,7 @@ void update_tor_list(tor_list_t *tor_list)
 
    tor_list->count = 0; // No need to free data, we just owrite them with new
 
-   fp = fopen("update.txt", "r");
+   fp = fopen(UPDATE_FILE_NAME, "r");
 
    while(fgets(buffer, 63, fp) != NULL) {
       // Trim newline character if is present
@@ -194,15 +199,31 @@ uint8_t check_ips(ur_template_t *tmplt, const void *data, tor_list_t *tor_list)
    uint8_t flag = 0;
 
    if (ip_binary_search(ur_get_ptr(tmplt, data, UR_SRC_IP), tor_list)) {
-      flag |= 1;
+      flag |= UR_TF_SRC;
    }
 
    if (ip_binary_search(ur_get_ptr(tmplt, data, UR_DST_IP), tor_list)) {
-      flag |= 2;
+      flag |= UR_TF_DST;
    }
 
    return flag;
 }
+
+
+int get_dyn_count(ur_template_t *tmplt)
+{
+   int dyn_count = 0;
+   ur_field_id_t id;
+   ur_iter_t iter = UR_ITER_BEGIN;
+   while ((id = ur_iter_fields_tmplt(tmplt, &iter)) != UR_INVALID_FIELD) {
+      if (ur_is_dynamic(id)) {
+         dyn_count++;
+      }
+   }
+
+   return dyn_count;
+}
+
 
 /*
  * MAIN FUNCTION
@@ -211,10 +232,9 @@ int main(int argc, char **argv)
 {
    int ret;
    tor_list_t *tor_list = NULL;
-   char *page = "http://torstatus.blutmagie.de/ip_list_exit.php";
-   char *file = "update.txt";
-
-   pid_t c_id = bl_down_init(&page, &file, 1);
+   
+   // ***** Initialize Blacklist Downloader *****
+   pid_t c_id = bl_down_init(&BLACKLIST_URL, &UPDATE_FILE_NAME, 1);
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info); 
@@ -225,29 +245,22 @@ int main(int argc, char **argv)
 
    if (c_id < 0) { // Downloader initialization failed
       printf("Error: Could not fork process!\n");
+      trap_finalize();
       return 1;
    }
 
-/* DEBUG TODO: DELETE
-   printf("Waiting for update from %d...\n", c_id);
-   for (int i = 0; i < 120; i++) {
-      if (update) {
-         printf("New update has arived\n");
-         update = 0;
-      } else {
-         printf("No new update :(\n");
-      }
-
-      sleep(4);
-   }
-   printf("TOR Detector exiting, send signal to downloader...\n");
-   kill(c_id, SIGINT); // Signal child that we are closing
-   exit(1);
-*/
 
    // ***** Initialize TOR IP list structure
    tor_list = init_tor_list();
-   while (!update) { // Wait for initial update
+   if (tor_list == NULL) {
+      // TOR IP list initialization failed
+      trap_finalize();
+      kill(c_id, SIGINT);
+      return 2;
+   }
+   
+   // Wait for initial update
+   while (!update) {
       sleep(1);
    }
    update = 0;
@@ -269,14 +282,14 @@ int main(int argc, char **argv)
    }
    // Create output UniRec template
    // TODO: STRING LITERAL TO DEFINE
-   char *unirec_specifier_out = calloc(1, sizeof(char) * (strlen(unirec_specifier_in) + strlen(",TOR_FLAGS") + 1));
+   char *unirec_specifier_out = calloc(1, sizeof(char) * (strlen(unirec_specifier_in) + strlen(TOR_FLAGS_FIELD_STRING) + 1));
    if (unirec_specifier_out == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for UniRec output template!\n");
       trap_finalize();
       return 5;
    }
    strcpy(unirec_specifier_out, unirec_specifier_in);
-   strcat(unirec_specifier_out, ",TOR_FLAGS");
+   strcat(unirec_specifier_out, TOR_FLAGS_FIELD_STRING);
 
    
    ur_template_t *tmplt     = ur_create_template(unirec_specifier_in);
@@ -291,8 +304,7 @@ int main(int argc, char **argv)
 
 
    // Create output data buffer
-   // TODO: DYNAMIC SIZE BASED ON DYNAMIC FIELD COUNT
-   void *data_out = ur_create(tmplt_out, 1024*10);
+   void *data_out = ur_create(tmplt_out, MAX_DYN_SIZE * get_dyn_count(tmplt_out));
 
    // ***** Main processing loop *****
    while (!stop) {
@@ -318,7 +330,10 @@ int main(int argc, char **argv)
       unirec_copy(tmplt_out, data_out, tmplt, data);
       tor_flag = check_ips(tmplt, data, tor_list);
       ur_set(tmplt_out, data_out, UR_TOR_FLAGS, tor_flag);
-   if (!tor_flag) continue;
+
+      /* DEBUG
+      if (!tor_flag) continue;
+      */
 
       trap_send_data(0, data_out, ur_rec_size(tmplt_out, data_out), TRAP_NO_WAIT);
       // ******************************************

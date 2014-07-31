@@ -45,7 +45,11 @@
 
 
 #define ALLOC_STEP_COUNT 50
+#define MAX_DYN_SIZE 1024
 
+const char *TOR_FLAGS_FIELD_STRING = ",TOR_FLAGS";
+char *UPDATE_FILE_NAME = "update.txt";
+char *BLACKLIST_URL    = "http://torstatus.blutmagie.de/ip_list_exit.php";
 
 
 typedef struct {
