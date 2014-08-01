@@ -263,9 +263,8 @@ int main(int argc, char **argv)
    while (!update) {
       sleep(1);
    }
-   update = 0;
    update_tor_list(tor_list);
-
+   update = 0;
 
    // ***** Create UniRec template *****
    char *unirec_specifier_in = "<COLLECTOR_FLOW>";
@@ -281,7 +280,6 @@ int main(int argc, char **argv)
       }
    }
    // Create output UniRec template
-   // TODO: STRING LITERAL TO DEFINE
    char *unirec_specifier_out = calloc(1, sizeof(char) * (strlen(unirec_specifier_in) + strlen(TOR_FLAGS_FIELD_STRING) + 1));
    if (unirec_specifier_out == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for UniRec output template!\n");
@@ -326,6 +324,11 @@ int main(int argc, char **argv)
       }
 
 
+      // ***** UPDATE IF NEW UPDATE IS READY *****
+      if (update) {
+         update_tor_list(tor_list);
+         update = 0;
+      }
       // ********** DETECT TOR IP ADDRESSES ********
       unirec_copy(tmplt_out, data_out, tmplt, data);
       tor_flag = check_ips(tmplt, data, tor_list);
