@@ -232,6 +232,7 @@ AC_CONFIG_FILES([Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
                  warden_collector/Makefile
+                 tor_detector/Makefile
                ])
 
 
