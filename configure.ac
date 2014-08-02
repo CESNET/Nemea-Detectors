@@ -215,6 +215,7 @@ AC_CONFIG_FILES([Makefile
                  python_example/Makefile
                  sampler/Makefile
                  simplebotnetdetector/Makefile
+                 sip_detector/Makefile
                  slowthreatdetector/Makefile
                  synflood/pcf/Makefile
                  synflood/synfindiff/Makefile

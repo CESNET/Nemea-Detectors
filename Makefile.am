@@ -33,6 +33,7 @@ python_example \
 report_handler \
 sampler \
 simplebotnetdetector \
+sip_detector \
 test_threads \
 timestamp_checker \
 tor_detector \
