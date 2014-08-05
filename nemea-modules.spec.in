@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules;
 make -j5
 
 %install
@@ -28,7 +28,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %post
 
 %files
-%{_bindir}/*
+%{_bindir}/nemea/*
 %{_docdir}/nemea-modules/*/README
 %{_sysconfdir}/nemea/*
 
