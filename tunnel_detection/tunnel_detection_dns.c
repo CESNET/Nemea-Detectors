@@ -810,7 +810,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
    ip_address_t * start;
    char ip_address [100];
    b_plus_tree_item * b_item;
-   int is_there_next=0;
+   int is_there_next = 0, print_time = 1;
    calulated_result_t result;
    b_item = b_plus_tree_create_list_item(b_plus_tree);
    is_there_next = b_plus_tree_get_list(b_plus_tree, b_item);
@@ -861,7 +861,8 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
          if(item->print & 0b11111111 && file != NULL){
             //translate ip int to str 
             get_ip_str_from_ip_struct(item, b_item->key, ip_address);            
-            print_founded_anomaly_immediately(ip_address, item, file);
+            print_founded_anomaly_immediately(ip_address, item, file, print_time);
+            print_time = 0;
             item->print=0;
             fflush(file);
          }
@@ -873,8 +874,13 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
 
 
 
-void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file)
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time)
 {
+   if(print_time){
+      time_t mytime;
+      mytime = time(NULL);
+      fprintf(file, "\nTIME: %s\n", ctime(&mytime));
+   }
    prefix_tree_domain_t *dom;
    char str[1024];
    if(item->print & 0b11111111){
@@ -1315,6 +1321,16 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
    return size;
 }
 
+inline  int cut_max_domain(packet_t * packet){
+   char * end_of_domain = END_OF_CUTTED_DOMAIN;
+   while(packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.'){
+      packet->request_length--;
+   }
+   memcpy(packet->request_string + packet->request_length, end_of_domain, END_OF_CUTTED_DOMAIN_LENGTH);
+   packet->request_length += END_OF_CUTTED_DOMAIN_LENGTH;
+   packet->request_string[packet->request_length]=0;
+}
+
 int compare_ipv6(void * a, void * b)
 {
    uint64_t *h1, *h2;
@@ -1615,6 +1631,11 @@ int main(int argc, char **argv)
             packet.size = ur_get(tmplt, data, UR_BYTES);
             //DNS NAME
             packet.request_length = copy_string(packet.request_string, ur_get_dyn(tmplt, data, UR_DNS_NAME), ur_get_dyn_size(tmplt, data, UR_DNS_NAME), MAX_SIZE_OF_REQUEST_DOMAIN);
+            if(packet.request_length >= MAX_SIZE_OF_REQUEST_EXPORTER){
+               cut_max_domain(&packet);
+            }
+
+
             //type request
             if(ur_get(tmplt, data, UR_DST_PORT)==53){
                packet.is_response = 0;

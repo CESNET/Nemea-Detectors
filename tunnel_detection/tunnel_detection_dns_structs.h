@@ -229,6 +229,10 @@ typedef struct calulated_result_t{
 
 //********* packet from parser *********
 
+#define MAX_SIZE_OF_REQUEST_EXPORTER 126
+#define END_OF_CUTTED_DOMAIN "max_length_domain"
+#define END_OF_CUTTED_DOMAIN_LENGTH 17
+
 #define MAX_SIZE_OF_REQUEST_DOMAIN 255
 #define MAX_SIZE_OF_RESPONSE_STRING 1024
 /*!
