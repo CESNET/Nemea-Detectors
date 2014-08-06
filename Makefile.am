@@ -17,6 +17,7 @@ flow_gen \
 flow_sanity_check \
 flowcounter \
 flowdirection \
+flow_statistic \
 flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
