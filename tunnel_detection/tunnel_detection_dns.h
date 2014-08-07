@@ -275,8 +275,9 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file);
  * \param[in] ip_address ip address string
  * \param[in] item ip address with anomaly 
  * \param[in] file pointer to file with results
+ * \param[in] print_time 1 - time is printed, 0 - time is not printed
  */
-void print_founded_anomaly_immediately(char *ip_address, ip_address_t *item, FILE *file);
+void print_founded_anomaly_immediately(char *ip_address, ip_address_t *item, FILE *file, unsigned char print_time);
 
 /*!
  * \brief Print annomaly on the end of module
