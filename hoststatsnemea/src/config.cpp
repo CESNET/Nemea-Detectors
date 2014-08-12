@@ -2,6 +2,8 @@
  * \file config.cpp
  * \brief The Configuration singleton - used for centralized access to configuration
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \date 2014
  * \date 2013
  * \date 2012
  */

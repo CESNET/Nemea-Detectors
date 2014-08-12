@@ -43,19 +43,38 @@
 #include <map>
 #include <vector>
 #include <pthread.h>
+#include <string>
 
 extern "C" {
    #include <unirec/ipaddr.h>
    #include <fast_hash_table.h>
+   #include <unirec/unirec.h>
 }
+
+/** \brief Generate a name of the subprofile class
+ * \param subprofile_name Name of the subprofile
+ */
+#define SUBPROFILE_CLASS(subprofile_name) \
+   subprofile_name ## _host_profile
+
+/** \brief Generate the name of a pointer to the subprofile instance in hosts_record_t
+ * \param subprofile_name Name of the subprofile
+ */
+#define SUBPROFILE_DATA(subprofile_name) \
+   subprofile_name ## hostprofile
+
+/** \brief Generate the name of pointer to the functions of the subprofile
+ * \param subprofile_name Name of the subprofile
+ */
+#define SUBPROFILE_POINTERS(subprofile_name) \
+   subprofile_name ## _pointers
 
 /////////////////////////////////////////////////////////////////
 // List of subprofiles
-class DNSHostProfile;
-class SSHHostProfile;
+class SUBPROFILE_CLASS(dns);
+class SUBPROFILE_CLASS(ssh);
 
 // Record with statistics about a host
-// TODO: update this comment !!! 
 struct hosts_record_t {
    uint32_t in_all_flows;
    uint32_t in_req_flows;
@@ -106,14 +125,13 @@ struct hosts_record_t {
    uint32_t first_rec_ts; // timestamp of first flow
    uint32_t last_rec_ts;  // timestamp of last flow
 
-   DNSHostProfile *dnshostprofile;
-   SSHHostProfile *sshhostprofile;
-
+   SUBPROFILE_CLASS(dns) *SUBPROFILE_DATA(dns);
+   SUBPROFILE_CLASS(ssh) *SUBPROFILE_DATA(ssh);
 
    hosts_record_t() { // Constructor sets all values to zeros.
       memset(this, 0, sizeof(hosts_record_t));
    }
-} __attribute__((packed));
+};
 
 
 // key
@@ -122,8 +140,7 @@ typedef ip_addr_t hosts_key_t;
 // hash table
 typedef fht_table_t stat_table_t;
 
-////////////////////////////////////
-
+// ------------------------------------
 // BloomFilter key
 struct bloom_key_t {
    ip_addr_t src_ip;
@@ -137,5 +154,24 @@ typedef enum {
    BF_SWAP,
    BF_DESTROY  
 } sp_bf_action;
+
+// ------------------------------------
+// Structure of subprofiles - more in subprofile.h
+struct subprofile_t;
+
+// Typedefs for the vector of pointers on subprofiles
+typedef std::vector<subprofile_t *> sp_list_ptr_v;
+typedef sp_list_ptr_v::iterator sp_list_ptr_iter;
+typedef sp_list_ptr_v::const_iterator sp_list_ptr_citer;
+
+// Input interface specification
+struct hs_in_ifc_spec_t {
+   std::string name;          // Name of input interface
+   uint32_t ifc_index;        // Index of input interface
+   uint32_t ifc_total;        // Total count of input interfaces
+   bool port_flowdir;         // Type of flow direction source is this module
+   ur_template_t *tmpl;       // Interface template
+   sp_list_ptr_v subprofiles; // List of subprofiles to update
+};
 
 #endif

@@ -50,20 +50,47 @@ extern "C" {
    #include <unirec/unirec.h>
 }
 
-// Function pointer to update the subprofile
-typedef bool (*sp_update)(bloom_key_t *, hosts_record_t&, const void *, 
-    const ur_template_t *, uint16_t);
+/** \brief Function pointer to update function of the subprofile
+ * Update record with new data from TRAP. The record is updated if the new flow 
+ * data belongs to a subprofile. If record does not exist, new one is created.
+ * \n
+ * First param: BloomFilter key (do not use if class doesn't contain BloomFilter) \n
+ * Second param: Main record to update \n
+ * Third param: New data from TRAP \n
+ * Fourth param: Pointer to input interface template \n
+ * Fifth param: Direction flag (request, response,...) \n
+ * Return: True when data belongs to subprofile, false otherwise
+ */
+typedef bool (*sp_update)(hosts_record_t&, const void *, const hs_in_ifc_spec_t &,
+   uint8_t, const bloom_key_t &);
 
-// Function pointer to check a record of the subprofile
+/** \brief Function pointer to check function of the subprofile
+ * Use detection rules only if subprofile exists. \n
+ * First param: Key of a record \n
+ * Second param: Main record with general statistics \n
+ * Return: True if there was a subprofile, false otherwise
+ */
 typedef bool (*sp_check)(const hosts_key_t&, const hosts_record_t&);
 
-// Function pointer to delete the subprofile
+/** \brief Function pointer to delete function of the subprofile
+ * Delete a subprofile record from a main record. \n
+ * Param: Main record with general statistics \n
+ * Return: True if there was a subprofile, false otherwise.
+ */
 typedef bool (*sp_delete)(hosts_record_t&);
 
-// Function pointers to manipulation with subprofile's BloomFilter
+/** \brief Function pointers to the manipulation function of subprofile's BloomFilter
+ * Create/swap/destroy BloomFilters \n
+ * First param: Type of action ::sp_bf_action \n
+ *   BF_CREATE - (constructor) create new instances of BloomFilters \n
+ *   BF_SWAP:    Clear active BloomFilter and swap active and learning BloomFilter \n
+ *   BF_DESTROY: (destructor) delete active and learning BloomFilter \n
+ * Second param: Size of BloomFilter (used only if arg is BF_CREATE)
+ */
 typedef void (*sp_bf_config)(sp_bf_action, int);
 
-// General stucture for subprofile pointers
+/** \brief General stucture for subprofile pointers
+ */
 typedef struct sp_pointers_s {
    sp_update update_src_ptr;
    sp_update update_dst_ptr;
@@ -72,36 +99,83 @@ typedef struct sp_pointers_s {
    sp_bf_config bf_config_ptr;
 } sp_pointers_t;
 
-
-// Structure with information about subprofile 
+/** \brief Structure with information about subprofile 
+ */
 struct subprofile_t{
    std::string name;
-   bool sp_status;         // active (1) or inactive (0)
-   std::string detector_name;
-   bool detector_status;   // active (1) or inactive (0)
    sp_pointers_t pointers;
+   bool rules_enabled;
+   int interfaces_count;
 
    // Structure constructor
-   subprofile_t(std::string name, std::string detector_name, sp_pointers_t ptr)
-   :  name(name), detector_name (detector_name), pointers(ptr)
+   /** \brief Structure constructor
+	* \param name[in] Name of the subprofile
+	* \param pointers[in] Pointers to subprofile functions
+    */
+   subprofile_t(std::string name, sp_pointers_t ptr) : name(name), pointers(ptr)
    {
-   }
-
-   // Load status information from configuration file
-   void check_config() {
-      Configuration *conf = Configuration::getInstance();
-      conf->lock();
-      sp_status =       (conf->getValue(name) == "1");
-      detector_status = (conf->getValue(detector_name) == "1"); 
-      conf->unlock();
-   }
-
-   // Operator overloading for sorting function
-   bool operator<(const subprofile_t &b) const {
-      return (sp_status && !b.sp_status) || 
-               (sp_status == b.sp_status && detector_status && !b.detector_status);
+       Configuration::trimString(name);
+       rules_enabled = false;
+       interfaces_count = 0;
    }
 };
+
+// ------------------------------ MACROS ---------------------------------------
+#define SP_DEF_BASIC_FUNCTIONS() \
+   /* Flow filter for update function */ \
+   static bool flow_filter(const void *data, const hs_in_ifc_spec_t &ifc); \
+   \
+   /* Update a subprofile (source IP address) */ \
+   static bool update_src_ip(hosts_record_t &main_record, const void *data, \
+      const hs_in_ifc_spec_t &ifc, uint8_t dir_flags, const bloom_key_t &ips); \
+   \
+   /* Update a subprofile (destination IP address) */ \
+   static bool update_dst_ip(hosts_record_t &main_record, const void *data, \
+      const hs_in_ifc_spec_t &ifc, uint8_t dir_flags, const bloom_key_t &ips); \
+   \
+   /* Check rules in a subprofile */ \
+   static bool check_record(const hosts_key_t &key, const hosts_record_t &record); \
+   \
+   /* Remove a subprofile from a main profile */ \
+   static bool delete_record(hosts_record_t &record);
+
+#define SP_DEF_BEGIN_CLASS(subprofile_name) \
+   class SUBPROFILE_CLASS(subprofile_name) { \
+   public: \
+      SP_DEF_BASIC_FUNCTIONS();
+
+#define SP_DEF_END_CLASS(subprofile_name) \
+   }; \
+   const sp_pointers_t subprofile_name##_pointers = { \
+      SUBPROFILE_CLASS(subprofile_name)::update_src_ip, \
+      SUBPROFILE_CLASS(subprofile_name)::update_dst_ip,\
+      SUBPROFILE_CLASS(subprofile_name)::check_record,\
+      SUBPROFILE_CLASS(subprofile_name)::delete_record,\
+      NULL \
+   };
+
+#define SP_DEF_BEGIN_CLASS_WITH_BF(subprofile_name) \
+   class SUBPROFILE_CLASS(subprofile_name) { \
+   public: \
+      SP_DEF_BASIC_FUNCTIONS(); \
+      /* BloomFilters only for all flows */ \
+      static bloom_filter *bf_active; \
+      static bloom_filter *bf_learn; \
+      static pthread_mutex_t bf_lock; \
+      /* Create/swap/destroy BloomFilters */ \
+      static void bloom_filter_config(sp_bf_action arg, int size);
+
+#define SP_DEF_END_CLASS_WITH_BF(subprofile_name) \
+   }; \
+   const sp_pointers_t subprofile_name##_pointers = { \
+      SUBPROFILE_CLASS(subprofile_name)::update_src_ip, \
+      SUBPROFILE_CLASS(subprofile_name)::update_dst_ip,\
+      SUBPROFILE_CLASS(subprofile_name)::check_record,\
+      SUBPROFILE_CLASS(subprofile_name)::delete_record,\
+      SUBPROFILE_CLASS(subprofile_name)::bloom_filter_config \
+   };
+
+// ----------------------------- SUBPROFILES -----------------------------------
 
 /******************************* DNS subprofile *******************************/
 // record structure
@@ -112,40 +186,14 @@ struct dns_record_t {
    dns_record_t() {
       memset(this, 0, sizeof(dns_record_t));
    }
-} __attribute__((packed));
+};
 
-// class
-class DNSHostProfile {
-private:
-   // Flow filter for update function
-   static bool flow_filter(const void *data, const ur_template_t *tmplt);
-
-public:
+// DNS subprofile class
+SP_DEF_BEGIN_CLASS(dns)
    // DNS record
    dns_record_t record;
+SP_DEF_END_CLASS(dns)
 
-   // Update DNS subprofile (source IP address)
-   static bool update_src_ip(bloom_key_t *, hosts_record_t &src_record,
-      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
-   
-   // Update DNS subprofile (destination IP address)
-   static bool update_dst_ip(bloom_key_t *, hosts_record_t &dst_record,
-      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
-
-   // Check rules in a DNS subprofile
-   static bool check_record(const hosts_key_t &key, const hosts_record_t &record);
-
-   // Remove a subprofile from a main profile
-   static bool delete_record(hosts_record_t &record);
-};
-
-const sp_pointers_t dns_pointers = {
-   DNSHostProfile::update_src_ip,
-   DNSHostProfile::update_dst_ip,
-   DNSHostProfile::check_record,
-   DNSHostProfile::delete_record,
-   NULL
-};
 
 /******************************* SSH subprofile *******************************/
 // record structure
@@ -165,46 +213,12 @@ struct ssh_record_t {
    ssh_record_t() {
       memset(this, 0, sizeof(ssh_record_t));
    }
-} __attribute__((packed));
+};
 
-// class
-class SSHHostProfile {
-private:
-   // BloomFilters only for all SSH flows
-   static bloom_filter *ssh_bf_active;
-   static bloom_filter *ssh_bf_learn;
-
-   // Flow filter for update function
-   static bool flow_filter(const void *data, const ur_template_t *tmplt);
-   
-public:
+// SSH subprofile class
+SP_DEF_BEGIN_CLASS_WITH_BF(ssh)
    // SSH record 
    ssh_record_t record;
-
-   // Update SSH subprofile (source IP address)
-   static bool update_src_ip(bloom_key_t *, hosts_record_t &src_record, 
-      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
-   
-   // Update SSH subprofile (destination IP address)
-   static bool update_dst_ip(bloom_key_t *, hosts_record_t &dst_record, 
-      const void *data, const ur_template_t *tmplt, uint16_t dir_flags);
-
-   // Check rules in a SSH subprofile
-   static bool check_record(const hosts_key_t &key, const hosts_record_t &record);
-
-   // Remove a subprofile from a main profile
-   static bool delete_record(hosts_record_t &record);
-
-   // Create/swap/destroy BloomFilters
-   static void bloom_filter_config(sp_bf_action arg, int size);
-};
-
-const sp_pointers_t ssh_pointers = {
-   SSHHostProfile::update_src_ip,
-   SSHHostProfile::update_dst_ip,
-   SSHHostProfile::check_record,
-   SSHHostProfile::delete_record,
-   SSHHostProfile::bloom_filter_config
-};
+SP_DEF_END_CLASS_WITH_BF(ssh)
 
 #endif
