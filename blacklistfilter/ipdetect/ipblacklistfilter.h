@@ -101,6 +101,44 @@ extern "C" {
  */
 #define BL_HASH_SIZE 100000
 
+/**
+ * Time to wait between blacklist updates.
+ */
+#define BLACKLIST_UPDATE_DELAY_TIME 3600
+
+/**
+ * Maximum length of one line to parse from blacklist website.
+ */
+#define BLACKLIST_LINE_MAX_LENGTH 1024
+
+/**
+ * Maximum length of one element (in this case, it is maximum length of IP address).
+ */
+#define BLACKLIST_EL_MAX_LENGTH 64
+
+/**
+ * Maximum count of elements in one update (in this case, it is maximum IP addresses per update) 
+ */
+#define BLACKLIST_EL_MAX_COUNT 100000
+
+/**
+ * Blacklist update mode. Do NOT change it unless you know what you are doing.
+ */
+#define BLACKLIST_UPDATE_MODE DIFF_UPDATE_MODE
+
+// global definitions
+
+/**
+ * Comments character for every blacklist website.
+ */
+char *BLACKLIST_COMMENT_AR = (char*)"###";
+
+/**
+ * Regular expression to parse IP address from blacklist. (only IPv4 for now).
+ */
+char *BLACKLIST_REG_PATTERN = (char*)"\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b";
+
+
 // structure definitions
 
 /**
@@ -156,7 +194,6 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
  */
 int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
 void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
-
 
 
 
