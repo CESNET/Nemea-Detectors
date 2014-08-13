@@ -40,6 +40,7 @@
 
 #include <string>
 #include <vector>
+#include <pthread.h>
 
 #include "config.h"
 #include <BloomFilter.hpp>
@@ -52,36 +53,24 @@ extern "C" {
    #include <unirec/unirec.h>
 }
 
-// The identification of item to remove
-typedef struct old_rec_item_s {
-   hosts_key_t key;
-   bool operator== (const old_rec_item_s& second) const
-   {
-      return (memcmp(&key, &second.key, sizeof(hosts_key_t)) == 0);   
-   }
-} old_rec_item_t;
-
-// List of subprofiles 
-typedef std::vector<subprofile_t> sp_list_v;
-typedef sp_list_v::iterator sp_list_iter;
-
-/* -------------------- MAIN PROFILE -------------------- */
-
 class HostProfile {
 private:
    stat_table_t *stat_table;   // hash table
     
    bloom_filter *bf_active, *bf_learn; // pointer to active/learning BloomFilter
-   int table_size;            // size of table
-   bool detector_status;      // main profile detector active / inactive
-   bool port_flowdir;         // flow direction based on port value (0[off]/1[on]) 
-   sp_list_v sp_list;         // list of avaiable subprofiles
+   pthread_mutex_t bf_lock;
+   int table_size;                     // size of table
+   bool generic_rules;                 // main profile detector active/inactive
+   const sp_list_ptr_v *sp_list;       // pointer to the list of all subprofiles
 
    // Get the reference of record from the table 
    hosts_record_t& get_record(const hosts_key_t& key, int8_t **lock);
 
    // Check changes in configuration file
    void apply_config();
+   
+   // Get BloomFilter presence
+   bool get_bf_presence(const bloom_key_t &key);
 
 public:
    int active_timeout;
@@ -89,13 +78,13 @@ public:
    int det_start_time; 
     
    // Constructor
-   HostProfile();
+   HostProfile(const sp_list_ptr_v *subprofile_list, bool generic_rules = true);
 
    // Destructor
    ~HostProfile();
 
    // Update the main profile and subprofiles
-   void update(const void *record, const ur_template_t *tmplt,
+   void update(const void *record, const hs_in_ifc_spec_t &ifc_spec,
       bool subprofiles = true);
 
    // Remove record from the main profile and subprofiles

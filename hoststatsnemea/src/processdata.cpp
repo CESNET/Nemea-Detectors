@@ -57,11 +57,6 @@ extern "C" {
 using namespace std;
 
 #define GET_DATA_TIMEOUT 1 //seconds
-#define MSEC             1000000
-
-// Global variables
-extern ur_template_t *tmpl_in;
-extern ur_template_t *tmpl_out;
 
 HostProfile *MainProfile       = NULL; // Global profile
 uint32_t hs_time               = 0; 
@@ -113,6 +108,21 @@ void alarm_handler(int signal)
    pthread_mutex_unlock(&detector_start);
 }
 
+/**
+ * \brief Start time updater
+ * Start automatic update of global variable hs_time with system time for online
+ * mode
+ */
+void start_alarm() 
+{
+   if (hs_time != 0) {
+      return;
+   }
+   
+   hs_time = time(NULL);
+   alarm(1);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // ONLINE mode
 ////////////////////////////////////////////////////////////////////////////////
@@ -121,22 +131,27 @@ void alarm_handler(int signal)
  * Thread function for get data from TRAP and store them. 
  */
 void *data_reader_trap(void *args)
-{
+{   
+   const hs_in_ifc_spec_t &ifc_spec = *(hs_in_ifc_spec_t *) args;
    int ret;
+   
+   /* TRAP data and data size */
+   const void *data;
+   uint16_t data_size;
+   
+   /* only for first thread (index 0) */
    uint32_t next_bf_change      = 0;
-   uint32_t last_change         = 0; 
    uint32_t flow_time           = 0; // seconds from rec->first
    
+   /* -- begin of main loop -- */
    while (!end_of_steam && !terminated) {
-      const void *data;
-      uint16_t data_size;
-
       // Get new data from TRAP with exception handling
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, GET_DATA_TIMEOUT * MSEC);
+      ret = trap_recv(ifc_spec.ifc_index, &data, &data_size);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TIMEOUT:
-            if (flow_time != 0) {
+            /* swap BloomFilters, only one (first) thread can do this */
+            if (ifc_spec.ifc_index == 0 && flow_time != 0) {
                flow_time += GET_DATA_TIMEOUT;
                if (flow_time >= next_bf_change) {
                   MainProfile->swap_bf();
@@ -156,33 +171,31 @@ void *data_reader_trap(void *args)
       }
 
       // Check the correctness of recieved data
-      if (data_size < ur_rec_static_size(tmpl_in)) {
+      if (data_size < ur_rec_static_size(ifc_spec.tmpl)) {
          if (data_size > 1) {
-            log(LOG_ERR, "Error: data with wrong size received (expected size: "
-               "%lu, received size: %i.)\nHint: if you are using this module "
-               "without flowdirection module change value 'port-flowdir' in "
-               "the configuration file (hoststats.conf by default)", 
-               ur_rec_static_size(tmpl_in), data_size);
+            log(LOG_ERR, "Error: data with wrong size received on interface "
+               "'%s' (expected size: %lu, received size: %i.)\nHint: if you "
+               "are using this module without flowdirection module change "
+               "value 'port_flowdir' in the configuration file "
+               "(hoststats.conf by default)", ifc_spec.name.c_str(),
+               ur_rec_static_size(ifc_spec.tmpl), data_size);
+            trap_terminate();
             terminated = true;
          }
          end_of_steam = true;
          break;
       }
 
-      // First flow
-      if (flow_time == 0) {
-         // Get time and setup alarm
-         hs_time = time(NULL);
-         alarm(1);
+      // Update data for BloomFilter swapping 
+      if (ifc_spec.ifc_index == 0) {
+         // First flow
+         if (flow_time == 0) {
+            next_bf_change = ur_time_get_sec(ur_get(ifc_spec.tmpl, data, 
+               UR_TIME_LAST)) + MainProfile->active_timeout/2;
+         }
+         
+         flow_time = ur_time_get_sec(ur_get(ifc_spec.tmpl, data, UR_TIME_LAST));
 
-         last_change = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
-         next_bf_change = last_change + MainProfile->active_timeout/2;
-      }
-
-      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
-
-      if (flow_time > last_change) {
-         last_change = flow_time;
          if (flow_time >= next_bf_change) {
             // Swap/clear BloomFilters
             MainProfile->swap_bf();
@@ -191,18 +204,22 @@ void *data_reader_trap(void *args)
       }
 
       // Update main profile and subprofiles
-      MainProfile->update(data, tmpl_in, true);
+      MainProfile->update(data, ifc_spec, true);
    }
+   // -- end of main loop --
 
    // TRAP TERMINATED, exiting... 
-   log(LOG_INFO, "Reading from the TRAP ended. Please wait until the HostStats "
-      "is finished processing.");
+   if (ifc_spec.ifc_index == 0) {
+      log(LOG_INFO, "Reading from the TRAP ended. Please wait until the "
+         "HostStats is finished processing.");
 
-   // Wait until the end of the current processing and run it again (to end)
-   pthread_mutex_lock(&det_processing);
-   pthread_mutex_unlock(&det_processing);
-   pthread_mutex_unlock(&detector_start);
+      // Wait until the end of the current processing and run it again
+      pthread_mutex_lock(&det_processing);
+      pthread_mutex_unlock(&det_processing);
+      pthread_mutex_unlock(&detector_start);
+   }
 
+   log(LOG_DEBUG, "Input thread '%s' terminated.", ifc_spec.name.c_str());
    pthread_exit(NULL);
 }
 
@@ -252,7 +269,7 @@ void *data_process_trap(void *args)
  * the TRAP and checks flow table for suspicious behavior. Then resume reading 
  * from TRAP and this is repeated until a stream ends.
  */
-void offline_analyzer()
+/*void offline_analyzer()
 {
    int ret;
    uint32_t next_bf_change      = 0;
@@ -324,3 +341,4 @@ void offline_analyzer()
       MainProfile->check_table(true);
    }
 }
+*/
