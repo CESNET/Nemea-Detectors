@@ -744,10 +744,10 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
  */
 void setup_downloader(bl_down_args_t *args, const char *file)
 {
-   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id ;
+   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id | BL_ELEM_TOR.id;
    args->file       = (char*)file;
    args->comment_ar = BLACKLIST_COMMENT_AR;
-   args->num        = 4;
+   args->num        = 5;
    args->delay      = BLACKLIST_UPDATE_DELAY_TIME;
    args->use_regex  = 1; // We want to use regelar expression filter
    args->reg_pattern     = BLACKLIST_REG_PATTERN;

@@ -104,7 +104,7 @@ extern "C" {
 /**
  * Time to wait between blacklist updates.
  */
-#define BLACKLIST_UPDATE_DELAY_TIME 3600
+#define BLACKLIST_UPDATE_DELAY_TIME 600
 
 /**
  * Maximum length of one line to parse from blacklist website.
@@ -131,7 +131,7 @@ extern "C" {
 /**
  * Comments character for every blacklist website.
  */
-char *BLACKLIST_COMMENT_AR = (char*)"###";
+char *BLACKLIST_COMMENT_AR = (char*)"#####";
 
 /**
  * Regular expression to parse IP address from blacklist. (only IPv4 for now).
