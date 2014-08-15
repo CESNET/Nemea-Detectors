@@ -1,12 +1,12 @@
 /**
  * \file dns_amplification.h
  * \brief Nemea module for detection of DNS amplification attacks based on NetFlow - header file
- * \author Michal Kovacik <ikovacik@fit.vutbr.cz>#
+ * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 25.10.2013
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013, 2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -100,14 +100,14 @@ typedef struct config_s {
 
 	config_s() {
 		port = 53;
-		n = 10;
-		min_flows = 1000;
-		q = 10;
-		min_a = 5;
-		min_flows_norm = 0.4;
-		min_resp_packets = 0;
-		min_resp_bytes = 1000;
-		max_quer_bytes = 300;
+		n = 5;
+		min_flows = 300;
+		q = 2;
+		min_a = 10;
+		min_flows_norm = 0.9;
+		min_resp_packets = 2;
+		min_resp_bytes = 2000;
+		max_quer_bytes = 400;
 		max_quer_flow_packets = 1000;
 		max_quer_flow_bytes = 40000;
 		max_resp_flow_packets = 1000;

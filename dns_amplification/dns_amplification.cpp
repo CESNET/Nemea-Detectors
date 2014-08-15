@@ -1,12 +1,12 @@
 /**
  * \file dns_amplification.cpp
  * \brief Nemea module for detection of DNS amplification attacks based on NetFlow
- * \author Michal Kovacik <ikovacik@fit.vutbr.cz>#
+ * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 25.10.2013
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013, 2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -686,19 +686,22 @@ int main (int argc, char** argv) {
 						later_end = it->second.r.size();
 					}
 
-					filename.str("");
-					filename.clear();
-					if (report_this == REPORT_BIG){
-						filename << log_path << "BIG/" << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
-					} else {
-						filename << log_path << LOG_FILE_PREFIX << it->second.identifier << LOG_FILE_SUFFIX;
-					}
+					char addr_buff[INET6_ADDRSTRLEN];
+               filename.str("");
+               filename.clear();
+               filename << log_path;
+               if (report_this == REPORT_BIG){
+                  filename << "BIG/";
+               }
+               ip_to_str(&actual_key.src, addr_buff);
+               filename << LOG_FILE_PREFIX << addr_buff;
+               ip_to_str(&actual_key.dst, addr_buff);
+               filename << "-" << addr_buff << LOG_FILE_SUFFIX;
 
-					log.open(filename.str().c_str(), ofstream::app);
+               log.open(filename.str().c_str(), ofstream::app);
 
-					if (log.is_open()){
-						char addr_buff[INET6_ADDRSTRLEN];
-						ip_to_str(&actual_key.src, addr_buff);
+               if (log.is_open()){
+                  ip_to_str(&actual_key.src, addr_buff);
 						log << "Abused server IP: " << addr_buff;
 						ip_to_str(&actual_key.dst, addr_buff);
 						log << "   Target IP: " << addr_buff << "\n";
