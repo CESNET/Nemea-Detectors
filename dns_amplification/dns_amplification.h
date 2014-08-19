@@ -54,8 +54,6 @@ extern "C" {
 #endif
 
 #define BYTES_MAX	5000	// max bytes of flow checked in q dividing
-#define QUERY		0
-#define RESPONSE	1
 #define PACKETS		0
 #define BYTES		1
 #define KEY		0
@@ -76,6 +74,14 @@ enum report_codes{
 	REPORT_BIG,
 	REPORT_COMPLEX,
 };
+
+enum direction_codes{// codes and indexes of direction (type)
+	QUERY = 0,
+	RESPONSE,
+	Q_REPORTED,
+	R_REPORTED,
+};
+
 
 /**
  * Configuration structure keeping module's settings from parameters
@@ -154,9 +160,9 @@ struct flow_data_t {
 
 	vector<flow_item_t> q;		// vector of query flows
 	vector<flow_item_t> r;		// vector of response flows
-	uint64_t total_bytes [2];		// total bytes of flows
-	uint32_t total_packets [2];		// total packets of flows
-	uint32_t total_flows [2];		// total number of flows
+	uint64_t total_bytes [4];		// total bytes of flows
+	uint32_t total_packets [4];		// total packets of flows
+	uint32_t total_flows [4];		// total number of flows
 	ur_time_t first_t;		// timestamp of first flow
 	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
 	uint32_t identifier;		// unique identifier

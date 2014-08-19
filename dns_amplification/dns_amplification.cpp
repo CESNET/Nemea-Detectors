@@ -130,8 +130,7 @@ void delete_inactive() {
 
 	// loop of erasing
 	for ( ; iter != iterEnd; ) {
-
-		if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
+      if ((actual_timestamp - ur_time_get_sec(iter->second.last_t)) > config.det_window) {
 			model.erase(iter++);
 		} else {
 			++iter;
@@ -560,14 +559,18 @@ int main (int argc, char** argv) {
 			continue;
 		}
 
-		actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+      if (actual_timestamp < ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST))){ // since timestamps are not always ordered
+         actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST));
+      }
 
 		// iterator through history model
 		history_iter it;
 
 		if ((it = model.find(actual_key)) != model.end()) {
 			// record exists - update information and add flow
-			it->second.last_t = ur_get(unirec_in, data, UR_TIME_FIRST);
+			if (it->second.last_t < ur_get(unirec_in, data, UR_TIME_LAST)){
+            it->second.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
+			}
 
 			// create new flow information structure
 			flow_item_t i;
@@ -590,7 +593,7 @@ int main (int argc, char** argv) {
 				it->second.q.push_back(i);
 			}
 
-			long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST));
+			long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST));
 			long t2 = ur_time_get_sec(it->second.first_t);
 			long t = t1 - t2;
 			/// -------------------------------------------------------------------
@@ -641,14 +644,14 @@ int main (int argc, char** argv) {
 						ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
 						ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
 						ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-						ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE]);
-						ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE]);
-						ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE]);
-						ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY]);
-						ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY]);
-						ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY]);
+						ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE] - it->second.total_flows[R_REPORTED]);
+						ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE] - it->second.total_packets[R_REPORTED]);
+						ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE] - it->second.total_bytes[R_REPORTED]);
+						ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY] - it->second.total_flows[Q_REPORTED]);
+						ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY] - it->second.total_packets[Q_REPORTED]);
+						ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY] - it->second.total_bytes[Q_REPORTED]);
 						ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
-						ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_FIRST));
+						ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_LAST));
 						ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
 
 						// send alert
@@ -686,7 +689,7 @@ int main (int argc, char** argv) {
 						later_end = it->second.r.size();
 					}
 
-					char addr_buff[INET6_ADDRSTRLEN];
+               char addr_buff[INET6_ADDRSTRLEN];
                filename.str("");
                filename.clear();
                filename << log_path;
@@ -734,8 +737,8 @@ int main (int argc, char** argv) {
 				/// DELETION OF WINDOW
 				// delete flows from queries
 				for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
-
-					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+               //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
+					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
 						it->second.total_bytes[QUERY] -= del->bytes;
 						it->second.total_packets[QUERY] -= del->packets;
 						it->second.total_flows[QUERY] -= 1;
@@ -744,11 +747,14 @@ int main (int argc, char** argv) {
 						++del;
 					}
 				}
+				it->second.total_bytes[Q_REPORTED] = it->second.total_bytes[QUERY];
+            it->second.total_packets[Q_REPORTED] = it->second.total_packets[QUERY];
+            it->second.total_flows[Q_REPORTED] = it->second.total_flows[QUERY];
 
 				// delete flows from responses
 				for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
-
-					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_FIRST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+               //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
+					if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
 						it->second.total_bytes[RESPONSE] -= del->bytes;
 						it->second.total_packets[RESPONSE] -= del->packets;
 						it->second.total_flows[RESPONSE] -= 1;
@@ -757,6 +763,10 @@ int main (int argc, char** argv) {
 						++del;
 					}
 				}
+            it->second.total_bytes[R_REPORTED] = it->second.total_bytes[RESPONSE];
+            it->second.total_packets[R_REPORTED] = it->second.total_packets[RESPONSE];
+            it->second.total_flows[R_REPORTED] = it->second.total_flows[RESPONSE];
+
 
 				if (it->second.r.empty() || it->second.q.empty()){
 					model.erase(it);
@@ -786,7 +796,7 @@ int main (int argc, char** argv) {
 			flow_data_t d;
 
 			d.first_t = ur_get(unirec_in, data, UR_TIME_FIRST);
-			d.last_t = d.first_t;
+			d.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
 			d.last_logged = 0;
 			d.identifier = 0;
 
@@ -816,6 +826,13 @@ int main (int argc, char** argv) {
 
 				d.q.push_back(i);
 			}
+         d.total_bytes[Q_REPORTED] = 0;
+         d.total_packets[Q_REPORTED] = 0;
+         d.total_flows[Q_REPORTED] = 0;
+         d.total_bytes[R_REPORTED] = 0;
+         d.total_packets[R_REPORTED] = 0;
+         d.total_flows[R_REPORTED] = 0;
+
 
 			// assign key to history model
 			model[actual_key] = d;
