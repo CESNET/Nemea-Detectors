@@ -53,13 +53,13 @@
 extern "C" {
 #endif
 
-#define BYTES_MAX	5000	// max bytes of flow checked in q dividing
-#define PACKETS		0
-#define BYTES		1
-#define KEY		0
-#define VALUE		1
-#define ERROR 		-1
-#define OK 		1
+#define BYTES_MAX 5000  // max bytes of flow checked in q dividing
+#define PACKETS      0
+#define BYTES     1
+#define KEY    0
+#define VALUE     1
+#define ERROR     -1
+#define OK     1
 
 #define LOG_FILE_PREFIX ""
 #define LOG_FILE_SUFFIX ".log"
@@ -70,16 +70,16 @@ extern "C" {
 using namespace std;
 
 enum report_codes{
-	DO_NOT_REPORT = 0,
-	REPORT_BIG,
-	REPORT_COMPLEX,
+   DO_NOT_REPORT = 0,
+   REPORT_BIG,
+   REPORT_COMPLEX,
 };
 
 enum direction_codes{// codes and indexes of direction (type)
-	QUERY = 0,
-	RESPONSE,
-	Q_REPORTED,
-	R_REPORTED,
+   QUERY = 0,
+   RESPONSE,
+   Q_REPORTED,
+   R_REPORTED,
 };
 
 
@@ -88,41 +88,41 @@ enum direction_codes{// codes and indexes of direction (type)
  */
 typedef struct config_s {
 
-	int port;		/** port */
-	int n;			/** number of topN chosen */
-	int min_flows;		/** minimal threshold for number of flows in TOP-N */
-	int q;			/** histogram step */
-	int min_a;		/** minimal amplification effect considered as attack */
-	float min_flows_norm;	/** minimal normalized threshold for count of flows in TOP-N */
-	int min_resp_packets;	/** minimal average of response packets in TOP-N */
-	int min_resp_bytes;	/** minimal threshold for average size of responses in bytes in TOP-N */
-	int max_quer_bytes;	/** maximal threshold for average size of queries in bytes in TOP-N */
-	int max_quer_flow_packets;	/** maximal threshold for number of packets in one flow for requests */
-	int max_quer_flow_bytes;	/** maximal threshold for number of bytes in one flow for requests */
-	int max_resp_flow_packets;	/** maximal threshold for number of packets in one flow for responses */
-	int max_resp_flow_bytes;	/** maximal threshold for number of bytes in one flow for responses */
-	int det_window;		/** length of detection window */
-	int del_time;		/** length of delete window after detection */
+   int port;      /** port */
+   int n;         /** number of topN chosen */
+   int min_flows;    /** minimal threshold for number of flows in TOP-N */
+   int q;         /** histogram step */
+   int min_a;     /** minimal amplification effect considered as attack */
+   float min_flows_norm;   /** minimal normalized threshold for count of flows in TOP-N */
+   int min_resp_packets;   /** minimal average of response packets in TOP-N */
+   int min_resp_bytes;  /** minimal threshold for average size of responses in bytes in TOP-N */
+   int max_quer_bytes;  /** maximal threshold for average size of queries in bytes in TOP-N */
+   int max_quer_flow_packets; /** maximal threshold for number of packets in one flow for requests */
+   int max_quer_flow_bytes;   /** maximal threshold for number of bytes in one flow for requests */
+   int max_resp_flow_packets; /** maximal threshold for number of packets in one flow for responses */
+   int max_resp_flow_bytes;   /** maximal threshold for number of bytes in one flow for responses */
+   int det_window;      /** length of detection window */
+   int del_time;     /** length of delete window after detection */
 
-	config_s() {
-		port = 53;
-		n = 5;
-		min_flows = 300;
-		q = 2;
-		min_a = 10;
-		min_flows_norm = 0.9;
-		min_resp_packets = 2;
-		min_resp_bytes = 2000;
-		max_quer_bytes = 400;
-		max_quer_flow_packets = 1000;
-		max_quer_flow_bytes = 40000;
-		max_resp_flow_packets = 1000;
-		max_resp_flow_bytes = 100000;
-//		det_window = 3600;
-//		del_time = 300;
-		det_window = 900;
-		del_time = 300;
-	}
+   config_s() {
+      port = 53;
+      n = 5;
+      min_flows = 300;
+      q = 2;
+      min_a = 10;
+      min_flows_norm = 0.9;
+      min_resp_packets = 2;
+      min_resp_bytes = 2000;
+      max_quer_bytes = 400;
+      max_quer_flow_packets = 1000;
+      max_quer_flow_bytes = 40000;
+      max_resp_flow_packets = 1000;
+      max_resp_flow_bytes = 100000;
+//    det_window = 3600;
+//    del_time = 300;
+      det_window = 900;
+      del_time = 300;
+   }
 
 } config_t;
 
@@ -132,13 +132,13 @@ typedef struct config_s {
  */
 struct flow_key_t {
 
-	ip_addr_t src;	// source ip address
-	ip_addr_t dst;	// destination ip address
+   ip_addr_t src; // source ip address
+   ip_addr_t dst; // destination ip address
 
-	// operator for comparison in .find()
-	bool operator<(const flow_key_t &key2) const {
-		return (memcmp((char*)this, (char*)&key2, sizeof(flow_key_t)) < 0);
-	}
+   // operator for comparison in .find()
+   bool operator<(const flow_key_t &key2) const {
+      return (memcmp((char*)this, (char*)&key2, sizeof(flow_key_t)) < 0);
+   }
 };
 
 
@@ -147,9 +147,9 @@ struct flow_key_t {
  */
 struct flow_item_t {
 
-	ur_time_t t;	// timestamp of flow
-	int bytes;	// bytes in flow
-	int packets;	// packets in flow
+   ur_time_t t;   // timestamp of flow
+   int bytes;  // bytes in flow
+   int packets;   // packets in flow
 };
 
 
@@ -158,15 +158,15 @@ struct flow_item_t {
  */
 struct flow_data_t {
 
-	vector<flow_item_t> q;		// vector of query flows
-	vector<flow_item_t> r;		// vector of response flows
-	uint64_t total_bytes [4];		// total bytes of flows
-	uint32_t total_packets [4];		// total packets of flows
-	uint32_t total_flows [4];		// total number of flows
-	ur_time_t first_t;		// timestamp of first flow
-	ur_time_t last_t;		// timestamp of last flow - for inactivity detection
-	uint32_t identifier;		// unique identifier
-	ur_time_t last_logged;		// timestamp of last logged flow
+   vector<flow_item_t> q;     // vector of query flows
+   vector<flow_item_t> r;     // vector of response flows
+   uint64_t total_bytes [4];     // total bytes of flows
+   uint32_t total_packets [4];      // total packets of flows
+   uint32_t total_flows [4];     // total number of flows
+   ur_time_t first_t;      // timestamp of first flow
+   ur_time_t last_t;    // timestamp of last flow - for inactivity detection
+   uint32_t identifier;    // unique identifier
+   ur_time_t last_logged;     // timestamp of last logged flow
 };
 
 /** Map storing history model of flows */
