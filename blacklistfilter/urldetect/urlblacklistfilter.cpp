@@ -2,11 +2,13 @@
  * \file urlblacklistfilter.cpp
  * \brief Main module for URLBlackLIstDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \author Erik Sabik, <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
+ * \date 2014
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -52,6 +54,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <idna.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
