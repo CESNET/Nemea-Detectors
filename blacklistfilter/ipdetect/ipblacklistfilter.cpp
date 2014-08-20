@@ -59,12 +59,16 @@
 extern "C" {
 #endif
 #include <libtrap/trap.h>
+
+#include <blacklist_downloader.h>
 #ifdef __cplusplus
 }
 #endif
 #include <unirec/unirec.h>
 #include "ipblacklistfilter.h"
 #include <cuckoo_hash_v2.h>
+
+
 
 //#define DEBUG
 #define LONG_RUN
@@ -170,111 +174,107 @@ bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
  * skipped.
  *
  * @param ip_bl Hash table for storing the addresses.
- * @param source_dir Path to the directory with IP addresses.
- * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
+ * @param file File with IP addresses.
+ * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
-int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
+int load_ip (cc_hash_table_t& ip_bl, string& file)
 {
-    DIR* dp; // directory pointer
-    struct dirent *file; // file pointer
     ifstream input; // data input
 
-    string line, ip;
+    string line, ip, bl_flag_str;
     size_t str_pos;
+
+    int line_num = 0;
+    uint64_t bl_flag;
 
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
     
-    dp = opendir(source_dir.c_str());
-
-    if (dp == NULL) { // directory cannot be openned
-        cerr << "ERROR: Cannot open directory " << source_dir << ". Directory doesn't exist";
-        cerr << " or you don't have proper permissions. Unable to continue." << endl; 
+    input.open(file.c_str(), ifstream::in);
+        
+    if (!input.is_open()) {
+        cerr << "ERROR: File " << file << " cannot be opened!" << endl;
         return BLIST_FILE_ERROR;
     }
 
-    while (file = readdir(dp)) { // iterate over files
-        if (file->d_name[0] == '.' || file->d_type == 0x4) {
-            // we don't need references to direcotry itself and its parent
+    while (!(input.eof())) {
+        getline(input, line);
+        line_num++;
+
+        if (!line.length()) {
             continue;
         }
 
-        input.open((source_dir + file->d_name).c_str(), ifstream::in);
-        
-        if (!input.is_open()) {
-            cerr << "ERROR: File " << file->d_name << " cannot be opened and will be skipped." << endl;
-            continue;
-        }
-        
-        while (!(input.eof())) {
-            getline(input, line);
+        // trim all whitespaces
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
-            if (!line.length()) {
-                continue;
-            }
+        str_pos = line.find_first_of('/');
 
-            // trim all whitespaces
-            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-
-            str_pos = line.find_first_of('/');
-
-            // prefix length is not specified --> will use 32
+        // prefix length is not specified --> will use 32
+        if (str_pos == string::npos) {
+            str_pos = line.find_first_of(',');
             if (str_pos == string::npos) {
-                if(!ip_from_str(line.c_str(), &key)) {
-                    continue;
-                }
-                if (ip_is4(&key)) {
-                    bl_entry.pref_length = PREFIX_V4_DEFAULT;
-                } else {
-                    bl_entry.pref_length = PREFIX_V6_DEFAULT;
-                }
-           /* } else { // commented out for future use with prefixes
-                ip = line.substr(0, str_pos);
+                // Blacklist index delimeter not found (bad format?), skip it
+                cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
+                continue;
+            }
+            ip = line.substr(0, str_pos);
+            bl_flag_str = line.substr(str_pos + 1, string::npos);
+            bl_flag = strtoull(bl_flag_str.c_str(), NULL, 10);
+
+            if(!ip_from_str(ip.c_str(), &key)) {
+                continue;
+            }
+            if (ip_is4(&key)) {
+                bl_entry.pref_length = PREFIX_V4_DEFAULT;
+            } else {
+                bl_entry.pref_length = PREFIX_V6_DEFAULT;
+            }
+       /* } else { // commented out for future use with prefixes
+            ip = line.substr(0, str_pos);
     
-                if(!ip_from_str(ip.c_str(), &key)) {
-                    continue;
-                }
-
-                ip = line.substr(str_pos + 1);
-                bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
-
-                if (ip_is4(&key) && (bl_entry.pref_length > 32)) {
-                    continue;
-                } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
-                    continue;
-                }
-            }*/
-
-            } else { // prefix specified -- will drop for now
-                continue;
-            }
- 
-            memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
-
-            // get source blacklist
-            bl_entry.in_blacklist = strtoul(file->d_name, NULL, 0);
-            
-            if (bl_entry.in_blacklist == 0) {
+            if(!ip_from_str(ip.c_str(), &key)) {
                 continue;
             }
 
-            if (bl_entry.pref_length == 32 || bl_entry.pref_length == 128) {
-                if (ht_get_index(&ip_bl, (char *) key.bytes, ip_bl.key_length) == NOT_FOUND) {
-                    ht_insert(&ip_bl, (char *) key.bytes, &bl_entry, ip_bl.key_length);
-                }
-            }               
-            // else
-            //  if ip_is4
-            //      pushback to v4 prefix list
-            //  else
-            //      pushback to v6 prefix list
-            //
-            // sort both vectors (for binary search)
+            ip = line.substr(str_pos + 1);
+            bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
+
+            if (ip_is4(&key) && (bl_entry.pref_length > 32)) {
+                continue;
+            } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
+                continue;
+            }
+        }*/
+
+        } else { // prefix specified -- will drop for now
+            continue;
         }
-        input.close();
-    }
+ 
+        memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
 
-    closedir(dp);
+        // get source blacklist
+        bl_entry.in_blacklist = bl_flag;
+
+        if (bl_entry.in_blacklist == 0) {
+            continue;
+        }
+
+        if (bl_entry.pref_length == 32 || bl_entry.pref_length == 128) {
+            if (ht_get_index(&ip_bl, (char *) key.bytes, ip_bl.key_length) == NOT_FOUND) {
+                ht_insert(&ip_bl, (char *) key.bytes, &bl_entry, ip_bl.key_length);
+            }
+        }               
+        // else
+        //  if ip_is4
+        //      pushback to v4 prefix list
+        //  else
+        //      pushback to v6 prefix list
+        //
+        // sort both vectors (for binary search)
+    }
+    input.close();
+
     return ALL_OK;
 }
 
@@ -290,103 +290,98 @@ int load_ip (cc_hash_table_t& ip_bl, string& source_dir)
  *
  * @param update_list_a Vector with entries that will be added or updated.
  * @param update_list_rm Vector with entries that will be removed.
- * @param path Path to the directory with updates.
- * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if directory cannot be accessed.
+ * @param file File with updates.
+ * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
-int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& path)
+int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& file)
 {
-    DIR* dp; // directory pointer
-    struct dirent *file; // file pointer
- 
     ifstream input; // data input
 
-    string line;
+    string line, ip, bl_flag_str;
     size_t str_pos;
+
+    uint64_t bl_flag;
+    int line_num = 0;
 
     ip_addr_t key; // ip address (used as key in the map)
     ip_blist_t bl_entry; // black list entry associated with ip address
 
-    dp = opendir(path.c_str());
-
     bool add_rem = false; // add or remove from table ?
 
-    if (dp == NULL) {
-        cerr << "Cannot open directory with updates. Will not update." << endl;
+    input.open(file.c_str(), ifstream::in);
+
+    if (!input.is_open()) {
+        cerr << "Cannot open file with updates!" << endl;
         return BLIST_FILE_ERROR;
     }
 
-    // go over every file with updates (one for each source)
-    while (file = readdir(dp)) {
-        if (file->d_name[0] == '.' || file->d_type == 0x4) {
-            // we don't need references to direcotry itself and its parent or hidden files
-            // and we also don't want to go recursively into another directories
+    while (!input.eof()) {
+        getline(input, line);
+        line_num++;
+
+        // trim all white spaces (if any)
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+        // transform all letters to lowercase (if any)
+        transform(line.begin(), line.end(), line.begin(), ::tolower);
+
+        // encountered a remove line?
+        if (line == "#remove") {
+            add_rem = true; // switch to remove mode
             continue;
         }
 
-        input.open((path + file->d_name).c_str(), ifstream::in);
-
-        if (!input.is_open()) {
-            cerr << "Cannot open file with updates. Will be skipped." << endl;
+        // Skip empty lines
+        if (!line.length()) {
             continue;
         }
 
-        while (!input.eof()) {
-            getline(input, line);
+        // are we loading prefix?
+        str_pos = line.find_first_of('/');
 
-            // trim all white spaces (if any)
-            line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-
-            // transform all letters to lowercase (if any)
-            transform(line.begin(), line.end(), line.begin(), ::tolower);
-
-            // encountered a remove line?
-            if (line == "#remove") {
-                add_rem = true; // switch to remove mode
+        if (str_pos == string::npos) { // ip only
+            str_pos = line.find_first_of(',');
+            if (str_pos == string::npos) {
+                // Blacklist index delimeter not found (bad format?), skip it
+                cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
                 continue;
             }
+            ip = line.substr(0, str_pos);
+            bl_flag_str = line.substr(str_pos + 1, string::npos);
+            bl_flag = strtoull(bl_flag_str.c_str(), NULL, 10);
 
-            // are we loading prefix?
-            str_pos = line.find_first_of('/');
-
-            if (str_pos == string::npos) { // ip only
-                if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
-                    continue;
-                }
-                if (ip_is4(&bl_entry.ip)) {
-                    bl_entry.pref_length = PREFIX_V4_DEFAULT;
-                } else {
-                    bl_entry.pref_length = PREFIX_V6_DEFAULT;
-                }                
-            } else { // ip prefix
-                if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
-                    continue;
-                }
-                line.erase(0, str_pos + 1);
-                if (str_pos != string::npos) {
-                    bl_entry.pref_length = strtoul(line.c_str(), NULL, 0);
-                } else {
-                    continue;
-                }
+            if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
+                continue;
             }
-
-            // determine blacklist
-            bl_entry.in_blacklist = strtoul(file->d_name, NULL, 0);           
-            if (bl_entry.in_blacklist == 0x0) {
-                cerr << "ERROR: Unable to determine the source blacklist. File " << file->d_name << " will be skipped." << endl;
-                input.close();
-                break;
-            }
-
-            // put entry into its respective update list        
-            if (!add_rem) {
-                update_list_a.push_back(bl_entry);
+            if (ip_is4(&bl_entry.ip)) {
+               bl_entry.pref_length = PREFIX_V4_DEFAULT;
             } else {
-                update_list_rm.push_back(bl_entry);
+                bl_entry.pref_length = PREFIX_V6_DEFAULT;
+            }                
+        } else { // ip prefix
+            if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+                continue;
+            }
+            line.erase(0, str_pos + 1);
+            if (str_pos != string::npos) {
+                bl_entry.pref_length = strtoul(line.c_str(), NULL, 0);
+            } else {
+                continue;
             }
         }
-        input.close();
+
+        // determine blacklist
+        bl_entry.in_blacklist = bl_flag;           
+     
+       // put entry into its respective update list        
+        if (!add_rem) {
+            update_list_a.push_back(bl_entry);
+        } else {
+            update_list_rm.push_back(bl_entry);
+        }
     }
-    closedir(dp);
+    input.close();
+   
     return ALL_OK;
 }
  
@@ -474,11 +469,11 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
-    uint8_t bl = 0x0;
+//    uint8_t bl = 0x0;
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist << 4);
+        //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist << 4);
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
@@ -487,7 +482,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
+        //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
@@ -498,7 +493,7 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result != NOT_FOUND)
 //  ur_set(det_tmp, detected, UR_DST_BLACKLIST
     if (marked) {
-        ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
+        //ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -529,12 +524,11 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result == NOT_FOUND)
 //  try prefixes
 // if (search_result != NOT_FOUND) ...
-
-    uint8_t bl = 0x0;
+//    uint8_t bl = 0x0;
 
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist) << 4;
+        //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist) << 4;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
@@ -546,14 +540,14 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 // if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
+        //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
  
     if (marked) {
-        ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
+        //ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -741,19 +735,43 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
     }
 }
 
+
+
+/**
+ * \brief Setup arguments structure for Blacklist Downloader.
+ * \param args Pointer to arguments structure.
+ */
+void setup_downloader(bl_down_args_t *args, const char *file)
+{
+   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id | BL_ELEM_TOR.id;
+   args->sites     |= BL_WARDEN_SOURCES;
+   args->file       = (char*)file;
+   args->comment_ar = BLACKLIST_COMMENT_AR;
+   args->num        = 5;
+   args->delay      = BLACKLIST_UPDATE_DELAY_TIME;
+   args->use_regex  = 1; // We want to use regelar expression filter
+   args->reg_pattern     = BLACKLIST_REG_PATTERN;
+   args->update_mode     = BLACKLIST_UPDATE_MODE;
+   args->line_max_length = BLACKLIST_LINE_MAX_LENGTH;
+   args->el_max_length   = BLACKLIST_EL_MAX_LENGTH;
+   args->el_max_count    = BLACKLIST_EL_MAX_COUNT;
+}
+
+
+
 /*
  * MAIN FUNCTION
  */
 int main (int argc, char** argv)
 {
-
     int retval = 0; // return value
+    bl_down_args_t bl_args;
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("<BASIC_FLOW>,DIR_BIT_FIELD,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE");
+    ur_template_t *tmpl_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
 
     // for use with prefixes (not implemented now)
     black_list_t v4_list; 
@@ -815,17 +833,32 @@ int main (int argc, char** argv)
     int count = 0, bl_count = 0;
 #endif
 
-    string dir = string(argv[1]);
+    string file = string(argv[1]);
+
+    // ***** Initialize Blacklist Downloader *****
+    setup_downloader(&bl_args, file.c_str());
+    pid_t c_id = bl_down_init(&bl_args);
+    if (c_id < 0) {
+       fprintf(stderr, "Error: Could not initialize downloader!\n");
+       return 1;
+    } else {
+        // Wait for initial update
+        while (!update) {
+            sleep(1);
+        }
+        update = 0;
+    }
 
     // load ip addresses from sources
-    retval = load_ip(hash_blacklist, dir);
-    
+    retval = load_ip(hash_blacklist, file);
+
     // something went wrong during loading operation -- terminate with error
     if (retval == BLIST_FILE_ERROR) {
         ur_free_template(templ);
         ur_free_template(tmpl_det);
         ht_destroy(&hash_blacklist);
         trap_finalize();
+        kill(c_id, SIGINT);
         return EXIT_FAILURE;
     }
 
@@ -876,7 +909,7 @@ int main (int argc, char** argv)
             }
         }
         
-        retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
+        //retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
         // try to match the ip addresses to blacklist
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
         //      retval = v4_blacklist_check(templ, data, black_list, v4_masks);
@@ -905,7 +938,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             out << "Updating black list ..." << endl;
 #endif
-            string upd_path = dir;
+            string upd_path = file;
             // Update procedure.
             retval = load_update(add_update, rm_update, upd_path);
             if (retval == BLIST_FILE_ERROR) {
@@ -947,6 +980,9 @@ int main (int argc, char** argv)
         }
 
     }
+
+   // Terminate child process
+   kill(c_id, SIGINT);
 
 // we don't want cascading shutdown of following modules
 #ifndef LONG_RUN
