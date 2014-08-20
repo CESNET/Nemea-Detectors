@@ -1323,7 +1323,7 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
 
 inline  int cut_max_domain(packet_t * packet){
    char * end_of_domain = END_OF_CUTTED_DOMAIN;
-   while(packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.'){
+   while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_SIZE_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
       packet->request_length--;
    }
    memcpy(packet->request_string + packet->request_length, end_of_domain, END_OF_CUTTED_DOMAIN_LENGTH);
@@ -1436,7 +1436,7 @@ int main(int argc, char **argv)
    
    // ***** Create UniRec template *****
    
-   char *unirec_specifier = "DST_IP,SRC_IP,BYTES,DNS_RR_TTL,DNS_ANSWERS,DNS_CLASS,DNS_ID,DNS_PSIZE,DNS_QTYPE,DNS_RLENGTH,DST_PORT,SRC_PORT,DNS_DO,DNS_RCODE,PROTOCOL,DNS_NAME,DNS_RDATA";
+   char *unirec_specifier = "<COLLECTOR_FLOW>,<DNS>";
    char opt;
    char *record_folder_name = NULL;
    char *input_packet_file_name = NULL;
@@ -1462,7 +1462,12 @@ int main(int argc, char **argv)
                if(result_file == NULL){
                   fprintf(stderr, "Error: Output file couldn`t be opened.\n");
                   goto failed_trap;
-               }   
+               }
+               else{
+                  time_t mytime;
+                  mytime = time(NULL);
+                  fprintf(result_file, "\nSTART TIME: %s\n", ctime(&mytime));
+               }
             break;
          case 'e':
             exception_file = fopen ( optarg, "r" );
@@ -1558,6 +1563,8 @@ int main(int argc, char **argv)
    }
    //initialize prefix tree
    preftree = prefix_tree_initialize(SUFFIX ,0,'.');
+
+   
    //add exceptions to prefix tree, if the file is specified
    if(exception_file != NULL){
       int sign;
@@ -1636,6 +1643,7 @@ int main(int argc, char **argv)
             }
 
 
+
             //type request
             if(ur_get(tmplt, data, UR_DST_PORT)==53){
                packet.is_response = 0;
@@ -1691,6 +1699,8 @@ int main(int argc, char **argv)
                }
 
             }
+
+
             #ifdef TEST  
                printf("request: %s\n", packet.request_string);
                if(packet.ns_response[0] != 0)
@@ -1733,7 +1743,7 @@ int main(int argc, char **argv)
                }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
-            
+ 
             if (stats == 1) {
                printf("Time: %lu\n", (long unsigned int) time(NULL));
                signal(SIGUSR1, signal_handler);
@@ -1819,6 +1829,7 @@ int main(int argc, char **argv)
                }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
+
             if (stats == 1) {
                printf("Time: %lu\n", (long unsigned int) time(NULL));
                signal(SIGUSR1, signal_handler);
@@ -1867,6 +1878,7 @@ int main(int argc, char **argv)
       printf("\n");
    }
    printf("Packets: %20lu\n", cnt_packets);
+
    
    // *****  Write into file ******
    if (write_summary){
