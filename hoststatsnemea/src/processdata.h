@@ -45,10 +45,13 @@
 #include "profile.h"
 
 // ONLINE MODE THREADS
-void *data_reader_trap(void *mutex_map); //for thread
-void *data_process_trap(void *mutex_map); //for thread
+void *data_reader_trap(void *args); //for thread
+void *data_process_trap(void *args); //for thread
+
+// Time update activation
+void start_alarm();
 
 // OFFLINE MODE FUNCTION
-void offline_analyzer();
+//void offline_analyzer();
 
 #endif

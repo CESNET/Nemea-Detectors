@@ -43,6 +43,7 @@
 using namespace std;
 
 extern uint32_t hs_time;
+extern int input_ifc_count;
 
 // DEFAULT VALUES OF THE MAIN PROFILE (in seconds)
 #define DEF_SIZE (65536)
@@ -53,16 +54,13 @@ extern uint32_t hs_time;
 #define STAT_TABLE_STASH_SIZE 4
 
 /* -------------------- MAIN PROFILE -------------------- */
-
-HostProfile::HostProfile()
+/** \brief Constructor of statistics class
+ * \param subprofile_list Pointer to the list of all subprofiles
+ * \param generic_rules Enable generic rules of the detector of global statistic
+ */
+HostProfile::HostProfile(const sp_list_ptr_v *subprofile_list, bool generic_rules) 
+      : sp_list(subprofile_list), generic_rules(generic_rules)
 {
-   // Fill vector of subprofiles 
-   subprofile_t sp_dns("dns", "rules-dns", dns_pointers);
-   sp_list.push_back(sp_dns);
-
-   subprofile_t sp_ssh("ssh", "rules-ssh", ssh_pointers);
-   sp_list.push_back(sp_ssh);
-
    // Load configuration
    apply_config();
 
@@ -83,6 +81,8 @@ HostProfile::HostProfile()
       bp.optimal_parameters.table_size, bp.optimal_parameters.number_of_hashes);
    bf_active = new bloom_filter(bp);
    bf_learn = new bloom_filter(bp);
+   
+   pthread_mutex_init(&bf_lock, NULL);
 }
 
 HostProfile::~HostProfile()
@@ -96,12 +96,15 @@ HostProfile::~HostProfile()
    // Delete BloomFilters
    delete bf_active;
    delete bf_learn;
+   pthread_mutex_destroy(&bf_lock);
 
    // Delete all BloomFilters in subprofiles
-   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      if (it->pointers.bf_config_ptr != NULL) {
-         it->pointers.bf_config_ptr(BF_DESTROY, 0);
+   for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+      if ((*it)->pointers.bf_config_ptr == NULL || (*it)->interfaces_count == 0) {
+         continue;
       }
+      
+      (*it)->pointers.bf_config_ptr(BF_DESTROY, 0);
    }
 }
 
@@ -116,8 +119,7 @@ void HostProfile::apply_config()
    active_timeout =   atoi(conf->getValue("timeout-active").c_str());
    inactive_timeout = atoi(conf->getValue("timeout-inactive").c_str());
    det_start_time =   atoi(conf->getValue("det_start_time").c_str());
-   detector_status =  (conf->getValue("rules-generic") == "1"); 
-   port_flowdir =     (conf->getValue("port-flowdir") == "1");
+   string rules_str = conf->getValue("rules");
    conf->unlock();
 
    // check size of table
@@ -156,27 +158,41 @@ void HostProfile::apply_config()
    }
    if (inactive_timeout <= 0) {
       inactive_timeout = D_INACTIVE_TIMEOUT;
-      log(LOG_WARNING, "Warning: Active timeout is not specified. Using "
+      log(LOG_WARNING, "Warning: Inactive timeout is not specified. Using "
          "%d as default.", D_INACTIVE_TIMEOUT);
    }
-
-   // update subprofile configuration
-   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      it->check_config();
-
-      if (it->pointers.bf_config_ptr == NULL) {
+   
+   // Create subprofile's BloomFilters
+   for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+      if ((*it)->pointers.bf_config_ptr == NULL || (*it)->interfaces_count == 0) {
          continue;
       }
-
-      // Create subprofile's BloomFilters
-      if (it->sp_status) {
-         it->pointers.bf_config_ptr(BF_CREATE, 2 * table_size);
-      }
+      
+      (*it)->pointers.bf_config_ptr(BF_CREATE, 2 * table_size);
    }
-
-   // Sort vector - active subprofiles go to the forefront of sp_list
-   std::sort(sp_list.begin(), sp_list.end());
 }
+
+/** \brief Get the presence in BloomFilter
+ * Stores a key "fingerprint" and determines whether a given "fingerprint" was
+ * already entered.
+ * @param key Key 
+ * @return True if "fingerprint" is known, otherwise false
+ */
+bool HostProfile::get_bf_presence(const bloom_key_t &key) {
+   if (input_ifc_count > 1) {
+      pthread_mutex_lock(&bf_lock);
+   }
+   
+   bool presence = bf_active->containsinsert((const unsigned char *) &key, 
+      sizeof(bloom_key_t));
+   bf_learn->insert((const unsigned char *) &key, sizeof(bloom_key_t));
+   
+   if (input_ifc_count > 1) {
+      pthread_mutex_unlock(&bf_lock);
+   }
+   return presence;
+}
+
 
 /** \brief Update records in the stat_table by data from TRAP input interface
  *
@@ -185,26 +201,26 @@ void HostProfile::apply_config()
  * Note: uses global variable hs_time with current system time 
  *
  * \param record Pointer to the data from the TRAP
- * \param tmpl_in Pointer to the TRAP input interface
+ * \param ifc_spec Specification of input interface
  * \param subprofiles When True update active subprofiles
  */
-void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
+void HostProfile::update(const void *record, const hs_in_ifc_spec_t &ifc_spec,
       bool subprofiles)
 {
    // create key for the BloomFilter
    bloom_key_t bloom_key;
-   bloom_key.src_ip = ur_get(tmpl_in, record, UR_SRC_IP);
-   bloom_key.dst_ip = ur_get(tmpl_in, record, UR_DST_IP);
+   bloom_key.src_ip = ur_get(ifc_spec.tmpl, record, UR_SRC_IP);
+   bloom_key.dst_ip = ur_get(ifc_spec.tmpl, record, UR_DST_IP);
    
    // common part
-   uint8_t tcp_flags = ur_get(tmpl_in, record, UR_TCP_FLAGS);
+   uint8_t tcp_flags = ur_get(ifc_spec.tmpl, record, UR_TCP_FLAGS);
 
    uint8_t dir_flags;
-   if (port_flowdir) {
+   if (ifc_spec.port_flowdir) {
       // ignore flowdir from record and create custom
       dir_flags = UR_DIR_FLAG_NRC;
-      uint16_t src_port = ur_get(tmpl_in, record, UR_SRC_PORT);
-      uint16_t dst_port = ur_get(tmpl_in, record, UR_DST_PORT);
+      uint16_t src_port = ur_get(ifc_spec.tmpl, record, UR_SRC_PORT);
+      uint16_t dst_port = ur_get(ifc_spec.tmpl, record, UR_DST_PORT);
 
       if (((src_port < 10000) || (dst_port < 10000)) && (src_port != dst_port)) {
          if (src_port < dst_port) {
@@ -215,7 +231,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       }
    } else {
       // use flowdir from unirec
-      dir_flags = ur_get(tmpl_in, record, UR_DIRECTION_FLAGS);
+      dir_flags = ur_get(ifc_spec.tmpl, record, UR_DIRECTION_FLAGS);
    }
    
    // Macros
@@ -246,14 +262,12 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    // | -- (src_ip) --  | -- (dst_ip) -- |  0XXX XXXX XXXX XXXX   |
    bloom_key.rec_time = src_host_rec.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
    bloom_key.rec_time &= ((1 << 15) - 1);
-   src_present = bf_active->containsinsert((const unsigned char *) &bloom_key, 
-      sizeof(bloom_key_t));
-   bf_learn->insert((const unsigned char *) &bloom_key, sizeof(bloom_key_t));   
+   src_present = get_bf_presence(bloom_key);
    
    // UPDATE STATS
    // all flows
-   ADD(src_host_rec.out_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
-   ADD(src_host_rec.out_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
+   ADD(src_host_rec.out_all_bytes, ur_get(ifc_spec.tmpl, record, UR_BYTES));
+   ADD(src_host_rec.out_all_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
    if (!src_present) INC(src_host_rec.out_all_uniqueips);
    INC(src_host_rec.out_all_flows);
 
@@ -264,12 +278,12 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    if (tcp_flags & 0x10) INC(src_host_rec.out_all_ack_cnt);
    if (tcp_flags & 0x20) INC(src_host_rec.out_all_urg_cnt);
 
-   src_host_rec.out_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
+   src_host_rec.out_linkbitfield |= ur_get(ifc_spec.tmpl, record, UR_LINK_BIT_FIELD);
 
    if (dir_flags & UR_DIR_FLAG_REQ) {
       // request flows
-      ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
-      ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(src_host_rec.out_req_bytes, ur_get(ifc_spec.tmpl, record, UR_BYTES));
+      ADD(src_host_rec.out_req_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
       if (!src_present) INC(src_host_rec.out_req_uniqueips);
       INC(src_host_rec.out_req_flows);
 
@@ -279,7 +293,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (tcp_flags & 0x10) INC(src_host_rec.out_req_ack_cnt);
    } else if (dir_flags & UR_DIR_FLAG_RSP) {
       // response flows
-      ADD(src_host_rec.out_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(src_host_rec.out_rsp_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
       INC(src_host_rec.out_rsp_flows);
 
       if (tcp_flags & 0x2)  INC(src_host_rec.out_rsp_syn_cnt);
@@ -288,13 +302,11 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    
    if (subprofiles) {
       // update subprofiles
-      for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-         if (!it->sp_status)
-            break;
-
-         it->pointers.update_src_ptr(&bloom_key, src_host_rec, record, tmpl_in,
-            dir_flags);
-      }      
+      for (sp_list_ptr_citer it = ifc_spec.subprofiles.begin(); 
+         it != ifc_spec.subprofiles.end(); ++it) {
+         (*it)->pointers.update_src_ptr(src_host_rec, record, ifc_spec, 
+            dir_flags, bloom_key);
+      }
    }
    
    fht_unlock_data(src_lock);
@@ -318,14 +330,12 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    // | -- (src_ip) --  | -- (dst_ip) -- |  1XXX XXXX XXXX XXXX   |
    bloom_key.rec_time = dst_host_rec.first_rec_ts % (std::numeric_limits<uint16_t>::max() + 1);
    bloom_key.rec_time |= (1 << 15);
-   dst_present = bf_active->containsinsert((const unsigned char *) &bloom_key, 
-      sizeof(bloom_key_t));
-   bf_learn->insert((const unsigned char *) &bloom_key, sizeof(bloom_key_t));
+   dst_present = get_bf_presence(bloom_key);
 
    // UPDATE STATS
    // all flows
-   ADD(dst_host_rec.in_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
-   ADD(dst_host_rec.in_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
+   ADD(dst_host_rec.in_all_bytes, ur_get(ifc_spec.tmpl, record, UR_BYTES));
+   ADD(dst_host_rec.in_all_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
    if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
    INC(dst_host_rec.in_all_flows);
 
@@ -336,12 +346,12 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    if (tcp_flags & 0x10) INC(dst_host_rec.in_all_ack_cnt);
    if (tcp_flags & 0x20) INC(dst_host_rec.in_all_urg_cnt);
 
-   dst_host_rec.in_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
+   dst_host_rec.in_linkbitfield |= ur_get(ifc_spec.tmpl, record, UR_LINK_BIT_FIELD);
 
    if (dir_flags & UR_DIR_FLAG_REQ) {
       // request flows
-      ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
-      ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(dst_host_rec.in_req_bytes, ur_get(ifc_spec.tmpl, record, UR_BYTES));
+      ADD(dst_host_rec.in_req_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
       if (!dst_present) INC(dst_host_rec.in_req_uniqueips);
       INC(dst_host_rec.in_req_flows);
 
@@ -350,7 +360,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (tcp_flags & 0x10) INC(dst_host_rec.in_req_ack_cnt);
    } else if (dir_flags & UR_DIR_FLAG_RSP) {
       // response flows
-      ADD(dst_host_rec.in_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(dst_host_rec.in_rsp_packets, ur_get(ifc_spec.tmpl, record, UR_PACKETS));
       INC(dst_host_rec.in_rsp_flows);
 
       if (tcp_flags & 0x10) INC(dst_host_rec.in_rsp_ack_cnt);
@@ -358,12 +368,10 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    
    if (subprofiles) {
       // update subprofiles
-      for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-         if (!it->sp_status)
-            break;
-
-         it->pointers.update_dst_ptr(&bloom_key, dst_host_rec, record, tmpl_in,
-            dir_flags);
+      for (sp_list_ptr_citer it = ifc_spec.subprofiles.begin(); 
+         it != ifc_spec.subprofiles.end(); ++it) {
+         (*it)->pointers.update_dst_ptr(dst_host_rec, record, ifc_spec, 
+            dir_flags, bloom_key);
       }
    }
    
@@ -387,8 +395,12 @@ void HostProfile::remove_by_key(const hosts_key_t &key)
       return;
    }
    
-   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      it->pointers.delete_ptr(*rec);
+   for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+      if ((*it)->interfaces_count == 0) {
+         break;
+      }
+      
+      (*it)->pointers.delete_ptr(*rec);
    }
 
    int ret = fht_remove_with_stash_locked(stat_table, (char*) key.bytes, lock);
@@ -412,8 +424,12 @@ void HostProfile::release()
          hosts_record_t &temp = *((hosts_record_t *) table_iter->data_ptr);
          
          // Iterate over subprofiles
-         for (sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-            it->pointers.delete_ptr(temp);
+         for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+            if ((*it)->interfaces_count == 0) {
+               break;
+            }
+            
+            (*it)->pointers.delete_ptr(temp);
          }
       }
       
@@ -429,19 +445,34 @@ void HostProfile::release()
  */
 void HostProfile::swap_bf()
 {
+   if (input_ifc_count > 1) {
+      pthread_mutex_lock(&bf_lock);
+   }
+   
+   log(LOG_DEBUG, "Swapping BloomFilters");
    bf_active->clear();
 
    bloom_filter *tmp = bf_active;
    bf_active = bf_learn;
    bf_learn = tmp;
+   
+   if (input_ifc_count > 1) {
+      pthread_mutex_unlock(&bf_lock);
+   }
 
    // Swap BloomFilters in subprofiles
-   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      if (it->pointers.bf_config_ptr == NULL) {
+   for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+      if ((*it)->pointers.bf_config_ptr == NULL) {
          continue;
       }
-
-      it->pointers.bf_config_ptr(BF_SWAP, 0);
+      
+      if ((*it)->interfaces_count == 0) {
+         // Subprofiles are sorted by number of interfaces -> no more active 
+         // subprofiles
+         break;
+      }
+      
+      (*it)->pointers.bf_config_ptr(BF_SWAP, 0);
    }
 }
 
@@ -455,7 +486,7 @@ void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &rec
    bool subprofiles)
 {
    // detector
-   if (detector_status) {
+   if (generic_rules) {
       check_new_rules(key, record);
    }
 
@@ -464,12 +495,18 @@ void HostProfile::check_record(const hosts_key_t &key, const hosts_record_t &rec
    }
 
    // call detectors of subprofiles
-   for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-      if (!it->detector_status || !it->sp_status) {
+   for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+      // Subprofiles are sort by interfaces count, so it is not necessary to 
+      // seach for suspicious behavior in subprofiles without active interfaces.
+      if ((*it)->interfaces_count == 0) {
          break;
       }
-
-      it->pointers.check_ptr(key, record);
+      
+      if (!(*it)->rules_enabled) {
+         continue;
+      }
+      
+      (*it)->pointers.check_ptr(key, record);
    }
 }
 
@@ -506,8 +543,12 @@ hosts_record_t& HostProfile::get_record(const hosts_key_t& key, int8_t **lock)
             check_record(kicked_key, kicked_data);
 
             // Delete subprofiles in the kicked item
-            for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-               it->pointers.delete_ptr(kicked_data);
+            for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+               if ((*it)->interfaces_count == 0) {
+                  break;
+               }
+               
+               (*it)->pointers.delete_ptr(kicked_data);
             }
             break;
          case FHT_INSERT_FAILED:
@@ -559,8 +600,11 @@ void HostProfile::check_table(bool check_all)
       check_record(key, rec);
       
       // Delete subprofiles in the kicked item
-      for(sp_list_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
-         it->pointers.delete_ptr(rec);
+      for (sp_list_ptr_citer it = sp_list->begin(); it != sp_list->end(); ++it) {
+         if ((*it)->interfaces_count == 0) {
+            break;
+         }
+         (*it)->pointers.delete_ptr(rec);
       }
       
       // Remove record

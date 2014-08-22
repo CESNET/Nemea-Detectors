@@ -2,7 +2,7 @@
  * \file config.h
  * \brief Interface of the Configuration singleton
  * \author Tomas Cejka <cejkat@cesnet.cz>
- * \author Lukáš Huták <xhutak01@stud.fit.vutbr.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \date 2014
  * \date 2013
  * \date 2012
@@ -73,11 +73,13 @@ private:
    Configuration& operator=(Configuration const&);
    ~Configuration(){};
    static Configuration *instance;
-   void trimString(string &text);
    ConfigurationStatus load();
    void clean();
 public:
+   static void trimString(string &text);
+   
    string getValue(string paramName);
+   
    friend ostream &operator<<(ostream &i, Configuration &c)
    {
       map<string, string>::iterator it;

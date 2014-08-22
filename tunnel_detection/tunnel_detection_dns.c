@@ -810,7 +810,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
    ip_address_t * start;
    char ip_address [100];
    b_plus_tree_item * b_item;
-   int is_there_next=0;
+   int is_there_next = 0, print_time = 1;
    calulated_result_t result;
    b_item = b_plus_tree_create_list_item(b_plus_tree);
    is_there_next = b_plus_tree_get_list(b_plus_tree, b_item);
@@ -861,7 +861,8 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
          if(item->print & 0b11111111 && file != NULL){
             //translate ip int to str 
             get_ip_str_from_ip_struct(item, b_item->key, ip_address);            
-            print_founded_anomaly_immediately(ip_address, item, file);
+            print_founded_anomaly_immediately(ip_address, item, file, print_time);
+            print_time = 0;
             item->print=0;
             fflush(file);
          }
@@ -873,8 +874,13 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
 
 
 
-void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file)
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time)
 {
+   if(print_time){
+      time_t mytime;
+      mytime = time(NULL);
+      fprintf(file, "\nTIME: %s\n", ctime(&mytime));
+   }
    prefix_tree_domain_t *dom;
    char str[1024];
    if(item->print & 0b11111111){
@@ -1315,6 +1321,16 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
    return size;
 }
 
+inline  int cut_max_domain(packet_t * packet){
+   char * end_of_domain = END_OF_CUTTED_DOMAIN;
+   while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_SIZE_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
+      packet->request_length--;
+   }
+   memcpy(packet->request_string + packet->request_length, end_of_domain, END_OF_CUTTED_DOMAIN_LENGTH);
+   packet->request_length += END_OF_CUTTED_DOMAIN_LENGTH;
+   packet->request_string[packet->request_length]=0;
+}
+
 int compare_ipv6(void * a, void * b)
 {
    uint64_t *h1, *h2;
@@ -1420,7 +1436,7 @@ int main(int argc, char **argv)
    
    // ***** Create UniRec template *****
    
-   char *unirec_specifier = "DST_IP,SRC_IP,BYTES,DNS_RR_TTL,DNS_ANSWERS,DNS_CLASS,DNS_ID,DNS_PSIZE,DNS_QTYPE,DNS_RLENGTH,DST_PORT,SRC_PORT,DNS_DO,DNS_RCODE,PROTOCOL,DNS_NAME,DNS_RDATA";
+   char *unirec_specifier = "<COLLECTOR_FLOW>,<DNS>";
    char opt;
    char *record_folder_name = NULL;
    char *input_packet_file_name = NULL;
@@ -1446,7 +1462,12 @@ int main(int argc, char **argv)
                if(result_file == NULL){
                   fprintf(stderr, "Error: Output file couldn`t be opened.\n");
                   goto failed_trap;
-               }   
+               }
+               else{
+                  time_t mytime;
+                  mytime = time(NULL);
+                  fprintf(result_file, "\nSTART TIME: %s\n", ctime(&mytime));
+               }
             break;
          case 'e':
             exception_file = fopen ( optarg, "r" );
@@ -1542,6 +1563,8 @@ int main(int argc, char **argv)
    }
    //initialize prefix tree
    preftree = prefix_tree_initialize(SUFFIX ,0,'.');
+
+   
    //add exceptions to prefix tree, if the file is specified
    if(exception_file != NULL){
       int sign;
@@ -1615,6 +1638,12 @@ int main(int argc, char **argv)
             packet.size = ur_get(tmplt, data, UR_BYTES);
             //DNS NAME
             packet.request_length = copy_string(packet.request_string, ur_get_dyn(tmplt, data, UR_DNS_NAME), ur_get_dyn_size(tmplt, data, UR_DNS_NAME), MAX_SIZE_OF_REQUEST_DOMAIN);
+            if(packet.request_length >= MAX_SIZE_OF_REQUEST_EXPORTER){
+               cut_max_domain(&packet);
+            }
+
+
+
             //type request
             if(ur_get(tmplt, data, UR_DST_PORT)==53){
                packet.is_response = 0;
@@ -1670,6 +1699,8 @@ int main(int argc, char **argv)
                }
 
             }
+
+
             #ifdef TEST  
                printf("request: %s\n", packet.request_string);
                if(packet.ns_response[0] != 0)
@@ -1712,7 +1743,7 @@ int main(int argc, char **argv)
                }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
-            
+ 
             if (stats == 1) {
                printf("Time: %lu\n", (long unsigned int) time(NULL));
                signal(SIGUSR1, signal_handler);
@@ -1798,6 +1829,7 @@ int main(int argc, char **argv)
                }
                histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
+
             if (stats == 1) {
                printf("Time: %lu\n", (long unsigned int) time(NULL));
                signal(SIGUSR1, signal_handler);
@@ -1846,6 +1878,7 @@ int main(int argc, char **argv)
       printf("\n");
    }
    printf("Packets: %20lu\n", cnt_packets);
+
    
    // *****  Write into file ******
    if (write_summary){

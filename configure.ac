@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-modules], [1.0.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([trapdump/trapdump.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -197,6 +197,7 @@ AC_CONFIG_FILES([Makefile
                  flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
+                 flow_statistic/Makefile
                  flowtools_reader/Makefile
                  heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
@@ -216,6 +217,7 @@ AC_CONFIG_FILES([Makefile
                  rrd_updater/Makefile
                  sampler/Makefile
                  simplebotnetdetector/Makefile
+                 sip_detector/Makefile
                  slowthreatdetector/Makefile
                  synflood/pcf/Makefile
                  synflood/synfindiff/Makefile
@@ -232,7 +234,6 @@ AC_CONFIG_FILES([Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
                  warden_collector/Makefile
-                 tor_detector/Makefile
                ])
 
 

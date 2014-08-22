@@ -17,6 +17,7 @@ flow_gen \
 flow_sanity_check \
 flowcounter \
 flowdirection \
+flow_statistic \
 flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
@@ -34,9 +35,9 @@ rrd_updater \
 report_handler \
 sampler \
 simplebotnetdetector \
+sip_detector \
 test_threads \
 timestamp_checker \
-tor_detector \
 traffic_delayer \
 traffic_merger \
 traffic_repeater \
