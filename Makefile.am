@@ -44,7 +44,7 @@ transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
-unirecfilter
+unirecfilter \
 slowthreatdetector \
 sshcure \
 synflood/synfindiff \
