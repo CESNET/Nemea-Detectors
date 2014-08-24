@@ -33,7 +33,6 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
@@ -268,6 +267,5 @@ echo "  LIBS.................: $LIBS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
-echo "Subdirs................: $ENABLEDTESTS"
 echo
 
