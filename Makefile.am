@@ -52,7 +52,7 @@ synflood/pcf \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_senderunirecfilter
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
