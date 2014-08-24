@@ -44,7 +44,6 @@ transitfilter \
 trapdump \
 trapreplay \
 tunnel_detection \
-unirecfilter \
 slowthreatdetector \
 sshcure \
 synflood/synfindiff \
@@ -53,13 +52,16 @@ synflood/pcf \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_senderunirecfilter
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
 endif
 if HAVE_LIBPCAP
 SUBDIRS += flow_meter portscan_detector
+endif
+if HAVE_BISON
+SUBDIRS += unirecfilter
 endif
 
 RPMDIR = RPMBUILD

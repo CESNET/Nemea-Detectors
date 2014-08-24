@@ -133,6 +133,12 @@ AC_CHECK_HEADER(pcap.h,
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
 
+AC_CHECK_PROG(BISON, bison, yes, [""])
+AC_CHECK_PROG(FLEX, flex, yes, [""])
+
+AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
+
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
 
