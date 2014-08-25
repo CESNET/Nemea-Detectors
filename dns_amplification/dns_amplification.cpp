@@ -42,6 +42,11 @@
  *
  */
 
+//information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h> 
+#endif
+
 #include <iostream>
 #include <fstream>
 #include <sstream>

@@ -29,14 +29,8 @@ trap_module_info_t module_info = {
 static int stop = 0;
 static int SEGFAULT_flag = 0;
 
-void signal_handler(int signal)
-{
-   if (signal == SIGTERM || signal == SIGINT) {
-      printf("Signal detected, terminating.\n");
-      stop = 1;
-      trap_terminate();
-   }
-}
+// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 int is_ip_uniq(ip_addr_t ip, vic_data_t *ar, int c)
 {
@@ -134,8 +128,9 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****   
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
+   
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    // ***** Create UniRec template *****   
    char *unirec_specifier = "<COLLECTOR_FLOW>";
