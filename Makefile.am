@@ -49,6 +49,7 @@ sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \
+voip_fraud_detection \
 warden_collector
 
 
