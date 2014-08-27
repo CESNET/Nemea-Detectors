@@ -238,6 +238,7 @@ AC_CONFIG_FILES([Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
                  unirecfilter/Makefile
+                 voip_fraud_detection/Makefile
                  warden_collector/Makefile
                ])
 
