@@ -50,16 +50,20 @@ sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \
+voip_fraud_detection \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
 endif
 if HAVE_LIBPCAP
 SUBDIRS += flow_meter portscan_detector
+endif
+if HAVE_BISON
+SUBDIRS += unirecfilter
 endif
 
 RPMDIR = RPMBUILD

@@ -33,7 +33,6 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
@@ -132,6 +131,12 @@ AC_CHECK_HEADER(pcap.h,
 	AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
+
+AC_CHECK_PROG(BISON, bison, yes, [""])
+AC_CHECK_PROG(FLEX, flex, yes, [""])
+
+AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
@@ -233,6 +238,8 @@ AC_CONFIG_FILES([Makefile
                  trapreplay/Makefile
                  sshcure/Makefile
                  tunnel_detection/Makefile
+                 unirecfilter/Makefile
+                 voip_fraud_detection/Makefile
                  warden_collector/Makefile
                ])
 
@@ -262,6 +269,5 @@ echo "  LIBS.................: $LIBS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
-echo "Subdirs................: $ENABLEDTESTS"
 echo
 
