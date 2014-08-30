@@ -41,6 +41,11 @@
  *
  */
 
+// Information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h> 
+#endif
+
 #include <math.h>  
 #include <stdio.h>
 #include <time.h>
@@ -92,12 +97,15 @@ static values_t values;
    static int add_to_prefix = 0;
 #endif /*TIME*/
 
+// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+   
 void signal_handler(int signal)
 {
-   if (signal == SIGTERM || signal == SIGINT) {
+   /*if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
-   } else if (signal == SIGUSR1) {
+   } else*/ if (signal == SIGUSR1) {
       stats = 1;
    }
 }
@@ -1429,9 +1437,10 @@ int main(int argc, char **argv)
    // ***** TRAP initialization *****
    
    
-   
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   //signal(SIGTERM, signal_handler);
+   //signal(SIGINT, signal_handler);
    signal(SIGUSR1, signal_handler);
    
    // ***** Create UniRec template *****
