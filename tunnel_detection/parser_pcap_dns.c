@@ -204,7 +204,7 @@ int read_packet(FILE *file, packet_t * create){
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
-		create->request_length = read_string(file, create->request_string, MAX_SIZE_OF_REQUEST_DOMAIN);
+		create->request_length = read_string(file, create->request_string, MAX_LENGTH_OF_REQUEST_DOMAIN);
 		sign = fgetc(file);
 	}
 
@@ -217,28 +217,28 @@ int read_packet(FILE *file, packet_t * create){
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
-			read_string(file, create->txt_response, MAX_SIZE_OF_RESPONSE_STRING);
+			read_string(file, create->txt_response, MAX_LENGTH_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
 		//read cname string 
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
-			read_string(file, create->cname_response, MAX_SIZE_OF_RESPONSE_STRING);
+			read_string(file, create->cname_response, MAX_LENGTH_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
 		//read mx string
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
-			read_string(file, create->mx_response, MAX_SIZE_OF_RESPONSE_STRING);
+			read_string(file, create->mx_response, MAX_LENGTH_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
 		//read ns string
 		sign = fgetc(file);
 		if(sign != ';' && sign != '\n' && sign != -1){
 			ungetc(sign,file);
-			read_string(file, create->ns_response, MAX_SIZE_OF_RESPONSE_STRING);
+			read_string(file, create->ns_response, MAX_LENGTH_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
 		read_rest_of_line(file);

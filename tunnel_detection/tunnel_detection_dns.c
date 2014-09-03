@@ -61,9 +61,10 @@ trap_module_info_t module_info = {
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -p N        Show progess - print a dot every N flows.\n"
+   "   -a          File with whitelist of domain which will not be analysed\n"
+   "   -b          File with whitelist of IPs which will not be analysed\n"
    "   -s          Folder with results and other information about detection (on the end of module). Specify folder for data saving.\n"
    "   -d          File with results of detection anomaly (during modul runtime).  \n"   
-   "   -e          File with list of domain exception which will not be analysed\n"
    "   -f          Read packets from file\n"   
    "   -g          Set Max and Min EX and VAR for suspision in requests, [MIN EX, MAX EX, MIN VAR, MAX VAR]\n" 
    "   -r          Set Max and Min EX and VAR for suspision in responses, [MIN EX, MAX EX, MIN VAR, MAX VAR]\n" 
@@ -1331,7 +1332,7 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
 
 inline  int cut_max_domain(packet_t * packet){
    char * end_of_domain = END_OF_CUTTED_DOMAIN;
-   while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_SIZE_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
+   while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_LENGTH_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
       packet->request_length--;
    }
    memcpy(packet->request_string + packet->request_length, end_of_domain, END_OF_CUTTED_DOMAIN_LENGTH);
@@ -1420,16 +1421,19 @@ int main(int argc, char **argv)
    int count_of_cycle=0;
    char file_or_port=0;
    FILE * result_file = NULL,
-        * exception_file = NULL;
+        * exception_file_domain = NULL,
+        * exception_file_ip = NULL;
    void * btree_ver4, *btree_ver6, *btree[2];
-   prefix_tree_t * preftree;
+   prefix_tree_t * exception_domain_prefix_tree = NULL;
+   void * exception_ip_v4_b_plus_tree = NULL;
+   void * exception_ip_v6_b_plus_tree = NULL;
    unsigned long cnt_flows = 0;
    unsigned long cnt_packets = 0;
    unsigned long cnt_bytes = 0;
    unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS];
    unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE];
    ip_address_t * list_of_ip = NULL;
-   unsigned char write_summary = 0, has_exception = 0;
+   unsigned char write_summary = 0;
    memset(histogram_dns_requests, 0, HISTOGRAM_SIZE_REQUESTS * sizeof(unsigned long));
    memset(histogram_dns_response, 0, HISTOGRAM_SIZE_RESPONSE * sizeof(unsigned long));
    //load default values from defined constants
@@ -1449,10 +1453,8 @@ int main(int argc, char **argv)
    char opt;
    char *record_folder_name = NULL;
    char *input_packet_file_name = NULL;
-   char *domains_exception_file_name = NULL;
-   char *ip_exception_file_name = NULL;
    ur_template_t *tmplt;
-   while ((opt = getopt(argc, argv, "u:p:s:f:d:e:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
+   while ((opt = getopt(argc, argv, "a:b:u:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -1478,13 +1480,20 @@ int main(int argc, char **argv)
                   fprintf(result_file, "\nSTART TIME: %s\n", ctime(&mytime));
                }
             break;
-         case 'e':
-            exception_file = fopen ( optarg, "r" );
-            if(exception_file == NULL){
-               fprintf(stderr, "Error: Exception file couldn`t be opened.\n");
+         case 'a':
+            exception_file_domain = fopen ( optarg, "r" );
+            if(exception_file_domain == NULL){
+               fprintf(stderr, "Error: Exception file with domains couldn`t be opened.\n");
                goto failed_trap;
             }              
             break;
+         case 'b':
+            exception_file_ip = fopen ( optarg, "r" );
+            if(exception_file_ip == NULL){
+               fprintf(stderr, "Error: Exception file with IPs couldn`t be opened.\n");
+               goto failed_trap;
+            }              
+            break;            
          case 'f':
             input_packet_file_name = optarg;
             file_or_port |= 1;
@@ -1570,39 +1579,109 @@ int main(int argc, char **argv)
       trap_finalize();
       return 4;
    }
-   //initialize prefix tree
-   preftree = prefix_tree_initialize(SUFFIX ,0,'.');
+
 
    
-   //add exceptions to prefix tree, if the file is specified
-   if(exception_file != NULL){
+   //add domain exceptions to prefix tree, if the file is specified
+   if(exception_file_domain != NULL){
       int sign;
       int length;
-      char domain[MAX_SIZE_OF_REQUEST_DOMAIN];
+      char domain[MAX_LENGTH_OF_REQUEST_DOMAIN];
       //read domains
-      sign = fgetc(exception_file);
-      has_exception = 1;
+      sign = fgetc(exception_file_domain);
+      //initialize prefix tree
+      exception_domain_prefix_tree = prefix_tree_initialize(SUFFIX ,0,'.');
+      if(exception_domain_prefix_tree == NULL){
+         fclose(exception_file_domain);
+         fprintf(stderr, "Error: The exception tree could not be allocated.\n");
+         trap_finalize();  
+         return 4;             
+      }      
       while(sign != -1){
          length = 0;
          while(sign != '\n' && sign != -1){
             if(sign != '\t' && sign != ' '){
                domain[length++] = sign;
             }
-            sign = fgetc(exception_file);
+            //doamin is too long
+            if(length > MAX_LENGTH_OF_REQUEST_DOMAIN){
+               fclose(exception_file_domain);
+               fprintf(stderr, "Error: The exception domain is too long. Max length of domain exception is %d\n", MAX_LENGTH_OF_REQUEST_DOMAIN - 1);
+               trap_finalize();  
+               return 4;             
+            }
+            sign = fgetc(exception_file_domain);
          }
          domain[length] = 0;
          if(length != 0){
-            prefix_tree_add_string_exception(preftree,domain ,length);
+            prefix_tree_add_string_exception(exception_domain_prefix_tree,domain ,length);
          }
-         sign = fgetc(exception_file);
+         sign = fgetc(exception_file_domain);
       }
-      fclose(exception_file);
+      fclose(exception_file_domain);
+   }
+
+   //add IPs exceptions to b+ tree, if the file is specified
+   if(exception_file_ip != NULL){
+      int sign;
+      int length;
+      char ip_str[MAX_LENGTH_OF_IP];
+      ip_addr_t addr;
+      //read IPs
+      sign = fgetc(exception_file_ip);      
+      while(sign != -1){
+         length = 0;
+         while(sign != '\n' && sign != ';' && sign != -1){
+            if(sign != '\t' && sign != ' '){
+               ip_str[length++] = sign;
+            }
+            //IP is too long
+            if(length > MAX_LENGTH_OF_IP){
+               fclose(exception_file_ip);
+               fprintf(stderr, "Error: The exception ip is too long. Max length of ip is %d\n", MAX_LENGTH_OF_IP - 1);
+               trap_finalize();  
+               return 4;
+            }            
+            sign = fgetc(exception_file_ip);
+         }
+         ip_str[length] = 0;
+         //translate to IP unirec format and insert to b plus tree.
+         if(length != 0){
+            if (ip_from_str(ip_str, &addr) == 1){
+               if(ip_is4(&addr)){
+                  //is IPv4
+                  if(exception_ip_v4_b_plus_tree == NULL){
+                     exception_ip_v4_b_plus_tree = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, 0, sizeof(uint32_t));
+                  }
+                  if(exception_ip_v4_b_plus_tree != NULL){
+                     uint32_t ip_to_tree = ip_get_v4_as_int(&addr);
+                     b_plus_tree_insert_item(exception_ip_v4_b_plus_tree, &ip_to_tree);
+                  }
+               }
+               else{
+                  //is IPv6
+                  if(exception_ip_v6_b_plus_tree == NULL){
+                     exception_ip_v6_b_plus_tree = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, 0, sizeof(uint64_t)*2);
+                  }
+                  if(exception_ip_v6_b_plus_tree != NULL){
+                     b_plus_tree_insert_item(exception_ip_v6_b_plus_tree, &addr);
+                  }
+               }
+            }
+            else{
+               fprintf(stderr, "Error: The exception ip \"%s\" does not match IP format.", ip_str);               
+            }
+            
+         }
+         sign = fgetc(exception_file_ip);
+      }
+      fclose(exception_file_ip);
    }
 
    //initialize b+ tree ipv4
-   btree_ver4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));   
+   btree_ver4 = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));   
    //initialize b+ tree ipv6
-   btree_ver6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
+   btree_ver6 = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
    //add trees to array, you can work with it in cycle
    btree[0] = btree_ver4;
    btree[1] = btree_ver6;
@@ -1646,7 +1725,7 @@ int main(int argc, char **argv)
             //size
             packet.size = ur_get(tmplt, data, UR_BYTES);
             //DNS NAME
-            packet.request_length = copy_string(packet.request_string, ur_get_dyn(tmplt, data, UR_DNS_NAME), ur_get_dyn_size(tmplt, data, UR_DNS_NAME), MAX_SIZE_OF_REQUEST_DOMAIN);
+            packet.request_length = copy_string(packet.request_string, ur_get_dyn(tmplt, data, UR_DNS_NAME), ur_get_dyn_size(tmplt, data, UR_DNS_NAME), MAX_LENGTH_OF_REQUEST_DOMAIN);
             if(packet.request_length >= MAX_SIZE_OF_REQUEST_EXPORTER){
                cut_max_domain(&packet);
             }
@@ -1694,16 +1773,16 @@ int main(int argc, char **argv)
                packet.cname_response[0]=0;
                switch(ur_get(tmplt, data, UR_DNS_QTYPE)){
                   case 2:
-                     copy_string(packet.ns_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_SIZE_OF_RESPONSE_STRING);
+                     copy_string(packet.ns_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_LENGTH_OF_RESPONSE_STRING);
                      break;
                   case 15:
-                     copy_string(packet.mx_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_SIZE_OF_RESPONSE_STRING);
+                     copy_string(packet.mx_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_LENGTH_OF_RESPONSE_STRING);
                      break;
                   case 16:
-                     copy_string(packet.txt_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_SIZE_OF_RESPONSE_STRING);
+                     copy_string(packet.txt_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_LENGTH_OF_RESPONSE_STRING);
                      break;
                   case 5:
-                     copy_string(packet.cname_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_SIZE_OF_RESPONSE_STRING);
+                     copy_string(packet.cname_response, ur_get_dyn(tmplt, data, UR_DNS_RDATA), ur_get_dyn_size(tmplt, data, UR_DNS_RDATA), MAX_LENGTH_OF_RESPONSE_STRING);
                      break;
                }
 
@@ -1723,36 +1802,51 @@ int main(int argc, char **argv)
                printf("\n");        
             #endif /*TEST*/    
 
-            //analyze the packet
-            //is it destination port of DNS (Port 53) request
-            if(packet.is_response==0){
-               // Update counters
-                  //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){
+            //test if it is not in exception
+            if( //domains
+                  (exception_domain_prefix_tree == NULL ||
+                   packet.request_length == 0 || 
+                   prefix_tree_is_string_in_exception(exception_domain_prefix_tree, packet.request_string, packet.request_length) == 0
+                  ) && 
+                  (  //ip
+                     (packet.ip_version == IP_VERSION_4 &&
+                        (exception_ip_v4_b_plus_tree == NULL ||
+                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
+                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0  
+                         ))
+                     )||
+                     (packet.ip_version == IP_VERSION_6 &&
+                        (exception_ip_v6_b_plus_tree == NULL ||
+                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
+                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                     )
+                  )
+            ){
+                  //analyze the packet
+                  //is it destination port of DNS (Port 53) request
+                  if(packet.is_response==0){
+                     // Update counters
                      if(packet.ip_version == IP_VERSION_4){
-                        collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
+                           collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
+                        }
+                        else{
+                           collection_of_information_and_basic_payload_detection(btree_ver6, packet.src_ip_v6,  &packet);
+                        }
+                     histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
+                  }
+                  //is it source port of DNS (Port 53)
+                  else{
+                     // Update counters
+                     if(packet.ip_version == IP_VERSION_4){
+                        collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                      }
                      else{
-                        collection_of_information_and_basic_payload_detection(btree_ver6, packet.src_ip_v6,  &packet);
+                        collection_of_information_and_basic_payload_detection(btree_ver6, packet.dst_ip_v6, &packet);
                      }
+                     
+                     histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
                   }
-               histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
             }
-            //is it source port of DNS (Port 53)
-            else{
-               // Update counters
-               //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
-                  if(packet.ip_version == IP_VERSION_4){
-                     collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
-                  }
-                  else{
-                     collection_of_information_and_basic_payload_detection(btree_ver6, packet.dst_ip_v6, &packet);
-                  }
-               }
-               histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
-            }
- 
             if (stats == 1) {
                printf("Time: %lu\n", (long unsigned int) time(NULL));
                signal(SIGUSR1, signal_handler);
@@ -1810,33 +1904,49 @@ int main(int argc, char **argv)
                printf(".");
                fflush(stdout);
             }
-            //is it destination port of DNS (Port 53) request
-            if(packet.is_response==0){
-               // Update counters
-                  //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-                  if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){
-                     if(packet.ip_version == IP_VERSION_4){
-                        collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
-                     }
-                     else{
-                        collection_of_information_and_basic_payload_detection(btree_ver6, packet.src_ip_v6, &packet);
-                     }
+
+            //test if it is not in exception
+            if( //domains
+                  (exception_domain_prefix_tree == NULL ||
+                   packet.request_length == 0 || 
+                   prefix_tree_is_string_in_exception(exception_domain_prefix_tree, packet.request_string, packet.request_length) == 0
+                  ) && 
+                  (  //ip
+                     (packet.ip_version == IP_VERSION_4 &&
+                        (exception_ip_v4_b_plus_tree == NULL ||
+                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
+                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0  
+                         ))
+                     )||
+                     (packet.ip_version == IP_VERSION_6 &&
+                        (exception_ip_v6_b_plus_tree == NULL ||
+                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
+                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                     )
+                  )
+            ){
+               //is it destination port of DNS (Port 53) request
+               if(packet.is_response==0){
+                  // Update counters
+                  if(packet.ip_version == IP_VERSION_4){
+                     collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.src_ip_v4), &packet);
                   }
-               histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
-            }
-            //is it source port of DNS (Port 53)
-            else{
-               // Update counters
-               //add domain to prexit tree, when it is exception, this record will not be added to btree. Analysis will not see this packet
-               if(packet.request_length == 0 || has_exception == 0 || prefix_tree_is_string_in_exception(preftree, packet.request_string, packet.request_length) == 0){               
+                  else{
+                     collection_of_information_and_basic_payload_detection(btree_ver6, packet.src_ip_v6, &packet);
+                  }
+                  histogram_dns_requests[packet.size <= (HISTOGRAM_SIZE_REQUESTS - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_REQUESTS - 1]++;
+               }
+               //is it source port of DNS (Port 53)
+               else{
+                  // Update counters
                   if(packet.ip_version == IP_VERSION_4){
                      collection_of_information_and_basic_payload_detection(btree_ver4, (&packet.dst_ip_v4), &packet);
                   }
                   else{
                      collection_of_information_and_basic_payload_detection(btree_ver6, packet.dst_ip_v6, &packet);
                   }
+                  histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
                }
-               histogram_dns_response[packet.size <= (HISTOGRAM_SIZE_RESPONSE - 1) * 10 ? packet.size / 10 : HISTOGRAM_SIZE_RESPONSE - 1]++;
             }
 
             if (stats == 1) {
@@ -1914,10 +2024,18 @@ int main(int argc, char **argv)
       b_plus_tree_destroy(btree[i]);
    }
 
-   //clean prefix tred
-   prefix_tree_destroy(preftree);
-
-
+   //clean exception prefix tree
+   if(exception_domain_prefix_tree != NULL){
+      prefix_tree_destroy(exception_domain_prefix_tree);
+   }
+   //clean exception b plus tree for IPv4
+   if(exception_ip_v4_b_plus_tree != NULL){
+      b_plus_tree_destroy(exception_ip_v4_b_plus_tree);
+   }
+   //clean exception b plus tree for IPv6
+   if(exception_ip_v6_b_plus_tree != NULL){
+      b_plus_tree_destroy(exception_ip_v6_b_plus_tree);
+   }
    // Do all necessary cleanup before exiting
 failed_trap:
    if(file_or_port == 2){

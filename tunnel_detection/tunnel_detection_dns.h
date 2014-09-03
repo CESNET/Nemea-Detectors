@@ -86,6 +86,7 @@
  * \name Default values
  *  Defines macros used by DNS tunel detection 
  * \{ */
+#define COUNT_OF_ITEM_IN_LEAF 5 /*< Count of item in leaf of B+ tree. M value of B+ tree */
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
 #define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum round to be IP in suspicion */
 #define PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION 0.3 /*< Percent of communication to be set to suspision state */
