@@ -198,13 +198,22 @@ void write_std(char * str, ...)
    va_end(parameters);
 }
 
-// Cut first 4 chars ("sip:") from str
+// Cut first 4 chars ("sip:") from input string and ignore ';' + string after it
 
 void cut_sip_identifier_from_string(char ** str, int * str_len)
 {
    const int sip_identifier_len = 4;
    *str += sip_identifier_len * sizeof (char);
    *str_len -= sip_identifier_len;
+
+   int i = 0;
+   while (i < *str_len) {
+      if ((*str)[i] == ';') {
+         *str_len = i;
+         break;
+      }
+      i++;
+   }
 }
 
 
@@ -457,8 +466,15 @@ int main(int argc, char **argv)
             // add one to statistic of number invite flow
             statistic_num_invite_flow++;
 
-            char * sip_from, * sip_to;
-            int sip_from_len, sip_to_len;
+            char * sip_from, * sip_to, *sip_via;
+            int sip_from_len, sip_to_len, sip_via_len;
+
+#ifdef TEST_DEBUG
+            sip_via = ur_get_dyn(template, in_rec, UR_INVEA_SIP_VIA);
+            sip_via_len = ur_get_dyn_size(template, in_rec, UR_INVEA_SIP_VIA);
+
+            printf("Via: %.*s\n", sip_via_len, sip_via);
+#endif
 
             sip_from = ur_get_dyn(template, in_rec, UR_INVEA_SIP_CALLING_PARTY);
             sip_from_len = ur_get_dyn_size(template, in_rec, UR_INVEA_SIP_CALLING_PARTY);
@@ -515,7 +531,11 @@ int main(int argc, char **argv)
                prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
 
                // insert into hash table
-               ht_insert_v2(&hash_table_ip, (char *) ip->bytes, (void *) hash_table_item);
+               if (ht_insert_v2(&hash_table_ip, (char *) ip->bytes, (void *) hash_table_item) != NULL) {
+#ifdef TEST_DEBUG
+                  printf("hash table reaches size limit!\n");
+#endif
+               }
             } else {
                // IP address is found in hash table
 

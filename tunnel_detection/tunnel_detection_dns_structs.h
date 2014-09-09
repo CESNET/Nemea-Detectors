@@ -233,8 +233,9 @@ typedef struct calulated_result_t{
 #define END_OF_CUTTED_DOMAIN "max_length_domain"
 #define END_OF_CUTTED_DOMAIN_LENGTH 17
 
-#define MAX_SIZE_OF_REQUEST_DOMAIN 255
-#define MAX_SIZE_OF_RESPONSE_STRING 1024
+#define MAX_LENGTH_OF_REQUEST_DOMAIN 255
+#define MAX_LENGTH_OF_RESPONSE_STRING 1024
+#define MAX_LENGTH_OF_IP 46
 /*!
  * \brief Structure containing packet DNS
  * Structure used to keep information about DNS packet.
@@ -248,12 +249,12 @@ typedef struct calulated_result_t{
     unsigned char ip_version;
     unsigned int size;
     char is_response;
-    char  request_string[MAX_SIZE_OF_REQUEST_DOMAIN];
+    char  request_string[MAX_LENGTH_OF_REQUEST_DOMAIN];
     int request_length;
-    char mx_response[MAX_SIZE_OF_RESPONSE_STRING];
-    char ns_response[MAX_SIZE_OF_RESPONSE_STRING];
-    char cname_response[MAX_SIZE_OF_RESPONSE_STRING];
-    char txt_response[MAX_SIZE_OF_RESPONSE_STRING];
+    char mx_response[MAX_LENGTH_OF_RESPONSE_STRING];
+    char ns_response[MAX_LENGTH_OF_RESPONSE_STRING];
+    char cname_response[MAX_LENGTH_OF_RESPONSE_STRING];
+    char txt_response[MAX_LENGTH_OF_RESPONSE_STRING];
 }packet_t;
 
 
