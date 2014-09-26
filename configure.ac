@@ -220,6 +220,7 @@ AC_CONFIG_FILES([Makefile
                  protocolcounters/Makefile
                  python_example/Makefile
                  sampler/Makefile
+                 sdm_controller/Makefile
                  simplebotnetdetector/Makefile
                  sip_detector/Makefile
                  slowthreatdetector/Makefile
