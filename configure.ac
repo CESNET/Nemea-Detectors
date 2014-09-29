@@ -219,6 +219,7 @@ AC_CONFIG_FILES([Makefile
                  portscan_detector/Makefile
                  protocolcounters/Makefile
                  python_example/Makefile
+                 rrd_updater/Makefile
                  sampler/Makefile
                  sdm_controller/Makefile
                  simplebotnetdetector/Makefile
