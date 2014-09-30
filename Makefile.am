@@ -31,8 +31,10 @@ p2pbotnet_detection \
 p2pdetector \
 protocolcounters \
 python_example \
+rrd_updater \
 report_handler \
 sampler \
+sdm_controller \
 simplebotnetdetector \
 sip_detector \
 test_threads \
