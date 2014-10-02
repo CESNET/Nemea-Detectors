@@ -1323,10 +1323,11 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
 
 int copy_string(char * dst, char * src, int size, int max_size_of_dst)
 {
-   if(size > max_size_of_dst-1)
+   if (size > max_size_of_dst-1) {
       size = max_size_of_dst-1;
+   }
    memcpy(dst, src, size);
-   dst[size]=0;
+   dst[size] = 0;
    return size;
 }
 
