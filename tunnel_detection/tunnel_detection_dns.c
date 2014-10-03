@@ -1321,16 +1321,18 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
    fclose(file_suspision);
 }
 
-inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
+int copy_string(char * dst, char * src, int size, int max_size_of_dst)
 {
-   if(size > max_size_of_dst-1)
+   if (size > max_size_of_dst-1) {
       size = max_size_of_dst-1;
+   }
    memcpy(dst, src, size);
-   dst[size]=0;
+   dst[size] = 0;
    return size;
 }
 
-inline  int cut_max_domain(packet_t * packet){
+int cut_max_domain(packet_t * packet)
+{
    char * end_of_domain = END_OF_CUTTED_DOMAIN;
    while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_LENGTH_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
       packet->request_length--;
