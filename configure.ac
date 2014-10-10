@@ -211,6 +211,7 @@ AC_CONFIG_FILES([Makefile
                  flowtools_reader/Makefile
                  heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
+                 hoststatsnemea_wr_edition/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
