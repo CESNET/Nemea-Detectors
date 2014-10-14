@@ -68,7 +68,6 @@
 #define STATE_OK               0b10000000
 /* /} */
 
-
 /*!
  * \brief Structure - statistic information about string
  * Structure used to keep statistic information about string.
@@ -295,5 +294,19 @@ typedef struct values_t{
 }values_t;
 
 
+/*!
+ * \brief Structure - information send to UniRec as a report of detection
+ * Structure keeping information for sending them via unirec.
+ */
+typedef struct unirec_tunnel_notification_t{
+    ur_template_t * unirec_out; /*< UniRec output template */
+    void *          detection; /*< pointer to UniRec data */
+    ip_addr_t       ip; /*< ip address with anomaly */
+    double          tunnel_per_new_domain; /*< percent of domains searched just ones */
+    double          tunnel_per_subdomain;   /*< percent of different subdomains */
+    uint8_t         tunnel_type;    /*< type of anomally */
+    char            tunnel_domain [MAX_LENGTH_OF_REQUEST_DOMAIN];   /*< Domain name example */
+    uint32_t        tunnel_cnt_packet;  /*< Count of recorded packets*/
+}unirec_tunnel_notification_t;
 
 #endif /* _TUNNEL_DETECTION_DNS_STRUCTS_ */
