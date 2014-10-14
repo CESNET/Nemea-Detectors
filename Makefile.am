@@ -21,6 +21,7 @@ flow_statistic \
 flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
+hoststatsnemea_wr_edition \
 ipspoofingdetector \
 ipv6stats \
 logger \
@@ -31,7 +32,6 @@ p2pbotnet_detection \
 p2pdetector \
 protocolcounters \
 python_example \
-rrd_updater \
 report_handler \
 sampler \
 sdm_controller \
@@ -55,7 +55,7 @@ voip_fraud_detection \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter rrd_updater
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
@@ -65,6 +65,9 @@ SUBDIRS += flow_meter portscan_detector
 endif
 if HAVE_BISON
 SUBDIRS += unirecfilter
+endif
+if HAVE_RRDTOOL
+SUBDIRS += rrd_updater
 endif
 
 RPMDIR = RPMBUILD

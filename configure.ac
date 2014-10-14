@@ -132,6 +132,11 @@ AC_CHECK_HEADER(pcap.h,
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
 
+AC_CHECK_HEADER(rrd.h,
+	AC_CHECK_LIB(rrd, rrd_update, [rrdtool=yes], AC_MSG_WARN([rrdtool not found. The rrd_updater module will not be compiled.])), AC_MSG_WARN([rrd.h not found. The rrd_updater module will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_RRDTOOL, test x${rrdtool} = xyes)
+
 AC_CHECK_PROG(BISON, bison, yes, [""])
 AC_CHECK_PROG(FLEX, flex, yes, [""])
 
@@ -206,6 +211,7 @@ AC_CONFIG_FILES([Makefile
                  flowtools_reader/Makefile
                  heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
+                 hoststatsnemea_wr_edition/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
