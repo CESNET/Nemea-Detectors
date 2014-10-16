@@ -70,7 +70,6 @@ trap_module_info_t module_info = {
    "   -r          Set Max and Min EX and VAR for suspision in responses, [MIN EX, MAX EX, MIN VAR, MAX VAR]\n" 
    "   -j          Set Max count of used letters not to be in suspision mode [MAX number for Request, MAX number for response]\n"
    "   -k          Max and Min percent of subdomain [MAX, MIN]\n" 
-   "   -l          Max count of numbers in domain not to be in suspicion mode [MAX, MIN]\n"  
    "   -l          Max count and percent of numbers in domain not to be in suspicion mode [MAX count, MAX percent]\n"  
    "   -m          Max percent of mallformed packet to be in traffic anoly [MAX]\n"  
    "   -n          MIN count of suspected requests to be traffic anomaly or tunnel [MIN for traffic anomaly, MIN for tunnel]\n" 
@@ -80,9 +79,9 @@ trap_module_info_t module_info = {
 
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
-   "   Outputs: 0\n",
+   "   Outputs: 1\n",
    1, // Number of input interfaces
-   0, // Number of output interfaces
+   1, // Number of output interfaces
 };
 /* ************************************************************************* */
 
@@ -811,8 +810,23 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item)
 }
 
 
+void send_unirec_out(unirec_tunnel_notification_t * notification)
+{
+   
+   ur_set(notification->unirec_out, notification->detection, UR_SRC_IP, notification->ip);
+   ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_NEW_DOMAIN, notification->tunnel_per_new_domain);
+   ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_SUBDOMAIN, notification->tunnel_per_subdomain);
+   ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_TYPE, notification->tunnel_type);
+   //ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_DOMAIN, notification->tunnel_domain);
+   printf("zkouska vypisu: %s\n",  notification->tunnel_domain);
+   ur_set_from_string(notification->unirec_out, notification->detection, UR_TUNNEL_DOMAIN, notification->tunnel_domain);
 
-void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
+   ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);
+   trap_send_data(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection), TRAP_HALFWAIT);
+   
+}
+
+void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
 {
    ip_address_t * item;
    ip_address_t * previous = NULL;
@@ -870,7 +884,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
          if(item->print & 0b11111111 && file != NULL){
             //translate ip int to str 
             get_ip_str_from_ip_struct(item, b_item->key, ip_address);            
-            print_founded_anomaly_immediately(ip_address, item, file, print_time);
+            print_founded_anomaly_immediately(ip_address, item, file, print_time, ur_notification);
             print_time = 0;
             item->print=0;
             fflush(file);
@@ -883,7 +897,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file)
 
 
 
-void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time)
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time, unirec_tunnel_notification_t * unirec_out)
 {
    if(print_time){
       time_t mytime;
@@ -895,7 +909,9 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
    if(item->print & 0b11111111){
       //ip address contaion anomaly
       fprintf(file, "\n%s\n", ip_address);
-      
+      if(unirec_out != NULL){
+         ip_from_str(ip_address, &(unirec_out->ip));
+      }
       //print found anomaly tunnel
       if(item->state_request_tunnel == STATE_ATTACK && item->print & REQUEST_PART_TUNNEL){
          fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
@@ -907,6 +923,20 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision ,dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }               
+         if(unirec_out != NULL){
+            unirec_out->tunnel_per_new_domain = (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones);
+            unirec_out->tunnel_per_subdomain =  prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION);
+            unirec_out->tunnel_cnt_packet = (item->suspision_request_tunnel->tunnel_suspision->count_of_inserting);
+            dom = item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
+            if(dom != NULL){
+               prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+            }
+            else{
+               unirec_out->tunnel_domain[0] = 0;
+            }
+            unirec_out->tunnel_type = REQUEST_PART_TUNNEL;
+            send_unirec_out(unirec_out);
+         }
       }
       //print founded anomaly other in request
       if(item->state_request_other == STATE_ATTACK && item->print & REQUEST_PART_OTHER){  
@@ -924,11 +954,25 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
-            }
+            }     
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_request_other->other_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_request_other->other_suspision->count_of_different_domains/(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_request_other->other_suspision->count_of_inserting;
+               dom =item->suspision_request_other->other_suspision->list_of_most_used_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               }            
+               unirec_out->tunnel_type = REQUEST_PART_OTHER;
+               send_unirec_out(unirec_out);
+            }                   
          }
          else{
             fprintf(file, "\tMallformed packets found:\tCount of malformed responses: %d.\n", item->counter_request.request_without_string);
-         }
+         }         
       }
       //response tunnel
       if(item->state_response_tunnel == STATE_ATTACK && item->print & RESPONSE_PART_TUNNEL){
@@ -940,6 +984,20 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
+            }
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->request_suspision->count_of_inserting;
+               dom = item->suspision_response_tunnel->request_suspision->list_of_most_unused_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               }               
+               unirec_out->tunnel_type = RESPONSE_PART_TUNNEL;
+               send_unirec_out(unirec_out);
             }        
          }         
          //txt
@@ -951,7 +1009,21 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
-            }        
+            }   
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->txt_suspision->count_of_inserting;
+               dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               }               
+               unirec_out->tunnel_type = TXT_TUNNEL;
+               send_unirec_out(unirec_out);
+            }       
          }
          //cname
          if(item->suspision_response_tunnel->state_type & CNAME_TUNNEL){
@@ -962,7 +1034,21 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
-            }        
+            }      
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->cname_suspision->count_of_inserting;
+               dom =item->suspision_response_tunnel->cname_suspision->list_of_most_unused_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               }  
+               unirec_out->tunnel_type = CNAME_TUNNEL;
+               send_unirec_out(unirec_out);
+            }   
          }
          //ns
          if(item->suspision_response_tunnel->state_type & NS_TUNNEL){
@@ -973,7 +1059,21 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision ,dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
-            }        
+            }  
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->ns_suspision->count_of_inserting;
+               dom =item->suspision_response_tunnel->ns_suspision->list_of_most_unused_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               }  
+               unirec_out->tunnel_type = NS_TUNNEL;
+               send_unirec_out(unirec_out);
+            }      
          }  
          //mx
          if(item->suspision_response_tunnel->state_type & MX_TUNNEL){
@@ -984,7 +1084,21 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, str), dom->count_of_insert);
                dom= dom->most_used_domain_less;
-            }        
+            }  
+            if(unirec_out != NULL){
+               unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones);
+               unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->mx_suspision->count_of_inserting;
+               dom =item->suspision_response_tunnel->mx_suspision->list_of_most_unused_domains;
+               if(dom != NULL){
+                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               }
+               else{
+                  unirec_out->tunnel_domain[0] = 0;
+               } 
+               unirec_out->tunnel_type = MX_TUNNEL;
+               send_unirec_out(unirec_out);
+            }       
          }
       }
       //print founded anomaly other in responses
@@ -999,6 +1113,20 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, str), dom->count_of_insert);
             dom= dom->most_used_domain_less;
          }
+         if(unirec_out != NULL){
+            unirec_out->tunnel_per_new_domain = 0;
+            unirec_out->tunnel_per_subdomain =  0;
+            unirec_out->tunnel_cnt_packet = item->suspision_response_other->other_suspision->count_of_inserting;
+            dom =item->suspision_response_other->other_suspision->list_of_most_unused_domains;
+            if(dom != NULL){
+               prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+            }
+            else{
+               unirec_out->tunnel_domain[0] = 0;
+            }            
+            unirec_out->tunnel_type = RESPONSE_PART_OTHER;
+            send_unirec_out(unirec_out);
+         } 
       }
       item->print = 0;
     }
@@ -1456,6 +1584,12 @@ int main(int argc, char **argv)
    char *record_folder_name = NULL;
    char *input_packet_file_name = NULL;
    ur_template_t *tmplt;
+   unirec_tunnel_notification_t ur_notification;
+   ur_notification.unirec_out = NULL;
+   ur_notification.detection = NULL;
+   
+
+
    while ((opt = getopt(argc, argv, "a:b:u:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
       switch (opt) {
          case 'u':
@@ -1570,9 +1704,19 @@ int main(int argc, char **argv)
    if(file_or_port == 2 || file_or_port == 0){
       TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
       tmplt = ur_create_template(unirec_specifier);
-      if (tmplt == NULL){
+      ur_notification.unirec_out = ur_create_template("<DNS_TUNNEL_ALERT>");
+      if (tmplt == NULL || ur_notification.unirec_out == NULL){
          fprintf(stderr, "Error: Invalid UniRec specifier.\n");
          trap_finalize();
+         return 4;
+      }
+      // prepare detection record
+      ur_notification.detection = ur_create(ur_notification.unirec_out, MAX_LENGTH_OF_REQUEST_DOMAIN);
+      if (ur_notification.detection == NULL) {
+         fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
+         ur_free_template(tmplt);
+         ur_free_template(ur_notification.unirec_out);
+         ur_free(ur_notification.detection);
          return 4;
       }
    }
@@ -1860,8 +2004,8 @@ int main(int argc, char **argv)
          //restart timer
          printf("cycle %d\n", ++count_of_cycle);
          printf("\tcount of ip's before_erase %lu\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6)); 
-         calculate_statistic_and_choose_anomaly(btree_ver4, result_file);
-         calculate_statistic_and_choose_anomaly(btree_ver6, result_file);
+         calculate_statistic_and_choose_anomaly(btree_ver4, result_file, &ur_notification);
+         calculate_statistic_and_choose_anomaly(btree_ver6, result_file, &ur_notification);
          printf("\tcount of ip's after_erase %lu\n\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
          //stop=1;              
       }
@@ -1972,8 +2116,8 @@ int main(int argc, char **argv)
                ip_address_before_erase += b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6);
                start_t = clock();
          #endif /*TIME*/  
-         calculate_statistic_and_choose_anomaly(btree_ver4, result_file);
-         calculate_statistic_and_choose_anomaly(btree_ver6, result_file);
+         calculate_statistic_and_choose_anomaly(btree_ver4, result_file, NULL);
+         calculate_statistic_and_choose_anomaly(btree_ver6, result_file, NULL);
           #ifdef TIME
               end_t = clock();;
           #endif /*TIME*/
@@ -2040,10 +2184,16 @@ int main(int argc, char **argv)
    }
    // Do all necessary cleanup before exiting
 failed_trap:
-   if(file_or_port == 2){
-      //TRAP_DEFAULT_FINALIZATION();
-      trap_finalize();
+   if(file_or_port == READ_FROM_UNIREC){
+      // send terminate message
+      char dummy[1] = {0};
+      trap_send_data(0, dummy, 1, TRAP_HALFWAIT);
+      // clean up before termination
       ur_free_template(tmplt);
+      ur_free_template(ur_notification.unirec_out);
+      ur_free(ur_notification.detection);
+
+      trap_finalize();
    }
    
    return 0;
