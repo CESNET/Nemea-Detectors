@@ -218,6 +218,7 @@ AC_CONFIG_FILES([Makefile
                  logreplay/Makefile
                  merger/Makefile
                  nemea-modules.spec
+                 nemea2sdmcap/Makefile
                  nfreader/Makefile
                  p2pbotnet_detection/Makefile
                  p2pdetector/Makefile
