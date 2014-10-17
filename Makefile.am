@@ -27,6 +27,7 @@ ipv6stats \
 logger \
 logreplay \
 merger \
+nemea2sdmcap \
 pca \
 p2pbotnet_detection \
 p2pdetector \
@@ -34,7 +35,7 @@ protocolcounters \
 python_example \
 report_handler \
 sampler \
-sdm_controller \
+sdmcap_controller \
 simplebotnetdetector \
 sip_detector \
 test_threads \
