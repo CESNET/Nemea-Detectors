@@ -34,7 +34,7 @@ protocolcounters \
 python_example \
 report_handler \
 sampler \
-sdm_controller \
+sdmcap_controller \
 simplebotnetdetector \
 sip_detector \
 test_threads \

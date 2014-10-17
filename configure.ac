@@ -227,7 +227,7 @@ AC_CONFIG_FILES([Makefile
                  python_example/Makefile
                  rrd_updater/Makefile
                  sampler/Makefile
-                 sdm_controller/Makefile
+                 sdmcap_controller/Makefile
                  simplebotnetdetector/Makefile
                  sip_detector/Makefile
                  slowthreatdetector/Makefile
