@@ -62,13 +62,14 @@ trap_module_info_t module_info = {
    "This module detecting fraud in VoIP telephony, especially in SIP communication.\n"
    "It detects:\n"
    " - prefix enumeration\n"
-   " - ...\n"
    "\n"
    "Optional parameters:\n"
    "   -l  : path to log file\n"
    "   -m  : max_prefix_length\n"
+   "   -d  : minimum length of called number\n"
    "   -s  : detection interval in seconds\n"
    "   -t  : prefix_examination_detection_threshold\n"
+   "   -p  : detection_pause_after_attack in seconds\n"
    "\n"
    "Interfaces:\n"
    "   Inputs: 1 (SIP records)\n"
@@ -86,15 +87,36 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 // variables for saving modul configuration
 unsigned int max_prefix_length;
+unsigned int min_length_called_number;
 unsigned int prefix_examination_detection_threshold;
 unsigned int detection_interval;
+unsigned int detection_pause_after_attack;
 char * log_file = NULL;
 
-// statistics
+// global statistics
 unsigned int statistic_num_attack_detected = 0;
 unsigned long long statistic_num_invite_flow = 0;
-unsigned int statistic_num_invalid_sip_to = 0;
+unsigned int statistic_num_invalid_sip_identifier = 0;
 
+// detection statistics
+int detection_value_invite;
+int detection_value_ack;
+int detection_value_cancel;
+int detection_value_bye;
+int detection_value_ok;
+int detection_value_trying;
+int detection_value_ringing;
+int detection_value_service_ok;
+int detection_value_rtcp_data;
+
+// only for testing variables
+int testvar_ok_count = 0;
+int testvar_ack_count = 0;
+int testvar_cancel_count = 0;
+int testvar_bye_count = 0;
+int testvar_invite_count = 0;
+
+// UniRec template
 ur_template_t *template;
 const void *in_rec;
 
@@ -174,7 +196,7 @@ void write_to_log(char * str, ...)
    }
 }
 
-// Write input strings to standard output (variadic funtion)
+// Write input strings to standard output (variadic function)
 
 void write_std(char * str, ...)
 {
@@ -195,6 +217,92 @@ void write_std(char * str, ...)
 
    // end using variable parameters list
    va_end(parameters);
+}
+
+// cache_no_attack
+prefix_tree_inner_node_t * cache_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
+int cache_no_attack_size = 0;
+
+// testing variables
+int write_cache_limit_info = 0;
+int test_cache_hit = 0;
+int test_cache_not_hit = 0;
+int test_cache_save = 0;
+int test_cache_delete_successor = 0;
+
+// Find if node is verified for no attack by cache
+// Return 1 if node exists in cache, 0 otherwise
+
+int cache_no_attack_exists(prefix_tree_inner_node_t * node)
+{
+   // try to find node in cache
+   int i;
+   for (i = 0; i < cache_no_attack_size; i++) {
+      if (cache_no_attack_data[i] == node) return 1;
+   }
+
+   // try to find predecessor of node in cache
+   if (node != NULL) {
+      if (node->parent != NULL) return cache_no_attack_exists(node->parent);
+   }
+
+   // node not found => return 0
+   return 0;
+}
+
+// Save pointer of node into cache
+
+void cache_no_attack_save(prefix_tree_inner_node_t * node)
+{
+   static int full_index = 0;
+
+   // clear successors of the node in cache
+   int i;
+   prefix_tree_inner_node_t * predecessor_node;
+
+   for (i = 0; i < cache_no_attack_size; i++) {
+      predecessor_node = cache_no_attack_data[i]->parent;
+
+      while (predecessor_node != NULL) {
+         if (predecessor_node == node) {
+
+            // delete cache_no_attack_data[i] from cache
+            cache_no_attack_size--;
+            if (cache_no_attack_size > 0) {
+               cache_no_attack_data[i] = cache_no_attack_data[cache_no_attack_size];
+            }
+
+            test_cache_delete_successor++;
+         }
+         predecessor_node = predecessor_node->parent;
+      }
+
+   }
+
+   // save the node to cache
+   if (cache_no_attack_size >= MAX_CACHE_NO_ATTACK_SIZE) {
+      cache_no_attack_data[full_index] = node;
+      full_index++;
+      if (full_index >= MAX_CACHE_NO_ATTACK_SIZE) full_index = 0;
+
+      // only testing info
+      if (write_cache_limit_info == 0) {
+         printf("cache limit!!!\n");
+         write_cache_limit_info = 1;
+      }
+
+   } else {
+      cache_no_attack_data[cache_no_attack_size] = node;
+      cache_no_attack_size++;
+   }
+
+}
+
+// Clear cache
+
+void cache_no_attack_clear()
+{
+   cache_no_attack_size = 0;
 }
 
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' + string after it
@@ -221,24 +329,22 @@ int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * s
          // not valid sip identifier
 
 #ifdef DEBUG
-         print_error(2, "SIP URI is invalid!\n");
-
          uint64_t link_bit_field;
          link_bit_field = ur_get(template, in_rec, UR_LINK_BIT_FIELD);
 
          PRINT_STD_LOG(input_description, " is invalid:\"");
          PRINT_STD_LOG_NOTDATETIME(input_str, "\";");
-         PRINT_STD_LOG_NOTDATETIME("LINK_BIT_FIELD:", inttostr(link_bit_field), ";\n");
+         PRINT_STD_LOG_NOTDATETIME("LINK_BIT_FIELD:", inttostr(link_bit_field), ";");
 #endif
 
-         statistic_num_invalid_sip_to++;
+         statistic_num_invalid_sip_identifier++;
 
          return -1;
       }
 
    }
 
-   // ignore ';' + string after it    
+   // ignore ';' + string after it
    int i = 0;
    while (i < *str_len) {
       if ((*output_str)[i] == ';') {
@@ -253,6 +359,7 @@ int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * s
 
 
 // Check if input string is numeric with allowed special char ('+','*','#') or this text part before '@'
+// + check of minimum numeric length
 
 int is_numeric_participant(char * str, int str_len)
 {
@@ -275,22 +382,69 @@ int is_numeric_participant(char * str, int str_len)
       }
    }
 
+   // check of minimum length of called number
+   if (char_index < min_length_called_number) return 0;
+
    return is_numeric;
+}
+
+
+// Initialize node_data defined by input parameter
+
+int check_initialize_node_data(prefix_tree_domain_t * prefix_tree_node, uint8_t voip_packet_type)
+{
+   // check if input prefix_tree_node has not allocate memory
+   if (prefix_tree_node->parent->value == NULL) {
+
+      // allocate memory for node data
+      prefix_tree_node->parent->value = (void *) malloc(sizeof (node_data));
+
+      // check successful allocation memory
+      if (prefix_tree_node->parent->value == NULL) {
+         PRINT_STD_LOG("initialize_node_data(voip_packet_type:", inttostr(voip_packet_type), "): error memory allocation\n");
+         return -1;
+      }
+
+      // initialize values of node_data
+      ((node_data *) (prefix_tree_node->parent->value))->invite_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->cancel_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->ack_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->bye_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->ok_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->trying_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->ringing_count = 0;
+      ((node_data *) (prefix_tree_node->parent->value))->service_ok_count = 0;
+
+      ((node_data *) (prefix_tree_node->parent->value))->rtp_data = 0;
+   }
+
+   return 0;
 }
 
 // Function to thorough count of prefix detection minus value
 
-int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, int sum_prefix_down)
+unsigned int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, int sum_prefix_down)
 {
-   int result = 0;
+   unsigned int result = 0;
    int stop_tree_walk = 0;
 
    // checking if node has data
    if (node->value != NULL) {
       if (((node_data *) (node->value))->invite_count <= ((node_data *) (node->value))->ok_count) {
-         // (invite_count <= ok_count) ==> incrementation result by one
+         // incrementation result by one
          result += 1;
       }
+
+      detection_value_invite += ((node_data *) (node->value))->invite_count;
+      detection_value_cancel += ((node_data *) (node->value))->cancel_count;
+      detection_value_ack += ((node_data *) (node->value))->ack_count;
+      detection_value_bye += ((node_data *) (node->value))->bye_count;
+      detection_value_ok += ((node_data *) (node->value))->ok_count;
+      detection_value_trying += ((node_data *) (node->value))->trying_count;
+      detection_value_ringing += ((node_data *) (node->value))->ringing_count;
+      detection_value_service_ok += ((node_data *) (node->value))->service_ok_count;
+
+      detection_value_rtcp_data += ((node_data *) (node->value))->rtp_data;
    }
 
    // checking of max_prefix_length
@@ -319,10 +473,17 @@ int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t *
    return result;
 }
 
-// Detection prefix examination in input prefix tree
+// Detection prefix examination in input prefix tree,
+// if attack is detected delete node and his descendants
 
 int detect_prefix_examination(prefix_tree_t * tree, prefix_tree_inner_node_t * node)
 {
+   // check if node is in cache
+   if (cache_no_attack_exists(node)) {
+      test_cache_hit++;
+      return STATE_NO_ATTACK;
+   }
+
    int i;
 
    if (node->child == NULL) {
@@ -349,30 +510,62 @@ int detect_prefix_examination(prefix_tree_t * tree, prefix_tree_inner_node_t * n
             if (!(prefix_sum_length + (at_pointer - str) <= max_prefix_length)) break;
          }
 
+         // count length and number of descendants
          prefix_sum_length += strlen(str);
          prefix_sum_count += predecessor_node->count_of_string - prefix_last_count;
          prefix_last_count = predecessor_node->count_of_string;
 
-         // printf("str: %s, count_of_string: %i\n", str, predecessor_node->count_of_string);
-
+         // save actual node
          last_predecessor_node = predecessor_node;
 
+         // move to predecessor of node
          predecessor_node = predecessor_node->parent;
 
+         // check if predecessor exists
          if (predecessor_node == NULL) break;
       }
 
+      // check if prefix_sum_count exceeds threshold
       if (prefix_sum_count > prefix_examination_detection_threshold) {
 
+         // check if node is not in cache
+         if (cache_no_attack_exists(predecessor_node) == 1) {
+            test_cache_hit++;
+            return STATE_NO_ATTACK;
+         } else {
+            test_cache_not_hit++;
+         }
+
+         // reset detection statistics
+         detection_value_invite = 0;
+         detection_value_ack = 0;
+         detection_value_cancel = 0;
+         detection_value_bye = 0;
+         detection_value_ok = 0;
+         detection_value_trying = 0;
+         detection_value_ringing = 0;
+         detection_value_service_ok = 0;
+         detection_value_rtcp_data = 0;
+
          // thorough count of prefix detection
-         int minus = count_minus_detection_value(tree, last_predecessor_node, 0);
+         unsigned int minus_detection_value = count_minus_detection_value(tree, last_predecessor_node, 0);
 
          // decrement prefix_sum_count by minus detection value
-         prefix_sum_count -= minus;
+         if (prefix_sum_count <= minus_detection_value) {
+            prefix_sum_count = 0;
+         } else {
+            prefix_sum_count -= minus_detection_value;
+         }
 
+         // check if prefix_sum_count exceeds threshold after recalculation
          if (prefix_sum_count > prefix_examination_detection_threshold) {
 
-            printf("count_minus %i; prefix_sum_count_original: %i; total_sum_after_descrease: %i;\n", minus, prefix_sum_count + minus, prefix_sum_count);
+            // attack detected
+
+#ifdef DEBUG
+            // testing
+            printf("count_minus %i; prefix_sum_count_original: %i; total_sum_after_descrease: %i;\n", minus_detection_value, prefix_sum_count + minus_detection_value, prefix_sum_count);
+#endif
 
             char sip_to[MAX_STRING_PREFIX_TREE_NODE + 1];
 
@@ -394,13 +587,47 @@ int detect_prefix_examination(prefix_tree_t * tree, prefix_tree_inner_node_t * n
             PRINT_STD_LOG_NOTDATETIME("(prefix_sum_count=", inttostr(prefix_sum_count), " (>) ");
             PRINT_STD_LOG_NOTDATETIME("threshold=", inttostr(prefix_examination_detection_threshold), ")!!!");
 
-            PRINT_STD_LOG_NOTDATETIME(" invite_count=", inttostr(((node_data *) (node->value))->invite_count), ";");
-            PRINT_STD_LOG_NOTDATETIME(" ack_count=", inttostr(((node_data *) (node->value))->ack_count), ";");
-            PRINT_STD_LOG_NOTDATETIME(" cancel_count=", inttostr(((node_data *) (node->value))->cancel_count), ";");
-            PRINT_STD_LOG_NOTDATETIME(" bye_count=", inttostr(((node_data *) (node->value))->bye_count), ";");
-            PRINT_STD_LOG_NOTDATETIME(" ok_count=", inttostr(((node_data *) (node->value))->ok_count), ";");
+            PRINT_STD_LOG_NOTDATETIME(" count_rtcp_data=", inttostr(detection_value_rtcp_data), ";");
+            PRINT_STD_LOG_NOTDATETIME(" count_invite=", inttostr(detection_value_invite), ";");
+            PRINT_STD_LOG_NOTDATETIME(" count_ack=", inttostr(detection_value_ack), ";");
+            PRINT_STD_LOG_NOTDATETIME(" count_cancel=", inttostr(detection_value_cancel), ";");
+            PRINT_STD_LOG_NOTDATETIME(" count_bye= ", inttostr(detection_value_bye), ";");
+
+            if (detection_value_ok > 0) {
+               PRINT_STD_LOG_NOTDATETIME("alert! count_detection_value_ok: ", inttostr(detection_value_ok), ";");
+            }
+
+            if (detection_value_trying > 0) {
+               PRINT_STD_LOG_NOTDATETIME("alert! count_detection_value_trying: ", inttostr(detection_value_trying), ";");
+            }
+
+            if (detection_value_ringing > 0) {
+               PRINT_STD_LOG_NOTDATETIME("alert! count_detection_value_ringing: ", inttostr(detection_value_ringing), ";");
+            }
+
+            if (detection_value_service_ok > 0) {
+               PRINT_STD_LOG_NOTDATETIME("alert! count_detection_value_service_ok: ", inttostr(detection_value_service_ok), ";");
+            }
+
+#ifdef DEBUG
+            // testing
+            PRINT_STD_LOG_NOTDATETIME(" before delete:", inttostr(tree->root->count_of_string));
+#endif
+
+            // delete node and his descendants from prefix tree
+            prefix_tree_delete_inner_node(tree, last_predecessor_node);
+
+#ifdef DEBUG
+            // testing
+            PRINT_STD_LOG_NOTDATETIME("; after delete:", inttostr(tree->root->count_of_string), ";");
+#endif
 
             return STATE_ATTACK_DETECTED;
+
+         } else {
+            // attack not detected, save node to cache
+            cache_no_attack_save(last_predecessor_node);
+            test_cache_save++;
          }
       }
 
@@ -439,23 +666,31 @@ int main(int argc, char **argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    // Set default parameters
+   min_length_called_number = DEFAULT_MIN_LENGTH_CALLED_NUMBER;
    max_prefix_length = DEFAULT_MAX_PREFIX_LENGTH;
    prefix_examination_detection_threshold = DEFAULT_PREFIX_EXAMINATION_DETECTION_THRESHOLD;
    detection_interval = DEFAULT_DETECTION_INTERVAL;
+   detection_pause_after_attack = DEFAULT_DETECTION_PAUSE_AFTER_ATTACK;
 
    // Parse remaining parameters and get configuration
    char opt;
 
-   while ((opt = getopt(argc, argv, "l:m:s:t:")) != -1) {
+   while ((opt = getopt(argc, argv, "l:d:m:s:p:t:")) != -1) {
       switch (opt) {
          case 'l':
             log_file = optarg;
+            break;
+         case 'd':
+            min_length_called_number = atoi(optarg);
             break;
          case 'm':
             max_prefix_length = atoi(optarg);
             break;
          case 's':
             detection_interval = atoi(optarg);
+            break;
+         case 'p':
+            detection_pause_after_attack = atoi(optarg);
             break;
          case 't':
             prefix_examination_detection_threshold = atoi(optarg);
@@ -470,9 +705,13 @@ int main(int argc, char **argv)
    PRINT_STD_LOG("Start VoIP fraud detection module (version:", MODULE_VERSION, ") ...\n");
    PRINT_STD_LOG("   Module configuration:\n");
    PRINT_STD_LOG("    - max_prefix_length=", inttostr(max_prefix_length), "\n");
+   PRINT_STD_LOG("    - min_length_called_number=", inttostr(min_length_called_number), "\n");
    PRINT_STD_LOG("    - prefix_examination_detection_threshold=", inttostr(prefix_examination_detection_threshold), "\n");
-   PRINT_STD_LOG("    - detection interval=", inttostr(detection_interval), "\n");
-   if (log_file != NULL) PRINT_STD_LOG("    - log file:", log_file, "\n");
+   PRINT_STD_LOG("    - detection_interval=", inttostr(detection_interval), "\n");
+   PRINT_STD_LOG("    - detection_pause_after_attack=", inttostr(detection_pause_after_attack), "\n");
+   if (log_file != NULL) {
+      PRINT_STD_LOG("    - log file:", log_file, "\n");
+   }
    PRINT_STD_LOG("-----------------------------------------------------\n");
 
 
@@ -483,12 +722,11 @@ int main(int argc, char **argv)
    template = ur_create_template(ur_template_specifier);
 
 
-   // ***** Main processing loop 
+   // ***** Main processing loop
 
    // initialize hash table for IP addresses
    cc_hash_table_v2_t hash_table_ip;
    ht_init_v2(&hash_table_ip, HASH_TABLE_IP_SIZE, sizeof (ip_item), sizeof (ip_addr_t));
-
 
    // save start time module
    time_t time_start_module;
@@ -540,14 +778,24 @@ int main(int argc, char **argv)
       uint8_t voip_packet_type;
       voip_packet_type = ur_get(template, in_rec, UR_INVEA_VOIP_PACKET_TYPE);
 
-      char ip_str[20];
-      ip_addr_t * ip;
+      char ip_src_str[20], ip_dst_str[20];
+      ip_addr_t * ip_src;
+      ip_addr_t * ip_dst;
 
-      if (voip_packet_type == 3 || voip_packet_type == 4) {
+      prefix_tree_domain_t * prefix_tree_node;
+      ip_item * hash_table_item;
+
+
+      // if voip_packet_type is monitored
+      if (voip_packet_type >= 2 && voip_packet_type <= 4) {
 
          // get source IP (unirec)
-         ip = &ur_get(template, in_rec, UR_SRC_IP);
-         ip_to_str(ip, ip_str);
+         ip_src = &ur_get(template, in_rec, UR_SRC_IP);
+         ip_to_str(ip_src, ip_src_str);
+
+         // get destination IP (unirec)
+         ip_dst = &ur_get(template, in_rec, UR_DST_IP);
+         ip_to_str(ip_dst, ip_dst_str);
 
          // get SIP_FROM from UniRec
          sip_from_len = ur_get_dyn_size(template, in_rec, UR_INVEA_SIP_CALLING_PARTY);
@@ -563,178 +811,335 @@ int main(int argc, char **argv)
          memcpy(sip_to_orig, ur_sip_to, sizeof (char) * sip_to_len);
          sip_to_orig [sip_to_len] = '\0';
 
+         uint16_t src_port, dst_port;
+         src_port = ur_get(template, in_rec, UR_SRC_PORT);
+         dst_port = ur_get(template, in_rec, UR_DST_PORT);
+
          // cut "sip:" or "sips:" from sip_to and sip_from
-         cut_sip_identifier_from_string(&sip_to, sip_to_orig, &sip_to_len, "SIP_TO header");
-         cut_sip_identifier_from_string(&sip_from, sip_from_orig, &sip_from_len, "SIP_FROM header");
-
-         // check if sip_to is numeric with allowed special char ('+','*','#') or this text part before '@'
-         if (!is_numeric_participant(sip_to, sip_to_len)) continue;
-
-      }
-
-
-      // is request type: call oriented
-      if (voip_packet_type == 3) {
-
-         // get number of INVITE messages in the flow record
-         uint64_t sip_stats;
-         uint32_t invite_stats;
-         uint16_t bye_stats;
-         uint8_t ack_stats, cancel_stats;
-
-         sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
-
-         // INVITE stats
-         // same as: invite_stats = (uint32_t) (sip_stats & 0x00000000ffffffff);
-         invite_stats = (uint32_t) sip_stats;
-
-         // CANCEL, ACK, BYE stats (other_stats = sip_stats>>32;)
-         cancel_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
-         ack_stats = (uint8_t) ((sip_stats & 0x00ff000000000000) >> 48);
-         bye_stats = (uint16_t) ((sip_stats & 0x0000ffff00000000) >> 32);
+         if (cut_sip_identifier_from_string(&sip_to, sip_to_orig, &sip_to_len, "SIP_TO header") == -1) {
 
 #ifdef TEST_DEBUG
-         //  printf("Invite_stats i: %i\n", invite_stats);
-#endif
+            // temporary testing output ...
 
-         // is at least one INVITE message
-         if (invite_stats > 0) {
+            PRINT_STD_LOG_NOTDATETIME("Invalid src_ip(sip_to):", ip_src_str, "; dst_ip: ", ip_dst_str, "; voip_packet_type: ", inttostr(voip_packet_type));
+            printf("src_port: %u, dst_port: %u", src_port, dst_port);
 
-            // add one to statistic of number invite flow
-            statistic_num_invite_flow++;
-
-            char *sip_via;
-            int sip_via_len;
-
-#ifdef TEST_DEBUG
-            sip_via_len = ur_get_dyn_size(template, in_rec, UR_INVEA_SIP_VIA);
-            sip_via = ur_get_dyn(template, in_rec, UR_INVEA_SIP_VIA);
-
-            printf("Via: %.*s\n", sip_via_len, sip_via);
-
-            printf("%s;IP:%s;INVITE: SIP_FROM:\"%.*s\";\n", get_actual_time_string(), ip_str, sip_from_len, sip_from);
-            printf("%s;IP:%s;INVITE: SIP_TO:\"%.*s\";\n", get_actual_time_string(), ip_str, sip_to_len, sip_to);
-#endif
-
-            ip_item * hash_table_item;
-            time_t time_actual;
-
-            prefix_tree_domain_t * prefix_tree_node;
-
-            if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip->bytes))) == NULL) {
-
-               // IP address not found in hash table
-
-               // create and initialize hash_table_item
-               hash_table_item = (ip_item *) malloc(sizeof (ip_item));
-               hash_table_item->tree = malloc(sizeof (prefix_tree_inner_node_t *));
-               hash_table_item->tree = prefix_tree_initialize(SUFFIX, 0, -1);
-               hash_table_item->time_last_check = time_start_module;
-
-
-               // add sip_to to prefix tree
-               prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
-
-               // insert into hash table
-               if (ht_insert_v2(&hash_table_ip, (char *) ip->bytes, (void *) hash_table_item) != NULL) {
-#ifdef TEST_DEBUG
-                  printf("hash table reaches size limit!\n");
-#endif
-               }
-            } else {
-               // IP address is found in hash table
-
-               ip_to_str((ip_addr_t *) ip->bytes, ip_str);
-
-               // add sip_to to prefix tree
-               prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
-
+            if (voip_packet_type == 3) {
+               uint64_t sip_stats;
+               uint32_t invite_stats;
+               uint16_t bye_stats;
+               uint8_t ack_stats, cancel_stats;
+               sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+               invite_stats = (uint32_t) sip_stats;
+               cancel_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
+               ack_stats = (uint8_t) ((sip_stats & 0x00ff000000000000) >> 48);
+               bye_stats = (uint16_t) ((sip_stats & 0x0000ffff00000000) >> 32);
+               printf("; Invite stats: %u ; ack_stats: %u; cancel_stats: %u; bye_stats: %u; ", invite_stats, ack_stats, cancel_stats, bye_stats);
             }
-
-            // save invite, ack, cancel, bye count to node
-
-            if (prefix_tree_node->parent->value == NULL) {
-               // allocate memory for node data
-               prefix_tree_node->parent->value = (void *) malloc(sizeof (node_data));
-
-               // initialize values
-               ((node_data *) (prefix_tree_node->parent->value))->invite_count = invite_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->cancel_count = cancel_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->ack_count = ack_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->bye_count = bye_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->ok_count = 0;
-            } else {
-               // node has memory for node data, sum stats
-               ((node_data *) (prefix_tree_node->parent->value))->invite_count += invite_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->cancel_count += cancel_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->ack_count += ack_stats;
-               ((node_data *) (prefix_tree_node->parent->value))->bye_count += bye_stats;
-            }
-
-            // get actual time
-            time(&time_actual);
-
-            // check if detection interval was expired
-            if (difftime(time_actual, hash_table_item->time_last_check) >= detection_interval) {
-
-               int status_detection;
-               // call detection of prefix examination
-               status_detection = detect_prefix_examination(hash_table_item->tree, hash_table_item->tree->root);
-               if (status_detection == STATE_ATTACK_DETECTED) {
-
-                  PRINT_STD_LOG_NOTDATETIME("Detail: SRC_IP:", ip_str, " <==\n");
-                  statistic_num_attack_detected++;
-
-                  // destroy tree for current IP address
-                  prefix_tree_destroy(hash_table_item->tree);
-                  // remove IP address item from hash table
-                  ht_remove_by_key_v2(&hash_table_ip, (char *) ip->bytes);
-               }
-               // save last detection time
-               time(&(hash_table_item->time_last_check));
-
-#ifdef DEBUG
-               // PRINT_STD_LOG("DEBUG: calling function detect_prefix_examination() with IP:", ip_str,"\n");
+            PRINT_STD_LOG_NOTDATETIME("\n");
 #endif
-
-            }
-
          }
-      }
 
-      // is response type: call oriented
-      if (voip_packet_type == 4) {
 
-         prefix_tree_domain_t * prefix_tree_node;
+         if (cut_sip_identifier_from_string(&sip_from, sip_from_orig, &sip_from_len, "SIP_FROM header") == -1) {
 
-         ip_item * hash_table_item;
+#ifdef TEST_DEBUG
+            // temporary testing output ...
 
-         if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip->bytes))) != NULL) {
+            PRINT_STD_LOG_NOTDATETIME("Invalid src_ip(sip_from):", ip_src_str, ";dst_ip: ", ip_dst_str, "; voip_packet_type: ", inttostr(voip_packet_type));
+            printf("src_port: %u, dst_port: %u", src_port, dst_port);
 
-            uint64_t sip_stats;
+            if (voip_packet_type == 3) {
+               uint64_t sip_stats;
+               uint32_t invite_stats;
+               uint16_t bye_stats;
+               uint8_t ack_stats, cancel_stats;
+               sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+               invite_stats = (uint32_t) sip_stats;
+               cancel_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
+               ack_stats = (uint8_t) ((sip_stats & 0x00ff000000000000) >> 48);
+               bye_stats = (uint16_t) ((sip_stats & 0x0000ffff00000000) >> 32);
+               printf("; Invite stats: %u ; ack_stats: %u; cancel_stats: %u; bye_stats: %u; ", invite_stats, ack_stats, cancel_stats, bye_stats);
+            }
+            PRINT_STD_LOG_NOTDATETIME("\n");
+#endif
+         }
 
-            sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+         // RTP data
+         if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) != NULL) {
 
             // add sip_to to prefix tree
             prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
 
-            if (prefix_tree_node->parent->value == NULL) {
-               // allocate memory for node data
-               prefix_tree_node->parent->value = (void *) malloc(sizeof (node_data));
+            // check of successful initialization of node data
+            if (check_initialize_node_data(prefix_tree_node, voip_packet_type) == -1) continue;
 
-               // initialize values
-               ((node_data *) (prefix_tree_node->parent->value))->invite_count = 0;
-               ((node_data *) (prefix_tree_node->parent->value))->cancel_count = 0;
-               ((node_data *) (prefix_tree_node->parent->value))->ack_count = 0;
-               ((node_data *) (prefix_tree_node->parent->value))->bye_count = 0;
-               ((node_data *) (prefix_tree_node->parent->value))->ok_count = (sip_stats & 0xff00000000000000) >> 56;
-            } else {
-               ((node_data *) (prefix_tree_node->parent->value))->ok_count += (sip_stats & 0xff00000000000000) >> 56;
+            // set rtp_data=1, if some packets are in the flow record
+            if (ur_get(template, in_rec, UR_INVEA_RTCP_PACKETS) > 0 && ur_get(template, in_rec, UR_INVEA_RTCP_OCTETS) > 0) {
+               ((node_data *) (prefix_tree_node->parent->value))->rtp_data = 1;
+            }
+         }
+
+         // check if sip_to is numeric with allowed special char ('+','*','#') or this text part before '@' + check of minimum numeric length
+         if (!is_numeric_participant(sip_to, sip_to_len)) continue;
+
+         // do action against according to voip_packet_type
+         switch (voip_packet_type) {
+
+            case 3:
+            {
+               /* --------------------------------
+                * request type: call oriented
+                * -------------------------------- */
+
+
+               // is source IP in hash table?
+               if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) == NULL) {
+
+                  /* IP address not found in hash table */
+
+                  // create and initialize hash_table_item
+                  hash_table_item = (ip_item *) malloc(sizeof (ip_item));
+
+                  // check successful allocation memory
+                  if (hash_table_item == NULL) {
+                     PRINT_STD_LOG("hash_table_item(voip_packet_type:", inttostr(voip_packet_type), "): error memory allocation\n");
+                     continue;
+                  }
+
+                  // initialize prefix_tree
+                  hash_table_item->tree = prefix_tree_initialize(SUFFIX, 0, -1);
+
+                  // check successful allocation memory
+                  if (hash_table_item->tree == NULL) {
+                     PRINT_STD_LOG("hash_table_item->tree(voip_packet_type:", inttostr(voip_packet_type), "), prefix_tree_initialize: error memory allocation\n");
+                     continue;
+                  }
+
+                  // initialize other variables of hash_table_item
+                  hash_table_item->time_last_check = time_start_module;
+                  hash_table_item->time_attack_detected_prefix_examination = 0;
+                  hash_table_item->attack_count = 0;
+
+
+                  // insert into hash table
+                  if (ht_insert_v2(&hash_table_ip, (char *) ip_src->bytes, (void *) hash_table_item) != NULL) {
+#ifdef TEST_DEBUG
+                     PRINT_STD_LOG("(voip_packet_type:", inttostr(voip_packet_type), ") hash table reaches size limit!\n");
+#endif
+                  }
+               }
+
+               // get actual time
+               time_t time_actual;
+               time(&time_actual);
+
+               // check if detection interval was expired
+               if (difftime(time_actual, hash_table_item->time_last_check) >= detection_interval) {
+
+                  // check if detection_pause_after_attack was expired
+                  if (difftime(time_actual, hash_table_item->time_attack_detected_prefix_examination) >= detection_pause_after_attack) {
+
+                     // clear cache
+                     cache_no_attack_clear();
+
+                     int status_detection;
+
+                     // call detection of prefix examination
+                     status_detection = detect_prefix_examination(hash_table_item->tree, hash_table_item->tree->root);
+
+                     if (status_detection == STATE_ATTACK_DETECTED) {
+
+                        PRINT_STD_LOG_NOTDATETIME("Detail: SRC_IP:", ip_src_str);
+
+                        // save attack detection prefix_examination
+                        hash_table_item->attack_count++;
+
+                        PRINT_STD_LOG_NOTDATETIME("; attack_count: ", inttostr(hash_table_item->attack_count), " <==\n");
+
+                        // add one to statistics of number attacks
+                        statistic_num_attack_detected++;
+
+                        // update time of last attack
+                        time(&(hash_table_item->time_attack_detected_prefix_examination));
+                     }
+
+                     // save last detection time
+                     time(&(hash_table_item->time_last_check));
+
+#ifdef TEST_DEBUG
+                     if (hash_table_item->tree->root->count_of_string > 5000) printf("count_of_root: %i; IP: %s; cache_size: %i;\n", hash_table_item->tree->root->count_of_string, ip_src_str, cache_no_attack_size);
+#endif
+
+                  }
+
+               }
+
+
+               // get number of INVITE messages in the flow record
+               uint64_t sip_stats;
+               uint32_t invite_stats;
+               uint16_t bye_stats;
+               uint8_t ack_stats, cancel_stats;
+
+               sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+
+               // INVITE stats
+               // same as: invite_stats = (uint32_t) (sip_stats & 0x00000000ffffffff);
+               invite_stats = (uint32_t) sip_stats;
+
+               // CANCEL, ACK, BYE stats (other_stats = sip_stats>>32;)
+               cancel_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
+               ack_stats = (uint8_t) ((sip_stats & 0x00ff000000000000) >> 48);
+               bye_stats = (uint16_t) ((sip_stats & 0x0000ffff00000000) >> 32);
+
+               // is at least one INVITE message
+               if (invite_stats > 0) {
+
+                  // add one to statistics of number invite flow
+                  statistic_num_invite_flow++;
+
+#ifdef TEST_DEBUG
+                  char *sip_via;
+                  int sip_via_len;
+
+                  sip_via_len = ur_get_dyn_size(template, in_rec, UR_INVEA_SIP_VIA);
+                  sip_via = ur_get_dyn(template, in_rec, UR_INVEA_SIP_VIA);
+
+                  uint64_t link_bit_field;
+                  link_bit_field = ur_get(template, in_rec, UR_LINK_BIT_FIELD);
+
+                  printf("Via: %.*s\n", sip_via_len, sip_via);
+
+                  printf("%s;IP:%s;LINK_BIT_FIELD: %u; INVITE: SIP_FROM:\"%.*s\";\n", get_actual_time_string(), ip_src_str, link_bit_field, sip_from_len, sip_from);
+                  printf("%s;IP:%s;LINK_BIT_FIELD: %u; INVITE: SIP_TO:\"%.*s\";\n", get_actual_time_string(), ip_src_str, link_bit_field, sip_to_len, sip_to);
+#endif
+
+               }
+
+
+               /*  PRINT_STD_LOG("DEBUG: src_ip(sip_from):", ip_src_str, ";dst_ip: ", ip_dst_str, "; voip_packet_type: ", inttostr(voip_packet_type));
+                 printf("; Invite stats: %u ; ack_stats: %u; cancel_stats: %u; bye_stats: %u; ", invite_stats, ack_stats, cancel_stats, bye_stats);
+
+                 uint64_t link_bit_field;
+                 link_bit_field = ur_get(template, in_rec, UR_LINK_BIT_FIELD);
+
+                 PRINT_STD_LOG_NOTDATETIME(" LINK_BIT_FIELD:", inttostr(link_bit_field), ";\n");
+                */
+
+
+               // add sip_to to prefix tree
+               prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
+
+               // check successful prefix_tree_insert
+               if (prefix_tree_node == NULL) {
+                  PRINT_STD_LOG("prefix_tree_insert(voip_packet_type:", inttostr(voip_packet_type), "): error\n");
+                  continue;
+               }
+
+               // check of successful initialization of node data
+               if (check_initialize_node_data(prefix_tree_node, voip_packet_type) == -1) continue;
+
+               // sum stats
+               ((node_data *) (prefix_tree_node->parent->value))->invite_count += invite_stats;
+               ((node_data *) (prefix_tree_node->parent->value))->cancel_count += cancel_stats;
+               ((node_data *) (prefix_tree_node->parent->value))->ack_count += ack_stats;
+               ((node_data *) (prefix_tree_node->parent->value))->bye_count += bye_stats;
+
+               testvar_invite_count += invite_stats;
+               testvar_ack_count += ack_stats;
+               testvar_bye_count += bye_stats;
+               testvar_cancel_count += cancel_stats;
+
+               break;
             }
 
+
+            case 2:
+            {
+               /* --------------------------------
+                * response type: service oriented
+                * -------------------------------- */
+
+               // is destination IP in hash table?
+               if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip_dst->bytes))) != NULL) {
+
+                  uint64_t sip_stats;
+
+                  sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+
+                  // add sip_to to prefix tree
+                  prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
+
+                  // check successful prefix_tree_insert
+                  if (prefix_tree_node == NULL) {
+                     PRINT_STD_LOG("prefix_tree_insert(voip_packet_type:", inttostr(voip_packet_type), "): error memory allocation\n");
+                     continue;
+                  }
+
+                  // check of successful initialization of node data
+                  if (check_initialize_node_data(prefix_tree_node, voip_packet_type) == -1) continue;
+
+                  // sum stats
+                  ((node_data *) (prefix_tree_node->parent->value))->trying_count += sip_stats & 0x00000000000000ff;
+                  ((node_data *) (prefix_tree_node->parent->value))->ringing_count += (sip_stats & 0x0000ff0000000000) >> 40;
+                  ((node_data *) (prefix_tree_node->parent->value))->service_ok_count += (sip_stats & 0xff00000000000000) >> 56;
+
+               }
+
+               break;
+            }
+
+
+            case 4:
+            {
+               /* --------------------------------
+                * response type: call oriented
+                * -------------------------------- */
+
+               // is destination IP in hash table?
+               if ((hash_table_item = (ip_item *) ht_get_v2(&hash_table_ip, (char *) (ip_dst->bytes))) != NULL) {
+
+                  uint64_t sip_stats;
+
+                  sip_stats = ur_get(template, in_rec, UR_INVEA_SIP_STATS);
+
+                  // add sip_to to prefix tree
+                  prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
+
+                  // check successful prefix_tree_insert
+                  if (prefix_tree_node == NULL) {
+                     PRINT_STD_LOG("prefix_tree_insert(voip_packet_type:", inttostr(voip_packet_type), "): error\n");
+                     continue;
+                  }
+
+                  // check of successful initialization of node data
+                  if (check_initialize_node_data(prefix_tree_node, voip_packet_type) == -1) continue;
+
+                  // sum stats
+                  ((node_data *) (prefix_tree_node->parent->value))->ok_count += (sip_stats & 0xff00000000000000) >> 56;
+
+                  /*
+                              PRINT_STD_LOG("DEBUG: src_ip(sip_from):", ip_src_str, ";dst_ip: ", ip_dst_str, "; voip_packet_type: ", inttostr(voip_packet_type));
+
+                              if (((sip_stats & 0xff00000000000000) >> 56) > 0) {
+                                 printf("; OK: %u; ", ((sip_stats & 0xff00000000000000) >> 56));
+                              }
+                              uint64_t link_bit_field;
+                              link_bit_field = ur_get(template, in_rec, UR_LINK_BIT_FIELD);
+                              PRINT_STD_LOG_NOTDATETIME(" LINK_BIT_FIELD:", inttostr(link_bit_field), ";\n");
+                   */
+
+                  testvar_ok_count += (sip_stats & 0xff00000000000000) >> 56;
+
+               }
+
+               break;
+            }
          }
 
       }
+
    }
 
    // print statistics
@@ -742,17 +1147,31 @@ int main(int argc, char **argv)
    PRINT_STD_LOG("Total module statistics:\n");
    PRINT_STD_LOG("   - num_attack_detected=", inttostr(statistic_num_attack_detected), "\n");
    PRINT_STD_LOG("   - num_invite_flow=", inttostr(statistic_num_invite_flow), "\n");
-   PRINT_STD_LOG("   - num_invalid_sip_to=", inttostr(statistic_num_invalid_sip_to), "\n");
+   PRINT_STD_LOG("   - num_invalid_sip_identifier=", inttostr(statistic_num_invalid_sip_identifier), "\n");
    PRINT_STD_LOG("   - num_warden_alert=", "not implemented", "\n");
+
+
+#ifdef TEST_DEBUG
+   // only for testing
+   printf(" | count_cache_hit: %i\n", test_cache_hit);
+   printf(" | count_cache_not_hit: %i\n", test_cache_not_hit);
+   printf(" | count_cache_save: %i\n", test_cache_save);
+   printf(" | count_cache_delete_successor: %i\n", test_cache_delete_successor);
+   printf(" | testvar_ok_count: %i\n", testvar_ok_count);
+   printf(" | testvar_invite_count: %i\n", testvar_invite_count);
+   printf(" | testvar_ack_count: %i\n", testvar_ack_count);
+   printf(" | testvar_bye_count: %i\n", testvar_bye_count);
+   printf(" | testvar_cancel_count: %i\n", testvar_cancel_count);
+#endif
 
    // ***** Cleanup *****
 
-#ifdef DEBUG
-   PRINT_STD_LOG("Module cleanup!\n");
-#endif
+   PRINT_STD_LOG("Module cleanup-1!\n");
 
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
+
+   PRINT_STD_LOG("Module cleanup-2!\n");
 
    // free memory - destroy tree for all IP addresses
    ip_item * hash_table_item;
@@ -763,8 +1182,12 @@ int main(int argc, char **argv)
       }
    }
 
+   PRINT_STD_LOG("Module cleanup-3!\n");
+
    // destroy hash table (free memory)
    ht_destroy_v2(&hash_table_ip);
+
+   PRINT_STD_LOG("Module cleanup-4!\n");
 
    // destroy template (free memory)
    ur_free_template(template);
