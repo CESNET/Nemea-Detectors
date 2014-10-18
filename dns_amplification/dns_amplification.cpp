@@ -68,7 +68,6 @@ extern "C" {
 }
 #endif
 #include <unirec/unirec.h>
-#include "../../unirec/ipaddr.h"
 #include "dns_amplification.h"
 
 //#define DEBUG
