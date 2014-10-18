@@ -87,6 +87,9 @@
  *  Defines macros used by DNS tunel detection 
  * \{ */
 #define COUNT_OF_ITEM_IN_LEAF 5 /*< Count of item in leaf of B+ tree. M value of B+ tree */
+#define READ_FROM_FILE 1 /*< Specify module configuration. Modul will read packets from FILE */ 
+#define READ_FROM_UNIREC 2 /*< Specify module configuration. Modul will read packets from UNIREC */  
+#define MEASURE_PARAMETERS 4 /*< Specify module configuration. Modul will measure detection parameters */ 
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
 #define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum round to be IP in suspicion */
 #define PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION 0.3 /*< Percent of communication to be set to suspision state */
@@ -266,8 +269,9 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item);
  * If there is no anomaly, the IP address is deleted from B+ tree.
  * \param[in] b_plus_tree pointer to B+ tree structure
  * \param[in] file pointer to file with results
+ * \param[in] ur_notification structure with unirec output datas
  */
-void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file);
+void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification);
 
 /*!
  * \brief Print annomaly during detection
@@ -277,8 +281,9 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file);
  * \param[in] item ip address with anomaly 
  * \param[in] file pointer to file with results
  * \param[in] print_time 1 - time is printed, 0 - time is not printed
+ * \param[in] unirec_out  structure with output unirec variables or NULL
  */
-void print_founded_anomaly_immediately(char *ip_address, ip_address_t *item, FILE *file, unsigned char print_time);
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time, unirec_tunnel_notification_t * unirec_out);
 
 /*!
  * \brief Print annomaly on the end of module
@@ -356,5 +361,11 @@ int compare_ipv4(void * a, void * b);
  */
 void load_default_values();
 
+/*!
+ * \brief Send notifications to UniRec
+ * Sends notification data stored in structure unirec_tunnel_notification_t to UniRec.
+ * \param[in] notification structure with data, which are send to UniRec
+ */
+void send_unirec_out(unirec_tunnel_notification_t * notification);
 
  #endif /* _TUNNEL_DETECTION_DNS_ */

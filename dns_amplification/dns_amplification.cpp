@@ -95,7 +95,8 @@ trap_module_info_t module_info = {
     "   -l <num>         minimal threshold for average size of responses in bytes in TOP-N (1000)\n"
     "   -m <num>         maximal threshold for average size of queries in bytes in TOP-N (300)\n"
     "   -w <sec>         time window of detection / timeout of inactive flow (3600)\n"
-    "   -s <sec>         time window of deletion / period of inactive flows checking(300)\n",
+    "   -s <sec>         time window of deletion / period of inactive flows checking(300)\n"
+    "   -S <cnt>         count of records to store for query / response direction (max size of vector).\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -496,9 +497,28 @@ int main (int argc, char** argv) {
             config.max_flow_items = atoi (optarg);
             break;
          default:
-            fprintf(stderr, "Invalid arguments.\n");
+            fprintf(stderr, "Error: Invalid arguments.\n");
+            trap_finalize();
             return ERROR;
       }
+   }
+
+   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE || config.max_flow_items < config.flow_items_del_count){
+      cerr << "Error: Wrong record vector(s) settings." << endl;
+      trap_finalize();
+      return ERROR;
+   }
+
+   if (trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK){
+      cerr << "Error: Unable to set up intput timeout." << endl;
+      trap_finalize();
+      return ERROR;
+   }
+
+   if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT) != TRAP_E_OK){
+      cerr << "Error: Unable set up output timeout." << endl;
+      trap_finalize();
+      return ERROR;
    }
 
    // declare demplates
@@ -515,10 +535,11 @@ int main (int argc, char** argv) {
    // prepare detection record
    void *detection = ur_create(unirec_out, 0);
    if (detection == NULL) {
-      fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
+      fprintf(stderr,"Error: No memory available for detection record. Unable to continue.\n");
       ur_free_template(unirec_in);
       ur_free_template(unirec_out);
       ur_free(detection);
+      trap_finalize();
       return ERROR;
    }
 
@@ -531,14 +552,9 @@ int main (int argc, char** argv) {
    const void *data;
    uint16_t data_size;
 
-   trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT); ///TODO osetrit
-   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT); ///TODO osetrit
-
    // ***** Main processing loop *****
    while (!stop) {
       // retrieve data from server
-//      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
-//      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       ret = trap_recv(0, &data, &data_size);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
@@ -597,32 +613,23 @@ int main (int argc, char** argv) {
             it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
             it->second.total_flows[RESPONSE] += 1;
 
-            it->second.r.push_back(i);
-
-            if (it->second.r.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[RESPONSE] -= del->bytes;
-                  it->second.total_packets[RESPONSE] -= del->packets;
-                  it->second.total_flows[RESPONSE] -= 1;
-
-                  del = it->second.r.erase(del);
-               }
+            if (it->second.r.size() < config.max_flow_items){
+               it->second.r.push_back(i);
+            } else {
+               it->second.r[it->second.r_rem_pos] = i;
+               it->second.r_rem_pos = (it->second.r_rem_pos + 1) % config.max_flow_items;
             }
          } else {
             it->second.total_bytes[QUERY] += ur_get(unirec_in, data, UR_BYTES);
             it->second.total_packets[QUERY] += ur_get(unirec_in, data, UR_PACKETS);
             it->second.total_flows[QUERY] += 1;
 
-            it->second.q.push_back(i);
 
-            if (it->second.q.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[QUERY] -= del->bytes;
-                  it->second.total_packets[QUERY] -= del->packets;
-                  it->second.total_flows[QUERY] -= 1;
-
-                  del = it->second.r.erase(del);
-               }
+            if (it->second.q.size() < config.max_flow_items){
+               it->second.q.push_back(i);
+            } else {
+               it->second.q[it->second.q_rem_pos] = i;
+               it->second.q_rem_pos = (it->second.q_rem_pos + 1) % config.max_flow_items;
             }
          }
 
@@ -835,6 +842,8 @@ int main (int argc, char** argv) {
          d.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
          d.last_logged = 0;
          d.identifier = 0;
+         d.q_rem_pos = 0;
+         d.r_rem_pos = 0;
 
          // create flow item
          flow_item_t i;

@@ -53,13 +53,15 @@
 extern "C" {
 #endif
 
-#define BYTES_MAX 5000  // max bytes of flow checked in q dividing
+#define BYTES_MAX    5000  // max bytes of flow checked in q dividing
+#define MINIMAL_RECORD_VECTOR_SIZE    10000
+
 #define PACKETS      0
-#define BYTES     1
-#define KEY    0
-#define VALUE     1
-#define ERROR     -1
-#define OK     1
+#define BYTES        1
+#define KEY          0
+#define VALUE        1
+#define ERROR        -1
+#define OK           1
 
 #define LOG_FILE_PREFIX ""
 #define LOG_FILE_SUFFIX ".log"
@@ -163,7 +165,9 @@ struct flow_item_t {
 struct flow_data_t {
 
    vector<flow_item_t> q;     // vector of query flows
+   uint32_t q_rem_pos;
    vector<flow_item_t> r;     // vector of response flows
+   uint32_t r_rem_pos;
    uint64_t total_bytes [4];     // total bytes of flows
    uint32_t total_packets [4];      // total packets of flows
    uint32_t total_flows [4];     // total number of flows
