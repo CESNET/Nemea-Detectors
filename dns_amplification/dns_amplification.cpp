@@ -504,6 +504,12 @@ int main (int argc, char** argv) {
       }
    }
 
+   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE || config.max_flow_items < config.flow_items_del_count){
+      cerr << "Error: Wrong record vector(s) settings." << endl;
+      trap_finalize();
+      return ERROR;
+   }
+
    if (trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK){
       cerr << "Error: Unable to set up intput timeout." << endl;
       trap_finalize();
@@ -546,9 +552,13 @@ int main (int argc, char** argv) {
    // data buffer
    const void *data;
    uint16_t data_size;
-
+   uint64_t cnt = 0;
    // ***** Main processing loop *****
    while (!stop) {
+         if (!(++cnt % 10000)){
+            cout << ".";
+            fflush(stdout);
+         }
       // retrieve data from server
 //      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
 //      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
@@ -609,34 +619,56 @@ int main (int argc, char** argv) {
             it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
             it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
             it->second.total_flows[RESPONSE] += 1;
+//            it->second.r.push_back(i);
+//
+//            if (it->second.r.size() > config.max_flow_items){
+//                  cout << "R-deletion: " << it->second.r.size() << endl;
+////                  int deletor = 0;
+//               vector<flow_item_t>::iterator del = it->second.r.begin();
+//               for (int i = 0; i < config.flow_items_del_count; ++i) {
+////                  cout << ++deletor << endl;
+//                  it->second.total_bytes[RESPONSE] -= del->bytes;
+//                  it->second.total_packets[RESPONSE] -= del->packets;
+//                  it->second.total_flows[RESPONSE] -= 1;
+//
+//                  it->second.r.erase(del++);
+//               }
+//            }
 
-            it->second.r.push_back(i);
-
-            if (it->second.r.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[RESPONSE] -= del->bytes;
-                  it->second.total_packets[RESPONSE] -= del->packets;
-                  it->second.total_flows[RESPONSE] -= 1;
-
-                  del = it->second.r.erase(del);
-               }
+            if (it->second.r.size() < config.max_flow_items){
+               it->second.r.push_back(i);
+            } else {
+               it->second.r[it->second.r_rem_pos] = i;
+               it->second.r_rem_pos = (it->second.r_rem_pos + 1) % config.max_flow_items;
             }
+
          } else {
             it->second.total_bytes[QUERY] += ur_get(unirec_in, data, UR_BYTES);
             it->second.total_packets[QUERY] += ur_get(unirec_in, data, UR_PACKETS);
             it->second.total_flows[QUERY] += 1;
 
-            it->second.q.push_back(i);
+//            it->second.q.push_back(i);
 
-            if (it->second.q.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[QUERY] -= del->bytes;
-                  it->second.total_packets[QUERY] -= del->packets;
-                  it->second.total_flows[QUERY] -= 1;
-
-                  del = it->second.r.erase(del);
-               }
+            if (it->second.q.size() < config.max_flow_items){
+               it->second.q.push_back(i);
+            } else {
+               it->second.q[it->second.q_rem_pos] = i;
+               it->second.q_rem_pos = (it->second.q_rem_pos + 1) % config.max_flow_items;
             }
+//            if (it->second.q.size() > config.max_flow_items){
+//                  cout << "Q-deletion: " << it->second.q.size() << endl;
+////                  int deletor = 0;
+////                  cout << endl << (it->second.q.begin() + it->second.q.size())->bytes << endl << it->second.q.end()->bytes << endl;
+//               vector<flow_item_t>::iterator del = it->second.q.begin();
+//               for (int i = 0; i < config.flow_items_del_count; ++i) {
+////                  cout << ++deletor << endl;
+//                  it->second.total_bytes[QUERY] -= del->bytes;
+//                  it->second.total_packets[QUERY] -= del->packets;
+//                  it->second.total_flows[QUERY] -= 1;
+//
+//                  it->second.q.erase(del++);
+//               }
+//            }
          }
 
          long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST));
@@ -836,6 +868,8 @@ int main (int argc, char** argv) {
                }
 
                it->second.first_t = min_time;
+
+               cout << "\nDetection done." << endl;
             }
          } //if (time > detection_window)
          /// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<---- Detection ----
@@ -848,6 +882,8 @@ int main (int argc, char** argv) {
          d.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
          d.last_logged = 0;
          d.identifier = 0;
+         d.q_rem_pos = 0;
+         d.r_rem_pos = 0;
 
          // create flow item
          flow_item_t i;
