@@ -87,7 +87,7 @@ if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
 	CXXFLAGS="$UNIREC_CFLAGS $CXXFLAGS"
 fi
 # Still empty? Check for *installed* UNIREC.
-if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
+if test -z "$UNIRECLIB"; then
 	# Check for UNIREC toolkit as a superproject.
 	if test -d "$srcdir/../unirec"; then
 	UNIRECINC='$(top_srcdir)/../'
@@ -103,7 +103,7 @@ if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
 	fi
 fi
 
-if test -z "$NEMEACOMMONLIB"; then
+if test "${repobuild}" = "false" -a -z "$NEMEACOMMONLIB"; then
 	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
 	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
 	LIBS="$NEMEACOMMON_LIBS $LIBS"
