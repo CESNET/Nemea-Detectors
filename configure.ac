@@ -218,6 +218,7 @@ AC_CONFIG_FILES([Makefile
                  logreplay/Makefile
                  merger/Makefile
                  nemea-modules.spec
+                 nemea2sdmcap/Makefile
                  nfreader/Makefile
                  p2pbotnet_detection/Makefile
                  p2pdetector/Makefile
@@ -227,7 +228,7 @@ AC_CONFIG_FILES([Makefile
                  python_example/Makefile
                  rrd_updater/Makefile
                  sampler/Makefile
-                 sdm_controller/Makefile
+                 sdmcap_controller/Makefile
                  simplebotnetdetector/Makefile
                  sip_detector/Makefile
                  slowthreatdetector/Makefile
