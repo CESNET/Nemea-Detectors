@@ -49,10 +49,12 @@ using namespace std;
 #define SYN_SCAN_REQUEST_TO_RESPONSE_RATIO 5
 #define SYN_SCAN_IPS 200
 
-#define DOS_VICTIM_CONNECTIONS 135000
+#define DOS_VICTIM_CONNECTIONS_SYNFLOOD 270000
+#define DOS_VICTIM_CONNECTIONS_OTHERS 1000000
 #define DOS_VICTIM_PACKET_RATIO 2
 
-#define DOS_ATTACKER_CONNECTIONS 135000
+#define DOS_ATTACKER_CONNECTIONS_SYNFLOOD 270000
+#define DOS_ATTACKER_CONNECTIONS_OTHERS 1000000
 #define DOS_ATTACKER_PACKET_RATIO 2
 
 #define DOS_REQ_RSP_EST_RATIO (4.0/5.0)
@@ -63,9 +65,12 @@ using namespace std;
 void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
 {
    // horizontal SYN scan (scanning address)
-   uint64_t est_out_req_syn_cnt = rec.out_req_syn_cnt + (rec.out_all_syn_cnt - (rec.out_req_syn_cnt + rec.out_rsp_syn_cnt))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_out_req_ack_cnt = rec.out_req_ack_cnt + (rec.out_all_ack_cnt - (rec.out_req_ack_cnt + rec.out_rsp_ack_cnt))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_in_rsp_ack_cnt = rec.in_rsp_ack_cnt + (rec.in_all_ack_cnt - (rec.in_req_ack_cnt + rec.in_rsp_ack_cnt))*DOS_RSP_REQ_EST_RATIO;
+   uint64_t est_out_req_syn_cnt = rec.out_req_syn_cnt + (rec.out_all_syn_cnt 
+           - (rec.out_req_syn_cnt + rec.out_rsp_syn_cnt))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_out_req_ack_cnt = rec.out_req_ack_cnt + (rec.out_all_ack_cnt 
+           - (rec.out_req_ack_cnt + rec.out_rsp_ack_cnt))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_in_rsp_ack_cnt = rec.in_rsp_ack_cnt + (rec.in_all_ack_cnt 
+           - (rec.in_req_ack_cnt + rec.in_rsp_ack_cnt))*DOS_RSP_REQ_EST_RATIO;
 
    if (est_out_req_syn_cnt > SYN_SCAN_TRESHOLD &&
        est_out_req_syn_cnt > SYN_SCAN_SYN_TO_ACK_RATIO * est_out_req_ack_cnt && // most of outgoing flows are SYN-only (no ACKs)
@@ -81,43 +86,76 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
    }
    
    // DoS/DDoS (victim)
-   uint64_t est_out_rsp_flows = rec.out_rsp_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
-   uint64_t est_in_req_flows = rec.in_req_flows + (rec.in_all_flows - (rec.in_req_flows + rec.in_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_in_req_packets = rec.in_req_packets + (rec.in_all_packets - (rec.in_req_packets + rec.in_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
-
-   if (est_in_req_flows > DOS_VICTIM_CONNECTIONS && // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
-       est_in_req_packets < DOS_VICTIM_PACKET_RATIO * est_in_req_flows && // packets per flow < 2
-       est_out_rsp_flows < est_in_req_flows/2 && // less than half of requests are replied
-       est_out_rsp_flows > est_in_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
-   {
+   uint64_t est_out_rsp_flows = rec.out_rsp_flows + (rec.out_all_flows 
+           - (rec.out_req_flows + rec.out_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
+   uint64_t est_in_req_flows = rec.in_req_flows + (rec.in_all_flows 
+           - (rec.in_req_flows + rec.in_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_in_req_packets = rec.in_req_packets + (rec.in_all_packets 
+           - (rec.in_req_packets + rec.in_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
+   
+   bool ddos_tcp_victim = false;
+   if (( //TCP (syn flood)
+      rec.in_all_syn_cnt > DOS_VICTIM_CONNECTIONS_SYNFLOOD &&
+      rec.in_all_syn_cnt > 2 * rec.in_all_ack_cnt &&
+      rec.in_all_packets < DOS_VICTIM_PACKET_RATIO * rec.in_all_flows &&
+      (ddos_tcp_victim = true)
+      ) || ( // UDP & others... 
+      est_in_req_flows > DOS_VICTIM_CONNECTIONS_OTHERS && // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
+      est_in_req_packets < DOS_VICTIM_PACKET_RATIO * est_in_req_flows && // packets per flow < 2
+      est_out_rsp_flows < est_in_req_flows/2) // less than half of requests are replied
+       // && est_out_rsp_flows > est_in_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
+      ) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DOS);
-      evt.addProto(TCP).addDstAddr(addr);
+      evt.addDstAddr(addr);
       evt.setScale(rec.in_all_flows);
-      evt.setNote("in: %u flows, %u packets; out: %u flows, %u packets; approx. %u source addresses",
-                  rec.in_all_flows, rec.in_all_packets, rec.out_all_flows, rec.out_all_packets, rec.in_all_uniqueips);
-      // Are source addresses random (spoofed)? If less than two incoming flows per address  
-      // (i.e. almost every flow comes from different address), it's probably spoofed.
+      evt.setNote("in: %u flows, %u packets; out: %u flows, %u packets; approx."
+         " %u source addresses", rec.in_all_flows, rec.in_all_packets, 
+         rec.out_all_flows, rec.out_all_packets, rec.in_all_uniqueips);
+      if (ddos_tcp_victim) {
+         evt.addProto(TCP);
+         evt.note += "; SYN flood";
+      }
+      // Are source addresses random (spoofed)? If less than two incoming flows 
+      // per address (i.e. almost every flow comes from different address), 
+      // it's probably spoofed.
       if (rec.in_all_flows < 2*rec.in_all_uniqueips) {
          evt.note += " (probably spoofed)";
       }
+      
       reportEvent(evt);
    }
    
    // DoS/DDoS (attacker)
-   uint64_t est_out_req_flows = rec.out_req_flows + (rec.out_all_flows - (rec.out_req_flows + rec.out_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_out_req_packets = rec.out_req_packets + (rec.out_all_packets - (rec.out_req_packets + rec.out_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
-   uint64_t est_in_rsp_flows = rec.in_rsp_flows + (rec.in_all_flows - (rec.in_req_flows + rec.in_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
+   uint64_t est_out_req_flows = rec.out_req_flows + (rec.out_all_flows 
+           - (rec.out_req_flows + rec.out_rsp_flows))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_out_req_packets = rec.out_req_packets + (rec.out_all_packets 
+           - (rec.out_req_packets + rec.out_rsp_packets))*DOS_REQ_RSP_EST_RATIO;
+   uint64_t est_in_rsp_flows = rec.in_rsp_flows + (rec.in_all_flows 
+           - (rec.in_req_flows + rec.in_rsp_flows))*DOS_RSP_REQ_EST_RATIO;
  
-   if (est_out_req_flows / DOS_ATTACKER_CONNECTIONS >= max(rec.out_all_uniqueips,(uint16_t)1U) && // number of connection requests per target
-       est_out_req_packets < DOS_ATTACKER_PACKET_RATIO * est_out_req_flows && // packets per flow < 2
-       est_in_rsp_flows < est_out_req_flows/2 && // less than half of requests are replied
-       est_in_rsp_flows > est_out_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
-   {
+   bool ddos_tcp_attacker = false;
+   if (( // TCP (syn flood)
+      rec.out_all_flows >= DOS_ATTACKER_CONNECTIONS_SYNFLOOD * max(rec.out_all_uniqueips,(uint16_t)1U) &&
+      rec.out_all_packets < DOS_ATTACKER_PACKET_RATIO * rec.out_all_flows &&
+      rec.out_all_syn_cnt > 2 * rec.out_all_ack_cnt &&
+      (ddos_tcp_attacker = true)
+      ) || ( // UDP & others...
+      est_out_req_flows >= DOS_ATTACKER_CONNECTIONS_OTHERS * max(rec.out_all_uniqueips,(uint16_t)1U) && // number of connection requests per target
+      est_out_req_packets < DOS_ATTACKER_PACKET_RATIO * est_out_req_flows && // packets per flow < 2
+      est_in_rsp_flows < est_out_req_flows/2) // less than half of requests are replied
+      // && est_in_rsp_flows > est_out_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
+      ) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DOS);
-      evt.addProto(TCP).addSrcAddr(addr);
+      evt.addSrcAddr(addr);
       evt.setScale(rec.out_all_flows);
-      evt.setNote("out: %u flows, %u packets; in: %u flows, %u packets; approx. %u destination addresses",
-                  rec.out_all_flows, rec.out_all_packets, rec.in_all_flows, rec.in_all_packets, rec.out_all_uniqueips);
+      evt.setNote("out: %u flows, %u packets; in: %u flows, %u packets; approx."
+         " %u destination addresses", rec.out_all_flows, rec.out_all_packets, 
+         rec.in_all_flows, rec.in_all_packets, rec.out_all_uniqueips);
+      if (ddos_tcp_attacker) {
+         evt.addProto(TCP);
+         evt.note += "; SYN flood";
+      }
+      
       reportEvent(evt);
    }
 }
