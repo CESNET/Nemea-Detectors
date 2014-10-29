@@ -101,7 +101,8 @@ trap_module_info_t module_info = {
       "Example of how to run this module:\n"
       "   Edit the configuration file \"hoststats.conf\" and especially the line\n"
       "   \"detection-log\" with the folder path to save the event log.\n"
-      "   Use FlowDirection or DedupAggregator output as an input for this module.\n"
+      "   (optional) Use FlowDirection or DedupAggregator output as an input for \n"
+      "              this module.\n"
       "   Run module: ./hoststatsnemea -i \"tt;localhost,12345;12346,5\"\n"
       "\n"
       "TRAP Interfaces:\n"
@@ -110,7 +111,8 @@ trap_module_info_t module_info = {
       "      (port-flowdir = 1: \"<COLLECTOR_FLOW>\")\n"
       "      Note: port-flowdir is a parameter in \"hoststats.conf\"\n"
       "             \n"
-      "   Outputs: 1 (\"<WARDEN_REPORT>\") \n",
+      "   Outputs: 1 (\"EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,\n"
+      "                DST_PORT,PROTOCOL,EVENT_SCALE,NOTE\") \n",
    1, // Number of input TRAP interfaces
    1, // Number of output TRAP interfaces
 };
@@ -221,7 +223,8 @@ int main(int argc, char *argv[])
    }
 
    /* Create UniRec template */
-   tmpl_out = ur_create_template("<WARDEN_REPORT>");
+   tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
+      "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE");
    
    if (config->getValue("port-flowdir") == "0") {
       tmpl_in = ur_create_template("<COLLECTOR_FLOW>,DIRECTION_FLAGS");
