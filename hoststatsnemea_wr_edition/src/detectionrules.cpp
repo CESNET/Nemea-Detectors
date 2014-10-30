@@ -264,9 +264,9 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
 
    if (dns_rec.out_rsp_overlimit_cnt > DNS_AMPLIF_THRESHOLD) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DNSAMP);
-      evt.addDstPort(53).addSrcAddr(addr);
+      evt.addSrcPort(53).addSrcAddr(addr);
       evt.setScale(dns_rec.out_rsp_overlimit_cnt);
-      evt.setNote("DNS amplification - attacker");
+      evt.setNote("DNS amplification - misused server");
       reportEvent(evt);
    } 
 
