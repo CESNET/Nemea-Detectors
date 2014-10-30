@@ -366,6 +366,6 @@ void load_default_values();
  * Sends notification data stored in structure unirec_tunnel_notification_t to UniRec.
  * \param[in] notification structure with data, which are send to UniRec
  */
-void send_unirec_out(unirec_tunnel_notification_t * notification)
+void send_unirec_out(unirec_tunnel_notification_t * notification);
 
  #endif /* _TUNNEL_DETECTION_DNS_ */

@@ -817,8 +817,6 @@ void send_unirec_out(unirec_tunnel_notification_t * notification)
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_NEW_DOMAIN, notification->tunnel_per_new_domain);
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_SUBDOMAIN, notification->tunnel_per_subdomain);
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_TYPE, notification->tunnel_type);
-   //ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_DOMAIN, notification->tunnel_domain);
-   printf("zkouska vypisu: %s\n",  notification->tunnel_domain);
    ur_set_from_string(notification->unirec_out, notification->detection, UR_TUNNEL_DOMAIN, notification->tunnel_domain);
 
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);

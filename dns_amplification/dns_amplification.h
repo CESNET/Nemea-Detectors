@@ -53,13 +53,15 @@
 extern "C" {
 #endif
 
-#define BYTES_MAX 5000  // max bytes of flow checked in q dividing
+#define BYTES_MAX    5000  // max bytes of flow checked in q dividing
+#define MINIMAL_RECORD_VECTOR_SIZE    10000
+
 #define PACKETS      0
-#define BYTES     1
-#define KEY    0
-#define VALUE     1
-#define ERROR     -1
-#define OK     1
+#define BYTES        1
+#define KEY          0
+#define VALUE        1
+#define ERROR        -1
+#define OK           1
 
 #define LOG_FILE_PREFIX ""
 #define LOG_FILE_SUFFIX ".log"
@@ -103,6 +105,8 @@ typedef struct config_s {
    int max_resp_flow_bytes;   /** maximal threshold for number of bytes in one flow for responses */
    int det_window;      /** length of detection window */
    int del_time;     /** length of delete window after detection */
+   uint32_t max_flow_items;     /** maximal size of vector with query/response records */
+   uint32_t flow_items_del_count;     /** count of records to erase from query/response vectors, if it's full */
 
    config_s() {
       port = 53;
@@ -122,6 +126,8 @@ typedef struct config_s {
 //    del_time = 300;
       det_window = 900;
       del_time = 300;
+      max_flow_items = 100000;
+      flow_items_del_count = 1000;
    }
 
 } config_t;
@@ -159,7 +165,9 @@ struct flow_item_t {
 struct flow_data_t {
 
    vector<flow_item_t> q;     // vector of query flows
+   uint32_t q_rem_pos;
    vector<flow_item_t> r;     // vector of response flows
+   uint32_t r_rem_pos;
    uint64_t total_bytes [4];     // total bytes of flows
    uint32_t total_packets [4];      // total packets of flows
    uint32_t total_flows [4];     // total number of flows
