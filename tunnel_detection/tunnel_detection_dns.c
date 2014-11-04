@@ -192,7 +192,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
                }
                if(found->suspision_request_tunnel != NULL && found->suspision_request_tunnel->tunnel_suspision == NULL){   
-                  found->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_request_tunnel != NULL && found->suspision_request_tunnel->tunnel_suspision != NULL){
                   prefix_tree_insert(found->suspision_request_tunnel->tunnel_suspision, packet->request_string, char_stat.length);
@@ -259,7 +259,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->request_suspision == NULL){
-                  found->suspision_response_tunnel->request_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_response_tunnel->request_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->request_suspision != NULL){
                   prefix_tree_insert(found->suspision_response_tunnel->request_suspision, packet->request_string, char_stat.length);
@@ -278,7 +278,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->txt_suspision == NULL){
-                  found->suspision_response_tunnel->txt_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_response_tunnel->txt_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->txt_suspision != NULL){
                   prefix_tree_insert(found->suspision_response_tunnel->txt_suspision, packet->txt_response, char_stat.length);
@@ -296,7 +296,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->cname_suspision == NULL){
-                  found->suspision_response_tunnel->cname_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_response_tunnel->cname_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->cname_suspision != NULL){
                   prefix_tree_insert(found->suspision_response_tunnel->cname_suspision, packet->cname_response, char_stat.length);
@@ -314,7 +314,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                }        
                if(found->suspision_response_tunnel !=NULL && found->suspision_response_tunnel->mx_suspision == NULL){
-                  found->suspision_response_tunnel->mx_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_response_tunnel->mx_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_response_tunnel !=NULL && found->suspision_response_tunnel->mx_suspision != NULL){
                   prefix_tree_insert(found->suspision_response_tunnel->mx_suspision, packet->mx_response, char_stat.length); 
@@ -332,7 +332,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
                   found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
                } 
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->ns_suspision == NULL){
-                  found->suspision_response_tunnel->ns_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+                  found->suspision_response_tunnel->ns_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
                }
                if(found->suspision_response_tunnel != NULL && found->suspision_response_tunnel->ns_suspision != NULL){
                   prefix_tree_insert(found->suspision_response_tunnel->ns_suspision, packet->ns_response, char_stat.length);
@@ -523,7 +523,7 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
          }
          //if it is first other suspision
          if(item->suspision_request_other != NULL && item->suspision_request_other->other_suspision == NULL){
-            item->suspision_request_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+            item->suspision_request_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
@@ -566,7 +566,7 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
          }
          //if it is first other suspision
          if(item->suspision_request_tunnel != NULL && item->suspision_request_tunnel->tunnel_suspision == NULL){
-            item->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+            item->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_REQUESTS ; i++){
@@ -602,7 +602,7 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
          }
          //if it is first other suspision
          if(item->suspision_response_other != NULL && item->suspision_response_other->other_suspision == NULL){
-            item->suspision_response_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.');
+            item->suspision_response_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }      
          max = 0;
          for(i = max; i < HISTOGRAM_SIZE_RESPONSE ; i++){
@@ -914,18 +914,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
       if(item->state_request_tunnel == STATE_ATTACK && item->print & REQUEST_PART_TUNNEL){
          fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
 
-         dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
+         dom =item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision ,dom, str), dom->count_of_insert);
-            dom= dom->most_used_domain_less;
+            dom= dom->domain_extension->most_used_domain_less;
          }               
          if(unirec_out != NULL){
             unirec_out->tunnel_per_new_domain = (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones);
             unirec_out->tunnel_per_subdomain =  prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION);
             unirec_out->tunnel_cnt_packet = (item->suspision_request_tunnel->tunnel_suspision->count_of_inserting);
-            dom = item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
+            dom = item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
             if(dom != NULL){
                prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
             }
@@ -946,18 +946,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             } 
             fprintf(file, "\n");
       
-            dom =item->suspision_request_other->other_suspision->list_of_most_used_domains;
+            dom =item->suspision_request_other->other_suspision->domain_extension->list_of_most_used_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }     
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_request_other->other_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_request_other->other_suspision->count_of_different_domains/(double)(item->suspision_request_other->other_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_request_other->other_suspision->count_of_inserting;
-               dom =item->suspision_request_other->other_suspision->list_of_most_used_domains;
+               dom =item->suspision_request_other->other_suspision->domain_extension->list_of_most_used_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -976,18 +976,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
       if(item->state_response_tunnel == STATE_ATTACK && item->print & RESPONSE_PART_TUNNEL){
          if(item->suspision_response_tunnel->state_type & REQUEST_STRING_TUNNEL){
             fprintf(file, "\tReponse tunnel found by request strings :\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->request_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->request_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->request_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision ,dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->request_suspision->count_of_inserting;
-               dom = item->suspision_response_tunnel->request_suspision->list_of_most_unused_domains;
+               dom = item->suspision_response_tunnel->request_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -1001,18 +1001,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          //txt
          if(item->suspision_response_tunnel->state_type & TXT_TUNNEL){
             fprintf(file, "\tReponse TXT tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->txt_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->txt_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision ,dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }   
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->txt_suspision->count_of_inserting;
-               dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+               dom =item->suspision_response_tunnel->txt_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -1026,18 +1026,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          //cname
          if(item->suspision_response_tunnel->state_type & CNAME_TUNNEL){
             fprintf(file, "\tReponse CNAME tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->cname_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->cname_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->cname_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }      
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->cname_suspision->count_of_inserting;
-               dom =item->suspision_response_tunnel->cname_suspision->list_of_most_unused_domains;
+               dom =item->suspision_response_tunnel->cname_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -1051,18 +1051,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          //ns
          if(item->suspision_response_tunnel->state_type & NS_TUNNEL){
             fprintf(file, "\tReponse NS tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->ns_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->ns_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->ns_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision ,dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }  
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->ns_suspision->count_of_inserting;
-               dom =item->suspision_response_tunnel->ns_suspision->list_of_most_unused_domains;
+               dom =item->suspision_response_tunnel->ns_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -1076,18 +1076,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          //mx
          if(item->suspision_response_tunnel->state_type & MX_TUNNEL){
             fprintf(file, "\tReponse MX tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->mx_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->mx_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->mx_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }  
             if(unirec_out != NULL){
                unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones);
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->mx_suspision->count_of_inserting;
-               dom =item->suspision_response_tunnel->mx_suspision->list_of_most_unused_domains;
+               dom =item->suspision_response_tunnel->mx_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
                   prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
                }
@@ -1104,18 +1104,18 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
          calulated_result_t result;
          calculate_statistic(item, &result);
          fprintf(file, "\tReseponse anomaly found:\tEX: %f.\tVAR: %f. \tPercent without request string %f. \tCount of responses %lu.\n", result.ex_response, result.var_response, (double)item->suspision_response_other->without_string / (double)item->suspision_response_other->packet_in_suspicion ,item->counter_response.dns_response_count);
-         dom =item->suspision_response_other->other_suspision->list_of_most_used_domains;
+         dom =item->suspision_response_other->other_suspision->domain_extension->list_of_most_used_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, str), dom->count_of_insert);
-            dom= dom->most_used_domain_less;
+            dom= dom->domain_extension->most_used_domain_less;
          }
          if(unirec_out != NULL){
             unirec_out->tunnel_per_new_domain = 0;
             unirec_out->tunnel_per_subdomain =  0;
             unirec_out->tunnel_cnt_packet = item->suspision_response_other->other_suspision->count_of_inserting;
-            dom =item->suspision_response_other->other_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_other->other_suspision->domain_extension->list_of_most_unused_domains;
             if(dom != NULL){
                prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
             }
@@ -1144,12 +1144,12 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
       if(item->state_request_tunnel == STATE_ATTACK){
          fprintf(file, "\tRequest tunnel found:\tDomains searched just once: %f.\tcount of different domains: %f.\tPercent of subdomain in most used domain %f.\tAll recorded requests: %d\n", (double)(item->suspision_request_tunnel->tunnel_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), (double)item->suspision_request_tunnel->tunnel_suspision->count_of_different_domains/(double)(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting_for_just_ones), prefix_tree_most_used_domain_percent_of_subdomains(item->suspision_request_tunnel->tunnel_suspision, DEPTH_TUNNEL_SUSPICTION) ,(item->suspision_request_tunnel->tunnel_suspision->count_of_inserting) );
 
-         dom =item->suspision_request_tunnel->tunnel_suspision->list_of_most_unused_domains;
+         dom =item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, str), dom->count_of_insert);
-            dom= dom->most_used_domain_less;
+            dom= dom->domain_extension->most_used_domain_less;
          }               
       }
       //print founded anomaly other in request
@@ -1162,12 +1162,12 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
             } 
             fprintf(file, "\n");
       
-            dom =item->suspision_request_other->other_suspision->list_of_most_used_domains;
+            dom =item->suspision_request_other->other_suspision->domain_extension->list_of_most_used_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }
          }
          else{
@@ -1180,56 +1180,56 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
       if(item->state_response_tunnel == STATE_ATTACK){
          if(item->suspision_response_tunnel->state_type & REQUEST_STRING_TUNNEL){
             fprintf(file, "\tReponse tunnel found by request strings :\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->request_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->request_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->request_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->request_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->request_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->request_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }        
          }         
          //txt
          if(item->suspision_response_tunnel->state_type & TXT_TUNNEL){
             fprintf(file, "\tReponse TXT tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->txt_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->txt_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->txt_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }        
          }
          //cname
          if(item->suspision_response_tunnel->state_type & CNAME_TUNNEL){
             fprintf(file, "\tReponse CNAME tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->cname_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->cname_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->cname_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->cname_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->cname_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->cname_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }        
          }
          //ns
          if(item->suspision_response_tunnel->state_type & NS_TUNNEL){
             fprintf(file, "\tReponse NS tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->ns_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->ns_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->ns_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->ns_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->ns_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->ns_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }        
          }  
          //mx
          if(item->suspision_response_tunnel->state_type & MX_TUNNEL){
             fprintf(file, "\tReponse MX tunnel found:\tstrings searched just once: %f.\tcount of different strings: %f.\tall requests: %d.\n", (double)(item->suspision_response_tunnel->mx_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones), (double)item->suspision_response_tunnel->mx_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->mx_suspision->count_of_inserting_for_just_ones),(item->suspision_response_tunnel->mx_suspision->count_of_inserting) );
-            dom =item->suspision_response_tunnel->mx_suspision->list_of_most_unused_domains;
+            dom =item->suspision_response_tunnel->mx_suspision->domain_extension->list_of_most_unused_domains;
             for(int i=0; i<5;i++){
                str[0]=0;
                if(dom==NULL) break;
                fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, str), dom->count_of_insert);
-               dom= dom->most_used_domain_less;
+               dom= dom->domain_extension->most_used_domain_less;
             }        
          }
       }
@@ -1239,12 +1239,12 @@ void print_founded_anomaly(char * ip_address, ip_address_t *item, FILE *file)
          calculate_statistic(item, &result);
          fprintf(file, "\tReseponse anomaly found:\tEX: %f.\tVAR: %f. \tPercent without request string %f. \tCount of responses %lu.\n", result.ex_response, result.var_response, (double)item->suspision_response_other->without_string / (double)item->suspision_response_other->packet_in_suspicion ,item->counter_response.dns_response_count);
 
-         dom =item->suspision_response_other->other_suspision->list_of_most_used_domains;
+         dom =item->suspision_response_other->other_suspision->domain_extension->list_of_most_used_domains;
          for(int i=0; i<5;i++){
             str[0]=0;
             if(dom==NULL) break;
             fprintf(file, "\t\t%s. %d\n",  prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, str), dom->count_of_insert);
-            dom= dom->most_used_domain_less;
+            dom= dom->domain_extension->most_used_domain_less;
          }
       }
    }
@@ -1734,7 +1734,7 @@ int main(int argc, char **argv)
       //read domains
       sign = fgetc(exception_file_domain);
       //initialize prefix tree
-      exception_domain_prefix_tree = prefix_tree_initialize(SUFFIX ,0,'.');
+      exception_domain_prefix_tree = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
       if(exception_domain_prefix_tree == NULL){
          fclose(exception_file_domain);
          fprintf(stderr, "Error: The exception tree could not be allocated.\n");

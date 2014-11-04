@@ -988,8 +988,7 @@ int main(int argc, char **argv)
                   }
 
                   // initialize prefix_tree
-                  hash_table_item->tree = prefix_tree_initialize(SUFFIX, 0, -1);
-
+                  hash_table_item->tree = prefix_tree_initialize(SUFFIX, 0, -1, DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_NO);
                   // check successful allocation memory
                   if (hash_table_item->tree == NULL) {
                      PRINT_STD_LOG("hash_table_item->tree(voip_packet_type:", inttostr(voip_packet_type), "), prefix_tree_initialize: error memory allocation\n");
