@@ -38,6 +38,15 @@ AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
+		[enable local compilation without system installed Nemea libraries, default: no]),
+[case "${enableval}" in
+	yes) repobuild=true ;;
+	no)  repobuild=false ;;
+	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
+esac], [repobuild=false])
+
+
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
 		[enable debugging, default: no]),
 [case "${enableval}" in
@@ -45,10 +54,9 @@ AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
 	no)  debug=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
 esac], [debug=false])
-
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
-if test -z "$TRAPLIB"; then
+if test "${repobuild}" = "false" -a -z "$TRAPLIB"; then
 	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
 	LDFLAGS="$LIBTRAP_LDFLAGS $LDFLAGS"
 	LIBS="$LIBTRAP_LIBS $LIBS"
@@ -71,7 +79,7 @@ if test -z "$TRAPLIB"; then
 	fi
 fi
 
-if test -z "$UNIRECLIB"; then
+if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
 	PKG_CHECK_MODULES([UNIREC], [unirec], [UNIRECLIB="yes"], AC_MSG_WARN([UNIREC was not found by pkg-config]))
 	LDFLAGS="$UNIREC_LDFLAGS $LDFLAGS"
 	LIBS="$UNIREC_LIBS $LIBS"
@@ -95,7 +103,7 @@ if test -z "$UNIRECLIB"; then
 	fi
 fi
 
-if test -z "$NEMEACOMMONLIB"; then
+if test "${repobuild}" = "false" -a -z "$NEMEACOMMONLIB"; then
 	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
 	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
 	LIBS="$NEMEACOMMON_LIBS $LIBS"

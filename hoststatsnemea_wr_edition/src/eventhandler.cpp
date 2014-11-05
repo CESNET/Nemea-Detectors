@@ -127,10 +127,6 @@ void reportEvent(const Event& event)
    }
    
    // Send event report to TRAP output interface (HALF_WAIT)
-   // Skip victims 
-   if (event.src_addr.empty()) {
-      return;
-   }
    
    // Allocate memory for Warden report
    const uint16_t WT_NOTE_SIZE = 200;
@@ -140,60 +136,49 @@ void reportEvent(const Event& event)
       return;
    }
    
-   // Convert EVENT_TYPE to WARDEN_TYPE
-   uint8_t w_type = UR_WT_OTHER;
-   switch(event.type) {
-      case UR_EVT_T_PORTSCAN:
-      case UR_EVT_T_PORTSCAN_H:
-      case UR_EVT_T_PORTSCAN_V:
-         w_type = UR_WT_PORTSCAN;
-         break;
-         
-      case UR_EVT_T_DOS:
-      case UR_EVT_T_SYNFLOOD:
-      case UR_EVT_T_DNSAMP:
-         w_type = UR_WT_DOS;
-         break;
+   // TIMESTAMPS AND EVENT TYPE
+   ur_set(tmpl_out, rec, UR_EVENT_TYPE, event.type);
+   ur_set(tmpl_out, rec, UR_TIME_FIRST, ur_time_from_sec_msec(event.time_first,0));
+   ur_set(tmpl_out, rec, UR_TIME_LAST, ur_time_from_sec_msec(event.time_last, 0));
 
-      case UR_EVT_T_BRUTEFORCE:
-         w_type = UR_WT_BRUTEFORCE;
-         break;
-         
-      default:
-         w_type = UR_WT_OTHER;
-         break;
-   }
-   
-   
-   // WARDEN_REPORT = "DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,NOTE"
-   
-   // DETECTION_TIME
-   ur_set(tmpl_out, rec, UR_DETECTION_TIME, ur_time_from_sec_msec(event.time_first,0));
-   
-   // WARDEN_TYPE
-   ur_set(tmpl_out, rec, UR_WARDEN_TYPE, w_type);
-   
-   // SRC_IP
-   ur_set(tmpl_out, rec, UR_SRC_IP, event.src_addr.front());
-   
-   // PROTOCOL
-   if (!event.proto.empty()) {
-      ur_set(tmpl_out, rec, UR_PROTOCOL, event.proto.front());
+   // SRC IP ADDRESS
+   if (!event.src_addr.empty()) {
+      ur_set(tmpl_out, rec, UR_SRC_IP, event.src_addr.front());
    } else {
-      // Unknown protocol
-      ur_set(tmpl_out, rec, UR_PROTOCOL, 255);
+      ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_int(0));
    }
-   
+
+   // DST IP ADDRESS
+   if (!event.dst_addr.empty()) {
+      ur_set(tmpl_out, rec, UR_DST_IP, event.dst_addr.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_DST_IP, ip_from_int(0));
+   }
+
+   // SRC PORT
+   if (!event.src_port.empty()) {
+      ur_set(tmpl_out, rec, UR_SRC_PORT, event.src_port.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_SRC_PORT, 0);
+   }
+
    // DST PORT
    if (!event.dst_port.empty()) {
       ur_set(tmpl_out, rec, UR_DST_PORT, event.dst_port.front());
    } else {
       ur_set(tmpl_out, rec, UR_DST_PORT, 0);
    }
-   
-   // EVENT_SCALE
+
+   // PROTOCOL
+   if (!event.proto.empty()) {
+      ur_set(tmpl_out, rec, UR_PROTOCOL, event.proto.front());
+   } else {
+      ur_set(tmpl_out, rec, UR_PROTOCOL, 0);
+   }
+
+   // EVENT SCALE
    ur_set(tmpl_out, rec, UR_EVENT_SCALE, event.scale);
-   
+
    // NOTE
    int offset = snprintf((char *) rec + ur_rec_static_size(tmpl_out), 
       WT_NOTE_SIZE, event.note.c_str());

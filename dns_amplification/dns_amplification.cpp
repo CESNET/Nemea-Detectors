@@ -68,7 +68,6 @@ extern "C" {
 }
 #endif
 #include <unirec/unirec.h>
-#include "../../unirec/ipaddr.h"
 #include "dns_amplification.h"
 
 //#define DEBUG
@@ -498,10 +497,16 @@ int main (int argc, char** argv) {
             config.max_flow_items = atoi (optarg);
             break;
          default:
-            fprintf(stderr, "Error: Invalid arguments.\n");
+            cerr <<  "Error: Invalid arguments." << endl;
             trap_finalize();
             return ERROR;
       }
+   }
+
+   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE || config.max_flow_items < config.flow_items_del_count){
+      cerr << "Error: Wrong record vector(s) settings." << endl;
+      trap_finalize();
+      return ERROR;
    }
 
    if (trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK){
@@ -522,7 +527,7 @@ int main (int argc, char** argv) {
 
    // check created templates
    if ((unirec_in == NULL) || (unirec_out == NULL)) {
-      fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+      cerr << "Error: Invalid UniRec specifier." << endl;
       trap_finalize();
       return ERROR;
    }
@@ -530,7 +535,7 @@ int main (int argc, char** argv) {
    // prepare detection record
    void *detection = ur_create(unirec_out, 0);
    if (detection == NULL) {
-      fprintf(stderr,"Error: No memory available for detection record. Unable to continue.\n");
+      cerr << "Error: No memory available for detection record. Unable to continue." << endl;
       ur_free_template(unirec_in);
       ur_free_template(unirec_out);
       ur_free(detection);
@@ -550,8 +555,6 @@ int main (int argc, char** argv) {
    // ***** Main processing loop *****
    while (!stop) {
       // retrieve data from server
-//      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
-//      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       ret = trap_recv(0, &data, &data_size);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
@@ -560,7 +563,8 @@ int main (int argc, char** argv) {
          if (data_size <= 1) { // end of data
             break;
          } else { // data corrupted
-            fprintf(stderr, "ERROR: Wrong data size. Expected: %lu Recieved: %lu.", ur_rec_static_size(unirec_in), data_size);
+            cerr << "ERROR: Wrong data size. Expected: " <<  ur_rec_static_size(unirec_in);
+            cerr << ", recieved: " << data_size << "." << endl;
             break;
          }
       }
@@ -573,15 +577,15 @@ int main (int argc, char** argv) {
       flow_key_t actual_key;
 
       // check if src or dst port is expected, otherwise next flow
-      if (src_port == config.port) {
-         qr = BOOL_RESPONSE;
-         actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
-         actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
-      } else if (dst_port == config.port) {
+      if (dst_port == config.port) {
          qr = BOOL_QUERY;
          actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
          actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
-      } else {
+      } else if (src_port == config.port) {
+         qr = BOOL_RESPONSE;
+         actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
+         actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
+      } else  {
          continue;
       }
 
@@ -605,37 +609,41 @@ int main (int argc, char** argv) {
          i.packets = ur_get(unirec_in, data, UR_PACKETS);
 
          // add new flow
-         if (qr == BOOL_RESPONSE){
-            it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
-            it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
-            it->second.total_flows[RESPONSE] += 1;
-
-            it->second.r.push_back(i);
-
-            if (it->second.r.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[RESPONSE] -= del->bytes;
-                  it->second.total_packets[RESPONSE] -= del->packets;
-                  it->second.total_flows[RESPONSE] -= 1;
-
-                  del = it->second.r.erase(del);
-               }
-            }
-         } else {
+         if (qr == BOOL_QUERY){
             it->second.total_bytes[QUERY] += ur_get(unirec_in, data, UR_BYTES);
             it->second.total_packets[QUERY] += ur_get(unirec_in, data, UR_PACKETS);
             it->second.total_flows[QUERY] += 1;
 
-            it->second.q.push_back(i);
-
-            if (it->second.q.size() > config.max_flow_items){
-               for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.begin() + config.flow_items_del_count; ) {
-                  it->second.total_bytes[QUERY] -= del->bytes;
-                  it->second.total_packets[QUERY] -= del->packets;
-                  it->second.total_flows[QUERY] -= 1;
-
-                  del = it->second.r.erase(del);
+            if (it->second.q.size() < config.max_flow_items){
+               it->second.q.push_back(i);
+            } else {
+               if (it->second.q_rem_pos == 0){
+                  it->second.q.reserve(config.max_flow_items);
                }
+//               it->second.total_bytes[QUERY] -=  it->second.q[it->second.q_rem_pos].bytes;
+//               it->second.total_packets[QUERY] -=  it->second.q[it->second.q_rem_pos].packets;
+//               it->second.total_flows[QUERY] -= 1;
+
+               it->second.q[it->second.q_rem_pos] = i;
+               it->second.q_rem_pos = (it->second.q_rem_pos + 1) % config.max_flow_items;
+            }
+         } else {
+            it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
+            it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
+            it->second.total_flows[RESPONSE] += 1;
+
+            if (it->second.r.size() < config.max_flow_items){
+               it->second.r.push_back(i);
+            } else {
+               if (it->second.r_rem_pos == 0){
+                  it->second.r.reserve(config.max_flow_items);
+               }
+//               it->second.total_bytes[RESPONSE] -= it->second.r[it->second.r_rem_pos].bytes;
+//               it->second.total_packets[RESPONSE] -= it->second.r[it->second.r_rem_pos].packets;
+//               it->second.total_flows[RESPONSE] -= 1;
+
+               it->second.r[it->second.r_rem_pos] = i;
+               it->second.r_rem_pos = (it->second.r_rem_pos + 1) % config.max_flow_items;
             }
          }
 
@@ -678,7 +686,6 @@ int main (int argc, char** argv) {
                   } //if (det. - cond2)
                } //if (det. - cond1)
             }
-
             /// Report event >>>
             if (report_this){
 
@@ -786,36 +793,23 @@ int main (int argc, char** argv) {
             for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
                //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
                if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-                  it->second.total_bytes[QUERY] -= del->bytes;
-                  it->second.total_packets[QUERY] -= del->packets;
-                  it->second.total_flows[QUERY] -= 1;
                   del = it->second.q.erase(del);
+                  it->second.q_rem_pos = 0;
                } else {
                   ++del;
                }
             }
-            // store counters for data, which was reported and which is still in history
-            it->second.total_bytes[Q_REPORTED] = it->second.total_bytes[QUERY];
-            it->second.total_packets[Q_REPORTED] = it->second.total_packets[QUERY];
-            it->second.total_flows[Q_REPORTED] = it->second.total_flows[QUERY];
 
             // delete flows from responses
             for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
                //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
                if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
-                  it->second.total_bytes[RESPONSE] -= del->bytes;
-                  it->second.total_packets[RESPONSE] -= del->packets;
-                  it->second.total_flows[RESPONSE] -= 1;
                   del = it->second.r.erase(del);
+                  it->second.r_rem_pos = 0;
                } else {
                   ++del;
                }
             }
-            // store counters for data, which was reported and which is still in history
-            it->second.total_bytes[R_REPORTED] = it->second.total_bytes[RESPONSE];
-            it->second.total_packets[R_REPORTED] = it->second.total_packets[RESPONSE];
-            it->second.total_flows[R_REPORTED] = it->second.total_flows[RESPONSE];
-
 
             if (it->second.r.empty() && it->second.q.empty()){
                model.erase(it);
@@ -823,19 +817,41 @@ int main (int argc, char** argv) {
                // determine new first time of key was spotted
                ur_time_t min_time = ur_get(unirec_in, data, UR_TIME_FIRST);
 
+               it->second.total_bytes[QUERY] = 0;
+               it->second.total_packets[QUERY] = 0;
+               it->second.total_flows[QUERY] = 0;
                for (vector<flow_item_t>::iterator it_min = it->second.q.begin(); it_min != it->second.q.end(); it_min++) {
+                  it->second.total_bytes[QUERY] += it_min->bytes;
+                  it->second.total_packets[QUERY] += it_min->packets;
+                  it->second.total_flows[QUERY] += 1;
                   if (it_min->t < min_time) {
                      min_time = it_min->t;
                   }
                }
 
+               it->second.total_bytes[RESPONSE] = 0;
+               it->second.total_packets[RESPONSE] = 0;
+               it->second.total_flows[RESPONSE] = 0;
                for (vector<flow_item_t>::iterator it_min = it->second.r.begin(); it_min != it->second.r.end(); it_min++) {
+                  it->second.total_bytes[RESPONSE] += it_min->bytes;
+                  it->second.total_packets[RESPONSE] += it_min->packets;
+                  it->second.total_flows[RESPONSE] += 1;
                   if (it_min->t < min_time) {
                      min_time = it_min->t;
                   }
                }
 
                it->second.first_t = min_time;
+
+               // store counters for data, which was reported and which is still in history
+               it->second.total_bytes[Q_REPORTED] = it->second.total_bytes[QUERY];
+               it->second.total_packets[Q_REPORTED] = it->second.total_packets[QUERY];
+               it->second.total_flows[Q_REPORTED] = it->second.total_flows[QUERY];
+
+               // store counters for data, which was reported and which is still in history
+               it->second.total_bytes[R_REPORTED] = it->second.total_bytes[RESPONSE];
+               it->second.total_packets[R_REPORTED] = it->second.total_packets[RESPONSE];
+               it->second.total_flows[R_REPORTED] = it->second.total_flows[RESPONSE];
             }
          } //if (time > detection_window)
          /// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<---- Detection ----
@@ -848,6 +864,8 @@ int main (int argc, char** argv) {
          d.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
          d.last_logged = 0;
          d.identifier = 0;
+         d.q_rem_pos = 0;
+         d.r_rem_pos = 0;
 
          // create flow item
          flow_item_t i;
