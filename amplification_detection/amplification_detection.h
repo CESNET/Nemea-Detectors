@@ -1,6 +1,6 @@
 /**
- * \file dns_amplification.h
- * \brief Nemea module for detection of DNS amplification attacks based on NetFlow - header file
+ * \file amplification_detection.h
+ * \brief Nemea module for detection of amplification attacks based on NetFlow - header file
  * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 25.10.2013
  */
@@ -46,8 +46,8 @@
 #include <vector>
 #include <map>
 
-#ifndef SIMPLE_DNSAMP_DETECTOR_H
-#define SIMPLE_DNSAMP_DETECTOR_H
+#ifndef SIMPLE_AMPLIF_DETECTOR_H
+#define SIMPLE_AMPLIF_DETECTOR_H
 
 #ifdef __cplusplus
 extern "C" {

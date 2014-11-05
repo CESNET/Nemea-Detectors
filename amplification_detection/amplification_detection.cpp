@@ -1,6 +1,6 @@
 /**
- * \file dns_amplification.cpp
- * \brief Nemea module for detection of DNS amplification attacks based on NetFlow
+ * \file amplification_detection.cpp
+ * \brief Nemea module for detection of amplification attacks based on NetFlow
  * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 25.10.2013
  */
@@ -68,16 +68,16 @@ extern "C" {
 }
 #endif
 #include <unirec/unirec.h>
-#include "dns_amplification.h"
+#include "amplification_detection.h"
 
 //#define DEBUG
 
 using namespace std;
 
 trap_module_info_t module_info = {
-    (char *) "NetFlow DNS Amplification detection module", // Module name
+    (char *) "NetFlow Amplification detection module", // Module name
     // Module description
-    (char *) "This module detects DNS Amplification attacks from NetFlow data\n"
+    (char *) "This module detects amplification attacks from NetFlow data\n"
     "It is based on the flow's analysis of incoming and outgoing packets and bytes.\n"
     "Detection is triggered always when certain time window of src and dst ip is collected.\n"
     "Interfaces:\n"
