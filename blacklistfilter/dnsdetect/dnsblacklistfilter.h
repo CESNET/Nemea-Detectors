@@ -3,10 +3,11 @@
  * \brief Main module for DNSBlackListDetector -- header file.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
+ * \date 2014
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
