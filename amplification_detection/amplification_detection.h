@@ -107,6 +107,7 @@ typedef struct config_s {
    int det_window;      /** length of detection window */
    int del_time;     /** length of delete window after detection */
    uint32_t max_flow_items;     /** maximal size of vector with query/response records */
+   uint32_t flow_items_del_count;     /** count of records to erase from query/response vectors, if it's full */
 
    config_s() {
       port = 53;
@@ -125,6 +126,7 @@ typedef struct config_s {
       det_window = 900;
       del_time = 300;
       max_flow_items = 100000;
+      flow_items_del_count = 1000;
    }
 
 } config_t;
