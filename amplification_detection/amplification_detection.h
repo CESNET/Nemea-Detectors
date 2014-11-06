@@ -1,7 +1,8 @@
 /**
  * \file amplification_detection.h
  * \brief Nemea module for detection of amplification attacks based on NetFlow - header file
- * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
+ * \author Michal Kovacik <ikovacik@fit.vutbr.cz>
+ * \author Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 25.10.2013
  */
 
@@ -106,7 +107,6 @@ typedef struct config_s {
    int det_window;      /** length of detection window */
    int del_time;     /** length of delete window after detection */
    uint32_t max_flow_items;     /** maximal size of vector with query/response records */
-   uint32_t flow_items_del_count;     /** count of records to erase from query/response vectors, if it's full */
 
    config_s() {
       port = 53;
@@ -122,12 +122,9 @@ typedef struct config_s {
       max_quer_flow_bytes = 40000;
       max_resp_flow_packets = 1000;
       max_resp_flow_bytes = 100000;
-//    det_window = 3600;
-//    del_time = 300;
       det_window = 900;
       del_time = 300;
       max_flow_items = 100000;
-      flow_items_del_count = 1000;
    }
 
 } config_t;
