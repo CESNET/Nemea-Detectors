@@ -41,98 +41,63 @@
  *
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <ctype.h>
+#include <libtrap/trap.h>
+#include <unirec/unirec.h>
 #include <prefix_tree.h>
+#include <nemea-common.h>
+#include "configuration.h"
+#include "cache_node_no_attack.h"
+#include "output.h"
+
 
 #ifndef VOIP_FRAUD_DETECTION_H
 #define VOIP_FRAUD_DETECTION_H
 
 /** \brief Version of module. */
-#define MODULE_VERSION "0.0.2"
-
-/** \brief UniRec input template definition. */
-#define UNIREC_INPUT_TEMPLATE "<COLLECTOR_FLOW>,<VOIP>"
+#define MODULE_VERSION "0.0.3"
 
 /** \brief Enable debug mode. */
 #define DEBUG
 
-/** \brief Enable testing mode. */
+/** \brief Enable testing debug mode. */
 #define TEST_DEBUG
 
-/** \brief Default value of max_prefix_length.
- * If parameter max_prefix_length not set at startup of module, then this default value is used. */
-#define DEFAULT_MAX_PREFIX_LENGTH 4
-
-/** \brief Default value of min_lenght_called_number.
- * If parameter min_lenght_called_number not set at startup of module, then this default value is used. */
-#define DEFAULT_MIN_LENGTH_CALLED_NUMBER 0
-
-/** \brief Default value of prefix_examination_detection_threshold.
- * If parameter prefix_examination_detection_threshold not set at startup of module, then this default value is used. */
-#define DEFAULT_PREFIX_EXAMINATION_DETECTION_THRESHOLD 10
-
-/** \brief Default value of detection_interval.
- * If parameter detection_interval not set at startup of module, then this default value is used. */
-#define DEFAULT_DETECTION_INTERVAL 10
-
-/** \brief Default value of detection_pause_after_attack.
- * If parameter detection_pause_after_attack not set at startup of module, then this default value is used. */
-#define DEFAULT_DETECTION_PAUSE_AFTER_ATTACK 60
-
-/** \brief Default size of hashing table for storing IP addresses. */
-#define HASH_TABLE_IP_SIZE 100000
-
-/** \brief Definition ID of detection states. */
+/** \brief Definition ID of detection state NO_ATTACK. */
 #define STATE_NO_ATTACK 0
+
+/** \brief Definition ID of detection state ATTACK. */
 #define STATE_ATTACK_DETECTED 1
 
-/** \brief Maximum length of SIP_FROM. */
-#define MAX_LENGTH_SIP_FROM 100
+/** \brief Last used Event ID of attack detection. */
+uint32_t last_event_id;
 
-/** \brief Maximum length of SIP_TO. */
-#define MAX_LENGTH_SIP_TO 100
+/** \brief UniRec input and output template. */
+ur_template_t *ur_template_in, *ur_template_out;
 
-/** \brief Maximum length of Call-ID. */
-#define MAX_LENGTH_CALL_ID 80
+/** \brief Pointer to received data from trap_recv(). */
+const void *in_rec;
 
-/** \brief Maximum number of Call-ID item in storage. */
-#define CALL_ID_STORAGE_SIZE 20
-
-/** \brief Length of buffer in inttostr() function. */
-#define LENGTH_BUFFER_INTTOSTR 10
-
-/** \brief Maximum string length of node in prefix tree. */
-#define MAX_STRING_PREFIX_TREE_NODE 100
-
-/** \brief Maximum size of cache_no_attack. */
-#define MAX_CACHE_NO_ATTACK_SIZE 100
-
-/** \brief Prefix of error message. */
-#define LOG_ERROR_PREFIX "ERR_voip_fraud_detection#"
-
-/** \brief Modul_configuration structure.
- * It is used for saving modul configuration.
- */
-struct modul_configuration_struct {
-   unsigned int max_prefix_length;
-   unsigned int min_length_called_number;
-   unsigned int prefix_examination_detection_threshold;
-   unsigned int detection_interval;
-   unsigned int detection_pause_after_attack;
-   char * log_file;
-};
-
-/** \brief Definition of modul_configuration (modul_configuration_struct).
- */
-struct modul_configuration_struct modul_configuration;
+/** \brief Detection record for sending detection events to database. */
+void * detection_record;
 
 /** \brief IP item structure.
  * It contains a tree pointer and last check time of detection.
  */
 typedef struct ip_item_struct {
    prefix_tree_t * tree; /**< Pointer to prefix_tree. */
+   time_t first_invite_request; /**< Last check time of detection. */
    time_t time_last_check; /**< Last check time of detection. */
+   time_t time_last_communication; /**< Last communication time of the IP address. */
    time_t time_attack_detected_prefix_examination; /**< Last detection of prefix examination attack. */
-   unsigned int attack_count; /**< Number of attacks for the IP. */
+   char * attack_sip_to; /**< One of SIP_TO that was evaluated as prefix examination in the last attack. */
+   uint32_t attack_event_id; /**< Event ID of the last attack. */
+   uint16_t attack_prefix_length; /**< Prefix length of attack_sip_to (in the last prefix examination attack). */
+   unsigned int detection_event_count; /**< Number of detected attack events for the IP. */
+   unsigned int attack_detected_count; /**< Number of detected attacks for the IP. */
 } ip_item;
 
 /** \brief Node data structure.
@@ -163,14 +128,15 @@ typedef struct node_data_struct {
 /** \brief Global module statistic structure.
  */
 struct global_module_statistic_struct {
-   unsigned int num_attack_detected;
-   unsigned long long num_invite_flow;
-   unsigned int num_invalid_sip_identifier;
+   unsigned int detection_event_count;
+   unsigned int attack_detected_count;
+   unsigned long int received_invite_flow_count;
+   unsigned int invalid_sip_identifier_count;
 };
 
 /** \brief Definition and initialization of global_module_statistic (global_module_statistic_struct).
  */
-struct global_module_statistic_struct global_module_statistic = {0, 0, 0};
+struct global_module_statistic_struct global_module_statistic = {0, 0, 0, 0};
 
 #ifdef DEBUG
 
@@ -178,17 +144,17 @@ struct global_module_statistic_struct global_module_statistic = {0, 0, 0};
  * It contains global statistic about SIP protocol processed by module.
  */
 struct global_sip_statistic_struct {
-   unsigned int ok_count;
-   unsigned int ack_count;
-   unsigned int cancel_count;
-   unsigned int bye_count;
-   unsigned int invite_count;
-   unsigned int trying_count;
-   unsigned int ringing_count;
-   unsigned int service_ok_count;
-   unsigned int forbidden_count;
-   unsigned int unauthorized_count;
-   unsigned int proxy_auth_req_count;
+   unsigned long int ok_count;
+   unsigned long int ack_count;
+   unsigned long int cancel_count;
+   unsigned long int bye_count;
+   unsigned long int invite_count;
+   unsigned long int trying_count;
+   unsigned long int ringing_count;
+   unsigned long int service_ok_count;
+   unsigned long int forbidden_count;
+   unsigned long int unauthorized_count;
+   unsigned long int proxy_auth_req_count;
 };
 
 /** \brief Definition and initialization of global_sip_statistic (global_sip_statistic_struct).
@@ -197,68 +163,81 @@ struct global_sip_statistic_struct global_sip_statistic = {0, 0, 0, 0, 0, 0, 0, 
 
 #endif
 
-/** \brief Detection statistic structure.
+/** \brief Detection of attack structure.
  */
-struct detection_statistic_struct {
-   unsigned int invite;
-   unsigned int ack;
-   unsigned int cancel;
-   unsigned int bye;
-   unsigned int ok;
-   unsigned int trying;
-   unsigned int ringing;
-   unsigned int service_ok;
-   unsigned int forbidden;
-   unsigned int unauthorized;
-   unsigned int rtcp_data;
-   unsigned int proxy_auth_req;
+struct detection_struct {
+   uint32_t invite;
+   uint32_t ack;
+   uint32_t cancel;
+   uint32_t bye;
+   uint32_t ok;
+   uint32_t unique_ok;
+   uint32_t trying;
+   uint32_t ringing;
+   uint32_t service_ok;
+   uint32_t forbidden;
+   uint32_t unauthorized;
+   uint32_t rtcp_data;
+   uint32_t proxy_auth_req;
+
+   time_t time; /**< Save time of start detection process for the IP address. */
+   char sip_to[MAX_STRING_PREFIX_TREE_NODE + 1]; /**< One of SIP_TO that was evaluated as prefix examination in the attack. */
+   uint32_t prefix_examination_count; /**< Number of unique SIP_TO that was evaluated as prefix examination attack. */
+   prefix_tree_inner_node_t * report_node; /**< Pointer to one node from prefix examination attack for reporting. */
+   uint16_t report_prefix_length; /**< Prefix length of report_node (in prefix examination attack). */
 };
 
 /** \brief Definition of detection_statistic (detection_statistic_struct).
  */
-struct detection_statistic_struct detection_statistic;
+struct detection_struct detection;
 
-/** \brief Function macro for printing to standard output with actual datetime.
- * Unlimited input parameters are printed to standard output with actual datetime at the beginning of text.
+
+/** \brief Load Event ID counter from defined file.
+ * \param[in] file definition of file path.
  */
-#define PRINT_STD(...) write_std(get_actual_time_string(),";", __VA_ARGS__, NULL)
+void load_event_id(char * file);
 
-/** \brief Function macro for printing to log file with actual datetime.
- * Unlimited input parameters are printed to log files with actual datetime at the beginning of text.
+/** \brief Save Event ID counter to defined file.
+ * \param[in] file definition of file path.
  */
-#define PRINT_LOG(...) write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+void save_event_id(char * file);
 
-/** \brief Function macro for printing to standard output and log file at the same time with actual datetime .
- * Unlimited input parameters are printed to standard output and log file at the same time with actual
- * datetime at the beginning of text.
+/** \brief Initialization of node_data.
+ * \param[in] node Determine node to initializes its node_data.
+ * \return Return 0 if node_data are successfully initialized, -1 if memory error occurs.
  */
-#define PRINT_STD_LOG(...) write_std(get_actual_time_string(),";", __VA_ARGS__, NULL);write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+int check_initialize_node_data(prefix_tree_domain_t * prefix_tree_node);
 
-/** \brief Function macro for printing to standard output and log file at the same time.
- * Unlimited input parameters are printed to standard output and log file at the same time with actual
- * datetime at the beginning of text.
+/** \brief Find if Call-ID exists in node_data.
+ * \param[in] node Pointer to node, in which is done searching.
+ * \param[in] call_id Call_id to search in node_data.
+ * \param[in] call_id_len Length of call_id string to search.
+ * \return Return 1 if Call-ID exists in node_data, 0 otherwise.
  */
-#define PRINT_STD_LOG_NOTDATETIME(...) write_std(__VA_ARGS__, NULL);write_to_log(__VA_ARGS__, NULL)
-
-
-/** \brief Return actual date and time in system default format.
- * \return String with actual date and time.
- */
-char * get_actual_time_string();
-
-
-char * inttostr(int integer);
-void print_error(int error_number, char * error_description);
-void write_to_log(char * str, ...);
-void write_std(char * str, ...);
-int cache_no_attack_exists(prefix_tree_inner_node_t * node);
-void cache_no_attack_save(prefix_tree_inner_node_t * node);
-void cache_no_attack_clear();
 int call_id_node_data_exists(prefix_tree_domain_t * prefix_tree_node, char * call_id, int call_id_len);
-void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call_id, int call_id_len);
-int check_initialize_node_data(prefix_tree_domain_t * prefix_tree_node, uint8_t voip_packet_type);
-unsigned int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, int sum_prefix_down);
 
+/** \brief Save Call-ID to node_data.
+ * \param[in] node Pointer to node to save node_data.
+ * \param[in] call_id Call_id to save in node_data.
+ * \param[in] call_id_len Length of call_id string to save.
+ */
+void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call_id, int call_id_len);
+
+/** \brief Check and free memory, that wasn't used for long time or exceeds limit of items (memory management of module).
+ * \param[in] hash_table Pointer to hash table.
+ */
+void check_and_free_module_memory(cc_hash_table_v2_t * hash_table);
+
+/** \brief Reset detection statistics used to count SIP requests and responses. */
+void reset_detection_statistics();
+
+/** \brief Function to thorough count of prefix detection minus value and save information about attack to detection_struct.
+ * \param[in] tree ...
+ * \param[in] node ...
+ * \param[in] sum_prefix_down ...
+ * \return Return value for decrementing of basic calculation prefix_sum_count.
+ */
+unsigned int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down);
 
 /** \brief Cut SIP identifier from input string
  * Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' + string after it.
