@@ -3,7 +3,8 @@
  * \brief Nemea module for detection of amplification attacks based on NetFlow
  * \author Michal Kovacik <ikovacik@fit.vutbr.cz>
  * \author Pavel Krobot <xkrobo01@cesnet.cz>
- * \date 25.10.2013
+ * \date 2013
+ * \date 2014
  */
 
 /*
@@ -511,7 +512,7 @@ int main (int argc, char** argv) {
       }
    }
 
-   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE || config.max_flow_items < config.flow_items_del_count){
+   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE){
       cerr << "Error: Wrong record vector(s) settings." << endl;
       trap_finalize();
       return ERROR;
