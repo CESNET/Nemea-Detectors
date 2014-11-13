@@ -1,13 +1,11 @@
 /**
- * \file urlblacklistfilter.h
- * \brief URL blacklist detector for Nemea -- header file
- * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
+ * \file cache_node_no_attack.h
+ * \brief VoIP fraud detection module - cache_node_no_attack - header file
+ * \author Lukas Truxa <truxaluk@fit.cvut.cz>
  * \date 2014
  */
-
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -43,71 +41,37 @@
  *
  */
 
-#ifndef URLBLACKLISTFILTER_H
-#define URLBLACKLISTFILTER_H
+#include <prefix_tree.h>
+#include "configuration.h"
 
-#include <string>
-#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
+#define VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
 
-#include <unirec/unirec.h>
-#include <nemea-common.h>
+// testing
+extern int test_cache_hit;
+extern int test_cache_not_hit;
+extern int test_cache_save;
+extern int test_cache_delete_successor;
 
-/**
- * Constant returned if everything is ok.
+/** \brief Storage of cache_node_no_attack. */
+prefix_tree_inner_node_t * cache_node_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
+
+/** \brief Size of cache_node_no_attack. */
+extern int cache_node_no_attack_size;
+
+/** \brief Find if node is verified for no attack by cache.
+ * \param[in] node prefix_tree_inner_node_t* for finding in cache.
+ * \return Return 1 if node exists in cache, 0 otherwise.
  */
-#define ALL_OK 0
+int cache_node_no_attack_exists(prefix_tree_inner_node_t * node);
 
-/**
- * Initial size of the blacklist.
+/** \brief Save pointer of node into cache.
+ * \param[in] node prefix_tree_inner_node_t* to save in cache.
  */
-#define BLACKLIST_DEF_SIZE 50000
+void cache_node_no_attack_save(prefix_tree_inner_node_t * node);
 
-/**
- * Consatnt returned by loading function if directory cannot be accessed
- */
-#define BLIST_LOAD_ERROR -1
+/** \brief Clear cache_node_no_attack. */
+void cache_node_no_attack_clear();
 
-/**
- * Constant retuned by checking function if URL is prsent on blacklist.
- */
-#define BLACKLISTED 1
-
-/**
- * Constant retuned by checking function if URL is clear.
- */
-#define URL_CLEAR 0
-
-/**
- * Structure of item used in update operations.
- */
-typedef struct {
-    /*@{*/
-    char* url; /**< URL to update */
-    uint8_t bl; /**< Source blacklist of the URL */
-    /*@}*/
-} upd_item_t;
-
-/*
- * Function for loading source files.
- */
-int load_url(cc_hash_table_t& blacklist, const char* path);
-
-/*
- * Function for loading update files.
- */
-int load_update(std::vector<upd_item_t>& add_upd, std::vector<upd_item_t>& rm_upd, const char* path);
-
-/*
- * Function for checking records.
- */
-int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* URLBLACKLISTFILTER_H */
+#endif	/* VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H */

@@ -1,8 +1,10 @@
 /**
- * \file dns_amplification.cpp
- * \brief Nemea module for detection of DNS amplification attacks based on NetFlow
- * \author Michal Kovacik <ikovacik@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
- * \date 25.10.2013
+ * \file amplification_detection.cpp
+ * \brief Nemea module for detection of amplification attacks based on NetFlow
+ * \author Michal Kovacik <ikovacik@fit.vutbr.cz>
+ * \author Pavel Krobot <xkrobo01@cesnet.cz>
+ * \date 2013
+ * \date 2014
  */
 
 /*
@@ -68,16 +70,23 @@ extern "C" {
 }
 #endif
 #include <unirec/unirec.h>
-#include "dns_amplification.h"
+#include "amplification_detection.h"
+
+/**
+ * Use this macro to count curently saved bytes/packets/flow only - if there are
+ * more then "max_flow_items" (default 100 000) records for one pair. By default
+ * all incomming records are counted.
+ */
+//#define COUNTS_WORKING
 
 //#define DEBUG
 
 using namespace std;
 
 trap_module_info_t module_info = {
-    (char *) "NetFlow DNS Amplification detection module", // Module name
+    (char *) "NetFlow Amplification detection module", // Module name
     // Module description
-    (char *) "This module detects DNS Amplification attacks from NetFlow data\n"
+    (char *) "This module detects amplification attacks from NetFlow data\n"
     "It is based on the flow's analysis of incoming and outgoing packets and bytes.\n"
     "Detection is triggered always when certain time window of src and dst ip is collected.\n"
     "Interfaces:\n"
@@ -503,7 +512,7 @@ int main (int argc, char** argv) {
       }
    }
 
-   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE || config.max_flow_items < config.flow_items_del_count){
+   if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE){
       cerr << "Error: Wrong record vector(s) settings." << endl;
       trap_finalize();
       return ERROR;
@@ -620,9 +629,11 @@ int main (int argc, char** argv) {
                if (it->second.q_rem_pos == 0){
                   it->second.q.reserve(config.max_flow_items);
                }
-//               it->second.total_bytes[QUERY] -=  it->second.q[it->second.q_rem_pos].bytes;
-//               it->second.total_packets[QUERY] -=  it->second.q[it->second.q_rem_pos].packets;
-//               it->second.total_flows[QUERY] -= 1;
+               #ifdef COUNTS_WORKING
+               it->second.total_bytes[QUERY] -=  it->second.q[it->second.q_rem_pos].bytes;
+               it->second.total_packets[QUERY] -=  it->second.q[it->second.q_rem_pos].packets;
+               it->second.total_flows[QUERY] -= 1;
+               #endif
 
                it->second.q[it->second.q_rem_pos] = i;
                it->second.q_rem_pos = (it->second.q_rem_pos + 1) % config.max_flow_items;
@@ -638,9 +649,11 @@ int main (int argc, char** argv) {
                if (it->second.r_rem_pos == 0){
                   it->second.r.reserve(config.max_flow_items);
                }
-//               it->second.total_bytes[RESPONSE] -= it->second.r[it->second.r_rem_pos].bytes;
-//               it->second.total_packets[RESPONSE] -= it->second.r[it->second.r_rem_pos].packets;
-//               it->second.total_flows[RESPONSE] -= 1;
+               #ifdef COUNTS_WORKING
+               it->second.total_bytes[RESPONSE] -= it->second.r[it->second.r_rem_pos].bytes;
+               it->second.total_packets[RESPONSE] -= it->second.r[it->second.r_rem_pos].packets;
+               it->second.total_flows[RESPONSE] -= 1;
+               #endif
 
                it->second.r[it->second.r_rem_pos] = i;
                it->second.r_rem_pos = (it->second.r_rem_pos + 1) % config.max_flow_items;

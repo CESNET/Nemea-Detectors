@@ -1,4 +1,4 @@
-************** Simple DNS amplification detection module for NEMEA *************
+************** Simple amplification detection module for NEMEA *************
 
 
 Table of Contents
@@ -14,9 +14,9 @@ Table of Contents
 1. Module description
 =====================
 
-    Module implements simple DNS Amplification attacks detection, based
+    Module implements simple amplification attacks detection, based
 on flow's number of packets and bytes. It analyzes query and response traffic. 
-Works with NetFlow.
+Works with flow data.
 
 
 2. How it works
@@ -33,8 +33,8 @@ several thresholds specified in the section of Additional parameters. Method
 calculates histograms of different monitored data, which are used to determine
 the most occurred values.
 
-Module input:	<COLLECTOR-FLOW>
-Module output:	<AMPLIFICATION-ALERT>
+Module input:	<COLLECTOR_FLOW>
+Module output:	<AMPLIFICATION_ALERT>
 
 
 3. Detection method
@@ -99,7 +99,7 @@ interfaces correctly. Then you can specify one of the parameters listed below.
 Default values of parameters are in the brackets 
 
 Usage:
-    ./dns_amplification -i <trap_interface> <Additional parameters>
+    ./amplification_detection -i <trap_interface> <Additional parameters>
 
 Additional parameters:
     -p <port>		port used for detection (53)

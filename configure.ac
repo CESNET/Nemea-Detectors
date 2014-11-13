@@ -206,7 +206,7 @@ AC_CONFIG_FILES([Makefile
                  deduplication/Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile
-                 dns_amplification/Makefile
+                 amplification_detection/Makefile
                  email_reporter/Makefile
                  entropy_module/Makefile
                  example/Makefile

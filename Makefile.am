@@ -8,7 +8,7 @@ basic2collector \
 brute_force_detector \
 deduplication \
 delaybuffer \
-dns_amplification \
+amplification_detection \
 dns_amp_twente \
 entropy_module \
 email_reporter \
