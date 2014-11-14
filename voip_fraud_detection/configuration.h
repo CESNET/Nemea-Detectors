@@ -52,7 +52,7 @@
 
 /** \brief Default value of max_prefix_length.
  * If parameter max_prefix_length not set at startup of module, then this default value is used. */
-#define DEFAULT_MAX_PREFIX_LENGTH 4
+#define DEFAULT_MAX_PREFIX_LENGTH 10
 
 /** \brief Default value of min_lenght_called_number.
  * If parameter min_lenght_called_number not set at startup of module, then this default value is used. */
@@ -60,7 +60,7 @@
 
 /** \brief Default value of prefix_examination_detection_threshold.
  * If parameter prefix_examination_detection_threshold not set at startup of module, then this default value is used. */
-#define DEFAULT_PREFIX_EXAMINATION_DETECTION_THRESHOLD 20
+#define DEFAULT_PREFIX_EXAMINATION_DETECTION_THRESHOLD 10
 
 /** \brief Default value of detection_interval.
  * If parameter detection_interval not set at startup of module, then this default value is used. */
@@ -76,7 +76,7 @@
 
 /** \brief Default value of time_clear_data_no_communication (1209600 seconds = 14days, 604800 seconds = 7 days).
  * If parameter time_clear_data_no_communication not set at startup of module, then this default value is used. */
-#define DEFAULT_CLEAR_DATA_NO_COMMUNICATION_AFTER 604800
+#define DEFAULT_CLEAR_DATA_NO_COMMUNICATION_AFTER 1209600
 
 /** \brief Default name of event_id file. */
 #define DEFAULT_EVENT_ID_FILE "event_id"
@@ -113,6 +113,15 @@
 
 /** \brief Return code of process in case of module successfully exits. */
 #define RETURN_OK 0
+
+/** \brief Enable debug mode. */
+#define DEBUG
+
+/** \brief Enable testing debug mode. */
+#define TEST_DEBUG
+
+/** \brief Enable printing detail information about invalid SIP URI. */
+#define PRINT_DETAIL_INVALID_SIPURI
 
 /** \brief Modul_configuration structure.
  * It is used for saving modul configuration.

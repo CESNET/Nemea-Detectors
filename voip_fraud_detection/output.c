@@ -74,31 +74,45 @@ char * time_t_to_str(time_t time)
    return time_str;
 }
 
-// Convert signed integer to char array (string)
-
-char * int_to_str(int integer)
-{
-   static char string [LENGTH_BUFFER_INTTOSTR];
-   sprintf(string, "%d", integer);
-   return string;
+/** \brief Macro to generating function for converting to char array (string). */
+#define GENERATE_FUNCTION_CONVERT_TO_STR(NAME_FUNCTION, VARIABLE_TYPE, FORMAT) char * NAME_FUNCTION(VARIABLE_TYPE input) \
+{ \
+   static char NAME_FUNCTION_string [LENGTH_BUFFER_INTTOSTR]; \
+   sprintf(NAME_FUNCTION_string, FORMAT, input); \
+   return NAME_FUNCTION_string; \
 }
+
+// Convert signed integer to char array (string)
+GENERATE_FUNCTION_CONVERT_TO_STR(int_to_str, int, "%d");
 
 // Convert unsigned integer to char array (string)
+GENERATE_FUNCTION_CONVERT_TO_STR(uint_to_str, unsigned int, "%u");
 
-char * uint_to_str(unsigned int integer)
+// Convert unsigned short integer to char array (string)
+GENERATE_FUNCTION_CONVERT_TO_STR(ushortint_to_str, unsigned short int, "%hu");
+
+
+// Write input strings to defined stream output (variadic function)
+
+void write_to_stream(FILE * stream, char * str, ...)
 {
-   static char string [LENGTH_BUFFER_INTTOSTR];
-   sprintf(string, "%u", integer);
-   return string;
-}
+   va_list parameters;
+   char * parameter;
 
-// Print error information on error output
+   // set first parameter
+   parameter = str;
 
-void print_error(int error_number, char * error_description)
-{
-   fprintf(stderr, LOG_ERROR_PREFIX);
-   fprintf(stderr, "%i:%s", error_number, error_description);
-   fprintf(stderr, "\n");
+   // initialization of parametres list
+   va_start(parameters, str);
+
+   // write parameters to standard output
+   while (parameter != NULL) {
+      fprintf(stream, "%s", parameter);
+      parameter = va_arg(parameters, char*);
+   }
+
+   // end using variable parameters list
+   va_end(parameters);
 }
 
 // Write input strings to log file (variadic funtion)
@@ -139,27 +153,4 @@ void write_to_log(char * str, ...)
       // end using variable parameters list
       va_end(parameters);
    }
-}
-
-// Write input strings to standard output (variadic function)
-
-void write_std(char * str, ...)
-{
-   va_list parameters;
-   char * parameter;
-
-   // set first parameter
-   parameter = str;
-
-   // initialization of parametres list
-   va_start(parameters, str);
-
-   // write parameters to standard output
-   while (parameter != NULL) {
-      printf("%s", parameter);
-      parameter = va_arg(parameters, char*);
-   }
-
-   // end using variable parameters list
-   va_end(parameters);
 }

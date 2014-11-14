@@ -52,32 +52,52 @@
 #define VOIP_FRAUD_DETECTION_OUTPUT_H
 
 /** \brief Prefix of error message. */
-#define LOG_ERROR_PREFIX "ERR_voip_fraud_detection:"
+#define ERROR_MESSAGE_PREFIX "ERR_voip_fraud_detection:"
 
-/** \brief Length of buffer in inttostr() function. */
+/** \brief Length of buffer in convert_to_str() function (int_to_str(), uint_to_str(), ...). */
 #define LENGTH_BUFFER_INTTOSTR 10
 
 /** \brief Function macro for printing to standard output with actual datetime.
  * Unlimited input parameters are printed to standard output with actual datetime at the beginning of text.
  */
-#define PRINT_STD(...) write_std(get_actual_time_string(),";", __VA_ARGS__, NULL)
+#define PRINT_OUT(...) write_to_stream(stdout, get_actual_time_string(), ";", __VA_ARGS__, NULL)
+
+/** \brief Function macro for printing to standard error output with actual datetime.
+ * Unlimited input parameters are printed to standard error output with actual datetime at the beginning of text.
+ */
+#define PRINT_ERR(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, get_actual_time_string(), ";", __VA_ARGS__, NULL)
 
 /** \brief Function macro for printing to log file with actual datetime.
  * Unlimited input parameters are printed to log files with actual datetime at the beginning of text.
  */
-#define PRINT_LOG(...) write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+#define PRINT_LOG(...) write_to_log(get_actual_time_string(), ";", __VA_ARGS__, NULL)
 
-/** \brief Function macro for printing to standard output and log file at the same time with actual datetime .
+/** \brief Function macro for printing to standard output and log file at the same time with actual datetime.
  * Unlimited input parameters are printed to standard output and log file at the same time with actual
  * datetime at the beginning of text.
  */
-#define PRINT_STD_LOG(...) write_std(get_actual_time_string(),";", __VA_ARGS__, NULL);write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+#define PRINT_OUT_LOG(...) write_to_stream(stdout, get_actual_time_string(), ";", __VA_ARGS__, NULL);write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+
+/** \brief Function macro for printing to standard error output and log file at the same time with actual datetime.
+ * Unlimited input parameters are printed to standard error output and log file at the same time with actual
+ * datetime at the beginning of text.
+ */
+#define PRINT_ERR_LOG(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, get_actual_time_string(), ";", __VA_ARGS__, NULL);write_to_log(ERROR_MESSAGE_PREFIX, get_actual_time_string(),";", __VA_ARGS__, NULL)
+
+/** \brief Function macro for printing to standard output.
+ * Unlimited input parameters are printed to standard output.
+ */
+#define PRINT_OUT_NOTDATETIME(...) write_to_stream(stdout, __VA_ARGS__, NULL)
 
 /** \brief Function macro for printing to standard output and log file at the same time.
- * Unlimited input parameters are printed to standard output and log file at the same time with actual
- * datetime at the beginning of text.
+ * Unlimited input parameters are printed to standard output and log file at the same time.
  */
-#define PRINT_STD_LOG_NOTDATETIME(...) write_std(__VA_ARGS__, NULL);write_to_log(__VA_ARGS__, NULL)
+#define PRINT_OUT_LOG_NOTDATETIME(...) write_to_stream(stdout, __VA_ARGS__, NULL);write_to_log(__VA_ARGS__, NULL)
+
+/** \brief Function macro for printing to standard error output and log file at the same time.
+ * Unlimited input parameters are printed to standard error output and log file at the same time.
+ */
+#define PRINT_ERR_LOG_NOTDATETIME(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL);write_to_log(ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL)
 
 
 /** \brief Return actual date and time in system default format.
@@ -97,16 +117,16 @@ char * int_to_str(int integer);
  */
 char * uint_to_str(unsigned int integer);
 
-/** \brief Print error information on error output.
+/** \brief Convert unsigned short integer to char array (string).
  */
-void print_error(int error_number, char * error_description);
+char * ushortint_to_str(unsigned short int integer);
+
+/** \brief Write input strings to defined stream output (variadic function).
+ */
+void write_to_stream(FILE * stream, char * str, ...);
 
 /** \brief Write input strings to log file (variadic funtion).
  */
 void write_to_log(char * str, ...);
-
-/** \brief Write input strings to standard output (variadic function).
- */
-void write_std(char * str, ...);
 
 #endif	/* VOIP_FRAUD_DETECTION_OUTPUT_H */

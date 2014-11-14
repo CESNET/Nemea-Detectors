@@ -58,19 +58,23 @@
 #define VOIP_FRAUD_DETECTION_H
 
 /** \brief Version of module. */
-#define MODULE_VERSION "0.0.3"
-
-/** \brief Enable debug mode. */
-#define DEBUG
-
-/** \brief Enable testing debug mode. */
-#define TEST_DEBUG
+#define MODULE_VERSION "0.0.4"
 
 /** \brief Definition ID of detection state NO_ATTACK. */
 #define STATE_NO_ATTACK 0
 
 /** \brief Definition ID of detection state ATTACK. */
 #define STATE_ATTACK_DETECTED 1
+
+/** \brief VOIP_PACKET_TYPE in the flow record used to request type: call oriented (defined by VoIP plugin). */
+#define VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED 3
+
+/** \brief VOIP_PACKET_TYPE in the flow record used to response type: service oriented (defined by VoIP plugin). */
+#define VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED 2
+
+/** \brief VOIP_PACKET_TYPE in the flow record used to response type: call oriented (defined by VoIP plugin). */
+#define VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED 4
+
 
 /** \brief Last used Event ID of attack detection. */
 uint32_t last_event_id;
@@ -81,7 +85,7 @@ ur_template_t *ur_template_in, *ur_template_out;
 /** \brief Pointer to received data from trap_recv(). */
 const void *in_rec;
 
-/** \brief Detection record for sending detection events to database. */
+/** \brief Detection record for sending detection events to output interface. */
 void * detection_record;
 
 /** \brief IP item structure.
@@ -244,10 +248,9 @@ unsigned int count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner
  * \param[out] output_str Pointer to result string
  * \param[in] input_str Input string.
  * \param[in,out] str_len Length of input string./Length of output string.
- * \param[in] input_description Description of input sip identifier. It is used for logging purpose.
  * \return Return 0 if sip identifier is valid, otherwise -1.
  */
-int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * str_len, char * input_description);
+int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * str_len);
 
 /** \brief Check if input string is numeric participant
  * Check if input string is numeric with allowed special char ('+','*','#') or this text part before '@' + check of minimum numeric length.
@@ -263,5 +266,13 @@ int is_numeric_participant(char * str, int str_len);
  * \return ID that indicates results of testing (STATE_NO_ATTACK or STATE_ATTACK_DETECTED).
  */
 int detect_prefix_examination(prefix_tree_t * tree, prefix_tree_inner_node_t * node);
+
+/** \brief Copy char array field from UniRec to defined string_output, update string_len and add terminating '\0' at the end of char array.
+ * \param[in] string_output Pointer for saving output char array.
+ * \param[in,out] string_len Length of saved char array (without terminating '\0')
+ * \param[in] unirec_field_id ID of UniRec field
+ * \param[in] max_length maximum length of string from UniRec field
+ */
+void get_string_from_unirec(char * string_output, int * string_len, int unirec_field_id, int max_length);
 
 #endif	/* VOIP_FRAUD_DETECTION_H */
