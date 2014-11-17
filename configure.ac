@@ -37,6 +37,11 @@ AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
+    CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+    CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
+    CC="$PTHREAD_CC"],
+    [AC_MSG_ERROR([pthread not found])])
 
 AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
 		[enable local compilation without system installed Nemea libraries, default: no]),
