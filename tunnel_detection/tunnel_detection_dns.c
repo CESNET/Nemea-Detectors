@@ -63,6 +63,7 @@ trap_module_info_t module_info = {
    "   -p N        Show progess - print a dot every N flows.\n"
    "   -a          File with whitelist of domain which will not be analysed\n"
    "   -b          File with whitelist of IPs which will not be analysed\n"
+   "   -c          Read packet from file - MEASURE_PARAMETERS mode"
    "   -s          Folder with results and other information about detection (on the end of module). Specify folder for data saving.\n"
    "   -d          File with results of detection anomaly (during modul runtime).  \n"   
    "   -f          Read packets from file\n"   
@@ -110,9 +111,33 @@ void signal_handler(int signal)
    }
 }
 
+void calculate_limits_by_confidential_interval( double sum, double sum_2, int count, double * min, double * max){
+   double ex, var, std;
+   ex = sum / (double)count;
+   var = (sum_2 - ex * ex * (double)count)/(double)(count-1);
+   std = sqrtf(var);
+   if(min != NULL){
+      *min = ex - std;
+   }
+   if(max != NULL){
+      *max = ex + std;
+   }
+   printf("hola ex %f, var %f, std %f \n", ex,var,std);
+}
 
-
-
+void calculate_limits_from_measuring(measure_parameters_t * measure)
+{
+   calculate_limits_by_confidential_interval(measure->sum_size_request, measure->sum_2_size_request, measure->requests, &(measure->ex_request_min), &(measure->ex_request_max));
+   calculate_limits_by_confidential_interval(measure->sum_size_response, measure->sum_2_size_response, measure->responses, &(measure->ex_response_min), &(measure->ex_response_max));
+   calculate_limits_by_confidential_interval(measure->sum_count_of_unique_letters_request, measure->sum_2_count_of_unique_letters_request, measure->requests, &(measure->request_max_count_of_used_letters), NULL);
+   calculate_limits_by_confidential_interval(measure->sum_count_of_unique_letters_response, measure->sum_2_count_of_unique_letters_response, measure->responses, &(measure->response_max_count_of_used_letters), NULL);
+   calculate_limits_by_confidential_interval(measure->sum_count_of_unique_letters_response, measure->sum_2_count_of_unique_letters_response, measure->responses, &(measure->response_max_count_of_used_letters), NULL);
+   //calculate_limits_by_confidential_interval(measure->sum_count_of_numbers, measure->sum_2_count_of_numbers, measure->requests, &(measure->max_count_of_numbers_in_domain_prefix_tree_filter), NULL);
+   //calculate_limits_by_confidential_interval(measure->sum_percent_of_numbers, measure->sum_2_percent_of_numbers, measure->requests, &(measure->max_percent_of_numbers_in_domain_prefix_tree_filter), NULL);
+   measure->max_count_of_numbers_in_domain_prefix_tree_filter = measure->sum_count_of_numbers / measure->requests;
+   measure->max_percent_of_numbers_in_domain_prefix_tree_filter = measure->sum_percent_of_numbers / (double)measure->requests;
+   printf(" sum percent of numbers: %f\n", measure->sum_percent_of_numbers);
+}
 
 
 void get_ip_str_from_ip_struct(ip_address_t * item, void * key,  char * ip_buff)
@@ -358,7 +383,7 @@ void calculate_character_statistic(unsigned char * string, character_statistic_t
    stat->count_of_different_letters = 0;
    stat->count_of_numbers_in_string = 0;
    stat->length = 0;
-   while(*string != 0){
+   while(*string != 0){ 
       used[*string]++;
       if(*string>='0' && *string<='9'){
          stat->count_of_numbers_in_string++;
@@ -809,6 +834,18 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item)
    return STATE_SUSPICION;
 }
 
+int get_length_of_string(char * str){
+   int length = 0;
+   if(str == NULL){
+      return 0;
+   }
+   while(*str != 0){
+      str++;
+      length++;
+   }
+   length++;
+   return length;
+}
 
 void send_unirec_out(unirec_tunnel_notification_t * notification)
 {
@@ -1454,7 +1491,7 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
    return size;
 }
 
-int cut_max_domain(packet_t * packet)
+inline  int cut_max_domain(packet_t * packet)
 {
    char * end_of_domain = END_OF_CUTTED_DOMAIN;
    while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_LENGTH_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
@@ -1585,7 +1622,7 @@ int main(int argc, char **argv)
    
 
 
-   while ((opt = getopt(argc, argv, "a:b:u:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
+   while ((opt = getopt(argc, argv, "a:b:c:u:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -1627,7 +1664,7 @@ int main(int argc, char **argv)
             break;            
          case 'f':
             input_packet_file_name = optarg;
-            file_or_port |= 1;
+            file_or_port |= READ_FROM_FILE;
             break;
          case 'g':
             if (sscanf(optarg, "%d,%d,%d,%d", &values.ex_request_min, &values.ex_request_max, &values.var_request_min, &values.var_request_max) != 4) {
@@ -1691,12 +1728,15 @@ int main(int argc, char **argv)
             }
             break;
          case 'i':
-            file_or_port |= 2; 
-            break;       
+            file_or_port |= READ_FROM_UNIREC; 
+            break;   
+         case 'c':
+            file_or_port |= MEASURE_PARAMETERS;  
+            input_packet_file_name = optarg;  
       }
    }
 
-   if(file_or_port == 2 || file_or_port == 0){
+   if(file_or_port == READ_FROM_UNIREC || file_or_port == 0){
       TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
       tmplt = ur_create_template(unirec_specifier);
       ur_notification.unirec_out = ur_create_template("<DNS_TUNNEL_ALERT>");
@@ -1715,7 +1755,7 @@ int main(int argc, char **argv)
          return 4;
       }
    }
-   else if(file_or_port  != 1){
+   else if(file_or_port != READ_FROM_FILE && file_or_port != MEASURE_PARAMETERS){
       fprintf(stderr, "Error: You have to specify input file or input socket (not both together).\n");
       trap_finalize();
       return 4;
@@ -1827,8 +1867,8 @@ int main(int argc, char **argv)
    btree[0] = btree_ver4;
    btree[1] = btree_ver6;
 
-   // ***** Main processing loop *****
-   if(file_or_port == 2){
+   // ***** Main processing loop for Unirec records *****
+   if(file_or_port == READ_FROM_UNIREC){
       ip_addr_t * ip_in_packet;
       const void *data;
       uint16_t data_size;
@@ -2005,7 +2045,8 @@ int main(int argc, char **argv)
          //stop=1;              
       }
    }
-   else{
+   else if(file_or_port == READ_FROM_FILE){
+   //***** Main processing loop for file *****
       //read packets from file
       //inicialization of parser
       FILE *input;
@@ -2132,6 +2173,170 @@ int main(int argc, char **argv)
       printf("ex from delta time: %f,\t deleted ip for cycle %f, \t packets for cycle: %f, \t IP address before erase: %f, \t IP address after erase: %f \n", delay/(double)count_of_cycle, delete_from_blus/(double)count_of_cycle, (double)cnt_packets/(double)count_of_cycle, ip_address_before_erase/(double)count_of_cycle, ip_address_after_erase/(double)count_of_cycle );
        #endif /*TIME*/
    }
+   else if(file_or_port == MEASURE_PARAMETERS){
+   //***** Main processing loop for measure parameters *****   
+      //read packets from file
+      //inicialization of parser
+      FILE *input;
+      measure_parameters_t measure;
+      character_statistic_t char_stat;
+      prefix_tree_t * tree_measure;
+      memset(&measure, 0, sizeof(measure_parameters_t));
+      input = parser_initialize(input_packet_file_name);
+      if(input == NULL){
+         fprintf(stderr, "Error: Input file couldn`t be opened.\n");
+         trap_finalize();
+      return 1;
+      }
+      tree_measure = prefix_tree_initialize(PREFIX, 0, '.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
+      if(tree_measure == NULL){
+         fprintf(stderr, "Error: Prefix tree could not be created\n");
+         trap_finalize();
+      return 1;
+      }
+      //loop till end of file
+      while (!stop) {
+            // Check if packet was recieved
+            if (read_packet(input, &packet) == -1) {
+               printf("End of file\n" );
+               stop=1;
+               break; // End of data (used for testing purposes)
+            }           
+            cnt_packets++;
+            //read packet time
+            packet_time = packet.time;
+            if (progress > 0 && cnt_flows % progress == 0) {
+               printf(".");
+               fflush(stdout);
+            }
+
+            //test if it is not in exception
+            if( //domains
+                  (exception_domain_prefix_tree == NULL ||
+                   packet.request_length == 0 || 
+                   prefix_tree_is_string_in_exception(exception_domain_prefix_tree, packet.request_string, packet.request_length) == 0
+                  ) && 
+                  (  //ip
+                     (packet.ip_version == IP_VERSION_4 &&
+                        (exception_ip_v4_b_plus_tree == NULL ||
+                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
+                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0  
+                         ))
+                     )||
+                     (packet.ip_version == IP_VERSION_6 &&
+                        (exception_ip_v6_b_plus_tree == NULL ||
+                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
+                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                     )
+                  )
+            ){
+               
+               //is it destination port of DNS (Port 53) request
+               if(packet.is_response==0){
+                  if(packet.request_string[0] != 0){
+                     double percent_of_numbers_request;
+                     measure.requests++;
+                     calculate_character_statistic(packet.request_string, &char_stat);
+                     measure.sum_size_request += packet.size;
+                     measure.sum_2_size_request += packet.size * packet.size;
+                     measure.sum_count_of_unique_letters_request += char_stat.count_of_different_letters;
+                     measure.sum_2_count_of_unique_letters_request += char_stat.count_of_different_letters * char_stat.count_of_different_letters;
+                     measure.sum_count_of_numbers += char_stat.count_of_numbers_in_string;
+                     measure.sum_2_count_of_numbers += char_stat.count_of_numbers_in_string * char_stat.count_of_numbers_in_string;                  
+                     percent_of_numbers_request = char_stat.length != 0 ? (double)char_stat.count_of_numbers_in_string / (double)char_stat.length : 0;
+                     measure.sum_percent_of_numbers += percent_of_numbers_request;
+                     measure.sum_2_percent_of_numbers += percent_of_numbers_request * percent_of_numbers_request;                  
+                     prefix_tree_insert(tree_measure, packet.request_string, char_stat.length);
+
+                  }
+               }
+               //is it source port of DNS (Port 53)
+               else{
+                  int max_count_of_unique_letters = 0;
+                  if(packet.request_string[0] != 0){
+                     calculate_character_statistic(packet.request_string, &char_stat);
+                     max_count_of_unique_letters = char_stat.count_of_different_letters;
+                     prefix_tree_insert(tree_measure, packet.request_string, char_stat.length);
+                  }
+                  if(packet.mx_response[0] != 0){
+                     calculate_character_statistic(packet.mx_response, &char_stat);
+                     if(char_stat.count_of_different_letters > max_count_of_unique_letters){
+                        max_count_of_unique_letters = char_stat.count_of_different_letters;
+                     }
+                  }
+                  if(packet.ns_response[0] != 0){
+                     calculate_character_statistic(packet.ns_response, &char_stat);
+                     if(char_stat.count_of_different_letters > max_count_of_unique_letters){
+                        max_count_of_unique_letters = char_stat.count_of_different_letters;
+                     }
+                  }    
+                  if(packet.cname_response[0] != 0){
+                     calculate_character_statistic(packet.cname_response, &char_stat);
+                     if(char_stat.count_of_different_letters > max_count_of_unique_letters){
+                        max_count_of_unique_letters = char_stat.count_of_different_letters;
+                     }
+                  }      
+                  if(packet.txt_response[0] != 0){
+                     calculate_character_statistic(packet.txt_response, &char_stat);
+                     if(char_stat.count_of_different_letters > max_count_of_unique_letters){
+                        max_count_of_unique_letters = char_stat.count_of_different_letters;
+                     }
+                  }
+                  if(max_count_of_unique_letters != 0){
+                     measure.responses++;
+                     measure.sum_size_response += packet.size;
+                     measure.sum_2_size_response += packet.size * packet.size;                  
+                     measure.sum_count_of_unique_letters_response += max_count_of_unique_letters;
+                     measure.sum_2_count_of_unique_letters_response += max_count_of_unique_letters * max_count_of_unique_letters;
+                  }           
+               }
+            }
+
+            if (stats == 1) {
+               printf("Time: %lu\n", (long unsigned int) time(NULL));
+               signal(SIGUSR1, signal_handler);
+               stats = 0;
+            }
+      }
+      calculate_limits_from_measuring(&measure);
+      measure.max_percent_of_domain_searching_just_once = (double)(tree_measure->count_of_domain_searched_just_ones) / (double)(tree_measure->count_of_inserting);
+      measure.max_percent_of_domain_searching_just_once -= measure.max_percent_of_domain_searching_just_once * (MEASURE_TOLERANCE);
+      measure.var_request_max = values.var_request_max;
+      measure.var_request_min = values.var_request_min;
+      measure.var_response_max = values.var_response_max;
+      measure.var_response_min = values.var_response_min;
+      //close reading from file
+      parser_end(input);
+       #ifdef TIME
+      printf("..................................................................\n");
+      printf("ex from delta time: %f,\t deleted ip for cycle %f, \t packets for cycle: %f, \t IP address before erase: %f, \t IP address after erase: %f \n", delay/(double)count_of_cycle, delete_from_blus/(double)count_of_cycle, (double)cnt_packets/(double)count_of_cycle, ip_address_before_erase/(double)count_of_cycle, ip_address_after_erase/(double)count_of_cycle );
+       #endif /*TIME*/      
+      printf("Calculated limits:\n");
+      printf("ex_request_max: %f\n", measure.ex_request_max);
+      printf("ex_request_min: %f\n", measure.ex_request_min);
+      printf("ex_response_max: %f\n", measure.ex_response_max);
+      printf("ex_response_min: %f\n", measure.ex_response_min);
+      printf("var_request_max: %f\n", measure.var_request_max);
+      printf("var_request_min: %f\n", measure.var_request_min);
+      printf("var_response_max: %f\n", measure.var_response_max);
+      printf("var_response_min: %f\n", measure.var_response_min);
+      printf("request_max_count_of_used_letters: %f\n", measure.request_max_count_of_used_letters);
+      printf("response_max_count_of_used_letters: %f\n", measure.response_max_count_of_used_letters);
+      printf("max_percent_of_domain_searching_just_once: %f\n", measure.max_percent_of_domain_searching_just_once);
+      printf("max_percent_of_unique_domains: %f\n", measure.max_percent_of_unique_domains);
+      printf("max_percent_of_numbers_in_domain_prefix_tree_filter: %f\n", measure.max_percent_of_numbers_in_domain_prefix_tree_filter);
+      printf("max_percent_of_subdomains_in_main_domain: %f\n", measure.max_percent_of_subdomains_in_main_domain);
+      printf("max_count_of_numbers_in_domain_prefix_tree_filter: %f\n", measure.max_count_of_numbers_in_domain_prefix_tree_filter);
+
+      printf("parameters:\n");
+      printf("-g %d,%d,%d,%d ", (int)measure.ex_request_min, (int)measure.ex_request_max, (int)measure.var_request_min, (int)measure.var_request_max);
+      printf("-r %d,%d,%d,%d ", (int)measure.ex_response_min, (int)measure.ex_response_max, (int)measure.var_response_min, (int)measure.var_response_max);
+      printf("-j %d,%d ", (int)measure.request_max_count_of_used_letters, (int)measure.response_max_count_of_used_letters);
+      printf("-q %f,%f ", measure.max_percent_of_domain_searching_just_once, values.min_percent_of_domain_searching_just_once);
+      printf("-l %d,%f \n", (int)measure.max_count_of_numbers_in_domain_prefix_tree_filter, measure.max_percent_of_numbers_in_domain_prefix_tree_filter);
+
+   }
+
    
    // ***** Print results *****
    if (progress > 0) {

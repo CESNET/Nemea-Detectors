@@ -293,6 +293,44 @@ typedef struct values_t{
     unsigned int max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
 }values_t;
 
+//********* values for measuring parameters *********
+
+/*!
+ * \brief Structure containing setting of the module
+ * Structure used to keep information about setting of the module.
+ */
+typedef struct measure_parameters_t{ 
+    double ex_request_max;    /*< maximal value of request middle value */
+    double ex_request_min;    /*< minimal value of request middle value */
+    double ex_response_max;   /*< maximal value of response middle value */
+    double ex_response_min;   /*< minimal value of response middle value */
+    double var_request_max;   /*< maximal value of request var */
+    double var_request_min;   /*< minimal value of request var*/
+    double var_response_max;  /*< maximal value of response var */
+    double var_response_min;  /*< minimal value of response var*/
+    double request_max_count_of_used_letters; /*< maximum number of used leeters for domain */
+    double response_max_count_of_used_letters;    /*< maximum number of used leeters for domain */
+    double max_percent_of_domain_searching_just_once;    /*< maximum percent of searching unique domains, more than that can be tunnel */
+    double max_percent_of_unique_domains;    /*< maximum percent of searching unique domains, more than that can be tunne l*/
+    double max_percent_of_numbers_in_domain_prefix_tree_filter;  /*< maximum percent of numbers in domain, more than that can be tunnel */
+    double max_percent_of_subdomains_in_main_domain; /*< Maximal value of request middle value */
+    double max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
+
+    unsigned long int sum_size_request;
+    unsigned long int sum_2_size_request;
+    unsigned long int sum_size_response;
+    unsigned long int sum_2_size_response;
+    unsigned long int sum_count_of_unique_letters_request;
+    unsigned long int sum_2_count_of_unique_letters_request;
+    unsigned long int sum_count_of_unique_letters_response;
+    unsigned long int sum_2_count_of_unique_letters_response;    
+    unsigned long int sum_count_of_numbers;
+    unsigned long int sum_2_count_of_numbers; 
+    double sum_percent_of_numbers;
+    double sum_2_percent_of_numbers;  
+    unsigned long int requests;
+    unsigned long int responses;   
+}measure_parameters_t;
 
 /*!
  * \brief Structure - information send to UniRec as a report of detection
