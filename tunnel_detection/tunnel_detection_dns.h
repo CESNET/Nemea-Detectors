@@ -181,7 +181,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
  * \param[in] stat pointer to structure, where to save data.
  * \param[in] packet recieved packet.
  */
-void calculate_character_statistic(char * string, character_statistic_t * stat);
+void calculate_character_statistic(unsigned char * string, character_statistic_t * stat);
 
 /*!
  * \brief Calcutate information about IP address

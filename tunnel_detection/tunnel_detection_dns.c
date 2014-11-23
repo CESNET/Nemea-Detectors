@@ -349,7 +349,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
 
 
 
-void calculate_character_statistic(char * string, character_statistic_t * stat)
+void calculate_character_statistic(unsigned char * string, character_statistic_t * stat)
 {
    char letter;
    char used[255];
@@ -812,16 +812,13 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item)
 
 void send_unirec_out(unirec_tunnel_notification_t * notification)
 {
-   
    ur_set(notification->unirec_out, notification->detection, UR_SRC_IP, notification->ip);
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_NEW_DOMAIN, notification->tunnel_per_new_domain);
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_PER_SUBDOMAIN, notification->tunnel_per_subdomain);
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_TYPE, notification->tunnel_type);
    ur_set_from_string(notification->unirec_out, notification->detection, UR_TUNNEL_DOMAIN, notification->tunnel_domain);
-
    ur_set(notification->unirec_out, notification->detection, UR_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);
-   trap_send_data(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection), TRAP_HALFWAIT);
-   
+   trap_send_data(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection), TRAP_NO_WAIT);
 }
 
 void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
@@ -959,7 +956,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_request_other->other_suspision->count_of_inserting;
                dom =item->suspision_request_other->other_suspision->domain_extension->list_of_most_used_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+			 prefix_tree_read_string(item->suspision_request_other->other_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -989,7 +986,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->request_suspision->count_of_inserting;
                dom = item->suspision_response_tunnel->request_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+                  prefix_tree_read_string(item->suspision_response_tunnel->request_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -1014,7 +1011,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->txt_suspision->count_of_inserting;
                dom =item->suspision_response_tunnel->txt_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+                  prefix_tree_read_string(item->suspision_response_tunnel->txt_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -1039,7 +1036,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->cname_suspision->count_of_inserting;
                dom =item->suspision_response_tunnel->cname_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+                  prefix_tree_read_string(item->suspision_response_tunnel->cname_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -1064,7 +1061,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->ns_suspision->count_of_inserting;
                dom =item->suspision_response_tunnel->ns_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+                  prefix_tree_read_string(item->suspision_response_tunnel->ns_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -1089,7 +1086,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
                unirec_out->tunnel_cnt_packet = item->suspision_response_tunnel->mx_suspision->count_of_inserting;
                dom =item->suspision_response_tunnel->mx_suspision->domain_extension->list_of_most_unused_domains;
                if(dom != NULL){
-                  prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+                  prefix_tree_read_string(item->suspision_response_tunnel->mx_suspision, dom, unirec_out->tunnel_domain);
                }
                else{
                   unirec_out->tunnel_domain[0] = 0;
@@ -1117,7 +1114,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
             unirec_out->tunnel_cnt_packet = item->suspision_response_other->other_suspision->count_of_inserting;
             dom =item->suspision_response_other->other_suspision->domain_extension->list_of_most_unused_domains;
             if(dom != NULL){
-               prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, unirec_out->tunnel_domain);
+               prefix_tree_read_string(item->suspision_response_other->other_suspision, dom, unirec_out->tunnel_domain);
             }
             else{
                unirec_out->tunnel_domain[0] = 0;
@@ -1447,7 +1444,7 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
    fclose(file_suspision);
 }
 
-int copy_string(char * dst, char * src, int size, int max_size_of_dst)
+inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
 {
    if (size > max_size_of_dst-1) {
       size = max_size_of_dst-1;
