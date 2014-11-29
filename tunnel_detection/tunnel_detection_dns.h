@@ -80,6 +80,7 @@
 #define FILE_NAME_SUSPICION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
 #define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */ 
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
+#define FILE_NAME_EVENT_ID "event_id.txt" /*< Name of file with last used event ID. */
 /* /} */
 
 /*!
@@ -156,6 +157,15 @@ inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t * item, void * key);
  * \param[in] ip_buff space where to store the string
  */
 void get_ip_str_from_ip_struct(ip_address_t * item, void * key,  char * ip_buff);
+
+/*!
+ * \brief Reads the last used event ID from file
+ * It tries to read the last event ID from file. When the file
+ * cannot be opened it will return 0.
+ * \param[in] file_name string with file name.
+ * \return last event id from file. Or 0.
+ */
+unsigned int read_event_id_from_file(char * file_name);
 
 /*!
  * \brief Write summary function

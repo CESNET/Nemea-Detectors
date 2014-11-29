@@ -88,7 +88,8 @@ typedef struct character_statistic_t{
     prefix_tree_t * other_suspision;    /*!< pointer to prefix tree */
     unsigned int round_in_suspicion;    /*!< count of round in SUSPICTION state */
     time_t time_first;                  /*!< time of first anomaly flow */
-    unsigned int sum_of_inserting;      /*< Sum of inserting */
+    unsigned int sum_of_inserting;      /*!< Sum of inserting */
+    unsigned int event_id;              /*!< Event ID of anomaly */
  } ip_address_suspision_request_other_t;
 
 /*!
@@ -101,6 +102,7 @@ typedef struct character_statistic_t{
     unsigned int round_in_suspicion;   /*!< count of round in SUSPICTION state */
     time_t time_first;                 /*!< time of first anomaly flow */
     unsigned int sum_of_inserting;     /*< Sum of inserting */
+    unsigned int event_id;             /*!< Event ID of anomaly */
  } ip_address_suspision_request_tunnel_t;
 
 
@@ -116,7 +118,8 @@ typedef struct character_statistic_t{
     unsigned int without_string;       /*!< count of response without request string */
     unsigned int packet_in_suspicion;  /*!< count of responses in suspicion */
     time_t time_first;                 /*!< time of first anomaly flow */
-    unsigned int sum_of_inserting;     /*< Sum of inserting */
+    unsigned int sum_of_inserting;     /*!< Sum of inserting */
+    unsigned int event_id;             /*!< Event ID of anomaly */
  } ip_address_suspision_response_other_t;
 
 /*!
@@ -153,6 +156,11 @@ typedef struct ip_address_suspision_response_tunnel_t{
     time_t mx_suspision_time_first;     /*!< time of first anomaly flow */
     time_t ns_suspision_time_first;     /*!< time of first anomaly flow */
     time_t request_suspision_time_first;/*!< time of first anomaly flow */
+    unsigned int event_id_txt;          /*!< Event ID of anomaly */
+    unsigned int event_id_cname;        /*!< Event ID of anomaly */
+    unsigned int event_id_mx;           /*!< Event ID of anomaly */
+    unsigned int event_id_ns;           /*!< Event ID of anomaly */
+    unsigned int event_id_request;      /*!< Event ID of anomaly */
  }ip_address_suspision_response_tunnel_t;
 
 
@@ -182,7 +190,7 @@ typedef struct ip_address_suspision_response_tunnel_t{
         //unsigned long sum_Xi3_request; /*!< Sum of sizes^3 request */
         //unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
     unsigned int request_without_string; /*!< count of requests without string */
-    unsigned char round_in_suspicion_request; /*!< number of round which Ip is in suspicion */   
+    unsigned char round_in_suspicion_request; /*!< number of round which Ip is in suspicion */ 
 }counter_request_t;
 
 /*!
@@ -311,6 +319,7 @@ typedef struct values_t{
     unsigned int max_count_of_round_in_attack;      /*< Maximum count of round in attack mode for each IP */
     unsigned int min_length_of_tunnel_string;       /*< minimal length of string to be considered for tunnel */
     unsigned int max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
+    unsigned int event_id_counter;                  /*!< Event ID counter for anomalies */
 }values_t;
 
 //********* values for measuring parameters *********
@@ -349,7 +358,7 @@ typedef struct measure_parameters_t{
     double sum_percent_of_numbers;
     double sum_2_percent_of_numbers;  
     unsigned long int requests;
-    unsigned long int responses;   
+    unsigned long int responses;
 }measure_parameters_t;
 
 /*!
@@ -367,6 +376,7 @@ typedef struct unirec_tunnel_notification_t{
     uint32_t        tunnel_cnt_packet;  /*< Count of recorded packets*/
     time_t          time_first; /*< Time of first anomaly flow */
     time_t          time_last; /*< Time of last anomaly flow */
+    unsigned int    event_id;  /*< Event ID */
 }unirec_tunnel_notification_t;
 
 #endif /* _TUNNEL_DETECTION_DNS_STRUCTS_ */
