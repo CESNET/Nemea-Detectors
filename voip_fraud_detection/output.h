@@ -41,17 +41,19 @@
  *
  */
 
+
+#ifndef VOIP_FRAUD_DETECTION_OUTPUT_H
+#define VOIP_FRAUD_DETECTION_OUTPUT_H
+
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
 #include "configuration.h"
+#include "data_structure.h"
 
 
-#ifndef VOIP_FRAUD_DETECTION_OUTPUT_H
-#define VOIP_FRAUD_DETECTION_OUTPUT_H
-
-/** \brief Prefix of error message. */
+/** \brief Prefix string of error message. */
 #define ERROR_MESSAGE_PREFIX "ERR_voip_fraud_detection:"
 
 /** \brief Length of buffer in convert_to_str() function (int_to_str(), uint_to_str(), ...). */
