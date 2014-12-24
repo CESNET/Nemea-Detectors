@@ -45,7 +45,7 @@
 #define VOIP_FRAUD_DETECTION_CONFIGURATION_H
 
 /** \brief Enable GeoIP support. */
-#define ENABLE_GEOIP
+//#define ENABLE_GEOIP
 
 /** \brief GeoIP IPv4 database path. */
 #define GEOIP_DATABASE_IPV4_PATH "/usr/share/GeoIP/GeoIP.dat"
