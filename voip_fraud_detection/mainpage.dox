@@ -1,16 +1,20 @@
-voip_fraud_detection module
-============================================================================
-Author: Lukas Truxa <truxaluk@fit.cvut.cz>, 2014
+/**
+\mainpage voip_fraud_detection module
 
-Module detecting fraud in VoIP telephony - in SIP communication.
+This is the documentation of VoIP fraud detection module, which is integrated in system NEMEA.
+
+<em>Author: Lukas Truxa <truxaluk@fit.cvut.cz>, 2014</em>
+
+<b>Module detecting fraud in VoIP telephony - in SIP communication.</b>
 
 Firstly, it detects testing prefix enumeration in telephone numbers.
 Secondly, it stores information about countries to which individual IP
 address calling. Module warnings, if is detected calling to different
 country.
 
-Optional parameters:
---------------------
+<em>Optional parameters:</em>
+
+<pre>
    -l  : path to log file
    -e  : event_id file (it can be "disabled")
    -c  : countries file (it can be "disabled")
@@ -27,22 +31,29 @@ Optional parameters:
    -q  : limit of maximum item in prefix tree for one IP address
    -x  : time in seconds after it will be clear data without
          communication
+</pre>
 
-Interfaces:
------------
-   Inputs: 1 (UniRec template: <COLLECTOR_FLOW>,<VOIP>)
-   Outputs: 1 (UniRec template: <VOIP_FRAUD_ALERT>)
+<em>Interfaces:</em>
+
+   Inputs: 1 (UniRec template: &lt;COLLECTOR_FLOW&gt;,&lt;VOIP&gt;)<br>
+   Outputs: 1 (UniRec template: &lt;VOIP_FRAUD_ALERT&gt;)
 
 A) When prefix enumeration attack is detected, module sends message to output
    interface with fields:
 
+<code>
    EVENT_ID, EVENT_TYPE (=EVT_T_VOIP_PREFIX_GUESS), SRC_IP, DETECTION_TIME,
-   TIME_FIRST, VOIP_FRAUD_SIP_TO, VOIP_FRAUD_USER_AGENT,
-   VOIP_FRAUD_PREFIX_LENGTH, VOIP_FRAUD_INVITE_COUNT,
-   VOIP_FRAUD_PREFIX_EXAMINATION_COUNT, VOIP_FRAUD_SUCCESSFUL_CALL_COUNT
+   TIME_FIRST, VOIP_FRAUD_SIP_TO, VOIP_FRAUD_USER_AGENT, VOIP_FRAUD_PREFIX_LENGTH,
+   VOIP_FRAUD_INVITE_COUNT, VOIP_FRAUD_PREFIX_EXAMINATION_COUNT,
+   VOIP_FRAUD_SUCCESSFUL_CALL_COUNT
+</code>
 
+<code>
 B) Warning message about calling to different country contains fields:
 
    EVENT_ID, EVENT_TYPE (=EVT_T_VOIP_CALL_DIFFERENT_COUNTRY), SRC_IP, DST_IP,
-   DETECTION_TIME, VOIP_FRAUD_SIP_TO, VOIP_FRAUD_SIP_FROM,
-   VOIP_FRAUD_USER_AGENT, VOIP_FRAUD_COUNTRY_CODE
+   DETECTION_TIME, VOIP_FRAUD_SIP_TO, VOIP_FRAUD_SIP_FROM, VOIP_FRAUD_USER_AGENT,
+   VOIP_FRAUD_COUNTRY_CODE
+</code>
+
+*/

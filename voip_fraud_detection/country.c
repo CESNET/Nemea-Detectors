@@ -59,20 +59,20 @@ void geoip_databases_load()
 
    // check return status
    if (geo_ipv4 == NULL) {
-      PRINT_ERR("Error opening GeoIP IPv4 database!\n");
+      PRINT_ERR_LOG("Error opening GeoIP IPv4 database!\n");
    } else {
 #ifdef DEBUG
-      printf("Loaded GeoIP IPv4 database:%s", GeoIP_database_info(geo_ipv4));
-      printf(" (database_type:%i)\n", geo_ipv4->databaseType);
+      PRINT_OUT_LOG("Loaded GeoIP IPv4 database:", GeoIP_database_info(geo_ipv4));
+      PRINT_OUT_LOG_NOTDATETIME(" (database_type:", int_to_str(geo_ipv4->databaseType), ")\n");
 #endif
    }
 
    if (geo_ipv6 == NULL) {
-      PRINT_ERR("Error opening GeoIP IPv6 database!\n");
+      PRINT_ERR_LOG("Error opening GeoIP IPv6 database!\n");
    } else {
 #ifdef DEBUG
-      printf("Loaded GeoIP IPv6 database:%s", GeoIP_database_info(geo_ipv6));
-      printf(" (database_type:%i)\n", geo_ipv6->databaseType);
+      PRINT_OUT_LOG("Loaded GeoIP IPv6 database:", GeoIP_database_info(geo_ipv6));
+      PRINT_OUT_LOG_NOTDATETIME(" (database_type:", int_to_str(geo_ipv6->databaseType), ")\n");
 #endif
    }
 }
@@ -149,7 +149,7 @@ int countries_load_all_from_file(char * file, cc_hash_table_v2_t * hash_table_ip
       // open countries file (read, text mode)
       io_countries_file = fopen(file, "rt");
       if (io_countries_file == NULL) {
-         PRINT_OUT("Warning: Can't open countries file: \"", file, "\"\n");
+         PRINT_OUT_LOG("Warning: Can't open countries file: \"", file, "\"\n");
          return 0;
       }
 
@@ -494,6 +494,23 @@ int country_different_call_detection(cc_hash_table_v2_t * hash_table, ip_item_t 
       // geoip if country is located
       if (geoip_id > 0) {
 
+         char country_allowed = 0;
+
+         // check allowed countries
+         unsigned int allowed_countries_id;
+         for (allowed_countries_id = 0; allowed_countries_id < modul_configuration.allowed_countries_count; allowed_countries_id++) {
+            if (strcmp(&(modul_configuration.allowed_countries[allowed_countries_id * 2]), GeoIP_code_by_id(geoip_id)) == 0) {
+               // country is globally allowed
+               country_allowed = 1;
+               break;
+            }
+         }
+
+         // is country globally allowed?
+         if (country_allowed == 1) {
+            return STATE_NO_ATTACK;
+         }
+
          switch (modul_configuration.countries_detection_mode) {
             case COUNTRIES_LEARNING_MODE:
 
@@ -506,135 +523,113 @@ int country_different_call_detection(cc_hash_table_v2_t * hash_table, ip_item_t 
                // check if country isn't in datastore of IP address
                if (country_ip_exists(hash_table_item, GeoIP_code_by_id(geoip_id)) == 0) {
 
-                  char country_allowed = 0;
-
-                  // check allowed countries
-                  unsigned int allowed_countries_id;
-                  for (allowed_countries_id = 0; allowed_countries_id < modul_configuration.allowed_countries_count; allowed_countries_id++) {
-                     if (strcmp(&(modul_configuration.allowed_countries[allowed_countries_id * 2]), GeoIP_code_by_id(geoip_id)) == 0) {
-                        // country is globally allowed
-                        country_allowed = 1;
-                        break;
-                     }
-                  }
-
                   // get actual time
                   static time_t time_detected;
                   time(&time_detected);
 
-                  // is country globally allowed?
-                  if (country_allowed == 1) {
+                  /* CALLING TO DIFFERENT COUNTRY ATTACK DETECTED */
 
-                     return STATE_NO_ATTACK;
+                  uint32_t event_id;
+                  short attack_continuation = 0;
 
-                  } else {
-
-                     /* CALLING TO DIFFERENT COUNTRY ATTACK DETECTED */
-
-
-                     uint32_t event_id;
-                     short attack_continuation = 0;
-
-                     // check if attack continue or the new attack will be reported
-                     if (hash_table_item->call_different_country_attack_event_id != 0 \
+                  // check if attack continue or the new attack will be reported
+                  if (hash_table_item->call_different_country_attack_event_id != 0 \
                              && strncmp(hash_table_item->call_different_country_attack_country, GeoIP_code_by_id(geoip_id), 2) == 0) {
 
-                        // check if detection_pause_after_attack was expired
-                        if (difftime(time_detected, hash_table_item->time_attack_detected_call_different_country) >= modul_configuration.detection_pause_after_attack) {
+                     // check if detection_pause_after_attack was expired
+                     if (difftime(time_detected, hash_table_item->time_attack_detected_call_different_country) >= modul_configuration.detection_pause_after_attack) {
 
-                           // last attack continues
-                           event_id = hash_table_item->call_different_country_attack_event_id;
-                           attack_continuation = 1;
-
-                        } else {
-
-                           // pause after last attack not expired, stop detection
-                           return STATE_NO_ATTACK;
-
-                        }
+                        // last attack continues
+                        event_id = hash_table_item->call_different_country_attack_event_id;
+                        attack_continuation = 1;
 
                      } else {
-                        // new attack
 
-                        // increment event_id
-                        last_event_id++;
+                        // pause after last attack not expired, stop detection
+                        return STATE_NO_ATTACK;
 
-                        event_id = last_event_id;
-
-                        // save attack detection
-                        hash_table_item->call_different_country_attack_detected_count++;
-
-                        // add one to statistics of number attacks
-                        global_module_statistic.call_different_country_attack_detected_count++;
                      }
 
-                     // save attack detection event
-                     hash_table_item->call_different_country_detection_event_count++;
+                  } else {
+                     // new attack
 
-                     // add one to statistics of number detection events
-                     global_module_statistic.call_different_country_detection_event_count++;
+                     // increment event_id
+                     last_event_id++;
 
-                     // get IP adresses in text format
-                     char ip_src_str[INET6_ADDRSTRLEN + 1], ip_dst_str[INET6_ADDRSTRLEN + 1];
-                     ip_to_str(ip_src, ip_src_str);
-                     ip_to_str(ip_dst, ip_dst_str);
+                     event_id = last_event_id;
 
-                     // Write attack information to stdout and log ...
-                     PRINT_OUT_LOG("==> Detected Calling to different country");
-                     if (attack_continuation == 1) {
-                        PRINT_OUT_LOG_NOTDATETIME(" (continuation)");
-                     }
-                     PRINT_OUT_LOG_NOTDATETIME("!; event_id=", uint_to_str(event_id), "; ");
-                     PRINT_OUT_LOG_NOTDATETIME("detection_time=\"", time_t_to_str(time_detected), "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("SRC_IP=", ip_src_str, "; ");
-                     PRINT_OUT_LOG_NOTDATETIME("DST_IP=", ip_dst_str, "; ");
-                     PRINT_OUT_LOG_NOTDATETIME("SIP_FROM=\"", sip_from, "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("SIP_TO=\"", sip_to, "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("USER_AGENT=\"", user_agent, "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("COUNTRY_NAME=\"", GeoIP_name_by_id(geoip_id), "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("COUNTRY_CODE=\"", GeoIP_code_by_id(geoip_id), "\"; "); // name of country in iso-8859-1
-                     PRINT_OUT_LOG_NOTDATETIME("CONTINENT=\"", GeoIP_continent_by_id(geoip_id), "\"; ");
-                     PRINT_OUT_LOG_NOTDATETIME("IP_detection_event_count=", uint_to_str(hash_table_item->call_different_country_detection_event_count), "; ");
-                     PRINT_OUT_LOG_NOTDATETIME("IP_attack_detected_count=", uint_to_str(hash_table_item->call_different_country_attack_detected_count), " <==");
+                     // save attack detection
+                     hash_table_item->call_different_country_attack_detected_count++;
 
-                     PRINT_OUT_LOG_NOTDATETIME("\n");
-
-                     // Send attack information to output interface
-
-                     // fill in fields of detection event
-                     ur_set(ur_template_out, detection_record, UR_EVENT_ID, event_id);
-                     ur_set(ur_template_out, detection_record, UR_EVENT_TYPE, UR_EVT_T_VOIP_CALL_DIFFERENT_COUNTRY);
-                     ur_set(ur_template_out, detection_record, UR_SRC_IP, *ip_src);
-                     ur_set(ur_template_out, detection_record, UR_DST_IP, *ip_dst);
-                     ur_set(ur_template_out, detection_record, UR_DETECTION_TIME, ur_time_from_sec_msec(time_detected, 0));
-                     ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_COUNTRY_CODE, GeoIP_code_by_id(geoip_id), sizeof (char) * LENGTH_COUNTRY_CODE);
-                     ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_FROM, sip_from, sizeof (char) * strlen(sip_from));
-                     ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_TO, sip_to, sizeof (char) * strlen(sip_to));
-                     ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_USER_AGENT, user_agent, sizeof (char) * strlen(user_agent));
-
-                     // send alert to output interface
-                     int return_code = trap_send(0, detection_record, ur_rec_size(ur_template_out, detection_record));
-                     TRAP_DEFAULT_SEND_ERROR_HANDLING(return_code,;, PRINT_ERR("Error during sending", UNIREC_OUTPUT_TEMPLATE, " to output interface!\n"););
-
-                     // save attack information to item of hash table
-                     hash_table_item->call_different_country_attack_event_id = event_id;
-                     strncpy(hash_table_item->call_different_country_attack_country, GeoIP_code_by_id(geoip_id), 2);
-
-                     // save event_id to file
-                     event_id_save(modul_configuration.event_id_file);
-
-                     // update time of last attack
-                     time(&(hash_table_item->time_attack_detected_call_different_country));
-
-                     // is not disabled saving new country?
-                     if (modul_configuration.disable_saving_new_country != 1) {
-                        // save country for defined IP address
-                        country_ip_save(hash_table_item, GeoIP_code_by_id(geoip_id), hash_table);
-                     }
-
-                     return STATE_ATTACK_DETECTED;
-
+                     // add one to statistics of number attacks
+                     global_module_statistic.call_different_country_attack_detected_count++;
                   }
+
+                  // save attack detection event
+                  hash_table_item->call_different_country_detection_event_count++;
+
+                  // add one to statistics of number detection events
+                  global_module_statistic.call_different_country_detection_event_count++;
+
+                  // get IP adresses in text format
+                  char ip_src_str[INET6_ADDRSTRLEN + 1], ip_dst_str[INET6_ADDRSTRLEN + 1];
+                  ip_to_str(ip_src, ip_src_str);
+                  ip_to_str(ip_dst, ip_dst_str);
+
+                  // Write attack information to stdout and log ...
+                  PRINT_OUT_LOG("==> Detected Calling to different country");
+                  if (attack_continuation == 1) {
+                     PRINT_OUT_LOG_NOTDATETIME(" (continuation)");
+                  }
+                  PRINT_OUT_LOG_NOTDATETIME("!; event_id=", uint_to_str(event_id), "; ");
+                  PRINT_OUT_LOG_NOTDATETIME("detection_time=\"", time_t_to_str(time_detected), "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("SRC_IP=", ip_src_str, "; ");
+                  PRINT_OUT_LOG_NOTDATETIME("DST_IP=", ip_dst_str, "; ");
+                  PRINT_OUT_LOG_NOTDATETIME("SIP_FROM=\"", sip_from, "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("SIP_TO=\"", sip_to, "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("USER_AGENT=\"", user_agent, "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("COUNTRY_NAME=\"", GeoIP_name_by_id(geoip_id), "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("COUNTRY_CODE=\"", GeoIP_code_by_id(geoip_id), "\"; "); // name of country in iso-8859-1
+                  PRINT_OUT_LOG_NOTDATETIME("CONTINENT=\"", GeoIP_continent_by_id(geoip_id), "\"; ");
+                  PRINT_OUT_LOG_NOTDATETIME("IP_detection_event_count=", uint_to_str(hash_table_item->call_different_country_detection_event_count), "; ");
+                  PRINT_OUT_LOG_NOTDATETIME("IP_attack_detected_count=", uint_to_str(hash_table_item->call_different_country_attack_detected_count), " <==");
+
+                  PRINT_OUT_LOG_NOTDATETIME("\n");
+
+                  // Send attack information to output interface
+
+                  // fill in fields of detection event
+                  ur_set(ur_template_out, detection_record, UR_EVENT_ID, event_id);
+                  ur_set(ur_template_out, detection_record, UR_EVENT_TYPE, UR_EVT_T_VOIP_CALL_DIFFERENT_COUNTRY);
+                  ur_set(ur_template_out, detection_record, UR_SRC_IP, *ip_src);
+                  ur_set(ur_template_out, detection_record, UR_DST_IP, *ip_dst);
+                  ur_set(ur_template_out, detection_record, UR_DETECTION_TIME, ur_time_from_sec_msec(time_detected, 0));
+                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_COUNTRY_CODE, GeoIP_code_by_id(geoip_id), sizeof (char) * LENGTH_COUNTRY_CODE);
+                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_FROM, sip_from, sizeof (char) * strlen(sip_from));
+                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_TO, sip_to, sizeof (char) * strlen(sip_to));
+                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_USER_AGENT, user_agent, sizeof (char) * strlen(user_agent));
+
+                  // send alert to output interface
+                  int return_code = trap_send(0, detection_record, ur_rec_size(ur_template_out, detection_record));
+                  TRAP_DEFAULT_SEND_ERROR_HANDLING(return_code,;, PRINT_ERR("Error during sending", UNIREC_OUTPUT_TEMPLATE, " to output interface!\n"););
+
+                  // save attack information to item of hash table
+                  hash_table_item->call_different_country_attack_event_id = event_id;
+                  strncpy(hash_table_item->call_different_country_attack_country, GeoIP_code_by_id(geoip_id), 2);
+
+                  // save event_id to file
+                  event_id_save(modul_configuration.event_id_file);
+
+                  // update time of last attack
+                  time(&(hash_table_item->time_attack_detected_call_different_country));
+
+                  // is not disabled saving new country?
+                  if (modul_configuration.disable_saving_new_country != 1) {
+                     // save country for defined IP address
+                     country_ip_save(hash_table_item, GeoIP_code_by_id(geoip_id), hash_table);
+                  }
+
+                  return STATE_ATTACK_DETECTED;
 
                }
 

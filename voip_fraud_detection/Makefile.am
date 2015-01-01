@@ -13,7 +13,5 @@ voip_fraud_detection_SOURCES=voip_fraud_detection.c \
                              data_structure.c \
                              configuration.h
 voip_fraud_detection_LDADD=-lunirec -ltrap -lm -lnemea-common
-
-#AM_CFLAGS = -D ENABLE_GEOIP
-#AM_CFLAGS += `pkg-config --cflags geoip`
-#AM_LDFLAGS = `pkg-config --libs geoip`
+voip_fraud_detection_CXXFLAGS=-std=c++98 -O2
+voip_fraud_detection_CFLAGS=-std=gnu99 -O2

@@ -80,7 +80,7 @@
 /** \brief Definition of modul_configuration (modul_configuration_struct). */
 modul_configuration_t modul_configuration;
 
-/** \brief Definition of detection_statistic (detection_statistic_struct). */
+/** \brief Definition of detection_statistic (detection_prefix_examination_struct). */
 detection_prefix_examination_t detection_prefix_examination;
 
 /** \brief Definition of global_module_statistic (global_module_statistic_struct). */
@@ -94,8 +94,11 @@ global_sip_statistic_t global_sip_statistic;
 /** \brief Last used Event ID of attack detection. */
 uint32_t last_event_id;
 
-/** \brief UniRec input and output template. */
-ur_template_t *ur_template_in, *ur_template_out;
+/** \brief UniRec input template. */
+ur_template_t *ur_template_in;
+
+/** \brief UniRec output template. */
+ur_template_t *ur_template_out;
 
 /** \brief Pointer to received data from trap_recv(). */
 const void *in_rec;
@@ -103,6 +106,8 @@ const void *in_rec;
 /** \brief Detection record for sending detection events to output interface. */
 void * detection_record;
 
+/** \brief Indication of stopping of module. */
+static int stop = 0;
 
 /** \brief Check and free memory, that wasn't used for long time or exceeds limit of items (memory management of module).
  * \param[in] hash_table Pointer to hash table of IP address.
@@ -120,7 +125,7 @@ void event_id_load(char * file);
 void event_id_save(char * file);
 
 /** \brief Find if Call-ID exists in node_data (data of node in suffix tree).
- * \param[in] node Pointer to node, in which is done searching.
+ * \param[in] prefix_tree_node Pointer to node, in which is done searching.
  * \param[in] call_id Call-ID to search in node_data.
  * \param[in] call_id_len Length of call_id string to search.
  * \return Return 1 if Call-ID exists in node_data, 0 otherwise.
@@ -128,7 +133,7 @@ void event_id_save(char * file);
 int call_id_node_data_exists(prefix_tree_domain_t * prefix_tree_node, char * call_id, int call_id_len);
 
 /** \brief Save Call-ID to node_data (data of node in suffix tree).
- * \param[in] node Pointer to node to save node_data.
+ * \param[in] prefix_tree_node Pointer to node to save node_data.
  * \param[in] call_id Call-ID to save in node_data.
  * \param[in] call_id_len Length of Call-ID string to save.
  */
@@ -141,7 +146,7 @@ void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call
  * \param[in,out] str_len Length of input string./Length of output string.
  * \return Return 0 if sip identifier is valid, otherwise -1.
  */
-int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * str_len);
+int cut_sip_identifier(char ** output_str, char * input_str, int * str_len);
 
 /** \brief Check if input string is numeric participant.
  * Check if input string is numeric with allowed special char ('+','*','#','-',':') or this text part before '@' + check of minimum numeric length.

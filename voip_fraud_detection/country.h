@@ -52,7 +52,7 @@
 
 #ifdef ENABLE_GEOIP
 
-#include "GeoIP.h"
+#include <GeoIP.h>
 
 /** \brief GeoIP database pointers. */
 GeoIP *geo_ipv4, *geo_ipv6;
@@ -112,7 +112,7 @@ void countries_save_all_to_file(char * file, cc_hash_table_v2_t * hash_table_ip)
 char * get_domain(char * str, int str_len);
 
 /** \brief Detection of calling to different countries and write/send information about it.
- * \param[in] hash_table_ip Pointer to hash table of IP addresses.
+ * \param[in] hash_table Pointer to hash table of IP addresses.
  * \param[in] hash_table_item Pointer to item of IP address (detection is performed for this IP).
  * \param[in] sip_to SIP To header.
  * \param[in] sip_to_len Length of SIP To header.

@@ -72,7 +72,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
  * \param[in] first_node Indication of first calling this function (used in recursive calling).
  * \return Return value for decrementing of basic calculation prefix_sum_count.
  */
-unsigned int prefix_examination_count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node);
+unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node);
 
 /** \brief Detection of prefix examination attack and write/send information about it.
  * \param[in] hash_table_user_agent Pointer to hash table of User-Agent headers.

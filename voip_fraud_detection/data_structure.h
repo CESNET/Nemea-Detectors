@@ -49,7 +49,7 @@
 #include "configuration.h"
 #include "output.h"
 
-extern struct model_configuration_struct modul_configuration;
+extern struct modul_configuration_struct modul_configuration;
 extern struct detection_prefix_examination_struct detection_prefix_examination;
 extern struct global_module_statistic_struct global_module_statistic;
 #ifdef DEBUG
@@ -74,24 +74,24 @@ extern struct global_sip_statistic_struct global_sip_statistic;
 /** \brief Modul_configuration structure.
  * It is used for saving modul configuration.
  */
-typedef struct model_configuration_struct {
-   unsigned int max_prefix_length;
-   unsigned int min_length_called_number;
-   unsigned int prefix_examination_detection_threshold;
-   unsigned int detection_interval;
-   unsigned int detection_pause_after_attack;
-   unsigned int max_item_prefix_tree;
-   unsigned int clear_data_no_communication_after;
+typedef struct modul_configuration_struct {
+   unsigned int max_prefix_length; /**< Maximum prefix length. */
+   unsigned int min_length_called_number; /**< Minimum length of called number. */
+   unsigned int prefix_examination_detection_threshold; /**< Detection threshold of prefix examination. */
+   unsigned int detection_interval; /**< Detection interval in seconds. */
+   unsigned int detection_pause_after_attack; /**< Detection pause after attack in seconds. */
+   unsigned int max_item_prefix_tree; /**< Maximum item in suffix tree. */
+   unsigned int clear_data_no_communication_after; /**< Clear data without communication after defined seconds. */
 #ifdef ENABLE_GEOIP
-   unsigned int learning_countries_period;
-   unsigned char countries_detection_mode;
-   char * countries_file;
-   char * allowed_countries;
-   unsigned int allowed_countries_count;
-   short int disable_saving_new_country;
+   unsigned int learning_countries_period; /**< Time in seconds for learning mode of calling to different countries. */
+   unsigned char countries_detection_mode; /**< Indication of actual detection mode of calling to different country. */
+   char * countries_file; /**< Setting of countries file. */
+   char * allowed_countries; /**< List of allowed countries for all IP addresses. */
+   unsigned int allowed_countries_count; /**< Number of allowed countries for all IP addresses. */
+   short int disable_saving_new_country; /**< Indication if new country is saved to list of allowed countries for defined IP address. */
 #endif
-   char * log_file;
-   char * event_id_file;
+   char * log_file; /**< Setting of log file. */
+   char * event_id_file; /**< Setting of event_id file. */
 } modul_configuration_t;
 
 /** \brief IP item structure.
@@ -177,18 +177,18 @@ typedef struct global_sip_statistic_struct {
  * Structure is used during detection of prefix examination attack.
  */
 typedef struct detection_prefix_examination_struct {
-   uint32_t invite;
-   uint32_t ack;
-   uint32_t cancel;
-   uint32_t bye;
-   uint32_t ok;
-   uint32_t successful_call;
-   uint32_t trying;
-   uint32_t ringing;
-   uint32_t forbidden;
-   uint32_t unauthorized;
-   uint32_t proxy_auth_req;
-   uint32_t rtcp_data;
+   uint32_t invite; /**< Number of INVITE requests. */
+   uint32_t cancel; /**< Number of CANCEL requests. */
+   uint32_t ack; /**< Number of ACK requests. */
+   uint32_t bye; /**< Number of BYE requests initiated by calling party. */
+   uint32_t ok; /**< Number of OK responses. */
+   uint32_t successful_call; /**< Number of successful calls to unique telephone numbers. */
+   uint32_t trying; /**< Number of TRYING responses. */
+   uint32_t ringing; /**< Number of RINGING responses. */
+   uint32_t forbidden; /**< Number of FORBIDDEN responses. */
+   uint32_t unauthorized; /**< Number of UNAUTHORIZED responses. */
+   uint32_t proxy_auth_req; /**< Number of PROXY AUTH REQUEST responses. */
+   uint32_t rtcp_data; /**< Indication of RTP data (0=no; 1=yes). */
 
    time_t time; /**< Save time of start detection process for the IP address. */
    char sip_to[MAX_STRING_PREFIX_TREE_NODE + 1]; /**< One of SIP_TO that was evaluated as prefix examination in the attack. */
@@ -210,7 +210,7 @@ int hash_table_item_initialize(ip_item_t * hash_table_item);
 void hash_table_item_free_inner_memory(ip_item_t * hash_table_item);
 
 /** \brief Initialize data of suffix tree node defined by input parameter.
- * \param[in] node Determine node to initialization its data.
+ * \param[in] prefix_tree_node Determine node to initialization its data.
  * \return Return 0 if data are successfully initialized, -1 if memory error occurs.
  */
 int node_data_check_initialize(prefix_tree_domain_t * prefix_tree_node);

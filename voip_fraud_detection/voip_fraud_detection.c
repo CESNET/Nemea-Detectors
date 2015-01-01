@@ -1,6 +1,6 @@
 /**
  * \file voip_fraud_detection.c
- * \brief VoIP fraud detection module
+ * \brief VoIP fraud detection module - main
  * \author Lukas Truxa <truxaluk@fit.cvut.cz>
  * \date 2014
  */
@@ -44,7 +44,7 @@
 #include "voip_fraud_detection.h"
 
 
-// Struct with information about module
+/** \brief Struct with information about module. */
 trap_module_info_t module_info = {
    "voip_fraud_detection module", // Module name
    // Module description
@@ -79,9 +79,6 @@ trap_module_info_t module_info = {
    1, // Number of input interfaces
    1, // Number of output interfaces
 };
-
-
-static int stop = 0;
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
@@ -262,7 +259,7 @@ void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call
 
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' or '?' + string after it
 
-int cut_sip_identifier_from_string(char ** output_str, char * input_str, int * str_len)
+int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
 {
    if ((*str_len >= 4) && (strncmp(input_str, "sip:", 4) == 0)) {
 
@@ -593,7 +590,7 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_GEOIP
    if (countries_load_all_from_file(modul_configuration.countries_file, &hash_table_ip) == -1) {
-      PRINT_ERR("Error loading countries file!\n");
+      PRINT_ERR_LOG("Error loading countries file!\n");
    }
 #endif
 
@@ -694,9 +691,9 @@ int main(int argc, char **argv)
          get_string_from_unirec(user_agent, &user_agent_len, UR_INVEA_SIP_USER_AGENT, MAX_LENGTH_USER_AGENT);
 
          // cut "sip:" or "sips:" from sip_request_uri, sip_to and sip_from
-         int invalid_request_uri = cut_sip_identifier_from_string(&sip_request_uri, sip_request_uri_orig, &sip_request_uri_len);
-         int invalid_sipto = cut_sip_identifier_from_string(&sip_to, sip_to_orig, &sip_to_len);
-         int invalid_sipfrom = cut_sip_identifier_from_string(&sip_from, sip_from_orig, &sip_from_len);
+         int invalid_request_uri = cut_sip_identifier(&sip_request_uri, sip_request_uri_orig, &sip_request_uri_len);
+         int invalid_sipto = cut_sip_identifier(&sip_to, sip_to_orig, &sip_to_len);
+         int invalid_sipfrom = cut_sip_identifier(&sip_from, sip_from_orig, &sip_from_len);
 
 #ifdef PRINT_DETAIL_INVALID_SIPURI
          if (invalid_sipto == -1 || invalid_sipfrom == -1 || \
@@ -943,7 +940,7 @@ int main(int argc, char **argv)
                   printf("To:\"%.*s\";\n", sip_to_len, sip_to);
                   printf("Via:\"%.*s\";\n", sip_via_len, sip_via);
                   printf("UserAgent:\"%.*s\";\n", user_agent_len, user_agent);
-                  printf("Reuqest-URI:\"%.*s\";\n", sip_request_uri_len, sip_request_uri);
+                  printf("RequestURI:\"%.*s\";\n", sip_request_uri_len, sip_request_uri);
                }
 #endif
 
@@ -954,14 +951,14 @@ int main(int argc, char **argv)
                   // check if To header and Request-URI isn't identical
                   if (strncmp(sip_to, sip_request_uri, MAX_LENGTH_SIP_TO) != 0) {
 
-                     char * at_position_request_uri = strtok(sip_request_uri, "@");
-                     char * at_position_sip_to = strtok(sip_to, "@");
+                     char * at_position_request_uri = strpbrk(sip_request_uri, "@");
+                     char * at_position_sip_to = strpbrk(sip_to, "@");
 
                      // check if To header and Reuqest-URI has the same number before '@'
                      if (at_position_request_uri == NULL || at_position_sip_to == NULL \
                              || ((at_position_request_uri - sip_request_uri) != (at_position_sip_to - sip_to)) \
                              || (strncmp(sip_to, sip_request_uri, at_position_sip_to - sip_to) != 0)) {
-                        PRINT_OUT("OtherRequest-URI:\"", sip_request_uri, "\";", "ToHeader:\"", sip_to, "\";\n");
+                        PRINT_OUT("OtherRequestURI:\"", sip_request_uri, "\";", "ToHeader:\"", sip_to, "\";\n");
                      }
                   }
                }

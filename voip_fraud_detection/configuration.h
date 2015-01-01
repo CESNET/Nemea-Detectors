@@ -44,9 +44,6 @@
 #ifndef VOIP_FRAUD_DETECTION_CONFIGURATION_H
 #define VOIP_FRAUD_DETECTION_CONFIGURATION_H
 
-/** \brief Enable GeoIP support. */
-//#define ENABLE_GEOIP
-
 /** \brief GeoIP IPv4 database path. */
 #define GEOIP_DATABASE_IPV4_PATH "/usr/share/GeoIP/GeoIP.dat"
 
@@ -71,9 +68,11 @@
 /** \brief Timeout in microseconds - waiting for data (trap_recv() function) in TRAP library. */
 #define TRAP_TIMEOUT_MICROSECONDS 2000000
 
+#ifdef FOR_DOCUMENTATION
 /** \brief If is define this macro, successful call is considered after SIP ACK request sended by calling party.
  * If is not defined it enough OK response sended by called party. */
-//#define CONSIDER_SUCCESSFUL_CALL_AFTER_SIPACK
+#define CONSIDER_SUCCESSFUL_CALL_AFTER_SIPACK
+#endif
 
 /** \brief If is define this macro, enable comparison of SIP To header and Request-URI. */
 #define CHECK_DIFFERENT_REQUEST_URI
@@ -114,8 +113,7 @@
 
 /** \brief Default value of learning_countries_period (0 = disable learning mode, 1209600 seconds = 14days, 604800 seconds = 7 days).
  * If parameter learning_countries_period is not set at startup of module then this default value is used. */
-//#define DEFAULT_LEARNING_COUNTRIES_PERIOD 1209600
-#define DEFAULT_LEARNING_COUNTRIES_PERIOD 600
+#define DEFAULT_LEARNING_COUNTRIES_PERIOD 1209600
 
 /** \brief Default size of hashing table for storing IP addresses. */
 #define HASH_TABLE_IP_SIZE 100000
@@ -136,7 +134,7 @@
 #define MAX_LENGTH_USER_AGENT 80
 
 /** \brief Maximum number of Call-ID item in storage. */
-#define MAX_CALL_ID_STORAGE_SIZE 20
+#define MAX_CALL_ID_STORAGE_SIZE 100
 
 /** \brief Maximum string length of node in prefix tree. */
 #define MAX_STRING_PREFIX_TREE_NODE 100

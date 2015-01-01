@@ -107,7 +107,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
          detection_statistics_reset();
 
          // thorough count of prefix detection
-         unsigned int minus_detection_value = prefix_examination_count_minus_detection_value(tree, last_predecessor_node, 0, 1);
+         unsigned int minus_detection_value = prefix_examination_minus_detection(tree, last_predecessor_node, 0, 1);
 
          // decrement prefix_sum_count by minus detection value
          if (prefix_sum_count <= minus_detection_value) {
@@ -172,7 +172,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
 
 // Function to thorough count of prefix detection minus value and save information about attack to detection_struct
 
-unsigned int prefix_examination_count_minus_detection_value(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node)
+unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node)
 {
    unsigned int result = 0;
 
@@ -242,7 +242,7 @@ unsigned int prefix_examination_count_minus_detection_value(prefix_tree_t * tree
             if (node->child[i] != NULL) {
 
                // recursive calling function
-               result += prefix_examination_count_minus_detection_value(tree, node->child[i], sum_prefix_down, 0);
+               result += prefix_examination_minus_detection(tree, node->child[i], sum_prefix_down, 0);
             }
          }
       }
