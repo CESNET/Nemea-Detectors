@@ -205,7 +205,7 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
             // incrementation result by one
             result += 1;
 
-            // incrementation of unique_ok
+            // incrementation of successful call
             detection_prefix_examination.successful_call += 1;
 
          } else {

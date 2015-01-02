@@ -454,7 +454,7 @@ char * get_domain(char * str, int str_len)
 
    // input string doesn't contain '@'
    char * output_pointer;
-   if (cut_sip_identifier_from_string(&output_pointer, str, &str_len) == -1) {
+   if (cut_sip_identifier(&output_pointer, str, &str_len) == -1) {
       // bad syntax of input string
       return NULL;
    } else {

@@ -700,15 +700,15 @@ int main(int argc, char **argv)
              (invalid_request_uri == -1 && voip_packet_type == VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED)) {
 
             if (invalid_sipto == -1) {
-               PRINT_OUT("SIP_TO header is invalid:\"", sip_to_orig, "\"; ");
+               PRINT_OUT("SIP_To header is invalid:\"", sip_to_orig, "\"; ");
             }
 
             if (invalid_sipfrom == -1) {
-               PRINT_OUT("SIP_FROM header is invalid:\"", sip_from_orig, "\"; ");
+               PRINT_OUT("SIP_From header is invalid:\"", sip_from_orig, "\"; ");
             }
 
             if (invalid_request_uri == -1 && voip_packet_type == VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED) {
-               PRINT_OUT("SIP_REQUEST-URI header is invalid:\"", sip_request_uri_orig, "\"; ");
+               PRINT_OUT("SIP_RequestURI header is invalid:\"", sip_request_uri_orig, "\"; ");
             }
 
             // get id of monitoring probes
