@@ -1,7 +1,7 @@
 /**
 \mainpage voip_fraud_detection module
 
-This is the documentation of VoIP fraud detection module, which is integrated in system NEMEA.
+This is the documentation of VoIP fraud detection module, which is integrated in system Nemea.
 
 <em>Author: Lukas Truxa <truxaluk@fit.cvut.cz>, 2014</em>
 
@@ -48,9 +48,9 @@ A) When prefix enumeration attack is detected, module sends message to output
    VOIP_FRAUD_SUCCESSFUL_CALL_COUNT
 </code>
 
-<code>
 B) Warning message about calling to different country contains fields:
 
+<code>
    EVENT_ID, EVENT_TYPE (=EVT_T_VOIP_CALL_DIFFERENT_COUNTRY), SRC_IP, DST_IP,
    DETECTION_TIME, VOIP_FRAUD_SIP_TO, VOIP_FRAUD_SIP_FROM, VOIP_FRAUD_USER_AGENT,
    VOIP_FRAUD_COUNTRY_CODE

@@ -130,7 +130,6 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
             // compose one of sip_to uri from prefix attack
             while (predecessor_node != NULL) {
                prefix_tree_read_inner_node(tree, predecessor_node, str);
-               // strcat(detection.sip_to, "|");
                strcat(detection_prefix_examination.sip_to, str);
                predecessor_node = predecessor_node->parent;
             }
