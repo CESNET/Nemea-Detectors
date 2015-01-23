@@ -72,6 +72,7 @@ trap_module_info_t module_info = {
    "   -p  : detection pause after attack in seconds\n"
    "   -q  : limit of maximum item in prefix tree for one IP address\n"
    "   -x  : time in seconds after it will be clear data without communication\n"
+   "   -n  : path to prefix examination statistic file\n"
    "\n"
    "Interfaces:\n"
    "   Inputs: 1 (UniRec template: "UNIREC_INPUT_TEMPLATE")\n"
@@ -380,16 +381,20 @@ int main(int argc, char **argv)
    modul_configuration.clear_data_no_communication_after = DEFAULT_CLEAR_DATA_NO_COMMUNICATION_AFTER;
    modul_configuration.event_id_file = DEFAULT_EVENT_ID_FILE;
    modul_configuration.log_file = NULL;
+   modul_configuration.prefix_statistic_file = NULL;
 
 
    // ***** Parse remaining parameters and get configuration *****
 
    char opt;
 
-   while ((opt = getopt(argc, argv, "l:d:m:s:p:t:q:x:e:a:c:ow")) != -1) {
+   while ((opt = getopt(argc, argv, "l:d:m:n:s:p:t:q:x:e:a:c:ow")) != -1) {
       switch (opt) {
          case 'l':
             modul_configuration.log_file = optarg;
+            break;
+         case 'n':
+            modul_configuration.prefix_statistic_file = optarg;
             break;
          case 'e':
             if (strcmp(optarg, "disabled") == 0) {
@@ -527,6 +532,11 @@ int main(int argc, char **argv)
    // print log filename (if is set)
    if (modul_configuration.log_file != NULL) {
       PRINT_OUT_LOG("    - log file:\"", modul_configuration.log_file, "\"\n");
+   }
+
+   // print prefix statistic filename (if is set)
+   if (modul_configuration.prefix_statistic_file != NULL) {
+      PRINT_OUT_LOG("    - prefix statistic file:\"", modul_configuration.prefix_statistic_file, "\"\n");
    }
    PRINT_OUT_LOG("-----------------------------------------------------\n");
 

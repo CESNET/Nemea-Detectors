@@ -45,7 +45,7 @@
 #define VOIP_FRAUD_DETECTION_H
 
 /** \brief Version of module. */
-#define MODULE_VERSION "1.0.0"
+#define MODULE_VERSION "1.0.1"
 
 #include <stdio.h>
 #include <stdlib.h>

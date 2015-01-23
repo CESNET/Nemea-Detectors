@@ -92,6 +92,7 @@ typedef struct modul_configuration_struct {
 #endif
    char * log_file; /**< Setting of log file. */
    char * event_id_file; /**< Setting of event_id file. */
+   char * prefix_statistic_file; /**< Setting of prefix statistic file. */
 } modul_configuration_t;
 
 /** \brief IP item structure.

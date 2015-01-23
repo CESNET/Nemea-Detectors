@@ -70,9 +70,10 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
  * \param[in] node Pointer to start node of detection.
  * \param[in] sum_prefix_down Length of actual prefix (used in recursive calling the function).
  * \param[in] first_node Indication of first calling this function (used in recursive calling).
+ * \param[in] prefix_statistic Indication of printing prefix statistic.
  * \return Return value for decrementing of basic calculation prefix_sum_count.
  */
-unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node);
+unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node, char prefix_statistic);
 
 /** \brief Detection of prefix examination attack and write/send information about it.
  * \param[in] hash_table_user_agent Pointer to hash table of User-Agent headers.
@@ -81,5 +82,13 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
  * \return ID that indicates results of detection (STATE_NO_ATTACK or STATE_ATTACK_DETECTED).
  */
 int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_item_t * hash_table_item, ip_addr_t * ip_src);
+
+/** \brief Print prefix statistic of node to file.
+ * \param[in] tree Pointer to suffix tree (data structure named prefix_tree).
+ * \param[in] node Pointer to node.
+ * \param[in] prefix_length Length of prefix.
+ * \param[in] successful_call Indicates successfull call (1=successfull call).
+ */
+void print_prefix_statistic(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int prefix_length, char successful_call);
 
 #endif	/* VOIP_FRAUD_DETECTION_PREFIX_EXAMINATION_H */

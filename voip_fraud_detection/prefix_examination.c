@@ -107,7 +107,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
          detection_statistics_reset();
 
          // thorough count of prefix detection
-         unsigned int minus_detection_value = prefix_examination_minus_detection(tree, last_predecessor_node, 0, 1);
+         unsigned int minus_detection_value = prefix_examination_minus_detection(tree, last_predecessor_node, 0, 1, 0);
 
          // decrement prefix_sum_count by minus detection value
          if (prefix_sum_count <= minus_detection_value) {
@@ -120,6 +120,12 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
          if (prefix_sum_count > modul_configuration.prefix_examination_detection_threshold) {
 
             // attack detected!
+
+            // check if prefix statistic file is set (configuration of module)
+            if (modul_configuration.prefix_statistic_file != NULL) {
+               // print prefix statistic
+               prefix_examination_minus_detection(tree, last_predecessor_node, 0, 1, 1);
+            }
 
             // initialize sip_to string
             detection_prefix_examination.sip_to[0] = '\0';
@@ -171,7 +177,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
 
 // Function to thorough count of prefix detection minus value and save information about attack to detection_struct
 
-unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node)
+unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node, char prefix_statistic)
 {
    unsigned int result = 0;
 
@@ -201,35 +207,49 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
 #else
          if (((node_data_t *) (node->value))->ok_count > 0) {
 #endif
-            // incrementation result by one
-            result += 1;
+            if (prefix_statistic != 1) {
 
-            // incrementation of successful call
-            detection_prefix_examination.successful_call += 1;
+               // incrementation result by one
+               result += 1;
 
+               // incrementation of successful call
+               detection_prefix_examination.successful_call += 1;
+
+            } else {
+               // print to prefix statistic file
+               print_prefix_statistic(tree, node, sum_prefix_down, 1);
+            }
          } else {
 
             // node is in prefix examination attack
 
-            if (detection_prefix_examination.report_prefix_length < sum_prefix_down) {
-               // save node of prefix examination for reporting
-               detection_prefix_examination.report_node = node;
-               detection_prefix_examination.report_prefix_length = sum_prefix_down;
-            }
+            if (prefix_statistic != 1) {
 
+               if (detection_prefix_examination.report_prefix_length < sum_prefix_down) {
+                  // save node of prefix examination for reporting
+                  detection_prefix_examination.report_node = node;
+                  detection_prefix_examination.report_prefix_length = sum_prefix_down;
+               }
+
+            } else {
+               // print to prefix statistic file
+               print_prefix_statistic(tree, node, sum_prefix_down, 0);
+            }
          }
 
-         detection_prefix_examination.invite += ((node_data_t *) (node->value))->invite_count;
-         detection_prefix_examination.cancel += ((node_data_t *) (node->value))->cancel_count;
-         detection_prefix_examination.ack += ((node_data_t *) (node->value))->ack_count;
-         detection_prefix_examination.bye += ((node_data_t *) (node->value))->bye_count;
-         detection_prefix_examination.ok += ((node_data_t *) (node->value))->ok_count;
-         detection_prefix_examination.trying += ((node_data_t *) (node->value))->trying_count;
-         detection_prefix_examination.ringing += ((node_data_t *) (node->value))->ringing_count;
-         detection_prefix_examination.forbidden += ((node_data_t *) (node->value))->forbidden_count;
-         detection_prefix_examination.unauthorized += ((node_data_t *) (node->value))->unauthorized_count;
-         detection_prefix_examination.proxy_auth_req += ((node_data_t *) (node->value))->proxy_auth_req_count;
-         detection_prefix_examination.rtcp_data += ((node_data_t *) (node->value))->rtp_data;
+         if (prefix_statistic != 1) {
+            detection_prefix_examination.invite += ((node_data_t *) (node->value))->invite_count;
+            detection_prefix_examination.cancel += ((node_data_t *) (node->value))->cancel_count;
+            detection_prefix_examination.ack += ((node_data_t *) (node->value))->ack_count;
+            detection_prefix_examination.bye += ((node_data_t *) (node->value))->bye_count;
+            detection_prefix_examination.ok += ((node_data_t *) (node->value))->ok_count;
+            detection_prefix_examination.trying += ((node_data_t *) (node->value))->trying_count;
+            detection_prefix_examination.ringing += ((node_data_t *) (node->value))->ringing_count;
+            detection_prefix_examination.forbidden += ((node_data_t *) (node->value))->forbidden_count;
+            detection_prefix_examination.unauthorized += ((node_data_t *) (node->value))->unauthorized_count;
+            detection_prefix_examination.proxy_auth_req += ((node_data_t *) (node->value))->proxy_auth_req_count;
+            detection_prefix_examination.rtcp_data += ((node_data_t *) (node->value))->rtp_data;
+         }
       }
 
       // is not node leaf?
@@ -241,7 +261,7 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
             if (node->child[i] != NULL) {
 
                // recursive calling function
-               result += prefix_examination_minus_detection(tree, node->child[i], sum_prefix_down, 0);
+               result += prefix_examination_minus_detection(tree, node->child[i], sum_prefix_down, 0, prefix_statistic);
             }
          }
       }
@@ -425,4 +445,42 @@ int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_
 
    }
    return STATE_NO_ATTACK;
+}
+
+// Print prefix statistic to file
+
+void print_prefix_statistic(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int prefix_length, char successful_call)
+{
+   static FILE * io_prefix_statistic_file;
+
+   // open prefix statistic file (append, text mode)
+   io_prefix_statistic_file = fopen(modul_configuration.prefix_statistic_file, "at");
+   if (io_prefix_statistic_file == NULL) {
+      fprintf(stderr, "Error open prefix statistic file: %s!\n", modul_configuration.prefix_statistic_file);
+      return;
+   }
+
+   char prefix[MAX_STRING_PREFIX_TREE_NODE + 1];
+   char str [MAX_STRING_PREFIX_TREE_NODE + 1];
+   unsigned int prefix_actual = 0;
+
+   // initialize prefix string
+   prefix[0] = '\0';
+
+   // compose prefix of node
+   while (node != NULL && prefix_actual < prefix_length) {
+      prefix_tree_read_inner_node(tree, node, str);
+      strcat(prefix, str);
+      prefix_actual += strlen(str);
+      if (prefix_actual > prefix_length) {
+         prefix[prefix_length] = '\0';
+      }
+      node = node->parent;
+   }
+
+   // print to prefix statistic file
+   fprintf(io_prefix_statistic_file, "%s;%s;%u;%i;\n", get_actual_time_string(), prefix, prefix_length, successful_call);
+
+   // close prefix statistic file
+   fclose(io_prefix_statistic_file);
 }
