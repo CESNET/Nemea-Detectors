@@ -27,6 +27,7 @@ Optional parameters:
    -q  : limit of maximum item in prefix tree for one IP address
    -x  : time in seconds after it will be clear data without
          communication
+   -n  : path to prefix examination statistic file
 
 Interfaces:
 -----------
