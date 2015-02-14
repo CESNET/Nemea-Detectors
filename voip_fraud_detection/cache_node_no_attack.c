@@ -44,15 +44,6 @@
 #include "cache_node_no_attack.h"
 
 
-// testing
-int write_cache_limit_info = 0;
-
-// testing
-int test_cache_hit = 0;
-int test_cache_not_hit = 0;
-int test_cache_save = 0;
-int test_cache_delete_successor = 0;
-
 // initialize size of cache_node_no_attack
 int cache_node_no_attack_size = 0;
 
@@ -97,8 +88,6 @@ void cache_node_no_attack_save(prefix_tree_inner_node_t * node)
             if (cache_node_no_attack_size > 0) {
                cache_node_no_attack_data[i] = cache_node_no_attack_data[cache_node_no_attack_size];
             }
-
-            test_cache_delete_successor++;
          }
          predecessor_node = predecessor_node->parent;
       }
@@ -110,13 +99,6 @@ void cache_node_no_attack_save(prefix_tree_inner_node_t * node)
       cache_node_no_attack_data[full_index] = node;
       full_index++;
       if (full_index >= MAX_CACHE_NO_ATTACK_SIZE) full_index = 0;
-
-      // only testing info
-      if (write_cache_limit_info == 0) {
-         printf("cache limit!!!\n");
-         write_cache_limit_info = 1;
-      }
-
    } else {
       cache_node_no_attack_data[cache_node_no_attack_size] = node;
       cache_node_no_attack_size++;

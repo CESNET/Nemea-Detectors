@@ -41,23 +41,17 @@
  *
  */
 
+#ifndef VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
+#define VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
+
 #include <prefix_tree.h>
 #include "configuration.h"
 
 
-#ifndef VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
-#define VOIP_FRAUD_DETECTION_CACHE_NODE_NO_ATTACK_H
-
-// testing
-extern int test_cache_hit;
-extern int test_cache_not_hit;
-extern int test_cache_save;
-extern int test_cache_delete_successor;
-
 /** \brief Storage of cache_node_no_attack. */
 prefix_tree_inner_node_t * cache_node_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
 
-/** \brief Size of cache_node_no_attack. */
+/** \brief Size of cache_node_no_attack (extern). */
 extern int cache_node_no_attack_size;
 
 /** \brief Find if node is verified for no attack by cache.

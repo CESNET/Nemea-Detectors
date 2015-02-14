@@ -80,6 +80,7 @@
 #define FILE_NAME_SUSPICION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
 #define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */ 
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
+#define FILE_NAME_EVENT_ID "event_id.txt" /*< Name of file with last used event ID. */
 /* /} */
 
 /*!
@@ -91,8 +92,10 @@
 #define READ_FROM_UNIREC 2 /*< Specify module configuration. Modul will read packets from UNIREC */  
 #define MEASURE_PARAMETERS 4 /*< Specify module configuration. Modul will measure detection parameters */ 
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
-#define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum round to be IP in suspicion */
+#define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum count of round to be IP in suspicion */
+#define MAX_COUNT_OF_ROUND_IN_ATTACK 5 /*< Maximum count of round to stay IP in ATTACK MODE without noticing anomaly */
 #define PERCENT_OF_COMMUNICATION_TO_BE_SUSPICION 0.3 /*< Percent of communication to be set to suspision state */
+#define MEASURE_TOLERANCE 0.1
 
 #define DEPTH_TUNNEL_SUSPICTION 2 /*< Depth of domain to be tunnel*/
 #define MAX_PERCENT_OF_SUBDOMAINS_IN_MAIN_DOMAIN 0.8 /*< Max percent of subdomains in main domain */
@@ -105,20 +108,21 @@
 #define VAR_RESPONSE_MAX 50000 /*< Maximal value of response var */
 #define VAR_RESPONSE_MIN 200 /*< Minimal value of response var*/
 #define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
-#define MIN_DNS_REQUEST_COUNT 200 /*< Minimal value of dns count of packets */
-#define MIN_DNS_REQUEST_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
-#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 200 /*< Minimal value of dns count in payload analysis for other anomaly */
-#define MIN_DNS_RESPONSE_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
-#define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 200 /*< Minimal value of dns count of packets */
-#define REQUEST_MAX_COUNT_OF_USED_LETTERS 24  /*< Maximum number of used leeters for domain */
+#define MIN_DNS_REQUEST_COUNT 1000 /*< Minimal value of dns count of packets */
+#define MIN_DNS_REQUEST_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 1500 /*< Minimal value of dns count in payload analysis for other anomaly */
+#define MIN_DNS_RESPONSE_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 1500 /*< Minimal value of dns count of packets */
+#define MIN_LENGTH_OF_TUNNEL_STRING 50 /*< Minimal length of string containing tunnel */
+#define REQUEST_MAX_COUNT_OF_USED_LETTERS 25  /*< Maximum number of used leeters for domain */
 #define RESPONSE_MAX_COUNT_OF_USED_LETTERS 30  /*< Maximum number of used leeters for domain */
-#define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.7 /*< Maximum percent of new subdomain, more than this can be tunel */
-#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.2 /*< Minimum percent of new subdomain, less than this can be anomaly */
-#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.2 /*< Minimum percent of searching unique domains, less than that can be anomaly */
-#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.7 /*< Maximum percent of searching unique domains, more than that can be tunnel */
-#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.2 /*< Minimum percent unique domains, less than that can be anomaly */
-#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.8 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
-#define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.2 /*< Maximum percent of numbers in domain, more than that can be tunnel */
+#define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.8 /*< Maximum percent of new subdomain, more than this can be tunel */
+#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.01 /*< Minimum percent of new subdomain, less than this can be anomaly */
+#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.01 /*< Minimum percent of searching unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.8 /*< Maximum percent of searching unique domains, more than that can be tunnel */
+#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.01 /*< Minimum percent unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.85 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
+#define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.3 /*< Maximum percent of numbers in domain, more than that can be tunnel */
 #define MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST 0.3 /*< Maximum percent of mallformed packet in requests */
 #define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 12 /*< Maximum count of numbers in domain, more than that can be tunnel */
 #define REQUEST_PART_TUNNEL         0b00000001 /*< Define request part for suspision */
@@ -136,13 +140,38 @@
  */
 void signal_handler(int signal);
 
+/*!
+ * \brief Turns IP address from b_plus_tree to ip_addr_t
+ * Turns IP address from b_plus_tree to ip_addr_t structure.
+ * \param[in] item  value structure from b_plus_tree
+ * \param[in] key key from b_plus_tree
+ * \return ip_addr_t structure
+ */
+inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t * item, void * key);
 
+/*!
+ * \brief Turns IP address from b_plus_tree to string
+ * Turns IP address from b_plus_tree to string in dot format.
+ * \param[in] item  value structure from b_plus_tree
+ * \param[in] key key from b_plus_tree
+ * \param[in] ip_buff space where to store the string
+ */
+void get_ip_str_from_ip_struct(ip_address_t * item, void * key,  char * ip_buff);
 
+/*!
+ * \brief Reads the last used event ID from file
+ * It tries to read the last event ID from file. When the file
+ * cannot be opened it will return 0.
+ * \param[in] file_name string with file name.
+ * \return last event id from file. Or 0.
+ */
+unsigned int read_event_id_from_file(char * file_name);
 
 /*!
  * \brief Write summary function
  * It will write summary information of DNS communication to a file.
  * It is histogram of DNS requests and responses of all IPs
+ * \param[in] record_folder name of folder where to save results
  * \param[in] histogram_dns_requests pointer to array of a histogram with requests.
  * \param[in] histogram_dns_response pointer to array of a histogram with responses.
  */
@@ -152,9 +181,20 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  * \brief Write detail results function
  * It will write details of DNS communication to a file.
  * It is histogram of DNS requests and responses of each ip address separately.
- * \param[in] list_of_ip pointer list of ip histogram structure.
+ * \param[in] record_folder_name name of folder where to save results
+ * \param[in] b_plus_tree pointer to array of b_plus_tree structures, where the IP address are stored.
+ * \param[in] count_of_btree count of trees in the array.
  */
 void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree);
+
+/*!
+ * \brief Send alerts of detected anomalies.
+ * It will send informations about detected anomalies.
+ * \param[in] ip_address IP address with anomaly.
+ * \param[in] item value from b_plus_tree.
+ * \param[in] unirec_out structure with information about UniRec output.
+ */
+void send_unirec_alert_and_reset_records(ip_addr_t * ip_address, ip_address_t *item, unirec_tunnel_notification_t * unirec_out);
 
 /*!
  * \brief Prefix tree filter
@@ -181,7 +221,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
  * \param[in] stat pointer to structure, where to save data.
  * \param[in] packet recieved packet.
  */
-void calculate_character_statistic(char * string, character_statistic_t * stat);
+void calculate_character_statistic(unsigned char * string, character_statistic_t * stat);
 
 /*!
  * \brief Calcutate information about IP address
@@ -281,9 +321,8 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
  * \param[in] item ip address with anomaly 
  * \param[in] file pointer to file with results
  * \param[in] print_time 1 - time is printed, 0 - time is not printed
- * \param[in] unirec_out  structure with output unirec variables or NULL
  */
-void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time, unirec_tunnel_notification_t * unirec_out);
+void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FILE *file, unsigned char print_time);
 
 /*!
  * \brief Print annomaly on the end of module
