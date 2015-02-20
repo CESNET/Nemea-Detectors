@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -40,45 +40,68 @@
 
 // Auxiliary functions for various conversions
 
-#include <stdint.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <syslog.h>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <limits>
+#include <cstdarg>
+#include <cstdio>
+#include <syslog.h>
+#include <stdint.h>
 
 using namespace std;
 
-extern bool background;
-extern int log_syslog;
 extern int log_upto;
 
-// static const char *level_str[] = {"EMERGENCY: ", "ALERT: ", "CRITICAL: ", "ERROR: ",
-//                                   "WARNING: ", "NOTICE: ", "INFO: ", "DEBUG: "};
-
-// Print given message to syslog and if running in foreground also to stdout
+/** \brief Print given message to syslog and also to stdout
+ * \param[in] level Type of a syslog priority
+ * \param[in] msg The message
+ */
 inline void log(int level, const char *msg, ...)
 {
    va_list args;
-   if (!background && level <= log_upto) {
+   if (level <= log_upto) {
       va_start(args, msg);
-//       if (level >= 0 && level < sizeof(level_str))
-//          printf(level_str[level]);
       vprintf(msg, args);
       va_end(args);
       printf("\n");
    }
-   if (log_syslog) {
-      va_start(args, msg);
-      vsyslog(level, msg, args);
-      va_end(args);
-   }
+   
+   // Write to Syslog
+   va_start(args, msg);
+   vsyslog(level, msg, args);
+   va_end(args);
 }
 
+/** \brief Parse and set new mask for syslog
+ * \param[in] mask Mask name
+ */
+inline void parse_logmask(string &mask)
+{
+   if (mask.compare("LOG_EMERG") == 0) {
+      log_upto = LOG_EMERG;
+   } else if (mask.compare("LOG_ALERT") == 0) {
+      log_upto = LOG_ALERT;
+   } else if (mask.compare("LOG_CRIT") == 0) {
+      log_upto = LOG_CRIT;
+   } else if (mask.compare("LOG_ERR") == 0) {
+      log_upto = LOG_ERR;
+   } else if (mask.compare("LOG_WARNING") ==0) {
+      log_upto = LOG_WARNING;
+   } else if (mask.compare("LOG_NOTICE") == 0) {
+      log_upto = LOG_NOTICE;
+   } else if (mask.compare("LOG_INFO") == 0) {
+      log_upto = LOG_INFO;
+   } else if (mask.compare("LOG_DEBUG") == 0) {
+      log_upto = LOG_DEBUG;
+   }
+   setlogmask(LOG_UPTO(log_upto));
+}
 
-
+/** \brief Convert int ot string
+ * \param[in] x Number
+ * \return String
+ */
 inline string int2str(int x)
 {
    stringstream ss;
@@ -86,6 +109,10 @@ inline string int2str(int x)
    return ss.str();
 }
 
+/** \brief Convert string to int
+ * \param[in] x String
+ * \return Int
+ */
 inline int str2int(const string &x)
 {
    stringstream ss(x);
@@ -94,13 +121,16 @@ inline int str2int(const string &x)
    return i;
 }
 
-
-// Split string using "delim" as a delimiter
-// If escape is set to true, "delim" can be escaped by backslash
+/** \brief Split string using any character from "delim" as a delimiter
+ * \param[in] str String
+ * \param[in] delim Delimiter
+ * \param[in] escape If escape is set to true, "delim" can be escaped by backslash
+ * \return A vector of strings
+ */
 inline vector<string> split(string str, char delim, bool escape = false)
 {
    vector<string> vec;
-   int i;
+   size_t i;
    while ((i = str.find(delim)) != string::npos) {
       if (escape && i > 0 && str[i-1] == '\\')
          continue;
@@ -111,12 +141,16 @@ inline vector<string> split(string str, char delim, bool escape = false)
    return vec;
 }
 
-// Split string using any character from "delim" as a delimiter
-// If escape is set to true, "delim" can be escaped by backslash
+/** \brief Split string using any character from "delim" as a delimiter
+ * \param[in] str String
+ * \param[in] delim Delimiter
+ * \param[in] escape If escape is set to true, "delim" can be escaped by backslash
+ * \return A vector of strings
+ */
 inline vector<string> split(string str, const char *delim, bool escape = false)
 {
    vector<string> vec;
-   int i;
+   size_t i;
    while ((i = str.find_first_of(delim)) != string::npos) {
       if (escape && i > 0 && str[i-1] == '\\')
          continue;
@@ -127,84 +161,85 @@ inline vector<string> split(string str, const char *delim, bool escape = false)
    return vec;
 }
 
-
-// Replace all occurences of "from" with "to" in string "str"
+/** \brief Replace all occurences of "from" with "to" in string "str"
+ * \param[in,out] str String
+ * \param[in] from Find what
+ * \param[in] to Replace with
+ */
 inline void replace(std::string& str, const std::string& from, const std::string& to) {
-    if(from.empty())
-        return;
-    size_t start_pos = 0;
-    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
-        str.replace(start_pos, from.length(), to);
-        start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
-    }
+   if(from.empty())
+      return;
+   size_t start_pos = 0;
+   while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+      str.replace(start_pos, from.length(), to);
+      start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// Templates definition
-// WARNING: use these function only for uint8_t, uint16_t, uint32_t, uint64_t
-// types
+/** \brief Trim string
+ * Removes whitespaces (spaces, tabs, etc.) from front and back of a string.
+ * If all characters are whitespaces, empty string is returned.
+ * \param[in] str Input string
+ * \return Trimmed string
+ */
+inline string trim(const string &str)
+{
+   const char* WHITESPACE = " \t\n\v\f\r";
+   size_t first = str.find_first_not_of(WHITESPACE);
+   size_t last = str.find_last_not_of(WHITESPACE);
+   if (first == string::npos) {
+      return "";
+   }
+   return str.substr(first, last - first + 1);
+}
 
-/**
- * safe_inc()
- *
- * Safely increase the value by one. In case of overflow, return value is set to
+/** \brief Safe increment of unsigned integer
+ * Safely increase the value by one. In case of overflow, value is set to
  * the maximum possible value.
- *
- * @param value Value to increase
- * @return Increased value
+ * \warning Use this template only for uint8_t, uint16_t, uint32_t, uint64_t
+ * \param[in] value Value to increase
  */
 template <typename T>
-inline T safe_inc (const T &value) 
+inline void safe_inc (T &value)
 {
    if (value < std::numeric_limits<T>::max()) {
-      return value + 1;
-   } else {
-      return value;
+      ++value;
    }
 }
 
-/**
- * safe_add()
- *
- * Safely add two unsigned values of different types. In case of overflow, 
- * return value is set to the maximum possible value of destination variable.
- *
- * @param dst Destination variable
- * @param src Source variable
- * @return Sum of values or max value of destination type
+/** \brief Safely adds two unsigned integers of different types
+ * In case of overflow, a destination value is set to the maximum possible value
+ * of a destination type.
+ * \warning Use this template only for uint8_t, uint16_t, uint32_t, uint64_t
+ * \param[in] dst Destination variable
+ * \param[in] src Source variable
  */
 template <typename T1, typename T2>
-inline T1 safe_add (const T1 &dst, const T2 &src) 
+inline void safe_add (T1 &dst, const T2 &src)
 {
-   if ((src > std::numeric_limits<T1>::max()) || 
+   if ((src > std::numeric_limits<T1>::max()) ||
       (dst > std::numeric_limits<T1>::max() - src)) {
-      return std::numeric_limits<T1>::max();
-   }
-   else {
-      return dst + src;
+      dst = std::numeric_limits<T1>::max();
+   } else {
+      dst += src;
    }
 }
 
-/**
- * safe_add()
- *
- * Safely add two unsigned values of the same type. In case of overflow, 
- * return value is set to the maximum possible value of the type of parameters.
- *
- * @param dst Destination variable
- * @param src Source variable
- * @return Sum of values or max value of the type of parameters
+/** \brief Safely adds two unsigned integers of same type
+ * In case of overflow, a destination value is set to the maximum possible value
+ * of the type of parameters.
+ * \warning Use this template only for uint8_t, uint16_t, uint32_t, uint64_t
+ * \param[in] dst Destination variable
+ * \param[in] src Source variable
  */
 template <typename T>
-inline T safe_add (const T &dst, const T &src)
+inline void safe_add (T &dst, const T &src)
 {
    if (dst > std::numeric_limits<T>::max() - src) {
-      return std::numeric_limits<T>::max();
-   }
-   else {
-      return dst + src;
+      dst = std::numeric_limits<T>::max();
+   } else {
+      dst += src;
    }
 }
-
 
 #endif
