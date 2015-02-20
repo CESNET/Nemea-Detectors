@@ -21,7 +21,6 @@ flow_statistic \
 flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
-hoststatsnemea_wr_edition \
 ipspoofingdetector \
 ipv6stats \
 logger \
