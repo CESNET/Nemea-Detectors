@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -42,10 +42,11 @@
 #include <vector>
 #include <cstdio>
 #include <cstdarg>
-
-#include "aux_func.h"
 #include "hoststats.h"
-#include <unirec/unirec.h>
+
+extern "C" {
+   #include <unirec/unirec.h>
+}
 
 #define ICMP 1
 #define TCP 6
@@ -62,11 +63,11 @@ public:
    std::vector<uint8_t> proto;
    uint32_t scale;
    std::string note;
-   
+
    Event(const uint32_t &time_first, const uint32_t &time_last, uint8_t type)
     : type(type), time_first(time_first), time_last(time_last)
    { }
-   
+
    // Methods to set parameters
    Event& addSrcAddr(const ip_addr_t &addr)
    {

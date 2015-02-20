@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -38,15 +38,13 @@
 #ifndef _DETECTION_RULES_H_
 #define _DETECTION_RULES_H_
 
-#include <string>
 #include "hoststats.h"
 
-const std::string get_rec_time(const hosts_record_t &rec); 
-
+// General detector
 void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec);
-
+// SSH detector
 void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec);
-
+// DNS detector
 void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec);
 
 #endif
