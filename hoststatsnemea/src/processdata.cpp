@@ -44,6 +44,7 @@
 #include <ctime>
 #include <csignal>
 #include <pthread.h>
+#include <unistd.h>
 #include "processdata.h"
 #include "aux_func.h" // various simple conversion functions
 #include "profile.h"

@@ -50,6 +50,7 @@
 #include "aux_func.h"
 #include "processdata.h"
 #include "config.h"
+#include <unistd.h>
 
 //TRAP
 extern "C" {
