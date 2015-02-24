@@ -63,7 +63,7 @@ enum ConfigurationStatus {NOT_INIT, INIT_OK, INIT_FAILED};
 
 class Configuration {
 private:
-   map<string, string> values;   
+   map<string, string> values;
    static pthread_mutex_t config_mutex;
    static string configFilePath;
    static ConfigurationStatus initStatus;
@@ -73,13 +73,11 @@ private:
    Configuration& operator=(Configuration const&);
    ~Configuration(){};
    static Configuration *instance;
+   void trimString(string &text);
    ConfigurationStatus load();
    void clean();
 public:
-   static void trimString(string &text);
-   
    string getValue(string paramName);
-   
    friend ostream &operator<<(ostream &i, Configuration &c)
    {
       map<string, string>::iterator it;
@@ -90,6 +88,12 @@ public:
       return i;
    }
 
+   // Get integer configuration value
+   int get_cfg_val(string name, string param, int def_value, 
+      int min_value);
+   // Get status configuration value
+   bool get_cfg_val(string name, string param);
+   
    /**
     * \brief Force Configuration to reread configuration file
     */
@@ -115,7 +119,7 @@ public:
     */
    static void freeConfiguration();
 
-   /** 
+   /**
     * \brief Set path to user defined configuration file
     * \param[in] file Path to configuration file
     */
@@ -126,6 +130,7 @@ public:
     * \return Status value
     */
    static ConfigurationStatus getInitStatus();
+   
 };
 
 #endif
