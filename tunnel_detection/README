@@ -17,9 +17,9 @@ Parameters:
     -d          File with results of detection anomaly (during modul runtime).
     -f          Read packets from file
     -g          Set Max and Min EX and VAR for suspision in requests,
-                [MIN EX, MAX EX, MIN VAR, MAX VAR]
+                [MIN EX, MAX EX, MIN VAR, MAX VAR] (all values are int) 
     -r          Set Max and Min EX and VAR for suspision in responses,
-                [MIN EX, MAX EX, MIN VAR, MAX VAR]
+                [MIN EX, MAX EX, MIN VAR, MAX VAR] (all values are int)
     -j          Set Max count of used letters not to be in suspision mode
                 [MAX number for Request, MAX number for response]
     -k          Max and Min percent of subdomain [MAX, MIN]
