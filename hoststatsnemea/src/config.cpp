@@ -2,13 +2,12 @@
  * \file config.cpp
  * \brief The Configuration singleton - used for centralized access to configuration
  * \author Tomas Cejka <cejkat@cesnet.cz>
- * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \date 2014
  * \date 2013
  * \date 2012
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2012-2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -47,7 +46,7 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include <syslog.h>
+#include <cstdlib>
 #include <pthread.h>
 #include "aux_func.h"
 #include "config.h"
@@ -131,12 +130,12 @@ ConfigurationStatus Configuration::load()
          file.close();
          return INIT_OK;
       } else {
-         log(LOG_ERR, "Failed to open configuration file \"%s\"", 
+         log(LOG_ERR, "Failed to open configuration file \"%s\"",
             configFilePath.c_str());
          return INIT_FAILED;
       }
    }
-   
+
    // Load configuration from a path defined by Nemea directory
    file.open(SYSCONFDIR "/" INI_FILENAME, ios_base::in);
    if (file.good()) {
@@ -158,10 +157,10 @@ ConfigurationStatus Configuration::load()
       file.close();
       return INIT_OK;
    }
-   
+
    // Config file is not in current directory nor in Nemea directory, copy default config.
    log(LOG_NOTICE, INI_FILENAME " file not found, trying to load " INI_DEFAULT_FILENAME);
-   
+
    // copy INI_DEFAULT_FILENAME to INI_FILENAME
    if (copy_file(SYSCONFDIR "/" INI_DEFAULT_FILENAME, SYSCONFDIR "/" INI_FILENAME)) {
       log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
@@ -170,7 +169,8 @@ ConfigurationStatus Configuration::load()
       log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
       file.open(INI_FILENAME, ios_base::in);
    } else {
-      syslog(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME ", using default file directly.");
+      log(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME 
+         ", using default file directly.");
       file.open(SYSCONFDIR "/" INI_DEFAULT_FILENAME, ios_base::in);
    }
    if (file.good()) {
@@ -181,7 +181,7 @@ ConfigurationStatus Configuration::load()
       file.close();
       return INIT_OK;
    }
-   
+
    cerr << "Could not load configuration" << endl;
    log(LOG_ERR, "Could not load configuration");
    return INIT_FAILED;
@@ -249,6 +249,69 @@ ConfigurationStatus Configuration::getInitStatus()
    return initStatus;
 }
 
+/** \brief Get integer configuration value
+ * Get the value from the configuration file. If the value is not specified or
+ * is less than a minimal value, returns default value.
+ * \param[in] name Meaning of the value for error messages
+ * \param[in] param Name of the value in the configuration file
+ * \param[in] def_value Default value
+ * \param[in] min_value Minimal value
+ * \return Variable from configuration file or default value.
+ */
+int Configuration::get_cfg_val(string name, string param, int def_value,
+   int min_value)
+{
+   int value;
+   string value_str = trim(getValue(param));
+
+   if (value_str.empty()) {
+      log(LOG_WARNING, "Warning: %s '%s' is not specified in the configuration "
+         "file. Using %d as default.", name.c_str(), param.c_str(), def_value);
+      value = def_value;
+   } else {
+      value = atoi(value_str.c_str());
+   }
+
+   if (value < min_value) {
+      log(LOG_WARNING, "Warning: %s value '%s' is less than the minimum "
+         "value (%d). Using %d as default.", name.c_str(), param.c_str(),
+         min_value, def_value);
+      value = def_value;
+   }
+
+   return value;
+}
+
+/** \brief Get status configuration value
+ * Get the value from the configuration file. If value is "1", "true" or
+ * "enabled", returns true. Otherwise returns false.
+ * If the value is not specified, returns false.
+ * \param[in] name Meaning of the value for error messages
+ * \param[in] param Name of the value in the configuration file
+ * \return True or false
+ */
+bool Configuration::get_cfg_val(std::string name, std::string param)
+{
+   bool value;
+   string value_str = trim(getValue(param));
+   
+   if (value_str.empty()) {
+      log(LOG_WARNING, "Warning: Status of %s '%s' is not specified in the "
+         "configuration file. Disabled by default.", name.c_str(), 
+         param.c_str());
+      value = false;
+   } else {
+      if (value_str == "1" || value_str == "true" || value_str == "enabled") {
+         value = true;
+      } else {
+         value = false;
+      }
+   }
+
+   return value;
+}
+
+// Static variables Initialization
 string Configuration::configFilePath = "";
 ConfigurationStatus Configuration::initStatus = NOT_INIT;
 Configuration *Configuration::instance = NULL;

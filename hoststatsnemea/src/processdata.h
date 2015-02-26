@@ -1,5 +1,11 @@
+/**
+ * \file processdata.h
+ * \brief TRAP data processing (header file)
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \date 2014
+ */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -38,20 +44,14 @@
 #ifndef _PROCESS_DATA_H
 #define _PROCESS_DATA_H
 
-#include <string>
-#include <unistd.h>
-#include "hoststats.h"
-#include "config.h" 
-#include "profile.h"
+#define RECV_TIMEOUT 1 //seconds
+#define MSEC         1000000
 
 // ONLINE MODE THREADS
 void *data_reader_trap(void *args); //for thread
 void *data_process_trap(void *args); //for thread
 
-// Time update activation
-void start_alarm();
-
 // OFFLINE MODE FUNCTION
-//void offline_analyzer();
+void offline_analyzer();
 
 #endif
