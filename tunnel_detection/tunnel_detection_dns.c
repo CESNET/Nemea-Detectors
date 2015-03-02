@@ -1232,7 +1232,7 @@ void send_unirec_alert_and_reset_records(ip_addr_t * ip_address, ip_address_t *i
          item->suspision_response_tunnel->request_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
       }
       //txt
-      if(item->suspision_response_tunnel->state_type){
+      if(item->suspision_response_tunnel->state_type & TXT_TUNNEL){
          unirec_out->event_id = item->suspision_response_tunnel->event_id_txt;
          unirec_out->tunnel_per_new_domain = (double)(item->suspision_response_tunnel->txt_suspision->count_of_domain_searched_just_ones) /(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
          unirec_out->tunnel_per_subdomain =  (double)item->suspision_response_tunnel->txt_suspision->count_of_different_domains/(double)(item->suspision_response_tunnel->txt_suspision->count_of_inserting_for_just_ones);
