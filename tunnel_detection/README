@@ -1,0 +1,36 @@
+DNS Tunel Detection README
+
+Goal:	This module detects DNS tunnels on the network.
+
+Input Interface: UniRec format <COLLECTOR_FLOW>,<DNS>
+		 Specified by -u parameter
+Output Interface: UniRec format <DNS_TUNNEL_ALERT>
+
+Parameters:
+    -u TMPL	Specify UniRec template expected on the input interface.
+    -p N        Show progess - print a dot every N flows.
+    -a          File with whitelist of domain which will not be analysed
+    -b          File with whitelist of IPs which will not be analysed
+    -c          Read packet from file - MEASURE_PARAMETERS mode
+    -s          Folder with results and other information about detection
+                (on the end of module). Specify folder for data saving.
+    -d          File with results of detection anomaly (during modul runtime).
+    -f          Read packets from file
+    -g          Set Max and Min EX and VAR for suspision in requests,
+                [MIN EX, MAX EX, MIN VAR, MAX VAR] (all values are int) 
+    -r          Set Max and Min EX and VAR for suspision in responses,
+                [MIN EX, MAX EX, MIN VAR, MAX VAR] (all values are int)
+    -j          Set Max count of used letters not to be in suspision mode
+                [MAX number for Request, MAX number for response]
+    -k          Max and Min percent of subdomain [MAX, MIN]
+    -l          Max count and percent of numbers in domain not to be in
+                suspicion mode [MAX count, MAX percent]
+    -m          Max percent of mallformed packet to be in traffic anoly [MAX]
+    -n          MIN count of suspected requests to be traffic anomaly
+                or tunnel [MIN for traffic anomaly, MIN for tunnel]
+    -o          MIN count of suspected responses to be traffic anomaly or
+                tunnel [MIN for traffic anomaly, MIN for tunnel]
+    -q          Max and Min percent of searching just ones [MAX, MIN]
+    -t          MAX round in SUSPICTION MODE and ATTACK MODE [SUSPICTION, ATTACK]
+    -w          MIN length of string to be tunnel [MIN]
+    -z          Length of collecting packets berore analysis in sec [time in sec]
