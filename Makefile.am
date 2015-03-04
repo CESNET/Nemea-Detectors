@@ -26,7 +26,6 @@ ipv6stats \
 logger \
 logreplay \
 merger \
-multopt \
 nemea2sdmcap \
 pca \
 p2pbotnet_detection \

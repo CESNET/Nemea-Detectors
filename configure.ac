@@ -229,7 +229,6 @@ AC_CONFIG_FILES([Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
-                 multopt/Makefile
                  nemea-modules.spec
                  nemea2sdmcap/Makefile
                  nfreader/Makefile
