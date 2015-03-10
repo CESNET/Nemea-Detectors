@@ -2,6 +2,7 @@
  * \file ipblacklistfilter.h 
  * \brief IP blacklist detector for Nemea -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \date 2013
  * \date 2014
  */
@@ -98,6 +99,16 @@ extern "C" {
 #define BL_ENTRY_UPDATED -1
 
 /**
+ * Static mode ID.
+ */
+#define BL_STATIC_MODE 1
+
+/**
+ * Dynamic mode ID. 
+ */
+#define BL_DYNAMIC_MODE 2
+
+/**
  * Inital size for the hash table of addresses.
  */
 #define BL_HASH_SIZE 100000
@@ -137,8 +148,8 @@ char *BLACKLIST_COMMENT_AR = (char*)"#####";
 /**
  * Regular expression to parse IP address from blacklist. (only IPv4 for now).
  */
-char *BLACKLIST_REG_PATTERN = (char*)"\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b";
 
+char *BLACKLIST_REG_PATTERN = (char*)"\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
 
 // structure definitions
 

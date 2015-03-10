@@ -84,9 +84,12 @@ trap_module_info_t module_info = {
     "If any of the addresses is blacklisted the record is changed by adding \n"
     "a number of the list which blacklisted the address. UniRec with this \n"
     "flag is then sent to the next module.\n"
-    "Running syntax:\n"
-    "\t./ipblacklistfilter -i <trap_interface> <blacklist_folder>\n"
-    "The module should be controlled by python script \"detector.py\".\n"
+    "Usage:\n"
+    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D] [-n]\n"
+    "Module specific parameters:\n"
+    "	-f		Specify file with blacklisted IP addresses/subnets.\n"
+    "	-D		Switch to dynamic mode.\n"
+    "	-n              Do not send terminating Unirec when exiting program.\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n", 
@@ -112,6 +115,19 @@ void signal_handler(int signal)
 }
 
 /**
+ * Procedure for swapping bits in byte.
+ * @param in Input byte.
+ * @return Byte with reversed bits.
+ */
+inline uint8_t bit_endian_swap(uint8_t in) {
+   in = (in & 0xF0) >> 4 | (in & 0x0F) << 4;
+   in = (in & 0xCC) >> 2 | (in & 0x33) << 2;
+   in = (in & 0xAA) >> 1 | (in & 0x55) << 1;
+   return in;
+}
+
+
+/**
  * Function for creating masks for IPv4 addresses.
  * Function fills the given array with every possible netmask for IPv4 address.
  * Size of this array is 33 items (see header file)
@@ -123,6 +139,12 @@ void create_v4_mask_map(ipv4_mask_map_t& m)
     m[0] = 0x00000000; // explicitly inserted or else it will be 0xFFFFFFFF
     for (int i = 1; i <= 32; i++) {
         m[i] = (0xFFFFFFFF >> (32 - i));
+
+        // swap bits in each byte for compatibility with ip_addr_t structure
+        m[i] = (bit_endian_swap((m[i] & 0x000000FF)>>  0) <<  0) |
+               (bit_endian_swap((m[i] & 0x0000FF00)>>  8) <<  8) |
+               (bit_endian_swap((m[i] & 0x00FF0000)>> 16) << 16) |
+               (bit_endian_swap((m[i] & 0xFF000000)>> 24) << 24);
     }
 }
 
@@ -209,21 +231,23 @@ int load_ip (cc_hash_table_t& ip_bl, string& file)
         // trim all whitespaces
         line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
-        str_pos = line.find_first_of('/');
+        // Find IP-blacklist separator
+        str_pos = line.find_first_of(',');
+        if (str_pos == string::npos) {
+            // Blacklist ID delimeter not found (bad format?), skip it
+            cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
+            continue;
+        }
 
+        // Parse blacklist ID
+        bl_flag = strtoull((line.substr(str_pos + 1, string::npos)).c_str(), NULL, 10);
+        
+        // Parse IP
+        ip = line.substr(0, str_pos);
+        str_pos = ip.find_first_of('/');
         // prefix length is not specified --> will use 32
         if (str_pos == string::npos) {
-            str_pos = line.find_first_of(',');
-            if (str_pos == string::npos) {
-                // Blacklist index delimeter not found (bad format?), skip it
-                cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
-                continue;
-            }
-            ip = line.substr(0, str_pos);
-            bl_flag_str = line.substr(str_pos + 1, string::npos);
-            bl_flag = strtoull(bl_flag_str.c_str(), NULL, 10);
-
-            if(!ip_from_str(ip.c_str(), &key)) {
+            if (!ip_from_str(ip.c_str(), &key)) {
                 continue;
             }
             if (ip_is4(&key)) {
@@ -231,25 +255,24 @@ int load_ip (cc_hash_table_t& ip_bl, string& file)
             } else {
                 bl_entry.pref_length = PREFIX_V6_DEFAULT;
             }
-       /* } else { // commented out for future use with prefixes
-            ip = line.substr(0, str_pos);
+	cout << "loaded ip: " << ip << "/32" << endl;
+        } else { // ip with prefix
+            string ip_only, mask_only;
+            ip_only = ip.substr(0, str_pos);
     
-            if(!ip_from_str(ip.c_str(), &key)) {
+            if(!ip_from_str(ip_only.c_str(), &key)) {
                 continue;
             }
 
-            ip = line.substr(str_pos + 1);
-            bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
+            mask_only = ip.substr(str_pos + 1);
+            bl_entry.pref_length = strtoul(mask_only.c_str(), NULL, 0);
 
             if (ip_is4(&key) && (bl_entry.pref_length > 32)) {
                 continue;
             } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
                 continue;
             }
-        }*/
-
-        } else { // prefix specified -- will drop for now
-            continue;
+	cout << "loaded ip: " << ip_only << "/" << mask_only << endl;
         }
  
         memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
@@ -337,20 +360,23 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
             continue;
         }
 
+
+        // find IP-blacklist separator
+        str_pos = line.find_first_of(',');
+        if (str_pos == string::npos) {
+           // Blacklist index delimeter not found (bad format?), skip it
+           cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
+           continue;
+        }
+
+        // Parse blacklist ID
+        bl_flag = strtoull((line.substr(str_pos + 1, string::npos)).c_str(), NULL, 10);
+
+        // Parse IP
+        ip = line.substr(0, str_pos);
         // are we loading prefix?
-        str_pos = line.find_first_of('/');
-
+        str_pos = ip.find_first_of('/');
         if (str_pos == string::npos) { // ip only
-            str_pos = line.find_first_of(',');
-            if (str_pos == string::npos) {
-                // Blacklist index delimeter not found (bad format?), skip it
-                cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
-                continue;
-            }
-            ip = line.substr(0, str_pos);
-            bl_flag_str = line.substr(str_pos + 1, string::npos);
-            bl_flag = strtoull(bl_flag_str.c_str(), NULL, 10);
-
             if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
                 continue;
             }
@@ -360,12 +386,12 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
                 bl_entry.pref_length = PREFIX_V6_DEFAULT;
             }                
         } else { // ip prefix
-            if (!ip_from_str(line.substr(0, str_pos).c_str(), &bl_entry.ip)) {
+            if (!ip_from_str((ip.substr(0, str_pos)).c_str(), &bl_entry.ip)) {
                 continue;
             }
-            line.erase(0, str_pos + 1);
+            ip.erase(0, str_pos + 1); // TODO: O RLY?
             if (str_pos != string::npos) {
-                bl_entry.pref_length = strtoul(line.c_str(), NULL, 0);
+                bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
             } else {
                 continue;
             }
@@ -400,7 +426,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, black_list_t& black_list)
 {
     int begin, end, mid;
-    int mask_result;
+    int mask_result = 1;
     ip_addr_t masked;
     begin = 0;
     end = black_list.size() - 1;
@@ -458,27 +484,42 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * @param record Record being analyzed.
  * @param detected Detection record used if any address matches the blacklist.
  * @param ip_bl Hash table with addresses.
+ * @param v4mm Map of IPv4 masks.
+ * @param v6mm Map of IPv6 masks.
+ * @param net_bl List of prefixes to be compared with.
  * @return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void *record, void *detected, cc_hash_table_t& ip_bl)
+int v4_blacklist_check(ur_template_t* ur_tmp,
+                       ur_template_t* ur_det,
+                       const void *record,
+                       void *detected,
+                       cc_hash_table_t& ip_bl,
+                       ipv4_mask_map_t& v4mm,
+                       ipv6_mask_map_t& v6mm,
+                       black_list_t& net_bl)
 {
     bool marked = false;
     // index of the prefix the source ip fits in (return value of binary/hash search)
     int search_result;
+
+    // Check source IP
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
-// if (search_result == NOT_FOUND)
-//  try prefixes
-// if (search_result != NOT_FOUND) ...
-//    uint8_t bl = 0x0;
-
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist << 4);
         marked = true;
     } else {
-        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+        // Check subnet blacklist
+        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+            ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
+            marked = true;
+        } else {
+            ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+        }
     }
+
+    // Check destination IP
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
     if (search_result != NOT_FOUND) {
@@ -486,15 +527,17 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
         //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
-        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+        // Check subnet blacklist
+        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+            ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
+            marked = true;
+        } else {
+            ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+        }
     }
  
-// else
-//  try prefixes
-// if (search_result != NOT_FOUND)
-//  ur_set(det_tmp, detected, UR_DST_BLACKLIST
+
     if (marked) {
-        //ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -512,39 +555,57 @@ int v4_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
  * @param record Record being analyzed.
  * @param detected Detection record used if any address matches the blacklist.
  * @param ip_bl Hash table with addresses.
+ * @param v4mm Map of IPv4 masks.
+ * @param v6mm Map of IPv6 masks.
+ * @param net_bl List of prefixes to be compared with.
  * @return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void *record, void *detected, cc_hash_table_t& ip_bl)
+int v6_blacklist_check(ur_template_t* ur_tmp,
+                       ur_template_t* ur_det,
+                       const void *record,
+                       void *detected,
+                       cc_hash_table_t& ip_bl,
+                       ipv4_mask_map_t& v4mm,
+                       ipv6_mask_map_t& v6mm,
+                       black_list_t& net_bl)
 {
     bool marked = false;
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
 
+    // Check source IP
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
     search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
-// if (search_result == NOT_FOUND)
-//  try prefixes
-// if (search_result != NOT_FOUND) ...
-//    uint8_t bl = 0x0;
-
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist) << 4;
         marked = true;
     } else {
-        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+        // Check subnet blacklist
+        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+            char buf[64];
+            ip_to_str(ur_get_ptr(ur_tmp, record, UR_SRC_IP), buf);
+            printf("IPv6 found: %s\n", buf);
+            ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
+        } else {
+            ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+        }
     }
+
+    // Check destination IP
     ip = ur_get(ur_tmp, record, UR_DST_IP);
     search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
-// if (search_result == NOT_FOUND)
-//  try prefixes
-// if (search_result != NOT_FOUND) ...
     if (search_result != NOT_FOUND) {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
         //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
         marked = true;
     } else {
-        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+        // Check subnet blacklist
+        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+            ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
+        } else {
+            ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+        }
     }
  
     if (marked) {
@@ -572,7 +633,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp, ur_template_t* ur_det, const void 
 int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t& v6mm, black_list_t& black_list)
 {
     int begin, end, mid;
-    int mask_result;
+    int mask_result = 1; // Need to be anything other than 0 to pass the first run
     ip_addr_t masked;
     begin = 0;
     end = black_list.size() - 1;
@@ -744,8 +805,7 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
  */
 void setup_downloader(bl_down_args_t *args, const char *file)
 {
-   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id | BL_ELEM_TOR.id;
-   args->sites     |= BL_WARDEN_SOURCES;
+   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id | BL_ELEM_TOR.id /*| BL_WARDEN_SOURCES*/ | BL_ELEM_SPAMHAUS.id;
    args->file       = (char*)file;
    args->comment_ar = BLACKLIST_COMMENT_AR;
    args->num        = 5;
@@ -766,6 +826,7 @@ void setup_downloader(bl_down_args_t *args, const char *file)
 int main (int argc, char** argv)
 {
     int retval = 0; // return value
+    int send_terminating_unirec = 1;
     bl_down_args_t bl_args;
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
@@ -785,6 +846,8 @@ int main (int argc, char** argv)
     // mask array (for prefixes)
     ipv4_mask_map_t v4_masks;
     ipv6_mask_map_t v6_masks;
+    create_v4_mask_map(v4_masks);
+    create_v6_mask_map(v6_masks);
 
     // can be used for both v4 and v6
     cc_hash_table_t hash_blacklist;
@@ -811,14 +874,6 @@ int main (int argc, char** argv)
     trap_free_ifc_spec(ifc_spec);
 
     trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
-    // is directory with sources specified ? (should be in control script)
-    if (argc != 2) {
-        cerr << "ERROR: Directory with blacklists is not specified. Unable to continue." << endl;
-        ur_free_template(templ);
-        ur_free_template(tmpl_det);
-        trap_finalize();
-        return EXIT_FAILURE;
-    }
 
     // set signal handling for termination
     signal(SIGTERM, signal_handler);
@@ -834,34 +889,85 @@ int main (int argc, char** argv)
     int count = 0, bl_count = 0;
 #endif
 
-    string file = string(argv[1]);
+    int opt;
+    string file;
+    int bl_mode = BL_STATIC_MODE; // default mode
 
-    // ***** Initialize Blacklist Downloader *****
-    setup_downloader(&bl_args, file.c_str());
-    pid_t c_id = bl_down_init(&bl_args);
-    if (c_id < 0) {
-       fprintf(stderr, "Error: Could not initialize downloader!\n");
-       return 1;
-    } else {
-        // Wait for initial update
-        while (!update) {
-            sleep(1);
+    // ********** Parse arguments **********
+    while ((opt = getopt(argc, argv, "Df:")) != -1) {
+        switch (opt) {
+            case 'D': // Dynamic mode
+                      bl_mode = BL_DYNAMIC_MODE;
+                      break;
+            case 'f': // Specify file with blacklisted IPs
+                      file = string(optarg);
+                      break;
+            case 'n': // Do not send terminating Unirec
+                      send_terminating_unirec = 0;
+                      break;
         }
-        update = 0;
     }
 
-    // load ip addresses from sources
-    retval = load_ip(hash_blacklist, file);
-
-    // something went wrong during loading operation -- terminate with error
-    if (retval == BLIST_FILE_ERROR) {
+    // ***** Check module arguments *****
+    if (file.length() == 0) {
+        fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D]\n", argv[0]);
         ur_free_template(templ);
         ur_free_template(tmpl_det);
         ht_destroy(&hash_blacklist);
         trap_finalize();
-        kill(c_id, SIGINT);
         return EXIT_FAILURE;
     }
+
+
+    // ***** Initialize Blacklist Downloader *****
+    pid_t c_id;
+    if (bl_mode == BL_DYNAMIC_MODE) {
+        // Start Blacklist Downloader 
+        setup_downloader(&bl_args, file.c_str());
+        c_id = bl_down_init(&bl_args);
+        if (c_id < 0) {
+           fprintf(stderr, "Error: Could not initialize downloader!\n");
+           return 1;
+        } else {
+            // Wait for initial update
+            while (!update) {
+                sleep(1);
+            }
+            update = 0;
+        }
+    }
+
+    // load ip addresses from sources
+    retval = load_update(add_update, rm_update, file);
+
+    // something went wrong during loading operation -- terminate with error
+    if (retval == BLIST_FILE_ERROR) {
+        fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        ht_destroy(&hash_blacklist);
+        trap_finalize();
+        if (bl_mode == BL_DYNAMIC_MODE) {
+            kill(c_id, SIGINT);
+        }
+        return EXIT_FAILURE;
+    }
+
+    // Add update
+    if (!add_update.empty()) {
+        if (update_add(hash_blacklist, v4_list, v6_list, add_update, v4_masks, v6_masks)) {
+            ur_free_template(templ);
+            ur_free_template(tmpl_det);
+            ht_destroy(&hash_blacklist);
+            trap_finalize();
+            if (bl_mode == BL_DYNAMIC_MODE) {
+                kill(c_id, SIGINT);
+            }
+            return EXIT_FAILURE;
+        }
+    }
+    add_update.clear();
+    rm_update.clear();
 
     unsigned int conn_try = 10;
     char ip_tab[INET6_ADDRSTRLEN];
@@ -909,15 +1015,20 @@ int main (int argc, char** argv)
                 break;
             }
         }
+
+        ip_addr_t tmp_ip = ur_get(templ, data, UR_SRC_IP);
+        if (tmp_ip.bytes[8] == 147 && tmp_ip.bytes[9] == 229) {
+            retval++;
+            retval--;
+        }
+
         
-        //retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
         // try to match the ip addresses to blacklist
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
-        //      retval = v4_blacklist_check(templ, data, black_list, v4_masks);
-            retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
+            // Check blacklisted IPs (subnet mask /32)
+            retval = v4_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist, v4_masks, v6_masks, v4_list);
         } else {
-        //      retval = v6_blacklist_check(templ, data, black_list, v6_masks);
-            retval = v6_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist);
+            retval = v6_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist, v4_masks, v6_masks, v6_list);
         }
         
         if (retval == BLACKLISTED) {
@@ -934,7 +1045,7 @@ int main (int argc, char** argv)
         count++;
 #endif
 
-        if (update) {
+        if (bl_mode == BL_DYNAMIC_MODE && update) {
         //  update black_list
 #ifdef DEBUG
             out << "Updating black list ..." << endl;
@@ -982,13 +1093,15 @@ int main (int argc, char** argv)
 
     }
 
-   // Terminate child process
-   kill(c_id, SIGINT);
+    // Terminate child process if in dynamic mode
+    if (bl_mode == BL_DYNAMIC_MODE) {
+        kill(c_id, SIGINT);
+    }
 
 // we don't want cascading shutdown of following modules
-#ifndef LONG_RUN
-    trap_send_data(0, data, 1, TRAP_HALFWAIT);
-#endif
+   if (send_terminating_unirec) {
+      trap_send_data(0, data, 1, TRAP_HALFWAIT);
+   }
 
 #ifdef DEBUG
     out << count << " flows went through." << endl;
