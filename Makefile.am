@@ -21,7 +21,6 @@ flow_statistic \
 flowtools_reader \
 heartbleed_detector \
 hoststatsnemea \
-hoststatsnemea_wr_edition \
 ipspoofingdetector \
 ipv6stats \
 logger \
@@ -48,7 +47,6 @@ trapdump \
 trapreplay \
 tunnel_detection \
 slowthreatdetector \
-sshcure \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \

@@ -224,7 +224,6 @@ AC_CONFIG_FILES([Makefile
                  flowtools_reader/Makefile
                  heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
-                 hoststatsnemea_wr_edition/Makefile
                  ipspoofingdetector/Makefile
                  ipv6stats/Makefile
                  logger/Makefile
@@ -257,7 +256,6 @@ AC_CONFIG_FILES([Makefile
                  transitfilter/Makefile
                  trapdump/Makefile
                  trapreplay/Makefile
-                 sshcure/Makefile
                  tunnel_detection/Makefile
                  unirecfilter/Makefile
                  voip_fraud_detection/Makefile

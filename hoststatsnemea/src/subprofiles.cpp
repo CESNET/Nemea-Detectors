@@ -1,5 +1,12 @@
+/**
+ * \file subprofiles.cpp
+ * \brief Optional processing of flow data
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \date 2014
+ * \date 2015
+ */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -36,349 +43,355 @@
  */
 
 #include "subprofiles.h"
-#include "aux_func.h"
 #include "detectionrules.h"
 
-extern int input_ifc_count;
-
-// Macros
-#define ADD(dst, src) \
-   dst = safe_add(dst, src);
-
-#define INC(value) \
-   value = safe_inc(value);
 
 /* HOW TO ADD NEW SUBPROFILE:
- * 1) In subprofiles.h create new class using SP_DEF_BEGIN_CLASS(_WITH_BF)
- *    and SP_DEF_END_CLASS(_WITH_BF) macros. Add your public class code between 
- *    this two macros. Use macros with _WITH_BF only when you need BloomFilter
- *    for your subprofile.
+ * 1) In subprofiles.h create new class derived from class "SubprofileBase".
+ *    This class must consists of 4 required functions from base class:
+ *       - update_src_ip(...)
+ *       - update_dst_ip(...)
+ *       - check_record(...)
+ *       - delete record(...)
+ *    Also define data structure for statistic record about a host.
+ *
+ * 2) In hoststats.h add a declaration of data structure to "List of
+ *    subprofiles's data structures".
+ *    Then append struct hosts_record_t with new line:
+ *       <data_structure> *<structure_id>;
+ *
+ * 3) In subprofile.cpp (this file) find function "register_subprofiles()" and
+ *    add your subprofile to the list of available subprofiles.
+ *
+ *    Then add definition of required class functions of your subprofile.
+ *    The constructor/destructor of the class is called on start/exit of
+ *    this module.
+ *    Keep in mind that the constructor of subprofile class use base class
+ *    constructor to specify:
+ *       - name of the subprofile
+ *       - required UniRec template
+ *       - number of required BloomFilters (optional)
+ *    Note: check_record() function is a function with detector of a suspicious
+ *       behavior. You should add this function to detection_rules.cpp(/.h).
  * 
- * 2) In subprofile.cpp add definitions of requied subprofile functions:
- *    SP_FLOW_FILTER(name)   - flow filter
- *    SP_UPDATE_SRC_IP(name) - update subprofile of source IP
- *    SP_UPDATE_DST_IP(name) - update subprofile of destination IP
- * 
- *    Add default implementation of other requied functions(just add these lines)
- *    SP_DEF_CHECK_RECORD(name);
- *    SP_DEF_DELETE_RECORD(name);
- *    
- *    If you use macros with _WITH_BF add this two macros too.
- *    SP_DEF_BLOOM_FILTER_INIT(name);
- *    SP_DEF_BLOOM_FILTER_CONFIG(name);
- * 
- * 3) In hoststats.h add subprofile to "List of subprofiles" with new line:
- *       class SUBPROFILE_CLASS(name); 
- *    Append struct hosts_record_t with new line:
- *       SUBPROFILE_CLASS(name) *SUBPROFILE_DATA(name);
- * 
- * 4) In hoststatserv.cpp find function init_subprofiles_list() and add your
- *    subprofile to the list of available subprofiles. 
+ * 4) In a configuration file add value "rules-<name_of_subprofile> = 1" to
+ *    enable your new subprofile. You can easily deactivate it by value
+ *    "rules-<name> = 0".
  * 
  * Note: There are two sample subprofiles (SSH and DNS) where you can inspire...
  */
 
-/* 
- * \brief Generate function header of the flow filter
- * \param subprofile_name Name of the subprofile
- */
-#define SP_FLOW_FILTER(subprofile_name) \
-   bool SUBPROFILE_CLASS(subprofile_name)::flow_filter(const void *data, \
-      const hs_in_ifc_spec_t &ifc)
+/**************************** Subprofile registration *************************/
+// Global list of all subprofiles
+sp_list_ptr_v subprofile_list;
 
-/** \brief Flow filter
- * Use filter to filter out unwanted flow data
- */
-#define SP_USE_FLOW_FILTER() \
-   if (!flow_filter(data, ifc)) { \
-      return 0; \
-   }
-
-/** \brief Default record creator
- * Create new record if subprofile does not exists
- * \param subprofile_name Name of the subprofile
- */
-#define SP_USE_RECORD_CREATOR(subprofile_name) \
-   /* Create new record if subprofile does not exists */ \
-   if (main_record.SUBPROFILE_DATA(subprofile_name) == NULL) { \
-      main_record.SUBPROFILE_DATA(subprofile_name) = new SUBPROFILE_CLASS(subprofile_name); \
-   }
-
-/*
- * \brief Generate update function header of source IP record
- * This macro defines a common implementation of function used by typedef 
- * ::sp_update
- * \param subprofile_name Name of the subprofile
- */
-#define SP_UPDATE_SRC_IP(subprofile_name) \
-   bool SUBPROFILE_CLASS(subprofile_name)::update_src_ip( \
-      hosts_record_t &main_record, const void *data, const hs_in_ifc_spec_t &ifc, \
-      uint8_t dir_flags, const bloom_key_t &ips) 
-
-/*
- * \brief Generate update function header of destination IP record
- * This macro defines a common implementation of function used by typedef 
- * ::sp_update
- * \param subprofile_name Name of the subprofile
- */
-#define SP_UPDATE_DST_IP(subprofile_name) \
-   bool SUBPROFILE_CLASS(subprofile_name)::update_dst_ip( \
-      hosts_record_t &main_record, const void *data, const hs_in_ifc_spec_t &ifc, \
-      uint8_t dir_flags, const bloom_key_t &ips)
-
-/*
- * \brief Generate default check record code
- * This macro defines a common implementation of function used by typedef 
- * ::sp_check
- * \param subprofile_name Name of the subprofile
- * \param rule_function Pointer to check record function (can by NULL)
- */
-#define SP_DEF_CHECK_RECORD(subprofile_name, rule_function) \
-   bool SUBPROFILE_CLASS(subprofile_name)::check_record(const hosts_key_t &key, \
-      const hosts_record_t &record) \
-   {\
-      if (record.subprofile_name ## hostprofile == NULL || rule_function == NULL) \
-         return 0; \
-      \
-      rule_function(key, record); \
-      return 1; \
-   }
-
-/*
- * \brief Generate default delete record code
- * This macro defines a common implementation of function used by typedef 
- * ::sp_delete
- * \param subprofile_name Name of the subprofile
- */
-#define SP_DEF_DELETE_RECORD(subprofile_name) \
-   bool SUBPROFILE_CLASS(subprofile_name)::delete_record(hosts_record_t &record) \
-   {\
-      if (record.subprofile_name ## hostprofile == NULL) {\
-         return 0;\
-      }\
-      else {\
-         delete record.subprofile_name ## hostprofile;\
-         return 1;\
-      }\
-   }
-
-/** \brief Default initialization of BloomFilters
- * \param subprofile_name Name of the subprofiles
- */
-#define SP_DEF_BLOOM_FILTER_INIT(subprofile_name) \
-   /* static variables inicialization */ \
-   bloom_filter* SUBPROFILE_CLASS(subprofile_name)::bf_active = NULL; \
-   bloom_filter* SUBPROFILE_CLASS(subprofile_name)::bf_learn = NULL; \
-   pthread_mutex_t SUBPROFILE_CLASS(subprofile_name)::bf_lock = PTHREAD_MUTEX_INITIALIZER;
-
-/** \brief Generate default BloomFilter configuration code
- * This macro defines a common implementation of function used by typedef 
- * ::sp_bf_config .
- * \param subprofile_name Name of the subprofile
- */
-#define SP_DEF_BLOOM_FILTER_CONFIG(subprofile_name) \
-   void SUBPROFILE_CLASS(subprofile_name)::bloom_filter_config(sp_bf_action arg, \
-   int size) \
-   { \
-      switch (arg) { \
-      case BF_CREATE: { \
-         if (bf_active != NULL || bf_learn != NULL) { \
-            break; \
-         } \
-         \
-         bloom_parameters bp; \
-         bp.projected_element_count = size; \
-         bp.false_positive_probability = 0.01; \
-         bp.compute_optimal_parameters(); \
-         \
-         bf_active = new bloom_filter(bp); \
-         bf_learn = new bloom_filter(bp); \
-         } break; \
-      case BF_SWAP: { \
-         if (bf_active == NULL || bf_learn == NULL) { \
-            break; \
-         } \
-         \
-         if (input_ifc_count > 1) { \
-            pthread_mutex_lock(&bf_lock); \
-         } \
-         bf_active->clear(); \
-         bloom_filter *tmp = bf_active; \
-         bf_active = bf_learn; \
-         bf_learn = tmp; \
-         \
-         if (input_ifc_count > 1) { \
-            pthread_mutex_unlock(&bf_lock); \
-         } \
-         \
-         } break; \
-      case BF_DESTROY: { \
-         if (bf_active == NULL || bf_learn == NULL) { \
-            break; \
-         } \
-         \
-         delete bf_active; \
-         delete bf_learn; \
-         bf_active = NULL; \
-         bf_learn = NULL; \
-         } break; \
-      } \
-   }
-
-/** \brief Generate default BloomFilter get presence code
- * Stores a key "fingerprint" and determines whether a given "fingerprint" was
- * already entered. Fingerprint is combination of SRC IP + DST IP + other
- * implementation required data
- * \n
- * Param: status[out] Result of BloomFilter presence test (bool value) - 
- *        True if "fingerprint" is known, otherwise false
- */
-#define SP_GET_BF_PRESENCE(status) \
-   if (input_ifc_count > 1) { \
-      pthread_mutex_lock(&bf_lock); \
-   } \
-   \
-   status = bf_active->containsinsert((const unsigned char *) &ips, \
-      sizeof(bloom_key_t)); \
-   bf_learn->insert((const unsigned char *) &ips, sizeof(bloom_key_t)); \
-   \
-   if (input_ifc_count > 1) { \
-      pthread_mutex_unlock(&bf_lock); \
-   }
-
-
-
-/******************************* DNS subprofile *******************************/
-#define DNS_BYTES_OVERLIMIT 1000
-
-/* DNS flow filter */
-SP_FLOW_FILTER(dns)
-{
-   return ((ur_get(ifc.tmpl, data, UR_PROTOCOL) == 6  || 
-            ur_get(ifc.tmpl, data, UR_PROTOCOL) == 17) 
-            &&
-           (ur_get(ifc.tmpl, data, UR_SRC_PORT) == 53 || 
-            ur_get(ifc.tmpl, data, UR_DST_PORT) == 53));
+/** \brief Registration of all subprofiles */
+void register_subprofiles() {
+   // DNS subprofile
+   subprofile_list.push_back(new DNSSubprofile());   
+   // SSH subprofile
+   subprofile_list.push_back(new SSHSubprofile());
+   // Add here your new subprofile...
 }
 
-/* DNS SRC IP updater */
-SP_UPDATE_SRC_IP(dns)
+/** \brief Deregistration of all subprofiles */
+void unregister_subprofiles() {
+   while(!subprofile_list.empty()) {
+      delete subprofile_list.back();
+      subprofile_list.pop_back();
+   }
+}
+
+// Macros
+#define ADD(dst, src) \
+   safe_add(dst, src);
+
+#define INC(value) \
+   safe_inc(value);
+
+
+/***************************** Base class definition **************************/
+
+/** \brief Abstract class constructor
+ * \param[in] name Name of new subprofile
+ * \param[in] tmpl_str Required UniRec items
+ * \param[in] bloom_filters_cnt A number of required BloomFilter pairs
+ */
+SubprofileBase::SubprofileBase(std::string name, std::string tmpl_str, 
+   int bloom_filters_cnt)
+{
+   sbp_enabled = false;
+   sbp_name = trim(name);
+   sbp_tmpl = trim(tmpl_str);
+   sbp_bloom_cnt = bloom_filters_cnt;
+   
+   log(LOG_DEBUG, "Subprofile '%s' created.", sbp_name.c_str());
+}
+
+/** \brief Abstract class destructor
+ */
+SubprofileBase::~SubprofileBase()
+{
+   bloomfilters_destroy();
+   log(LOG_DEBUG, "Subprofile '%s' destroyed.", sbp_name.c_str());
+}
+
+/** \brief Initialization of BloomFilters
+ * Create new instances of BloomFilters with specified size
+ * \param[in] size Size of each BloomFilter
+ */
+void SubprofileBase::bloomfilters_init(int size)
+{
+   if (sbp_bloom_cnt <= 0) {
+      // No bloomfilters required
+      return;
+   }
+   
+   // Create BloomFilters
+   bloom_parameters bp;
+   bp.projected_element_count = size;
+   bp.false_positive_probability = 0.01;
+   bp.compute_optimal_parameters();
+   
+   for (int i = 0; i < sbp_bloom_cnt; ++i) {
+      bloom_filters_t pair;
+      pair.bf_active = new bloom_filter(bp);
+      pair.bf_learn = new bloom_filter(bp);
+      bloom_filters.push_back(pair);
+   }
+}
+
+/** \brief Destruction of BloomFilters
+ */
+void SubprofileBase::bloomfilters_destroy() {
+   while (!bloom_filters.empty()) {
+      bloom_filters_t &pair = bloom_filters.back();
+      delete pair.bf_active;
+      delete pair.bf_learn;
+      bloom_filters.pop_back();
+   }
+}
+
+/** \brief Swap BloomFilters
+ * Clear active BloomFilter and swap active and learning BloomFilter.
+ */
+void SubprofileBase::bloomfilters_swap()
+{
+   std::vector<bloom_filters_t>::iterator it = bloom_filters.begin();
+   while (it != bloom_filters.end()) {
+      it->bf_active->clear();
+      bloom_filter *tmp = it->bf_active;
+      it->bf_active = it->bf_learn;
+      it->bf_learn = tmp;
+      ++it;
+   }
+}
+
+/** \brief Test whether key is in the set and than insert key
+ * 
+ * \param[in] key Key
+ * \param[in] index Index of BloomFilter pair according to the number of pairs
+ * defined in the constructor (0th pair by default).
+ * \return True if key is known, otherwise false.
+ */
+bool SubprofileBase::bloomfilters_get_presence(const bloom_key_t &key, int index) {
+   bloom_filters_t &filter = bloom_filters[index];
+   bool status = filter.bf_active->containsinsert((const unsigned char *) &key,
+      sizeof(bloom_key_t));
+   filter.bf_learn->insert((const unsigned char *) &key, sizeof(bloom_key_t));
+   return status;
+}
+
+
+/******************************* SSH subprofile *******************************/
+// Constructor
+SSHSubprofile::SSHSubprofile() : SubprofileBase("ssh", "<COLLECTOR_FLOW>", 1)
+{
+}
+
+// Destructor
+SSHSubprofile::~SSHSubprofile()
+{
+}
+
+// Flow filter
+bool SSHSubprofile::flow_filter(const void* data, const ur_template_t* tmplt)
+{
+   return (ur_get(tmplt, data, UR_PROTOCOL) == 6
+      && (
+         ur_get(tmplt, data, UR_SRC_PORT) == 22 ||
+         ur_get(tmplt, data, UR_DST_PORT) == 22
+      ));
+}
+
+// Update a record of source IP address
+bool SSHSubprofile::update_src_ip(hosts_record_t &main_record, const void *data,
+   const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips)
 {
    /* Flow filter and record creator */
-   SP_USE_FLOW_FILTER();
-   SP_USE_RECORD_CREATOR(dns);
-   
-   /* Subprofile update */
-   dns_record_t &src_host_rec = main_record.SUBPROFILE_DATA(dns)->record;
-   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(ifc.tmpl, data, UR_BYTES) >= DNS_BYTES_OVERLIMIT) {
-      INC(src_host_rec.out_rsp_overlimit_cnt);
+   if (!flow_filter(data, tmplt)) {
+      return 0;
+   }
+   if (main_record.ssh_data == NULL) {
+      main_record.ssh_data = new ssh_data_t;
    }
 
+   /* Update items */
+   bool src_present = bloomfilters_get_presence(ips);
+   uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
+   ssh_data_t &src_host_rec = *main_record.ssh_data;
+   
+   if (!src_present) INC(src_host_rec.out_all_uniqueips);
+   
+   if (dir_flags & UR_DIR_FLAG_REQ) {
+      // request flows
+      ADD(src_host_rec.out_req_packets, ur_get(tmplt, data, UR_PACKETS));
+      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_req_syn_cnt);
+   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      // respose flows
+      ADD(src_host_rec.out_rsp_packets, ur_get(tmplt, data, UR_PACKETS));
+      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_rsp_syn_cnt);
+   }
    return 1;
 }
 
-/* DNS DST IP updater */
-SP_UPDATE_DST_IP(dns)
+// Update a record of destination IP address
+bool SSHSubprofile::update_dst_ip(hosts_record_t &main_record, const void *data,
+   const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips)
 {
    /* Flow filter and record creator */
-   SP_USE_FLOW_FILTER();
-   SP_USE_RECORD_CREATOR(dns);
+   if (!flow_filter(data, tmplt)) {
+      return 0;
+   }
+   if (main_record.ssh_data == NULL) {
+      main_record.ssh_data = new ssh_data_t;
+   }
+
+   /* Update items */
+   bool dst_present = bloomfilters_get_presence(ips);
+   uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
+   ssh_data_t &dst_host_rec = *main_record.ssh_data;
    
-   // update items
-   dns_record_t &dst_host_rec = main_record.SUBPROFILE_DATA(dns)->record;
-   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(ifc.tmpl, data, UR_BYTES) >= DNS_BYTES_OVERLIMIT) {
+   if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
+
+   if (dir_flags & UR_DIR_FLAG_REQ) {
+      // request flows
+      ADD(dst_host_rec.in_req_packets, ur_get(tmplt, data, UR_PACKETS));
+      if (tcp_flags & UR_TCP_SYN) INC(dst_host_rec.in_req_syn_cnt);
+   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      // respose flows
+      ADD(dst_host_rec.in_rsp_packets, ur_get(tmplt, data, UR_PACKETS));
+      if (tcp_flags & UR_TCP_SYN) INC(dst_host_rec.in_rsp_syn_cnt);
+   }
+   return 1;
+}
+
+// Check rules in a record
+bool SSHSubprofile::check_record(const hosts_key_t &key, const hosts_record_t &record)
+{
+   if (record.ssh_data == NULL) {
+      return 0;  
+   }
+   
+   check_new_rules_ssh(key, record);
+   return 1;
+}
+
+// Delete record
+bool SSHSubprofile::delete_record(hosts_record_t &record)
+{
+   if (record.ssh_data == NULL) {
+      return 0;
+   } else {
+      delete record.ssh_data;
+      return 1;
+   }
+}
+
+/******************************* DNS subprofile *******************************/
+// Constructor
+DNSSubprofile::DNSSubprofile() : SubprofileBase("dns", "<COLLECTOR_FLOW>")
+{
+}
+
+// Destructor
+DNSSubprofile::~DNSSubprofile()
+{
+}
+
+// Flow filter
+bool DNSSubprofile::flow_filter(const void* data, const ur_template_t* tmplt)
+{
+   return ((ur_get(tmplt, data, UR_PROTOCOL) == 6  ||
+            ur_get(tmplt, data, UR_PROTOCOL) == 17)
+            &&
+           (ur_get(tmplt, data, UR_SRC_PORT) == 53 ||
+            ur_get(tmplt, data, UR_DST_PORT) == 53));
+}
+
+// Update a record of source IP address
+bool DNSSubprofile::update_src_ip(hosts_record_t& main_record, const void* data,
+   const ur_template_t* tmplt, uint8_t dir_flags, const bloom_key_t& ips)
+{
+   /* Flow filter and record creator */
+   if (!flow_filter(data, tmplt)) {
+      return 0;
+   }
+   if (main_record.dns_data == NULL) {
+      main_record.dns_data = new dns_data_t;
+   }
+
+   /* Update items */
+   dns_data_t &src_host_rec = *main_record.dns_data;
+   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(tmplt, data, UR_BYTES) >=
+      DNS_BYTES_OVERLIMIT) {
+      INC(src_host_rec.out_rsp_overlimit_cnt);
+   }
+   return 1;
+}
+
+// Update a record of destination IP address
+bool DNSSubprofile::update_dst_ip(hosts_record_t& main_record, const void* data,
+   const ur_template_t* tmplt, uint8_t dir_flags, const bloom_key_t& ips)
+{
+   /* Flow filter and record creator */
+   if (!flow_filter(data, tmplt)) {
+      return 0;
+   }
+   if (main_record.dns_data == NULL) {
+      main_record.dns_data = new dns_data_t;
+   }
+
+   /* Update items */
+   dns_data_t &dst_host_rec = *main_record.dns_data;
+   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(tmplt, data, UR_BYTES) >=
+      DNS_BYTES_OVERLIMIT) {
       INC(dst_host_rec.in_rsp_overlimit_cnt);
    }
 
    return 1;
 }
 
-/* Check record and delete record default functions */
-SP_DEF_CHECK_RECORD(dns, check_new_rules_dns)
-SP_DEF_DELETE_RECORD(dns)
-
-/******************************* SSH subprofile *******************************/
-
-/* Default initialization of BloomFilter */
-SP_DEF_BLOOM_FILTER_INIT(ssh)
-
-/* SSH flow filter */
-SP_FLOW_FILTER(ssh)
+// Check rules in a record
+bool DNSSubprofile::check_record(const hosts_key_t& key, const hosts_record_t& record)
 {
-   return 
-      (ur_get(ifc.tmpl, data, UR_PROTOCOL) == 6 
-      &&
-      (
-         ur_get(ifc.tmpl, data, UR_SRC_PORT) == 22 || 
-         ur_get(ifc.tmpl, data, UR_DST_PORT) == 22
-      ));
-}
-
-/* SSH SRC IP updater */
-SP_UPDATE_SRC_IP(ssh)
-{
-   /* Flow filter and record creator */
-   SP_USE_FLOW_FILTER();
-   SP_USE_RECORD_CREATOR(ssh);
-        
-   /* Find/add record in the BloomFilter */
-   bool src_present = false;
-   SP_GET_BF_PRESENCE(src_present);
-
-   uint8_t tcp_flags = ur_get(ifc.tmpl, data, UR_TCP_FLAGS);
-
-   /* Update items */
-   ssh_record_t &src_host_rec = main_record.SUBPROFILE_DATA(ssh)->record;
-   
-   if (!src_present) INC(src_host_rec.out_all_uniqueips);
-   
-   if (dir_flags & UR_DIR_FLAG_REQ) {
-      // request flows
-      ADD(src_host_rec.out_req_packets, ur_get(ifc.tmpl, data, UR_PACKETS));
-      if (tcp_flags & 0x2)  INC(src_host_rec.out_req_syn_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
-      // respose flows
-      ADD(src_host_rec.out_rsp_packets, ur_get(ifc.tmpl, data, UR_PACKETS));
-      if (tcp_flags & 0x2)  INC(src_host_rec.out_rsp_syn_cnt);
+   if (record.dns_data == NULL) {
+      return 0;  
    }
+   
+   check_new_rules_dns(key, record);
    return 1;
 }
 
-/* SSH DST IP updater */
-SP_UPDATE_DST_IP(ssh)
+// Delete record
+bool DNSSubprofile::delete_record(hosts_record_t &record)
 {
-   /* Flow filter and record creator */
-   SP_USE_FLOW_FILTER();
-   SP_USE_RECORD_CREATOR(ssh);
-   
-   /* Find/add record in the BloomFilter */
-   bool dst_present = false;
-   SP_GET_BF_PRESENCE(dst_present);
-
-   uint8_t tcp_flags = ur_get(ifc.tmpl, data, UR_TCP_FLAGS);
-
-   // update items
-   ssh_record_t &dst_host_rec = main_record.SUBPROFILE_DATA(ssh)->record;
-   
-   if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
-
-   if (dir_flags & UR_DIR_FLAG_REQ) {
-      // request flows
-      ADD(dst_host_rec.in_req_packets, ur_get(ifc.tmpl, data, UR_PACKETS));
-      if (tcp_flags & 0x2)  INC(dst_host_rec.in_req_syn_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
-      // respose flows
-      ADD(dst_host_rec.in_rsp_packets, ur_get(ifc.tmpl, data, UR_PACKETS));
-      if (tcp_flags & 0x2)  INC(dst_host_rec.in_rsp_syn_cnt);
+   if (record.dns_data == NULL) {
+      return 0;
+   } else {
+      delete record.dns_data;
+      return 1;
    }
-
-   return 1;
 }
 
-/* Check record, delete record and BloomFilter config default functions */
-SP_DEF_CHECK_RECORD(ssh, check_new_rules_ssh)
-SP_DEF_DELETE_RECORD(ssh)
-SP_DEF_BLOOM_FILTER_CONFIG(ssh)
-
-#undef ADD
-#undef INC
+/* Add your new subprofile here ... */

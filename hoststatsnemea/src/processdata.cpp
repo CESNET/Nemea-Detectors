@@ -1,5 +1,11 @@
+/**
+ * \file processdata.cpp
+ * \brief TRAP data processing
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \date 2014
+ */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -35,19 +41,13 @@
  *
  */
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h> // uint8_t, uint16_t, uint32_t, uint64_t
-#include <time.h>
-#include <signal.h>
-
+#include <ctime>
+#include <csignal>
+#include <pthread.h>
+#include <unistd.h>
 #include "processdata.h"
 #include "aux_func.h" // various simple conversion functions
-#include "eventhandler.h"
-#include "detectionrules.h"
+#include "profile.h"
 
 extern "C" {
    #include <libtrap/trap.h>
@@ -56,19 +56,18 @@ extern "C" {
 
 using namespace std;
 
-#define GET_DATA_TIMEOUT 1 //seconds
-
+// Global variables
+extern ur_template_t *tmpl_in;
 HostProfile *MainProfile       = NULL; // Global profile
-uint32_t hs_time               = 0; 
+uint32_t hs_time               = 0;
 
 // Status information
-bool processing_data = false;
-
-static bool terminated  = false;     // TRAP terminated by the user
+static bool processing_data = false;
+static bool terminated  = false;    // TRAP terminated by the user
 static bool end_of_steam = false;   // TRAP the end of stream (no new data)
 
 // only for ONLINE mode
-static pthread_mutex_t detector_start = PTHREAD_MUTEX_INITIALIZER; 
+static pthread_mutex_t detector_start = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t det_processing = PTHREAD_MUTEX_INITIALIZER;
 
 /////////////////////////////////////////
@@ -77,7 +76,7 @@ static pthread_mutex_t det_processing = PTHREAD_MUTEX_INITIALIZER;
 /** \brief Signal alarm handling
  * Use only in ONLINE mode!
  * Based on the alarm signal runs in regular (user defined) intervals thread
- * that goes throught the content of hosts stats table with flow records and 
+ * that goes throught the content of hosts stats table with flow records and
  * checks flow validity.
  *
  * \param signal Signal for processing
@@ -92,7 +91,7 @@ void alarm_handler(int signal)
       return;
    }
 
-   alarm(1);   
+   alarm(1);
    hs_time = time(NULL);
 
    if (hs_time % MainProfile->det_start_time != 0) {
@@ -108,51 +107,34 @@ void alarm_handler(int signal)
    pthread_mutex_unlock(&detector_start);
 }
 
-/**
- * \brief Start time updater
- * Start automatic update of global variable hs_time with system time for online
- * mode
- */
-void start_alarm() 
-{
-   if (hs_time != 0) {
-      return;
-   }
-   
-   hs_time = time(NULL);
-   alarm(1);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // ONLINE mode
 ////////////////////////////////////////////////////////////////////////////////
 
-/** 
- * Thread function for get data from TRAP and store them. 
+/**
+ * Thread function for get data from TRAP and store them.
  */
 void *data_reader_trap(void *args)
-{   
-   const hs_in_ifc_spec_t &ifc_spec = *(hs_in_ifc_spec_t *) args;
+{
    int ret;
-   
-   /* TRAP data and data size */
-   const void *data;
-   uint16_t data_size;
-   
-   /* only for first thread (index 0) */
    uint32_t next_bf_change      = 0;
    uint32_t flow_time           = 0; // seconds from rec->first
-   
-   /* -- begin of main loop -- */
+
+   // Set timeout on input ifc, so we can check whither it is needed to swap BF 
+   // even if no records are coming
+   trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, RECV_TIMEOUT * MSEC);
+
    while (!end_of_steam && !terminated) {
+      const void *data;
+      uint16_t data_size;
+
       // Get new data from TRAP with exception handling
-      ret = trap_recv(ifc_spec.ifc_index, &data, &data_size);
+      ret = trap_recv(0, &data, &data_size);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TIMEOUT:
-            /* swap BloomFilters, only one (first) thread can do this */
-            if (ifc_spec.ifc_index == 0 && flow_time != 0) {
-               flow_time += GET_DATA_TIMEOUT;
+            if (flow_time != 0) {
+               flow_time += RECV_TIMEOUT;
                if (flow_time >= next_bf_change) {
                   MainProfile->swap_bf();
                   next_bf_change += (MainProfile->active_timeout/2);
@@ -163,7 +145,7 @@ void *data_reader_trap(void *args)
             terminated = true;
             continue;
          default:
-            log(LOG_ERR, "Error: getting new data from TRAP failed: %s)\n",
+            log(LOG_ERR, "Error: getting new data from TRAP failed: %s",
                trap_last_error_msg);
             terminated = true;
             continue;
@@ -171,64 +153,58 @@ void *data_reader_trap(void *args)
       }
 
       // Check the correctness of recieved data
-      if (data_size < ur_rec_static_size(ifc_spec.tmpl)) {
+      if (data_size < ur_rec_static_size(tmpl_in)) {
          if (data_size > 1) {
-            log(LOG_ERR, "Error: data with wrong size received on interface "
-               "'%s' (expected size: %lu, received size: %i.)\nHint: if you "
-               "are using this module without flowdirection module change "
-               "value 'port_flowdir' in the configuration file "
-               "(hoststats.conf by default)", ifc_spec.name.c_str(),
-               ur_rec_static_size(ifc_spec.tmpl), data_size);
-            trap_terminate();
+            log(LOG_ERR, "Error: data with wrong size received (expected size: "
+               "%lu, received size: %i.)\nHint: if you are using this module "
+               "without flowdirection module change value 'port-flowdir' in "
+               "the configuration file (hoststats.conf by default)",
+               ur_rec_static_size(tmpl_in), data_size);
             terminated = true;
          }
          end_of_steam = true;
          break;
       }
 
-      // Update data for BloomFilter swapping 
-      if (ifc_spec.ifc_index == 0) {
-         // First flow
-         if (flow_time == 0) {
-            next_bf_change = ur_time_get_sec(ur_get(ifc_spec.tmpl, data, 
-               UR_TIME_LAST)) + MainProfile->active_timeout/2;
-         }
-         
-         flow_time = ur_time_get_sec(ur_get(ifc_spec.tmpl, data, UR_TIME_LAST));
+      // First flow
+      if (flow_time == 0) {
+         // Get time and setup alarm
+         hs_time = time(NULL);
+         alarm(1);
 
-         if (flow_time >= next_bf_change) {
-            // Swap/clear BloomFilters
-            MainProfile->swap_bf();
-            next_bf_change += (MainProfile->active_timeout/2);
-         }
+         next_bf_change = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST))
+            + MainProfile->active_timeout/2;
+      }
+
+      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
+
+      if (flow_time >= next_bf_change) {
+         // Swap/clear BloomFilters
+         MainProfile->swap_bf();
+         next_bf_change += (MainProfile->active_timeout/2);
       }
 
       // Update main profile and subprofiles
-      MainProfile->update(data, ifc_spec, true);
-   }
-   // -- end of main loop --
-
-   // TRAP TERMINATED, exiting... 
-   if (ifc_spec.ifc_index == 0) {
-      log(LOG_INFO, "Reading from the TRAP ended. Please wait until the "
-         "HostStats is finished processing.");
-
-      // Wait until the end of the current processing and run it again
-      pthread_mutex_lock(&det_processing);
-      pthread_mutex_unlock(&det_processing);
-      pthread_mutex_unlock(&detector_start);
+      MainProfile->update(data, tmpl_in, true);
    }
 
-   log(LOG_DEBUG, "Input thread '%s' terminated.", ifc_spec.name.c_str());
+   // TRAP TERMINATED, exiting...
+   log(LOG_INFO, "Reading from the TRAP ended.");
+
+   // Wait until the end of the current processing and run it again (to end)
+   pthread_mutex_lock(&det_processing);
+   pthread_mutex_unlock(&det_processing);
+   pthread_mutex_unlock(&detector_start);
+
    pthread_exit(NULL);
 }
 
 
-/** 
+/**
  * Thread for check validity of flow records
  */
 void *data_process_trap(void *args)
-{  
+{
    // First lock of this mutex
    pthread_mutex_lock(&detector_start);
 
@@ -247,12 +223,12 @@ void *data_process_trap(void *args)
       pthread_mutex_unlock(&det_processing);
    }
 
-   // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting... 
+   // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting...
    if (!terminated && end_of_steam) {
       log(LOG_INFO, "Main profile processing ended. Checking the remaining records");
       MainProfile->check_table(true);
    } else {
-      log(LOG_INFO, "Main profile processing terminated.");
+      log(LOG_INFO, "Main profile processing ended.");
    }
 
    pthread_exit(NULL);
@@ -264,24 +240,24 @@ void *data_process_trap(void *args)
 
 /** \brief Analysis of already captured data in Offline mode
  * Simulates the activity of two threads (manipulating and cheching) used in
- * online mode. Reads data from the TRAP and after a specified period of time 
- * based on time of the incoming flows (unreal time), suspend reading from 
- * the TRAP and checks flow table for suspicious behavior. Then resume reading 
+ * online mode. Reads data from the TRAP and after a specified period of time
+ * based on time of the incoming flows (unreal time), suspend reading from
+ * the TRAP and checks flow table for suspicious behavior. Then resume reading
  * from TRAP and this is repeated until a stream ends.
  */
-/*void offline_analyzer()
+void offline_analyzer()
 {
    int ret;
    uint32_t next_bf_change      = 0;
    uint32_t flow_time           = 0; // seconds from rec->last
    uint32_t check_time          = 0;
-   
+
    while (!end_of_steam && !terminated) {
       const void *data;
       uint16_t data_size;
 
       // Get new data from TRAP with exception catch
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+      ret = trap_recv(0, &data, &data_size);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TERMINATED:
@@ -326,7 +302,7 @@ void *data_process_trap(void *args)
       MainProfile->update(data, tmpl_in, true);
 
       if (hs_time < check_time) {
-         // Get new data from TRAP 
+         // Get new data from TRAP
          continue;
       }
 
@@ -335,10 +311,9 @@ void *data_process_trap(void *args)
       check_time += MainProfile->det_start_time;
    }
 
-   // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting... 
+   // TRAP CONNECTION CLOSED or TRAP TERMINATED, exiting...
    if (!terminated && end_of_steam) {
       log(LOG_INFO, "Reading from the TRAP ended. Checking the remaining records.");
       MainProfile->check_table(true);
    }
 }
-*/

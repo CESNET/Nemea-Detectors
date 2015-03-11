@@ -41,17 +41,19 @@
  *
  */
 
+
+#ifndef VOIP_FRAUD_DETECTION_OUTPUT_H
+#define VOIP_FRAUD_DETECTION_OUTPUT_H
+
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
 #include "configuration.h"
+#include "data_structure.h"
 
 
-#ifndef VOIP_FRAUD_DETECTION_OUTPUT_H
-#define VOIP_FRAUD_DETECTION_OUTPUT_H
-
-/** \brief Prefix of error message. */
+/** \brief Prefix string of error message. */
 #define ERROR_MESSAGE_PREFIX "ERR_voip_fraud_detection:"
 
 /** \brief Length of buffer in convert_to_str() function (int_to_str(), uint_to_str(), ...). */
@@ -76,13 +78,15 @@
  * Unlimited input parameters are printed to standard output and log file at the same time with actual
  * datetime at the beginning of text.
  */
-#define PRINT_OUT_LOG(...) write_to_stream(stdout, get_actual_time_string(), ";", __VA_ARGS__, NULL);write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
+#define PRINT_OUT_LOG(...) write_to_stream(stdout, get_actual_time_string(), ";", __VA_ARGS__, NULL);\
+write_to_log(get_actual_time_string(),";", __VA_ARGS__, NULL)
 
 /** \brief Function macro for printing to standard error output and log file at the same time with actual datetime.
  * Unlimited input parameters are printed to standard error output and log file at the same time with actual
  * datetime at the beginning of text.
  */
-#define PRINT_ERR_LOG(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, get_actual_time_string(), ";", __VA_ARGS__, NULL);write_to_log(ERROR_MESSAGE_PREFIX, get_actual_time_string(),";", __VA_ARGS__, NULL)
+#define PRINT_ERR_LOG(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, get_actual_time_string(), ";", __VA_ARGS__, NULL);\
+write_to_log(ERROR_MESSAGE_PREFIX, get_actual_time_string(),";", __VA_ARGS__, NULL)
 
 /** \brief Function macro for printing to standard output.
  * Unlimited input parameters are printed to standard output.
@@ -92,12 +96,14 @@
 /** \brief Function macro for printing to standard output and log file at the same time.
  * Unlimited input parameters are printed to standard output and log file at the same time.
  */
-#define PRINT_OUT_LOG_NOTDATETIME(...) write_to_stream(stdout, __VA_ARGS__, NULL);write_to_log(__VA_ARGS__, NULL)
+#define PRINT_OUT_LOG_NOTDATETIME(...) write_to_stream(stdout, __VA_ARGS__, NULL);\
+write_to_log(__VA_ARGS__, NULL)
 
 /** \brief Function macro for printing to standard error output and log file at the same time.
  * Unlimited input parameters are printed to standard error output and log file at the same time.
  */
-#define PRINT_ERR_LOG_NOTDATETIME(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL);write_to_log(ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL)
+#define PRINT_ERR_LOG_NOTDATETIME(...) write_to_stream(stderr, ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL);\
+write_to_log(ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL)
 
 
 /** \brief Return actual date and time in system default format.

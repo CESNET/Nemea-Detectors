@@ -1,4 +1,4 @@
-**************************** HostStatsNemea module ****************************
+﻿**************************** HostStatsNemea module ****************************
 
 Table of Contents
 =================
@@ -30,7 +30,7 @@ Input interface:    1
     Note: port-flowdir is a parameter in configuration file ("hoststats.conf")
 
 Output interface:   1 ("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,
-                        DST_PORT,PROTOCOL,EVENT_SCALE") (more details below)
+                        DST_PORT,PROTOCOL,EVENT_SCALE,NOTE")(more details below)
 Output: log file with detected events
 
 Note: DIRECTION_FLAGS are used to determine the type of flow (request, response,
@@ -40,13 +40,12 @@ module (recommended) or DedupAggregator module (not implemented yet).
 The content of items of the output interface:
 Some items may not be filled and these items are set to "zero" value such
 as "0.0.0.0" for IPs and "0" for others.
-	- EVENT_TYPE - a number of detected event: PORTSCAN(0), PORTSCAN_H(1), 
-		PORTSCAN_V(2), DOS(3), DDOS(4), BRUTEFORCE(5), OTHER(6)
+	- EVENT_TYPE - a number of detected event (see "fields" file in the unirec 
+                   folder)
 	- TIME_FIRST - a time of the first occurrence in the reporting period
 	- TIME_LAST - a time of the last occurrence in the reporting period
 	- EVENT_SCALE - a intensity of event
 	- other items have usual meaning
-
 
 2. How it works
 ===============

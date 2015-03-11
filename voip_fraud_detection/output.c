@@ -60,13 +60,13 @@ char * get_actual_time_string()
 
 char * time_t_to_str(time_t time)
 {
-   static char time_str[20];
+   static char time_str[FORMAT_DATETIME_LENGTH];
    struct tm *local_time;
 
    local_time = localtime(&time);
 
    // convert local_time to string in defined format
-   if (strftime(time_str, 20, FORMAT_DATETIME, local_time) == 0) {
+   if (strftime(time_str, FORMAT_DATETIME_LENGTH, FORMAT_DATETIME, local_time) == 0) {
       // set empty string in case of error strftime
       time_str[0] = '\0';
    }
@@ -102,7 +102,7 @@ void write_to_stream(FILE * stream, char * str, ...)
    // set first parameter
    parameter = str;
 
-   // initialization of parametres list
+   // initialization of parameters list
    va_start(parameters, str);
 
    // write parameters to standard output

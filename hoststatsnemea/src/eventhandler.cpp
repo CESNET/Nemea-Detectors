@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -44,7 +44,6 @@
 extern "C" {
    #include <libtrap/trap.h>
 }
-//#include <unirec/ipaddr.h>
 #include <unirec/ipaddr_cpp.h>
 
 using namespace std;
@@ -61,7 +60,7 @@ void reportEvent(const Event& event)
    string first_t = getTimeString(event.time_first);
    string last_t = getTimeString(event.time_last);
 
-   // Print info about event into a string 
+   // Print info about event into a string
    stringstream line;
    line << first_t << ';' << last_t << ';';
    line << getTypeString(event.type) << ';';
@@ -97,24 +96,24 @@ void reportEvent(const Event& event)
    line << ';';
    line << event.scale << ';';
    line << event.note << '\n';
-   
+
    // Write the line to a log file
    Configuration *config = Configuration::getInstance();
    config->lock();
    string path = config->getValue("detection-log");
    config->unlock();
-   
+
    string y = first_t.substr(0,4);
    string m = first_t.substr(4,2);
    string d = first_t.substr(6,2);
    string h = first_t.substr(8,2);
    string n = first_t.substr(10,2);
-   
-   if (!path.empty()) {     
+
+   if (!path.empty()) {
       if (path[path.size()-1] != '/')
          path += '/';
       path += y + m + d + ".log";
-      
+
       // Open file and append the line
       ofstream logfile(path.c_str(), ios_base::app);
       if (logfile.good()) {
@@ -125,10 +124,18 @@ void reportEvent(const Event& event)
          log(LOG_ERR, "Can't open log file \"%s\".", path.c_str());
       }
    }
-   
-   // Send event report to TRAP output interface (HALF_WAIT)
-   void *rec = ur_create(tmpl_out, 0);
 
+   // Send event report to TRAP output interface (HALF_WAIT)
+
+   // Allocate memory for Warden report
+   const uint16_t WT_NOTE_SIZE = 200;
+   void *rec = ur_create(tmpl_out, WT_NOTE_SIZE);
+   if (rec == NULL) {
+      log(LOG_ERR, "Failed to allocate new memory for a Warden detection report.");
+      return;
+   }
+
+   // TIMESTAMPS AND EVENT TYPE
    ur_set(tmpl_out, rec, UR_EVENT_TYPE, event.type);
    ur_set(tmpl_out, rec, UR_TIME_FIRST, ur_time_from_sec_msec(event.time_first,0));
    ur_set(tmpl_out, rec, UR_TIME_LAST, ur_time_from_sec_msec(event.time_last, 0));
@@ -139,7 +146,6 @@ void reportEvent(const Event& event)
    } else {
       ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_int(0));
    }
-
 
    // DST IP ADDRESS
    if (!event.dst_addr.empty()) {
@@ -169,9 +175,24 @@ void reportEvent(const Event& event)
       ur_set(tmpl_out, rec, UR_PROTOCOL, 0);
    }
 
+   // EVENT SCALE
    ur_set(tmpl_out, rec, UR_EVENT_SCALE, event.scale);
 
-   trap_send_data(0, rec, ur_rec_static_size(tmpl_out), TRAP_NO_WAIT);
+   // NOTE
+   int offset = snprintf((char *) rec + ur_rec_static_size(tmpl_out),
+      WT_NOTE_SIZE, event.note.c_str());
+   if (offset > 0) {
+      ur_set_dyn_offset(tmpl_out, rec, UR_NOTE, offset);
+   } else {
+      log(LOG_ERR, "Failed to create dynamic Unirec item.");
+      ur_free(rec);
+      return;
+   }
+
+   int ret = trap_send(0, rec, ur_rec_size(tmpl_out, rec));
+   if (ret != TRAP_E_OK) {
+      log(LOG_ERR, "Error: trap_send()");
+   }
 
    ur_free(rec);
 }
@@ -208,7 +229,7 @@ std::string getTimeString(const uint32_t &timestamp)
 {
    const time_t temp = timestamp;
    char buff[13]; //12 signs + '/0'
-   strftime(buff, 13, "%4Y%2m%2d%2H%2M", gmtime(&temp)); 
+   strftime(buff, 13, "%4Y%2m%2d%2H%2M", gmtime(&temp));
 
    return string(buff);
 }
