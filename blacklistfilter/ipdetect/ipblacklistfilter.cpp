@@ -64,6 +64,7 @@
 extern "C" {
 #endif
 #include <libtrap/trap.h>
+#include "../blacklist_downloader/blacklist_downloader.h"
 #ifdef __cplusplus
 }
 #endif
@@ -71,7 +72,7 @@ extern "C" {
 #include <unirec/unirec.h>
 #include <cuckoo_hash_v2.h>
 #include "ipblacklistfilter.h"
-#include "../blacklist_downloader/blacklist_downloader.h"
+
 
 //#define DEBUG
 #define LONG_RUN
@@ -184,9 +185,11 @@ aggr_data_t *create_new_aggr(aggr_data_key_t *key, aggr_data_t *data, int8_t **l
    switch (fht_ret) {
       case FHT_INSERT_OK: data_ret = NULL;
                           *kicked_flag = 0;
+                          *lock = NULL;
                           break;
       case FHT_INSERT_LOST: data_ret = NULL;
                             *kicked_flag = 1;
+                            *lock = NULL;
                             break;
       case FHT_INSERT_FAILED: data_ret = (aggr_data_t*) fht_get_data_locked(AGGR_TABLE, key, lock);
                               *kicked_flag = 0;
@@ -768,6 +771,7 @@ int main (int argc, char** argv)
     bl_down_args_t bl_args;
     uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
     uint32_t hash_table_stash_size = 0;
+    int8_t *fht_lock = NULL;
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
@@ -1045,16 +1049,8 @@ int main (int argc, char** argv)
             }
         }
 
-        
         update_timestamp(ur_get(templ, data, UR_TIME_FIRST) >> 32);
-
-        ip_addr_t tmp_ip = ur_get(templ, data, UR_SRC_IP);
-        if (tmp_ip.bytes[8] == 147 && tmp_ip.bytes[9] == 229) {
-            retval++;
-            retval--;
-        }
-
-        
+       
         // try to match the ip addresses to blacklist
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             // Check blacklisted IPs (subnet mask /32)
@@ -1070,7 +1066,6 @@ int main (int argc, char** argv)
             aggr_data_t *aggr_data;
             aggr_data_key_t aggr_data_key;
             uint8_t kicked_flag;
-            int8_t *data_lock;
 
             aggr_data_key.srcip = ur_get(templ, data, UR_SRC_IP);
             aggr_data_key.dstip = ur_get(templ, data, UR_DST_IP);
@@ -1083,7 +1078,7 @@ int main (int argc, char** argv)
             memcpy(new_data->data, detection, ur_rec_size(tmpl_det, detection));
 
             // Create new aggregation record or find old one already in table
-            aggr_data = create_new_aggr(&aggr_data_key, new_data, &data_lock, kicked_data, &kicked_flag);
+            aggr_data = create_new_aggr(&aggr_data_key, new_data, &fht_lock, kicked_data, &kicked_flag);
 
             // If aggregation record is already present in table
             if (aggr_data) {
@@ -1091,9 +1086,10 @@ int main (int argc, char** argv)
                 if (!update_aggr(tmpl_det, aggr_data)) {
                    // If Active timeout has run out, send data to output
                    trap_send_data(0, aggr_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
-                   fht_remove_locked(AGGR_TABLE, &aggr_data_key, data_lock);
+                   fht_remove_locked(AGGR_TABLE, &aggr_data_key, fht_lock);
                 }
-                fht_unlock_data(data_lock);
+                fht_unlock_data(fht_lock);
+                fht_lock = NULL;
             }
 
             // If data was kicked out from table, send them to output
@@ -1162,7 +1158,7 @@ int main (int argc, char** argv)
         // Critical section ends here
 
     }
-
+    stop = 1;
     // Terminate child process if in dynamic mode
     if (bl_mode == BL_DYNAMIC_MODE) {
 #ifdef DEBUG
@@ -1172,6 +1168,9 @@ int main (int argc, char** argv)
     }
 
    // Wait for inactive timeout flush thread
+   if (fht_lock != NULL) {
+      fht_unlock_data(fht_lock);
+   }
    pthread_kill(inactive_timeout_thread_id, SIGUSR1);
    pthread_join(inactive_timeout_thread_id, NULL);
 
