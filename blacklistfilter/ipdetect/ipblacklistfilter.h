@@ -138,6 +138,22 @@ extern "C" {
  */
 #define BLACKLIST_UPDATE_MODE DIFF_UPDATE_MODE
 
+/**
+ * Default inactive timeout in seconds.
+ */
+#define DEFAULT_TIMEOUT_INACTIVE 30
+
+/**
+ * Default active timeout in seconds.
+ */
+#define DEFAULT_TIMEOUT_ACTIVE 300
+
+/**
+ * Default aggregation hash table size.
+ */
+#define DEFAULT_HASH_TABLE_SIZE 500000
+
+
 // global definitions
 
 /**
@@ -152,6 +168,25 @@ char *BLACKLIST_COMMENT_AR = (char*)"#####";
 char *BLACKLIST_REG_PATTERN = (char*)"\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
 
 // structure definitions
+
+/**
+ * Structure for data aggregation
+ */
+typedef struct {
+   uint32_t time_first;
+   uint32_t time_last;
+   char data[1];
+} aggr_data_t;
+
+/**
+ * Structure for data aggregation
+ */
+typedef struct {
+   ip_addr_t srcip;
+   ip_addr_t dstip;
+   uint8_t proto;
+} aggr_data_key_t;
+
 
 /**
  * Structure for blacklisted addresses and prefixes

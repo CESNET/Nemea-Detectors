@@ -1,4 +1,4 @@
-EXTRA_DIST = ipdetect dnsdetect urldetect
+EXTRA_DIST = ipdetect
 if HAVE_LIBIDN
-SUBDIRS = ipdetect dnsdetect urldetect
+SUBDIRS = ipdetect
 endif

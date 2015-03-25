@@ -50,26 +50,28 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <map>
+#include <vector>
 #include <stdint.h>
 #include <signal.h>
 #include <getopt.h>
 #include <dirent.h>
 #include <unistd.h>
 
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include <libtrap/trap.h>
-
-#include <blacklist_downloader.h>
 #ifdef __cplusplus
 }
 #endif
+
 #include <unirec/unirec.h>
-#include "ipblacklistfilter.h"
 #include <cuckoo_hash_v2.h>
-
-
+#include "ipblacklistfilter.h"
+#include "../blacklist_downloader/blacklist_downloader.h"
 
 //#define DEBUG
 #define LONG_RUN
@@ -85,17 +87,28 @@ trap_module_info_t module_info = {
     "a number of the list which blacklisted the address. UniRec with this \n"
     "flag is then sent to the next module.\n"
     "Usage:\n"
-    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D] [-n]\n"
+    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size]\n"
     "Module specific parameters:\n"
-    "	-f		Specify file with blacklisted IP addresses/subnets.\n"
-    "	-D		Switch to dynamic mode.\n"
+    "	-f file		Specify file with blacklisted IP addresses/subnets.\n"
+    "	-D blacklists	Switch to dynamic mode and specify which blacklists to use.\n"
     "	-n              Do not send terminating Unirec when exiting program.\n"
+    "	-A secs         Specify active timeout in seconds. [Default: 300]\n"
+    "	-I secs         Specify inactive timeout in seconds. [Default: 30]\n"
+    "	-s size         Size of aggregation hash table. [Default: 500000]\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n", 
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
+
+
+
+uint32_t TIMESTAMP = 0; // global variable used for active/inactive timeout
+fht_table_t *AGGR_TABLE;
+
+uint32_t TIMEOUT_ACTIVE = DEFAULT_TIMEOUT_ACTIVE;
+uint32_t TIMEOUT_INACTIVE = DEFAULT_TIMEOUT_INACTIVE;
 
 static int stop = 0; // global variable for stopping the program
 static int update = 0; // global variable for updating blacklists
@@ -107,12 +120,107 @@ void signal_handler(int signal)
 {
     if (signal == SIGTERM || signal == SIGINT) {
         stop = 1;
-        trap_terminate();
-    } else if (signal == SIGUSR1) {
-        // set update variable
-        update = 1;
+        printf("Terminating signal caught...\nPlease wait for clean up.\n");
     }
 }
+
+/**
+ * \brief Procedure for checking if blacklists are ready to load.
+ */
+void check_update()
+{
+   bld_lock_sync();
+   update = BLD_SYNC_FLAG;
+   bld_unlock_sync();
+}
+
+/**
+ * \brief Procedure for updating internal timestamp.
+ * \param new_time New timestamp in seconds.
+ */
+void update_timestamp(uint32_t new_time)
+{
+   if (new_time > TIMESTAMP) {
+      TIMESTAMP = new_time;
+   }
+}
+
+
+/**
+ * \brief Function computes nearest upper value of power of 2.
+ * \param size Actual size.
+ * \return Lowest power of 2 bigger or equal than actual size.
+ */
+uint32_t update_hash_table_size_to_pow2(uint32_t size)
+{
+   size--;
+   size |= size >> 1;
+   size |= size >> 2;
+   size |= size >> 4;
+   size |= size >> 8;
+   size |= size >> 16;
+   return ++size;
+}
+
+/**
+ * \brief Function for creating new or finding old record in aggregation hash table.
+ * \param key  Key of inserting data.
+ * \param data New data to insert.
+ * \param lock Reference for locked data.
+ * \param kicked Data kicked from table due to insertion of new data.
+ * \param kicked_flag Flag gaining values 0 (data was not kicked) or 1 (data was kicked).
+ * \return NULL if insert was successfull or pointer to old data with same key as
+ *         new data if data was already present in table.
+ */
+aggr_data_t *create_new_aggr(aggr_data_key_t *key, aggr_data_t *data, int8_t **lock, aggr_data_t *kicked, uint8_t *kicked_flag)
+{
+   int fht_ret;
+   aggr_data_t *data_ret;
+
+   fht_ret = fht_insert(AGGR_TABLE, key, data, NULL, kicked);
+
+
+
+   switch (fht_ret) {
+      case FHT_INSERT_OK: data_ret = NULL;
+                          *kicked_flag = 0;
+                          break;
+      case FHT_INSERT_LOST: data_ret = NULL;
+                            *kicked_flag = 1;
+                            break;
+      case FHT_INSERT_FAILED: data_ret = (aggr_data_t*) fht_get_data_locked(AGGR_TABLE, key, lock);
+                              *kicked_flag = 0;
+                              break;
+   }
+
+   return data_ret;
+}
+
+/**
+ * \brief Function update aggregation count and last seen timestamp of data.
+ * \param tmplt Unirec template for stored data.
+ * \param data  Pointer to stored data.
+ * \return 0 if Active timeout has expired, 0 otherwise.
+ */
+uint8_t update_aggr(ur_template_t *tmplt, aggr_data_t *data)
+{
+   uint8_t ret = 1;
+
+   // Update aggregation count
+   ur_set(tmplt, data->data, UR_EVENT_SCALE, ur_get(tmplt, data->data, UR_EVENT_SCALE) +1);
+   data->time_last = TIMESTAMP;
+
+   // Check Active timeout
+   if ((data->time_last - data->time_first) >= TIMEOUT_ACTIVE) {
+      // Active timeout has ran out
+      ret = 0;
+   }
+
+   return ret;
+}
+
+
+
 
 /**
  * Procedure for swapping bits in byte.
@@ -170,136 +278,6 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
             m[i][1] = 0xFFFFFFFFFFFFFFFF >> (64 - i);
         }
     }
-}
-
-/*
- * Comparison functions for sorting the vector of loaded prefixes
- */
-bool sort_by_ip_v4 (const ip_addr_t& addr1, const ip_addr_t& addr2)
-{
-    return (memcmp(&(addr1.ui32[2]), &(addr2.ui32[2]), 4) < 0) ? true : false;
-}
-
-bool sort_by_ip_v6 (const ip_addr_t& addr1, const ip_addr_t& addr2)
-{
-    return (memcmp(&addr1.ui8, &addr2.ui8, 16) < 0) ? true : false;
-}
-
-/**
- * Function for loading source files.
- * Function goes through all files in given directory and loads their content
- * (ip addresses/prefixes) to module's tables/vectors used for IP address
- * classification. Pure addresses are then saved in one hash table (both V4 
- * and V6), prefixes are put into separate vectors for according to their 
- * IP version. Vectors are then sorted for the purpose of binary search.
- * The function also checks whether the record in file is valid ip address 
- * or if the file contains valid data. Invalid records/files are automatically 
- * skipped.
- *
- * @param ip_bl Hash table for storing the addresses.
- * @param file File with IP addresses.
- * @return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
- */
-int load_ip (cc_hash_table_t& ip_bl, string& file)
-{
-    ifstream input; // data input
-
-    string line, ip, bl_flag_str;
-    size_t str_pos;
-
-    int line_num = 0;
-    uint64_t bl_flag;
-
-    ip_addr_t key; // ip address (used as key in the map)
-    ip_blist_t bl_entry; // black list entry associated with ip address
-    
-    input.open(file.c_str(), ifstream::in);
-        
-    if (!input.is_open()) {
-        cerr << "ERROR: File " << file << " cannot be opened!" << endl;
-        return BLIST_FILE_ERROR;
-    }
-
-    while (!(input.eof())) {
-        getline(input, line);
-        line_num++;
-
-        if (!line.length()) {
-            continue;
-        }
-
-        // trim all whitespaces
-        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-
-        // Find IP-blacklist separator
-        str_pos = line.find_first_of(',');
-        if (str_pos == string::npos) {
-            // Blacklist ID delimeter not found (bad format?), skip it
-            cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
-            continue;
-        }
-
-        // Parse blacklist ID
-        bl_flag = strtoull((line.substr(str_pos + 1, string::npos)).c_str(), NULL, 10);
-        
-        // Parse IP
-        ip = line.substr(0, str_pos);
-        str_pos = ip.find_first_of('/');
-        // prefix length is not specified --> will use 32
-        if (str_pos == string::npos) {
-            if (!ip_from_str(ip.c_str(), &key)) {
-                continue;
-            }
-            if (ip_is4(&key)) {
-                bl_entry.pref_length = PREFIX_V4_DEFAULT;
-            } else {
-                bl_entry.pref_length = PREFIX_V6_DEFAULT;
-            }
-	cout << "loaded ip: " << ip << "/32" << endl;
-        } else { // ip with prefix
-            string ip_only, mask_only;
-            ip_only = ip.substr(0, str_pos);
-    
-            if(!ip_from_str(ip_only.c_str(), &key)) {
-                continue;
-            }
-
-            mask_only = ip.substr(str_pos + 1);
-            bl_entry.pref_length = strtoul(mask_only.c_str(), NULL, 0);
-
-            if (ip_is4(&key) && (bl_entry.pref_length > 32)) {
-                continue;
-            } else if (ip_is6(&key) && (bl_entry.pref_length > 128)) {
-                continue;
-            }
-	cout << "loaded ip: " << ip_only << "/" << mask_only << endl;
-        }
- 
-        memcpy(&bl_entry.ip, &key, 16); // copy the ip address to the entry
-
-        // get source blacklist
-        bl_entry.in_blacklist = bl_flag;
-
-        if (bl_entry.in_blacklist == 0) {
-            continue;
-        }
-
-        if (bl_entry.pref_length == 32 || bl_entry.pref_length == 128) {
-            if (ht_get_index(&ip_bl, (char *) key.bytes, ip_bl.key_length) == NOT_FOUND) {
-                ht_insert(&ip_bl, (char *) key.bytes, &bl_entry, ip_bl.key_length);
-            }
-        }               
-        // else
-        //  if ip_is4
-        //      pushback to v4 prefix list
-        //  else
-        //      pushback to v6 prefix list
-        //
-        // sort both vectors (for binary search)
-    }
-    input.close();
-
-    return ALL_OK;
 }
 
 /**
@@ -389,7 +367,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
             if (!ip_from_str((ip.substr(0, str_pos)).c_str(), &bl_entry.ip)) {
                 continue;
             }
-            ip.erase(0, str_pos + 1); // TODO: O RLY?
+            ip.erase(0, str_pos + 1);
             if (str_pos != string::npos) {
                 bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
             } else {
@@ -504,38 +482,21 @@ int v4_blacklist_check(ur_template_t* ur_tmp,
 
     // Check source IP
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-    search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
-    if (search_result != NOT_FOUND) {
-        ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist << 4);
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
         marked = true;
     } else {
-        // Check subnet blacklist
-        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-            ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
-            marked = true;
-        } else {
-            ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
-        }
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
     }
 
     // Check destination IP
     ip = ur_get(ur_tmp, record, UR_DST_IP);
-    search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
-    if (search_result != NOT_FOUND) {
-        ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
         marked = true;
     } else {
-        // Check subnet blacklist
-        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-            ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
-            marked = true;
-        } else {
-            ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
-        }
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
- 
 
     if (marked) {
         return BLACKLISTED;
@@ -575,41 +536,23 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
 
     // Check source IP
     ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-    search_result = ht_get_index(&ip_bl,(char *) ip.bytes, ip_bl.key_length);
-    if (search_result != NOT_FOUND) {
-        ur_set(ur_det, detected, UR_SRC_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        //bl |= (((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist) << 4;
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
         marked = true;
     } else {
-        // Check subnet blacklist
-        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-            char buf[64];
-            ip_to_str(ur_get_ptr(ur_tmp, record, UR_SRC_IP), buf);
-            printf("IPv6 found: %s\n", buf);
-            ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
-        } else {
-            ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
-        }
+        ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
     }
 
     // Check destination IP
     ip = ur_get(ur_tmp, record, UR_DST_IP);
-    search_result = ht_get_index(&ip_bl, (char *) ip.bytes, ip_bl.key_length);
-    if (search_result != NOT_FOUND) {
-        ur_set(ur_det, detected, UR_DST_BLACKLIST, ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist);
-        //bl |= ((ip_blist_t*) ip_bl.table[search_result].data)->in_blacklist;
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
         marked = true;
     } else {
-        // Check subnet blacklist
-        if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-            ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
-        } else {
-            ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
-        }
+        ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
  
     if (marked) {
-        //ur_set(ur_det, detected, UR_BLACKLIST_TYPE, bl);
         return BLACKLISTED;
     }
     return ADDR_CLEAR;
@@ -642,7 +585,7 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
         mid = (begin + end) >> 1;
 
         if (ip_is4(&(updated->ip))) {
-            masked.ui32[2] = updated->ip.ui32[2] & v4mm[black_list[mid].pref_length];
+            masked.ui32[2] = updated->ip.ui32[2];// & v4mm[black_list[mid].pref_length];
             mask_result = memcmp(&(black_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
         } else {
             if (black_list[mid].pref_length <= 64) { 
@@ -651,14 +594,14 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
                  * it for comparison (we don't need to compare the whole
                  * address)
                  */
-                masked.ui64[0] = updated->ip.ui64[0] & v6mm[black_list[mid].pref_length][0];
+                masked.ui64[0] = updated->ip.ui64[0];// & v6mm[black_list[mid].pref_length][0];
                 mask_result = memcmp(&(black_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
             } else { 
                 /*
                  * we mask only the lower part of the address and use 
                  * the whole address for comparison
                  */
-                masked.ui64[1] = updated->ip.ui64[1] & v6mm[black_list[mid].pref_length][1];
+                masked.ui64[1] = updated->ip.ui64[1];// & v6mm[black_list[mid].pref_length][1];
                 mask_result = memcmp(&(black_list[mid].ip.ui8), &(masked.ui8), 16);
             } 
             
@@ -703,47 +646,19 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
     for (int i = 0; i < add_upd.size(); i++) { // go through updates
 
         if (ip_is4(&(add_upd[i].ip))) {
-            if (add_upd[i].pref_length == PREFIX_V4_DEFAULT) { // ip only
-                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes, bl_hash.key_length);
-
-                if (insert_index == NOT_FOUND) { // item is not in table --> insert
-                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i], bl_hash.key_length);
-                    if (ins_retval != 0) {
-                        return ins_retval;
-                    }
-                } else { // item is in the table --> overwrite
-                    ((ip_blist_t *)(bl_hash.table[insert_index].data))->pref_length = add_upd[i].pref_length;
-                    ((ip_blist_t *)(bl_hash.table[insert_index].data))->in_blacklist = add_upd[i].in_blacklist;
-                }
-            } else { // prefix --> use binary search method
                 insert_index = ip_binary_update(&(add_upd[i]), m4, m6, bl_v4);
                 if (insert_index == BL_ENTRY_UPDATED) { // item was already in table
-                    continue;
                 } else { // item is new --> add it
                     bl_v4.insert(bl_v4.begin() + insert_index, add_upd[i]);
                 }
-            }
+                //bl_v4.push_back(add_upd[i]);
         } else { // same for v6
-            if (add_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
-                insert_index = ht_get_index(&bl_hash, (char *) add_upd[i].ip.bytes, bl_hash.key_length);
-
-                if (insert_index == NOT_FOUND) { // item is not in table --> insert
-                    ins_retval = ht_insert(&bl_hash, (char *) add_upd[i].ip.bytes, &add_upd[i], bl_hash.key_length);
-                    if (ins_retval != 0) {
-                        return ins_retval;
-                    }
-                } else { // item is in the table --> overwrite
-                    ((ip_blist_t *)(bl_hash.table[insert_index].data))->pref_length = add_upd[i].pref_length;
-                    ((ip_blist_t *)(bl_hash.table[insert_index].data))->in_blacklist = add_upd[i].in_blacklist;
-                }
-            } else {
-                insert_index = ip_binary_update(&(add_upd[i]), m4, m6, bl_v6);
+               insert_index = ip_binary_update(&(add_upd[i]), m4, m6, bl_v6);
                 if (insert_index == BL_ENTRY_UPDATED) {
                     continue;
                 } else {
                     bl_v6.insert(bl_v6.begin() + insert_index, add_upd[i]);
                 }
-            }
         }
     }
     return 0;
@@ -766,33 +681,19 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
 
     for (int i = 0; i < rm_upd.size(); i++) { // go through updates   
         if (ip_is4(&(rm_upd[i].ip))) {
-            if (rm_upd[i].pref_length == PREFIX_V4_DEFAULT) { // ip only
-                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes, bl_hash.key_length);
-                if (remove_index != NOT_FOUND) { // remove from table
-                    ht_remove_by_index(&bl_hash, remove_index);
-                }
-            } else {
-                remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v4);
-                if (remove_index == IP_NOT_FOUND) { // nothing to remove --> move on
-                    continue;
-                } else { // remove from vector
-                    bl_v4.erase(bl_v4.begin() + remove_index);
-                }
-            }
+           remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v4);
+           if (remove_index == IP_NOT_FOUND) { // nothing to remove --> move on
+              continue;
+           } else { // remove from vector
+              bl_v4.erase(bl_v4.begin() + remove_index);
+           }
         } else { // same for v6
-            if (rm_upd[i].pref_length == PREFIX_V6_DEFAULT) { // ip only
-                remove_index = ht_get_index(&bl_hash, (char *) rm_upd[i].ip.bytes, bl_hash.key_length);
-                if (remove_index != NOT_FOUND) {
-                    ht_remove_by_index(&bl_hash, remove_index);
-                }
-            } else {
-                remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v6);
-                if (remove_index == IP_NOT_FOUND) {
-                    continue;
-                } else {
-                    bl_v6.erase(bl_v6.begin() + remove_index);
-                }
-            }
+           remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v6);
+           if (remove_index == IP_NOT_FOUND) {
+              continue;
+           } else {
+              bl_v6.erase(bl_v6.begin() + remove_index);
+           }
         }
     }
 }
@@ -800,18 +701,55 @@ void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& 
 
 
 /**
+ * \brief Thread checking if Inactive timeout of stored flows has expired.
+ * \brief tmplt Unirec template of stored data.
+ * \return void.
+ */
+void *inactive_timeout_thread_func(void *tmplt)
+{
+
+   while (!stop) {
+      // Sleep for inactive timeout
+      sleep(TIMEOUT_INACTIVE); 
+
+      // Send all flows still in table as SF (single flow)
+      fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
+      while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
+         // Check flow last seen timestamp
+         if (TIMESTAMP - ((aggr_data_t*)iter->data_ptr)->time_last >= TIMEOUT_INACTIVE) {
+            // Inactive timeout expired, send data to output
+            trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_static_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+            fht_remove_iter(iter);
+         }
+      }
+   }
+}
+
+
+
+
+
+/**
  * \brief Setup arguments structure for Blacklist Downloader.
  * \param args Pointer to arguments structure.
  */
-void setup_downloader(bl_down_args_t *args, const char *file)
+void setup_downloader(bl_down_args_t *args, const char *file, char *b_str)
 {
-   args->sites      = BL_ELEM_ZEUS_TRACKER.id | BL_ELEM_SPYEYE_TRACKER.id | BL_ELEM_PALEVO_TRACKER.id | BL_ELEM_FEODO_TRACKER.id | BL_ELEM_TOR.id /*| BL_WARDEN_SOURCES*/ | BL_ELEM_SPAMHAUS.id;
+   uint64_t sites;
+   uint8_t num = bl_translate_to_id(b_str, &sites);
+   args->use_regex = (uint8_t*)malloc(sizeof(uint8_t) * num);
+   args->reg_pattern = (char**)malloc(sizeof(char *) * num);
+
+   for (int i = 0; i < num; i++) {
+      args->use_regex[i] = 1;
+      args->reg_pattern[i] = strdup(BLACKLIST_REG_PATTERN);
+   }
+
+   args->sites      = sites;
    args->file       = (char*)file;
    args->comment_ar = BLACKLIST_COMMENT_AR;
-   args->num        = 5;
-   args->delay      = BLACKLIST_UPDATE_DELAY_TIME;
-   args->use_regex  = 1; // We want to use regelar expression filter
-   args->reg_pattern     = BLACKLIST_REG_PATTERN;
+   args->num        = num;
+   args->delay      = 300;
    args->update_mode     = BLACKLIST_UPDATE_MODE;
    args->line_max_length = BLACKLIST_LINE_MAX_LENGTH;
    args->el_max_length   = BLACKLIST_EL_MAX_LENGTH;
@@ -828,12 +766,17 @@ int main (int argc, char** argv)
     int retval = 0; // return value
     int send_terminating_unirec = 1;
     bl_down_args_t bl_args;
+    uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
+    uint32_t hash_table_stash_size = 0;
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-    ur_template_t *tmpl_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST");
+    ur_template_t *tmpl_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE");
+
+    aggr_data_t *new_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det));
+    aggr_data_t *kicked_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det));
 
     // for use with prefixes (not implemented now)
     black_list_t v4_list; 
@@ -890,14 +833,15 @@ int main (int argc, char** argv)
 #endif
 
     int opt;
-    string file;
+    string file, bl_str;
     int bl_mode = BL_STATIC_MODE; // default mode
 
     // ********** Parse arguments **********
-    while ((opt = getopt(argc, argv, "Df:")) != -1) {
+    while ((opt = getopt(argc, argv, "nD:f:A:I:s:")) != -1) {
         switch (opt) {
             case 'D': // Dynamic mode
                       bl_mode = BL_DYNAMIC_MODE;
+                      bl_str = string(optarg);
                       break;
             case 'f': // Specify file with blacklisted IPs
                       file = string(optarg);
@@ -905,12 +849,48 @@ int main (int argc, char** argv)
             case 'n': // Do not send terminating Unirec
                       send_terminating_unirec = 0;
                       break;
+            case 'A': // Active timeout
+                      TIMEOUT_ACTIVE = atoi(optarg);
+                      break;
+            case 'I': // Inactive timeout
+                      TIMEOUT_INACTIVE = atoi(optarg);
+                      break;
+            case 's': // FHT table size
+                      hash_table_size = atoi(optarg);
+                      break;
+            case '?': if (optopt == 'D' || optopt == 'f' || optopt == 'I' || optopt == 'A' || optopt == 's') {
+                         fprintf (stderr, "ERROR: Option -%c requires an argumet.\n", optopt);
+                      } else {
+                         fprintf (stderr, "ERROR: Unknown option -%c.\n", optopt);
+                      }
+                      ur_free_template(templ);
+                      ur_free_template(tmpl_det);
+                      ht_destroy(&hash_blacklist);
+                      trap_finalize();
+                      return EXIT_FAILURE;
         }
     }
 
     // ***** Check module arguments *****
     if (file.length() == 0) {
-        fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D]\n", argv[0]);
+        fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size] ", argv[0]);
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        ht_destroy(&hash_blacklist);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    if (bl_mode == BL_DYNAMIC_MODE && bl_str.length() == 0) {
+        fprintf(stderr, "Error: Parameter -D needs argument.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size]\n", argv[0]);
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        ht_destroy(&hash_blacklist);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    hash_table_size = update_hash_table_size_to_pow2(hash_table_size);
+    if ((AGGR_TABLE = fht_init(hash_table_size, sizeof(aggr_data_key_t), sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det), hash_table_stash_size)) == NULL) {
+        fprintf(stderr, "Error: Could not allocate memory for hash table\n");
         ur_free_template(templ);
         ur_free_template(tmpl_det);
         ht_destroy(&hash_blacklist);
@@ -919,19 +899,49 @@ int main (int argc, char** argv)
     }
 
 
+
     // ***** Initialize Blacklist Downloader *****
-    pid_t c_id;
     if (bl_mode == BL_DYNAMIC_MODE) {
         // Start Blacklist Downloader 
-        setup_downloader(&bl_args, file.c_str());
-        c_id = bl_down_init(&bl_args);
-        if (c_id < 0) {
+        setup_downloader(&bl_args, file.c_str(), (char*) bl_str.c_str());
+        if (bl_args.sites == 0) {
+           fprintf(stderr, "Error: No blacklists were specified!\n");
+           ur_free_template(templ);
+           ur_free_template(tmpl_det);
+           ht_destroy(&hash_blacklist);
+           fht_destroy(AGGR_TABLE);
+           trap_finalize();
+           return EXIT_FAILURE;
+        }
+        int ret = bl_down_init(&bl_args);
+        if (ret < 0) {
            fprintf(stderr, "Error: Could not initialize downloader!\n");
-           return 1;
+           ur_free_template(templ);
+           ur_free_template(tmpl_det);
+           ht_destroy(&hash_blacklist);
+           fht_destroy(AGGR_TABLE);
+           trap_finalize();
+           return EXIT_FAILURE;
         } else {
             // Wait for initial update
             while (!update) {
                 sleep(1);
+                if (stop) {
+                   ur_free_template(templ);
+                   ur_free_template(tmpl_det);
+                   ht_destroy(&hash_blacklist);
+                   fht_destroy(AGGR_TABLE);
+                   trap_finalize();
+                   if (bl_mode == BL_DYNAMIC_MODE) {
+                      fprintf(stderr, "Quiting before first update\n");
+                      bld_finalize();
+                   }
+                   return EXIT_FAILURE;
+                }
+#ifdef DEBUG
+                cout << "Waiting for initial update.\n";
+#endif
+                check_update();
             }
             update = 0;
         }
@@ -946,9 +956,10 @@ int main (int argc, char** argv)
         ur_free_template(templ);
         ur_free_template(tmpl_det);
         ht_destroy(&hash_blacklist);
+        fht_destroy(AGGR_TABLE);
         trap_finalize();
         if (bl_mode == BL_DYNAMIC_MODE) {
-            kill(c_id, SIGINT);
+            bld_finalize();
         }
         return EXIT_FAILURE;
     }
@@ -958,10 +969,12 @@ int main (int argc, char** argv)
         if (update_add(hash_blacklist, v4_list, v6_list, add_update, v4_masks, v6_masks)) {
             ur_free_template(templ);
             ur_free_template(tmpl_det);
+            fht_destroy(AGGR_TABLE);
             ht_destroy(&hash_blacklist);
             trap_finalize();
+            fprintf(stderr, "Update failed\n");
             if (bl_mode == BL_DYNAMIC_MODE) {
-                kill(c_id, SIGINT);
+                bld_finalize();
             }
             return EXIT_FAILURE;
         }
@@ -982,6 +995,22 @@ int main (int argc, char** argv)
     ofstream out;
     out.open("./detect", ofstream::out);
 #endif
+
+
+    // Create thread for Inactive timeout checking
+    pthread_t inactive_timeout_thread_id;
+    if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
+       fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
+       ur_free(detection);
+       ur_free_template(templ);
+       ur_free_template(tmpl_det);
+       fht_destroy(AGGR_TABLE);
+       ht_destroy(&hash_blacklist);
+       trap_finalize();
+       return EXIT_SUCCESS;
+    }
+
+
     // ***** Main processing loop *****
     while (!stop) {
                
@@ -1016,6 +1045,9 @@ int main (int argc, char** argv)
             }
         }
 
+        
+        update_timestamp(ur_get(templ, data, UR_TIME_FIRST) >> 32);
+
         ip_addr_t tmp_ip = ur_get(templ, data, UR_SRC_IP);
         if (tmp_ip.bytes[8] == 147 && tmp_ip.bytes[9] == 229) {
             retval++;
@@ -1035,8 +1067,43 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Sending report ..." << endl;
 #endif
+            aggr_data_t *aggr_data;
+            aggr_data_key_t aggr_data_key;
+            uint8_t kicked_flag;
+            int8_t *data_lock;
+
+            aggr_data_key.srcip = ur_get(templ, data, UR_SRC_IP);
+            aggr_data_key.dstip = ur_get(templ, data, UR_DST_IP);
+            aggr_data_key.proto = ur_get(templ, data, UR_PROTOCOL);
+
+            new_data->time_first = TIMESTAMP;
+            new_data->time_last = TIMESTAMP;
             ur_transfer_static(templ, tmpl_det, data, detection);
-            trap_send_data(0, detection, ur_rec_size(tmpl_det, detection), TRAP_HALFWAIT);
+            ur_set(tmpl_det, detection, UR_EVENT_SCALE, 1);
+            memcpy(new_data->data, detection, ur_rec_size(tmpl_det, detection));
+
+            // Create new aggregation record or find old one already in table
+            aggr_data = create_new_aggr(&aggr_data_key, new_data, &data_lock, kicked_data, &kicked_flag);
+
+            // If aggregation record is already present in table
+            if (aggr_data) {
+                // Update old record 
+                if (!update_aggr(tmpl_det, aggr_data)) {
+                   // If Active timeout has run out, send data to output
+                   trap_send_data(0, aggr_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
+                   fht_remove_locked(AGGR_TABLE, &aggr_data_key, data_lock);
+                }
+                fht_unlock_data(data_lock);
+            }
+
+            // If data was kicked out from table, send them to output
+            if (kicked_flag) {
+               trap_send_data(0, kicked_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
+            }
+
+
+
+
 #ifdef DEBUG
             bl_count++;
 #endif
@@ -1045,7 +1112,9 @@ int main (int argc, char** argv)
         count++;
 #endif
 
-        if (bl_mode == BL_DYNAMIC_MODE && update) {
+        // Critical section starts here
+        bld_lock_sync();
+        if (bl_mode == BL_DYNAMIC_MODE && BLD_SYNC_FLAG) {
         //  update black_list
 #ifdef DEBUG
             out << "Updating black list ..." << endl;
@@ -1085,22 +1154,31 @@ int main (int argc, char** argv)
             add_update.clear();
             rm_update.clear();
 #ifdef DEBUG
-            out << "Blacklist succesfully updated." << endl;
+            cout << "Blacklist succesfully updated." << endl;
 #endif
-            update = 0;
-            continue;
+           BLD_SYNC_FLAG = 0;
         }
+        bld_unlock_sync();
+        // Critical section ends here
 
     }
 
     // Terminate child process if in dynamic mode
     if (bl_mode == BL_DYNAMIC_MODE) {
-        kill(c_id, SIGINT);
+#ifdef DEBUG
+        fprintf(stderr, "Terminating\n");
+#endif
+        bld_finalize();
     }
+
+   // Wait for inactive timeout flush thread
+   pthread_kill(inactive_timeout_thread_id, SIGUSR1);
+   pthread_join(inactive_timeout_thread_id, NULL);
+
 
 // we don't want cascading shutdown of following modules
    if (send_terminating_unirec) {
-      trap_send_data(0, data, 1, TRAP_HALFWAIT);
+      trap_send_data(0, data, 1, TRAP_NO_WAIT);
    }
 
 #ifdef DEBUG
@@ -1116,7 +1194,9 @@ int main (int argc, char** argv)
     ur_free_template(templ);
     ur_free_template(tmpl_det);
     ht_destroy(&hash_blacklist);
-    trap_finalize();
+    fht_destroy(AGGR_TABLE);
+
+    TRAP_DEFAULT_FINALIZATION();
 
     return EXIT_SUCCESS;
 }
