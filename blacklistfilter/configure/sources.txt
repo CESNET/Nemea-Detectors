@@ -1,8 +1,0 @@
-# For a back-check sake, it's important to keep one number for one source, once it's been used.
-# Always append new sources, never use the same number for more than one source.
-# Comment out unused sources, rather than deleting them and replacing with another.
-
-malwaredomains_com.1 http://mirror2.malwaredomains.com/files/justdomains
-zeus_ips.3 https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist
-spyeye_ips.5 https://spyeyetracker.abuse.ch/blocklist.php?download=ipblocklist
-palevo.6 https://palevotracker.abuse.ch/blocklists.php?download=combinedblocklist
