@@ -215,6 +215,7 @@ AC_CONFIG_FILES([Makefile
                  email_reporter/Makefile
                  entropy_module/Makefile
                  example/Makefile
+                 fbreader/Makefile
                  flow_gen/Makefile
                  flow_meter/Makefile
                  flow_sanity_check/Makefile

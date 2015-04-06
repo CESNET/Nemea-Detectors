@@ -13,6 +13,7 @@ dns_amp_twente \
 entropy_module \
 email_reporter \
 example \
+fbreader \
 flow_gen \
 flow_sanity_check \
 flowcounter \
