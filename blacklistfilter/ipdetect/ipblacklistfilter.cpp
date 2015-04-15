@@ -98,7 +98,7 @@ trap_module_info_t module_info = {
     "	-s size         Size of aggregation hash table. [Default: 500000]\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
-    "   Outputs: 1 (unirec record)\n", 
+    "   Outputs: 1 (unirec record)\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -286,11 +286,11 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 /**
  * Function for loading updates.
  * Function goes through all files in given directory and loads their content
- * (ip addresses/prefixes) for updating its classification tables. Records are 
- * sorted to two update lists based on adding/removal operation. These list are 
+ * (ip addresses/prefixes) for updating its classification tables. Records are
+ * sorted to two update lists based on adding/removal operation. These list are
  * used for both V4 and V6 addresses and both for pure addresses and prefixes.
- * The function also checks whether the record in file is valid ip address 
- * or if the file contains valid data. Invalid records/files are automatically 
+ * The function also checks whether the record in file is valid ip address
+ * or if the file contains valid data. Invalid records/files are automatically
  * skipped.
  *
  * @param update_list_a Vector with entries that will be added or updated.
@@ -365,7 +365,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
                bl_entry.pref_length = PREFIX_V4_DEFAULT;
             } else {
                 bl_entry.pref_length = PREFIX_V6_DEFAULT;
-            }                
+            }
         } else { // ip prefix
             if (!ip_from_str((ip.substr(0, str_pos)).c_str(), &bl_entry.ip)) {
                 continue;
@@ -379,9 +379,9 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
         }
 
         // determine blacklist
-        bl_entry.in_blacklist = bl_flag;           
-     
-       // put entry into its respective update list        
+        bl_entry.in_blacklist = bl_flag;
+
+       // put entry into its respective update list
         if (!add_rem) {
             update_list_a.push_back(bl_entry);
         } else {
@@ -389,13 +389,13 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
         }
     }
     input.close();
-   
+
     return ALL_OK;
 }
- 
+
 /**
  * Function for binary searching in prefix lists.
- * Function uses binary search algorithm to determine whehter the given ip 
+ * Function uses binary search algorithm to determine whehter the given ip
  * address fits any of the prefix in the list.
  *
  * @param searched IP address that we are checking.
@@ -419,7 +419,7 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
             masked.ui32[2] = searched->ui32[2] & v4mm[black_list[mid].pref_length];
             mask_result = memcmp(&(black_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
         } else {
-            if (black_list[mid].pref_length <= 64) { 
+            if (black_list[mid].pref_length <= 64) {
                 /*
                  * we mask only the "upper part of the address and use
                  * it for comparison (we don't need to compare the whole
@@ -427,15 +427,15 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
                  */
                 masked.ui64[0] = searched->ui64[0] & v6mm[black_list[mid].pref_length][0];
                 mask_result = memcmp(&(black_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
-            } else { 
+            } else {
                 /*
-                 * we mask only the lower part of the address and use 
+                 * we mask only the lower part of the address and use
                  * the whole address for comparison
                  */
                 masked.ui64[1] = searched->ui64[1] & v6mm[black_list[mid].pref_length][1];
                 mask_result = memcmp(&(black_list[mid].ip.ui8), &(masked.ui8), 16);
-            } 
-            
+            }
+
         }
 
         if (mask_result < 0) {
@@ -455,9 +455,9 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 
 /**
  * Function for checking IPv4 addresses.
- * Function extracts both source and destination addresses from the UniRec record 
- * and tries to match them to either an address or prefix. If the match is positive 
- * the field in detection record is filled with the respective blacklist number. 
+ * Function extracts both source and destination addresses from the UniRec record
+ * and tries to match them to either an address or prefix. If the match is positive
+ * the field in detection record is filled with the respective blacklist number.
  * This record is later sent to the modlue that for further analysis.
  *
  * @param ur_tmp Template of input UniRec record.
@@ -509,9 +509,9 @@ int v4_blacklist_check(ur_template_t* ur_tmp,
 
 /**
  * Function for checking IPv6 addresses.
- * Function extracts both source and destination addresses from the UniRec record 
- * and tries to match them to either an address or prefix. If the match is positive 
- * the field in detection record is filled with the respective blacklist number. 
+ * Function extracts both source and destination addresses from the UniRec record
+ * and tries to match them to either an address or prefix. If the match is positive
+ * the field in detection record is filled with the respective blacklist number.
  * This record is later sent to the modlue that for further analysis.
  *
  * @param ur_tmp Template of input UniRec record.
@@ -554,7 +554,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
     } else {
         ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
     }
- 
+
     if (marked) {
         return BLACKLISTED;
     }
@@ -564,10 +564,10 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
 
 /**
  * Function for updating prefix lists (adding operation).
- * Function performs binary search similar to matching operation but 
- * instead of returning the index of the matching ip it either updates 
+ * Function performs binary search similar to matching operation but
+ * instead of returning the index of the matching ip it either updates
  * the entry or returns the index where the new item should be inserted.
- * This operation keeps the list sorted for binary search without sorting 
+ * This operation keeps the list sorted for binary search without sorting
  * the vectors explicitely.
  *
  * @param updated Item containing the update.
@@ -591,7 +591,7 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
             masked.ui32[2] = updated->ip.ui32[2];// & v4mm[black_list[mid].pref_length];
             mask_result = memcmp(&(black_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
         } else {
-            if (black_list[mid].pref_length <= 64) { 
+            if (black_list[mid].pref_length <= 64) {
                 /*
                  * we mask only the "upper part of the address and use
                  * it for comparison (we don't need to compare the whole
@@ -599,22 +599,22 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
                  */
                 masked.ui64[0] = updated->ip.ui64[0];// & v6mm[black_list[mid].pref_length][0];
                 mask_result = memcmp(&(black_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
-            } else { 
+            } else {
                 /*
-                 * we mask only the lower part of the address and use 
+                 * we mask only the lower part of the address and use
                  * the whole address for comparison
                  */
                 masked.ui64[1] = updated->ip.ui64[1];// & v6mm[black_list[mid].pref_length][1];
                 mask_result = memcmp(&(black_list[mid].ip.ui8), &(masked.ui8), 16);
-            } 
-            
+            }
+
         }
 
         if (mask_result < 0) {
             begin = mid + 1;
         } else if (mask_result > 0) {
             end = mid - 1;
-        } else { 
+        } else {
             break;
         }
     }
@@ -638,9 +638,9 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * @param add_upd Vector with updates (new items).
  * @param m4 Array with v4 masks used for prefix search.
  * @param m6 Array with v6 masks used for prefix search.
- * @return 0 if everything goes otherwise REHASH_FAILURE or INSERT_FAILURE if update fails 
+ * @return 0 if everything goes otherwise REHASH_FAILURE or INSERT_FAILURE if update fails
  * (mainly with hash table).
- */ 
+ */
 int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6)
 {
     int insert_index; // position for item insertion
@@ -677,12 +677,12 @@ int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v
  * @param rm_upd Vector with updates (removed items).
  * @param m4 Array with v4 masks used for prefix search.
  * @param m6 Array with v6 masks used for prefix search.
- */ 
+ */
 void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6)
 {
     int remove_index; // position of deleted item
 
-    for (int i = 0; i < rm_upd.size(); i++) { // go through updates   
+    for (int i = 0; i < rm_upd.size(); i++) { // go through updates
         if (ip_is4(&(rm_upd[i].ip))) {
            remove_index = ip_binary_search(&(rm_upd[i].ip), m4, m6, bl_v4);
            if (remove_index == IP_NOT_FOUND) { // nothing to remove --> move on
@@ -713,7 +713,7 @@ void *inactive_timeout_thread_func(void *tmplt)
 
    while (!stop) {
       // Sleep for inactive timeout
-      sleep(TIMEOUT_INACTIVE); 
+      sleep(TIMEOUT_INACTIVE);
 
       // Send all flows still in table as SF (single flow)
       fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
@@ -725,6 +725,13 @@ void *inactive_timeout_thread_func(void *tmplt)
             fht_remove_iter(iter);
          }
       }
+   }
+
+   // The program is terminating, empty stored flows
+   fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
+   while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
+      trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_static_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+         fht_remove_iter(iter);
    }
 }
 
@@ -783,7 +790,7 @@ int main (int argc, char** argv)
     aggr_data_t *kicked_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det));
 
     // for use with prefixes (not implemented now)
-    black_list_t v4_list; 
+    black_list_t v4_list;
     black_list_t v6_list;
 
     // update lists
@@ -810,7 +817,7 @@ int main (int argc, char** argv)
         return retval;
     }
 
-    // Initialize TRAP library (create and init all interfaces)     
+    // Initialize TRAP library (create and init all interfaces)
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
@@ -906,7 +913,7 @@ int main (int argc, char** argv)
 
     // ***** Initialize Blacklist Downloader *****
     if (bl_mode == BL_DYNAMIC_MODE) {
-        // Start Blacklist Downloader 
+        // Start Blacklist Downloader
         setup_downloader(&bl_args, file.c_str(), (char*) bl_str.c_str());
         if (bl_args.sites == 0) {
            fprintf(stderr, "Error: No blacklists were specified!\n");
@@ -1017,7 +1024,7 @@ int main (int argc, char** argv)
 
     // ***** Main processing loop *****
     while (!stop) {
-               
+
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         if (retval != TRAP_E_OK) {
@@ -1037,7 +1044,7 @@ int main (int argc, char** argv)
             }
         }
 
-        // check the data size 
+        // check the data size
         if (data_size != ur_rec_static_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
@@ -1050,7 +1057,7 @@ int main (int argc, char** argv)
         }
 
         update_timestamp(ur_get(templ, data, UR_TIME_FIRST) >> 32);
-       
+
         // try to match the ip addresses to blacklist
         if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
             // Check blacklisted IPs (subnet mask /32)
@@ -1058,7 +1065,7 @@ int main (int argc, char** argv)
         } else {
             retval = v6_blacklist_check(templ, tmpl_det, data, detection, hash_blacklist, v4_masks, v6_masks, v6_list);
         }
-        
+
         if (retval == BLACKLISTED) {
 #ifdef DEBUG
             cout << "Sending report ..." << endl;
@@ -1082,7 +1089,7 @@ int main (int argc, char** argv)
 
             // If aggregation record is already present in table
             if (aggr_data) {
-                // Update old record 
+                // Update old record
                 if (!update_aggr(tmpl_det, aggr_data)) {
                    // If Active timeout has run out, send data to output
                    trap_send_data(0, aggr_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
@@ -1104,7 +1111,7 @@ int main (int argc, char** argv)
             bl_count++;
 #endif
         }
-#ifdef DEBUG        
+#ifdef DEBUG
         count++;
 #endif
 
