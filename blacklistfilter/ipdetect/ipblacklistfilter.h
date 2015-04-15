@@ -1,5 +1,5 @@
 /**
- * \file ipblacklistfilter.h 
+ * \file ipblacklistfilter.h
  * \brief IP blacklist detector for Nemea -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
@@ -67,7 +67,7 @@ extern "C" {
 #define ADDR_CLEAR 0
 
 /**
- * Return value when file with blacklisted addresses cannot be loaded 
+ * Return value when file with blacklisted addresses cannot be loaded
  * due the I/O error, wrong format or anything else.
  */
 #define BLIST_FILE_ERROR 1
@@ -93,7 +93,7 @@ extern "C" {
 #define PREFIX_V6_DEFAULT 128
 
 /**
- * Constant returned by update function for prefixes when an existing item was 
+ * Constant returned by update function for prefixes when an existing item was
  * updated.
  */
 #define BL_ENTRY_UPDATED -1
@@ -104,7 +104,7 @@ extern "C" {
 #define BL_STATIC_MODE 1
 
 /**
- * Dynamic mode ID. 
+ * Dynamic mode ID.
  */
 #define BL_DYNAMIC_MODE 2
 
@@ -129,7 +129,7 @@ extern "C" {
 #define BLACKLIST_EL_MAX_LENGTH 64
 
 /**
- * Maximum count of elements in one update (in this case, it is maximum IP addresses per update) 
+ * Maximum count of elements in one update (in this case, it is maximum IP addresses per update)
  */
 #define BLACKLIST_EL_MAX_COUNT 100000
 
@@ -194,7 +194,7 @@ typedef struct {
 typedef struct {
     /*@{*/
     ip_addr_t ip;
-    uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */  
+    uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
 } ip_blist_t;
@@ -232,7 +232,7 @@ void create_v6_mask_map(ipv6_mask_map_t& m);
 //int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir);
 
 /*
- */ 
+ */
 //int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm);
 //int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv6_mask_map_t& v6mm);
 
