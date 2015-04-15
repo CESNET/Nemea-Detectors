@@ -6,7 +6,7 @@
  * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -68,11 +68,11 @@ HostProfile::HostProfile()
 {
    Configuration *conf = Configuration::getInstance();
    conf->lock();
-   
+
    // Load configuration data and update profile (and subprofiles) variables
-   table_size = conf->get_cfg_val("Table size", "table-size", D_TABLE_SIZE, 
+   table_size = conf->get_cfg_val("Table size", "table-size", D_TABLE_SIZE,
       D_TABLE_SIZE);
-      
+
    // Check size of table
    // Find the smallest power of two that is greater or equal to a given value
    int i = table_size;
@@ -99,22 +99,22 @@ HostProfile::HostProfile()
       D_INACTIVE_TIMEOUT, 1);
    detector_status = conf->get_cfg_val("generic rules", "rules-generic");
    port_flowdir = conf->get_cfg_val("port flowdirection", "port-flowdir");
-   
+
    // Update subprofile configuration
-   for(sp_list_ptr_iter it = subprofile_list.begin(); 
+   for(sp_list_ptr_iter it = subprofile_list.begin();
       it != subprofile_list.end(); ++it) {
       SubprofileBase *sbp_ptr = *it;
       if (!sbp_ptr->is_enabled()) {
          /* Skip disabled subprofiles */
          continue;
       }
-      
+
       // Copy subprofile's pointer and do some configurations
       sp_list.push_back(sbp_ptr);
       sbp_ptr->bloomfilters_init(2 * table_size);
    }
    conf->unlock();
-         
+
    // Initialization of hosts stats table
    stat_table = fht_init(table_size / FHT_TABLE_COLS, sizeof(hosts_key_t),
       sizeof(hosts_record_t), STAT_TABLE_STASH_SIZE);
@@ -259,7 +259,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
          &bloom_key, sizeof(bloom_key_t));
       bf_dir_learn->insert((const unsigned char *) &bloom_key,
          sizeof(bloom_key_t));
-      
+
       ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
       if (!req_present) INC(src_host_rec.out_req_uniqueips);
@@ -332,7 +332,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
          &bloom_key, sizeof(bloom_key_t));
       bf_dir_learn->insert((const unsigned char *) &bloom_key,
          sizeof(bloom_key_t));
-      
+
       ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
       ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
       if (!req_present) INC(dst_host_rec.in_req_uniqueips);
@@ -428,7 +428,7 @@ void HostProfile::swap_bf()
    tmp = bf_dir_active;
    bf_dir_active = bf_dir_learn;
    bf_dir_learn = tmp;
-   
+
    // Swap BloomFilters in subprofiles
    for(sp_list_ptr_iter it = sp_list.begin(); it != sp_list.end(); ++it) {
       (*it)->bloomfilters_swap();

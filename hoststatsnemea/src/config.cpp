@@ -2,12 +2,13 @@
  * \file config.cpp
  * \brief The Configuration singleton - used for centralized access to configuration
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2015
  * \date 2014
  * \date 2013
  * \date 2012
  */
 /*
- * Copyright (C) 2012-2014 CESNET
+ * Copyright (C) 2012-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -169,7 +170,7 @@ ConfigurationStatus Configuration::load()
       log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
       file.open(INI_FILENAME, ios_base::in);
    } else {
-      log(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME 
+      log(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME
          ", using default file directly.");
       file.open(SYSCONFDIR "/" INI_DEFAULT_FILENAME, ios_base::in);
    }
@@ -294,10 +295,10 @@ bool Configuration::get_cfg_val(std::string name, std::string param)
 {
    bool value;
    string value_str = trim(getValue(param));
-   
+
    if (value_str.empty()) {
       log(LOG_WARNING, "Warning: Status of %s '%s' is not specified in the "
-         "configuration file. Disabled by default.", name.c_str(), 
+         "configuration file. Disabled by default.", name.c_str(),
          param.c_str());
       value = false;
    } else {

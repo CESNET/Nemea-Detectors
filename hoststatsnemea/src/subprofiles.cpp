@@ -6,7 +6,7 @@
  * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -73,11 +73,11 @@
  *       - number of required BloomFilters (optional)
  *    Note: check_record() function is a function with detector of a suspicious
  *       behavior. You should add this function to detection_rules.cpp(/.h).
- * 
+ *
  * 4) In a configuration file add value "rules-<name_of_subprofile> = 1" to
  *    enable your new subprofile. You can easily deactivate it by value
  *    "rules-<name> = 0".
- * 
+ *
  * Note: There are two sample subprofiles (SSH and DNS) where you can inspire...
  */
 
@@ -88,7 +88,7 @@ sp_list_ptr_v subprofile_list;
 /** \brief Registration of all subprofiles */
 void register_subprofiles() {
    // DNS subprofile
-   subprofile_list.push_back(new DNSSubprofile());   
+   subprofile_list.push_back(new DNSSubprofile());
    // SSH subprofile
    subprofile_list.push_back(new SSHSubprofile());
    // Add here your new subprofile...
@@ -117,14 +117,14 @@ void unregister_subprofiles() {
  * \param[in] tmpl_str Required UniRec items
  * \param[in] bloom_filters_cnt A number of required BloomFilter pairs
  */
-SubprofileBase::SubprofileBase(std::string name, std::string tmpl_str, 
+SubprofileBase::SubprofileBase(std::string name, std::string tmpl_str,
    int bloom_filters_cnt)
 {
    sbp_enabled = false;
    sbp_name = trim(name);
    sbp_tmpl = trim(tmpl_str);
    sbp_bloom_cnt = bloom_filters_cnt;
-   
+
    log(LOG_DEBUG, "Subprofile '%s' created.", sbp_name.c_str());
 }
 
@@ -146,13 +146,13 @@ void SubprofileBase::bloomfilters_init(int size)
       // No bloomfilters required
       return;
    }
-   
+
    // Create BloomFilters
    bloom_parameters bp;
    bp.projected_element_count = size;
    bp.false_positive_probability = 0.01;
    bp.compute_optimal_parameters();
-   
+
    for (int i = 0; i < sbp_bloom_cnt; ++i) {
       bloom_filters_t pair;
       pair.bf_active = new bloom_filter(bp);
@@ -188,7 +188,7 @@ void SubprofileBase::bloomfilters_swap()
 }
 
 /** \brief Test whether key is in the set and than insert key
- * 
+ *
  * \param[in] key Key
  * \param[in] index Index of BloomFilter pair according to the number of pairs
  * defined in the constructor (0th pair by default).
@@ -240,9 +240,9 @@ bool SSHSubprofile::update_src_ip(hosts_record_t &main_record, const void *data,
    bool src_present = bloomfilters_get_presence(ips);
    uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
    ssh_data_t &src_host_rec = *main_record.ssh_data;
-   
+
    if (!src_present) INC(src_host_rec.out_all_uniqueips);
-   
+
    if (dir_flags & UR_DIR_FLAG_REQ) {
       // request flows
       ADD(src_host_rec.out_req_packets, ur_get(tmplt, data, UR_PACKETS));
@@ -271,7 +271,7 @@ bool SSHSubprofile::update_dst_ip(hosts_record_t &main_record, const void *data,
    bool dst_present = bloomfilters_get_presence(ips);
    uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
    ssh_data_t &dst_host_rec = *main_record.ssh_data;
-   
+
    if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
 
    if (dir_flags & UR_DIR_FLAG_REQ) {
@@ -290,9 +290,9 @@ bool SSHSubprofile::update_dst_ip(hosts_record_t &main_record, const void *data,
 bool SSHSubprofile::check_record(const hosts_key_t &key, const hosts_record_t &record)
 {
    if (record.ssh_data == NULL) {
-      return 0;  
+      return 0;
    }
-   
+
    check_new_rules_ssh(key, record);
    return 1;
 }
@@ -376,9 +376,9 @@ bool DNSSubprofile::update_dst_ip(hosts_record_t& main_record, const void* data,
 bool DNSSubprofile::check_record(const hosts_key_t& key, const hosts_record_t& record)
 {
    if (record.dns_data == NULL) {
-      return 0;  
+      return 0;
    }
-   
+
    check_new_rules_dns(key, record);
    return 1;
 }
