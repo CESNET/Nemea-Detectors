@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -66,7 +66,7 @@ inline void log(int level, const char *msg, ...)
       va_end(args);
       printf("\n");
    }
-   
+
    // Write to Syslog
    va_start(args, msg);
    vsyslog(level, msg, args);

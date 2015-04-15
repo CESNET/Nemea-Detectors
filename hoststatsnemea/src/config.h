@@ -3,12 +3,13 @@
  * \brief Interface of the Configuration singleton
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \date 2015
  * \date 2014
  * \date 2013
  * \date 2012
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -89,11 +90,11 @@ public:
    }
 
    // Get integer configuration value
-   int get_cfg_val(string name, string param, int def_value, 
+   int get_cfg_val(string name, string param, int def_value,
       int min_value);
    // Get status configuration value
    bool get_cfg_val(string name, string param);
-   
+
    /**
     * \brief Force Configuration to reread configuration file
     */
@@ -130,7 +131,7 @@ public:
     * \return Status value
     */
    static ConfigurationStatus getInitStatus();
-   
+
 };
 
 #endif

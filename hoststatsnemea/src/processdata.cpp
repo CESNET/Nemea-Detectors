@@ -3,9 +3,10 @@
  * \brief TRAP data processing
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -120,7 +121,7 @@ void *data_reader_trap(void *args)
    uint32_t next_bf_change      = 0;
    uint32_t flow_time           = 0; // seconds from rec->first
 
-   // Set timeout on input ifc, so we can check whither it is needed to swap BF 
+   // Set timeout on input ifc, so we can check whither it is needed to swap BF
    // even if no records are coming
    trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, RECV_TIMEOUT * MSEC);
 

@@ -3,9 +3,10 @@
  * \brief TRAP data processing (header file)
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *

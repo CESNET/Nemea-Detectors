@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -186,28 +186,28 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
 
    // SSH bruteforce (output = address under attack)
    if (( // responses
-         // average response size must be in between 
+         // average response size must be in between
          // BRUTEFORCE_DATA_MIN_PACKET_RATIO and BRUTEFORCE_DATA_MAX_PACKET_RATIO
          // and number of responses must be at least  BRUTEFORCE_DATA_THRESHOLD
          ssh_rec.out_rsp_packets >= BRUTEFORCE_DATA_MIN_PACKET_RATIO * ssh_rec.out_rsp_syn_cnt &&
          ssh_rec.out_rsp_packets <= BRUTEFORCE_DATA_MAX_PACKET_RATIO * ssh_rec.out_rsp_syn_cnt &&
          ssh_rec.out_rsp_syn_cnt > BRUTEFORCE_DATA_THRESHOLD
-      ) 
+      )
       && ( // requests
-         // average  request size must be in between 
+         // average  request size must be in between
          // BRUTEFORCE_REQ_MIN_PACKET_RATIO and BRUTEFORCE_REQ_MAX_PACKET_RATIO
          // and number of responses must be at least  BRUTEFORCE_REQ_THRESHOLD
          ssh_rec.in_req_packets >= BRUTEFORCE_REQ_MIN_PACKET_RATIO * ssh_rec.in_req_syn_cnt &&
          ssh_rec.in_req_packets <= BRUTEFORCE_REQ_MAX_PACKET_RATIO * ssh_rec.in_req_syn_cnt &&
          ssh_rec.in_req_syn_cnt > BRUTEFORCE_REQ_THRESHOLD
-      ) 
+      )
       && ( // ratio
-         // number of incoming requests on SSH server must be 
-         // BRUTEFORCE_SERVER_RATIO-times larger than the number of outgoing 
+         // number of incoming requests on SSH server must be
+         // BRUTEFORCE_SERVER_RATIO-times larger than the number of outgoing
          // requests
          ssh_rec.in_req_syn_cnt > BRUTEFORCE_SERVER_RATIO * ssh_rec.out_req_syn_cnt
       )
-      && ( 
+      && (
          // at least BRUTEFORCE_IPS_RATIO responses to same address
          ssh_rec.out_rsp_syn_cnt > BRUTEFORCE_IPS_RATIO * ssh_rec.out_all_uniqueips)
       ) {
@@ -232,12 +232,12 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
    && (
       ssh_rec.in_req_syn_cnt < BRUTEFORCE_SERVER_RATIO * ssh_rec.out_req_syn_cnt
    )
-   && (( // at least 20 requests to the same address and less than 
+   && (( // at least 20 requests to the same address and less than
          // BRUTEFORCE_IPS password-guessing addresses
          ssh_rec.out_req_syn_cnt > BRUTEFORCE_IPS_RATIO * ssh_rec.out_all_uniqueips &&
          ssh_rec.out_all_uniqueips < BRUTEFORCE_IPS
       ) || (
-         // at least 10 requests to the same address and more than 
+         // at least 10 requests to the same address and more than
          // BRUTEFORCE_IPS password-guessing addresses
          ssh_rec.out_req_syn_cnt > 0.5 * BRUTEFORCE_IPS_RATIO * ssh_rec.out_all_uniqueips &&
          ssh_rec.out_all_uniqueips >= BRUTEFORCE_IPS

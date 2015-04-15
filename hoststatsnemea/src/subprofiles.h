@@ -6,7 +6,7 @@
  * \data 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -81,7 +81,7 @@ private:
    bool sbp_enabled;
    // Bloom filters pairs
    int sbp_bloom_cnt;
-   
+
    // Structure for active and learning Bloom Filters
    struct bloom_filters_t {
       bloom_filter *bf_active;
@@ -89,13 +89,13 @@ private:
    };
    // BloomFilters
    std::vector<bloom_filters_t> bloom_filters;
-   
+
 public:
    // Constructor
    SubprofileBase(std::string name, std::string tmpl_str, int bloom_filters_cnt = 0);
    // Destructor
    virtual ~SubprofileBase();
-   
+
    // Name of the subprofile
    std::string get_name() {return sbp_name;};
    // UniRec template of the subprofile
@@ -106,7 +106,7 @@ public:
    void disable() {sbp_enabled = false;};
    // Enable subprofile
    void enable() {sbp_enabled = true;};
-   
+
    // Init BloomFilters
    void bloomfilters_init(int size);
    // Destroy BloomFilters
@@ -115,7 +115,7 @@ public:
    void bloomfilters_swap();
    // Test whether key is in the set and than insert key
    bool bloomfilters_get_presence(const bloom_key_t &key, int index = 0);
-   
+
    /** \brief Update a record of source IP address
     * Update the record with new data from TRAP. The record is updated if
     * a flow data belongs to the subprofile. If the record does not exist,
@@ -129,13 +129,13 @@ public:
     */
    virtual bool update_src_ip(hosts_record_t &main_record, const void *data,
       const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips) = 0;
-   
+
    /** \brief Update a record of destination IP address
     * See description for #update_src_ip
     */
    virtual bool update_dst_ip(hosts_record_t &main_record, const void *data,
       const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips) = 0;
-   
+
    /** \brief Check rules in a record
     * Use detection rules only if subprofile exists
     * \param[in] key Key of a record
@@ -143,7 +143,7 @@ public:
     * \return True, if subprofile exists, false otherwise
     */
    virtual bool check_record(const hosts_key_t &key, const hosts_record_t &record) = 0;
-   
+
    /** \brief Remove a subprofile from a main profile
     * \param[in,out] record Main record with general statistics
     */
@@ -178,11 +178,11 @@ class SSHSubprofile : public SubprofileBase {
 private:
    // A filter for incomming flows
    bool flow_filter(const void *data, const ur_template_t *tmplt);
-   
+
 public:
    SSHSubprofile();
    ~SSHSubprofile();
-   
+
    // Definition of required functions
    bool update_src_ip(hosts_record_t &main_record, const void *data,
       const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips);
@@ -208,14 +208,14 @@ class DNSSubprofile : public SubprofileBase {
 private:
    // A threshold for excessive flows
    static const unsigned DNS_BYTES_OVERLIMIT = 1000;
-   
+
    // A filter for incomming flows
    bool flow_filter(const void *data, const ur_template_t *tmplt);
-   
+
 public:
    DNSSubprofile();
    ~DNSSubprofile();
-   
+
    // Definition of required functions
    bool update_src_ip(hosts_record_t &main_record, const void *data,
       const ur_template_t *tmplt, uint8_t dir_flags, const bloom_key_t &ips);

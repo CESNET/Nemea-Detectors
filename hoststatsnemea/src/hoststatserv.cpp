@@ -6,7 +6,7 @@
  * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -166,7 +166,7 @@ void terminate_daemon(int signal)
  * \return If subs_tmpl is subset of the main_tmpl returns true. Otherwise
  * retuns false and fill missing_items with names of missing UniRec items.
  */
-bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t 
+bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
    *subs_tmpl, string *missing_items = NULL)
 {
    bool subset = true;
@@ -201,15 +201,15 @@ int main(int argc, char *argv[])
 {
    /* Inicialization and processing of TRAP arguments */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   
+
    /* Configure output interface */
-   if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT) 
+   if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT)
       != TRAP_E_OK) {
       fprintf(stderr, "ERROR: trap_ifcctl() failed.\n");
       TRAP_DEFAULT_FINALIZATION();
       return 1;
    }
-   
+
    /* Parse command line arguments */
    if (arguments(argc, argv) == 0) {
       fprintf(stderr, "ERROR: Unrecognized parameter(s). Use \"-h\" for help\n");
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
    if (!logmask.empty()) {
       parse_logmask(logmask);
    }
-   
+
    /* Some variables initialization because of goto */
    ur_field_id_t dir_flag_id = UR_DIRECTION_FLAGS;
    ur_template_t *coll_tmpl = NULL;
@@ -250,11 +250,11 @@ int main(int argc, char *argv[])
       config->unlock();
       goto exitA;
    }
-   
+
    tmpl_in = ur_create_template(input_tmpl_str.c_str());
    tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
       "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE");
-   
+
    if (tmpl_in == NULL || tmpl_out == NULL) {
       if (tmpl_in == NULL) {
          log(LOG_ERR, "ERROR: Failed to create input UniRec template. Make "
@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
 
    /* Verify that 'DIRECTION_FLAGS' item is present in the input template when
     * port-flowdir is deactivated */
-   if (!config->get_cfg_val("port flowdirection", "port-flowdir") && 
+   if (!config->get_cfg_val("port flowdirection", "port-flowdir") &&
       !ur_is_present(tmpl_in, dir_flag_id)) {
       log(LOG_ERR, "ERROR: Unirec item '%s' is missing in the input template.\n"
          "Hint: if you are using this module without flowdirection module "
@@ -313,15 +313,15 @@ int main(int argc, char *argv[])
       } else {
          sbp_ptr->disable();
       }
-      
+
       log(LOG_DEBUG, "Subprofile '%s' is '%s'.", sbp_ptr->get_name().c_str(),
          sbp_ptr->is_enabled() ? "enabled" : "disabled");
-      
+
       if (!sbp_ptr->is_enabled()) {
          continue;
       }
-      
-      /* Active subprofile - check presence of required UniRec items 
+
+      /* Active subprofile - check presence of required UniRec items
        * in the input template */
       ur_template_t *sbp_tmpl = ur_create_template(sbp_ptr->get_template().c_str());
       if (sbp_tmpl == NULL) {
@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
       if (subset) {
          continue;
       }
-      
+
       log(LOG_ERR, "ERROR: Missing UniRec item(s) '%s' in input template "
          "required by active subprofile '%s'. The subprofile's template is '%s'.",
          missing_items.c_str(), sbp_ptr->get_name().c_str(),
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
       log(LOG_DEBUG, "Sending EOS message");
       trap_send(0, dummy, 1);
    }
-   
+
    log(LOG_DEBUG, "Exiting... releasing memory");
 
    // Delete all records

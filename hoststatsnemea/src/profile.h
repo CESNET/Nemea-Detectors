@@ -3,9 +3,10 @@
  * \brief Main processing of flow data (header file)
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -60,10 +61,10 @@ private:
    stat_table_t *stat_table;   // Statistics table
 
    // Pointers to common active/learning BloomFilter
-   bloom_filter *bf_com_active, *bf_com_learn; 
+   bloom_filter *bf_com_active, *bf_com_learn;
    // Pointer to active/learning BloomFilter for flow direction (req/rsp)
    bloom_filter *bf_dir_active, *bf_dir_learn;
-   
+
    int table_size;            // Size of table
    bool detector_status;      // Main profile detector active/inactive
    bool port_flowdir;         // Flow direction based on port value (0[off]/1[on])
