@@ -13,7 +13,6 @@ dns_amp_twente \
 entropy_module \
 email_reporter \
 example \
-fbreader \
 flow_gen \
 flow_sanity_check \
 flowcounter \
@@ -55,7 +54,7 @@ voip_fraud_detection \
 warden_collector
 
 
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter rrd_updater
+EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter rrd_updater fbreader
 
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
@@ -68,6 +67,9 @@ SUBDIRS += unirecfilter
 endif
 if HAVE_RRDTOOL
 SUBDIRS += rrd_updater
+endif
+if HAVE_LIBFASTBIT
+SUBDIRS += fbreader
 endif
 
 RPMDIR = RPMBUILD
