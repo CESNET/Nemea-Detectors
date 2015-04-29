@@ -46,8 +46,10 @@
 #ifndef URLBLACKLISTFILTER_H
 #define URLBLACKLISTFILTER_H
 
+#include <map>
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +62,16 @@ extern "C" {
  * Constant returned if everything is ok.
  */
 #define ALL_OK 0
+
+/**
+ * Static mode ID.
+ */
+#define BL_STATIC_MODE 1
+
+/**
+ * Dynamic mode ID. 
+ */
+#define BL_DYNAMIC_MODE 2
 
 /**
  * Initial size of the blacklist.
@@ -81,25 +93,88 @@ extern "C" {
  */
 #define URL_CLEAR 0
 
+
+const char *URL_REGEX =
+   // Protocol
+   //"((https?)://)?"
+   "(" // Host part
+    // IP
+   "([1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])"
+   "(\\.(1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}"
+   "(\\.([1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))"
+   "|" // OR
+    // Domain name
+   "(([a-z0-9]-*)*[a-z0-9]+)"
+   "(\\.([a-z0-9]-*)*[a-z0-9]+)*"
+   "(\\.([a-z]{2,}))"
+   ")"
+   // URL part
+   "(/|\\w|\\.|\\?|_|=|;|&|-)*"
+   // Strip last slash and/or last comma
+   "[^/,]"
+   ;
+
+
+/*
+   //"^"
+   // protocol identifier
+   "(?:(?:https?|ftp)://)"
+   // user:pass authentication
+   "(?:\\S+(?::\\S*)?@)?" 
+   "(?:"
+   // IP address exclusion
+   // private & local networks
+   "(?!(?:10|127)(?:\\.\\d{1,3}){3})"
+   "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})"
+   "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})"
+   // IP address dotted notation octets
+   // excludes loopback network 0.0.0.0
+   // excludes reserved space >= 224.0.0.0
+   // excludes network & broacast addresses
+   // (first & last IP address of each class)
+   "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])"
+   "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}"
+   "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))"
+   "|"
+   // host name
+   "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)"
+   // domain name
+   "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*"
+   // TLD identifier
+   "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))"
+   ")"
+   // port number
+   "(?::\\d{2,5})?"
+   // resource path
+   "(?:/\\S*)?"
+   //"$"
+   ;
+*/
+
+/*
+ * Map for URL blacklist
+ */
+typedef std::map<std::string, uint64_t> blacklist_map_t;
+
+
+
 /**
  * Structure of item used in update operations.
  */
 typedef struct {
     /*@{*/
-    char* url; /**< URL to update */
+    std::string url; /**< URL to update */
     uint8_t bl; /**< Source blacklist of the URL */
     /*@}*/
-} upd_item_t;
+} url_blist_t;
 
-/*
- * Function for loading source files.
- */
-int load_url(cc_hash_table_t& blacklist, const char* path);
+
+typedef std::vector<url_blist_t> black_list_t;
 
 /*
  * Function for loading update files.
  */
-int load_update(std::vector<upd_item_t>& add_upd, std::vector<upd_item_t>& rm_upd, const char* path);
+int load_update(black_list_t &add_upd, black_list_t &rm_upd, std::string &file);
 
 /*
  * Function for checking records.
