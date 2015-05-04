@@ -57,18 +57,16 @@
 #include <unistd.h>
 
 
-#define UINT64_MAX -1ULL
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include <libtrap/trap.h>
-#include <nemea-common.h>
+#include "../blacklist_downloader/blacklist_downloader.h"
 #ifdef __cplusplus
 }
 #endif
 
-#include "../blacklist_downloader/blacklist_downloader.h"
 #include "urlblacklistfilter.h"
 
 //#define DEBUG 1
@@ -118,7 +116,6 @@ void check_update()
    update = BLD_SYNC_FLAG;
    bld_unlock_sync();
 }
-
 
 
 
