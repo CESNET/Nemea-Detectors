@@ -2,10 +2,10 @@
  * \file tunnel_detection_dns_structs.h
  * \brief Modul that detects DNS tunnels.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -60,7 +60,7 @@
 
  /*!
  * \name Detection type states
- *  State of detection type. 
+ *  State of detection type.
  * \{ */
 #define STATE_NEW              0b00000000
 #define STATE_SUSPICION        0b00000001
@@ -93,8 +93,8 @@ typedef struct character_statistic_t{
  } ip_address_suspision_request_other_t;
 
 /*!
- * \brief Structure - type detection request tunnel 
- * Structure used to keep information about type detection request tunnel 
+ * \brief Structure - type detection request tunnel
+ * Structure used to keep information about type detection request tunnel
  */
  typedef struct ip_address_suspision_request_tunnel_t{
     unsigned char  state_request_size [HISTOGRAM_SIZE_REQUESTS]; /*!< state, for every size to store in prefix tree */
@@ -124,26 +124,26 @@ typedef struct character_statistic_t{
 
 /*!
  * \name Suspicion posibilities
- *  This values are used to identify which string is contains anomaly. 
+ *  This values are used to identify which string is contains anomaly.
  *  It could be used in one variable all types.
  * \{ */
 #define TXT_TUNNEL              0b00000001
 #define CNAME_TUNNEL            0b00000010
 #define MX_TUNNEL               0b00000100
 #define NS_TUNNEL               0b00001000
-#define REQUEST_STRING_TUNNEL   0b00010000 
+#define REQUEST_STRING_TUNNEL   0b00010000
 /* /} */
 
 /*!
  * \brief Structure - type detection response tunnel
- * Structure used to keep information about type detection response tunnel 
+ * Structure used to keep information about type detection response tunnel
  */
 typedef struct ip_address_suspision_response_tunnel_t{
     prefix_tree_t * txt_suspision;      /*!< pointer to prefix tree */
     prefix_tree_t * cname_suspision;    /*!< pointer to prefix tree */
     prefix_tree_t * mx_suspision;       /*!< pointer to prefix tree */
     prefix_tree_t * ns_suspision;       /*!< pointer to prefix tree */
-    prefix_tree_t * request_suspision;  /*!< pointer to prefix tree */    
+    prefix_tree_t * request_suspision;  /*!< pointer to prefix tree */
     unsigned char state_type;           /*!< records to store */
     unsigned int round_in_suspicion;    /*!< count of round in SUSPICTION state */
     unsigned int sum_of_inserting_request;/*!< Sum of inserting */
@@ -179,18 +179,18 @@ typedef struct ip_address_suspision_response_tunnel_t{
  typedef struct counter_request_t{
     unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
     unsigned long histogram_dns_request_sum_for_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, requests */
-    unsigned long histogram_dns_request_ex_sum_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size. 
+    unsigned long histogram_dns_request_ex_sum_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size.
                                                                                             At first it is sum, but on the end it has to be devided
-                                                                                            by count of requests */    
+                                                                                            by count of requests */
     unsigned long dns_request_count; /*!< count of requests */
     unsigned long dns_request_string_count; /*!< count of requests string */
     unsigned long sum_Xi_request; /*!< Sum of sizes request */
     unsigned long sum_Xi2_request; /*!< Sum of sizes^2 request */
-    //Could be used for improving the module                                                                                        
+    //Could be used for improving the module
         //unsigned long sum_Xi3_request; /*!< Sum of sizes^3 request */
         //unsigned long sum_Xi4_request; /*!< Sum of sizes^4 request */
     unsigned int request_without_string; /*!< count of requests without string */
-    unsigned char round_in_suspicion_request; /*!< number of round which Ip is in suspicion */ 
+    unsigned char round_in_suspicion_request; /*!< number of round which Ip is in suspicion */
 }counter_request_t;
 
 /*!
@@ -198,14 +198,14 @@ typedef struct ip_address_suspision_response_tunnel_t{
  * Structure used to keep information about responses
  */
  typedef struct counter_response_t{
-    unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */   
+    unsigned long histogram_dns_response [HISTOGRAM_SIZE_RESPONSE]; /*!< histogram values, responses */
     unsigned long dns_response_count; /*!< count of responses */
     unsigned long sum_Xi_response; /*!< Sum of sizes respone */
     unsigned long sum_Xi2_response; /*!< Sum of sizes^2 respone */
     //Could be used for improving the module
         //unsigned long sum_Xi3_response; /*!< Sum of sizes^3 respone */
         //unsigned long sum_Xi4_response; /*!< Sum of sizes^4 respone */
-    unsigned char round_in_suspicion_response; /*!< number of round which Ip is in suspicion */    
+    unsigned char round_in_suspicion_response; /*!< number of round which Ip is in suspicion */
 }counter_response_t ;
 
 
@@ -236,7 +236,7 @@ typedef struct ip_address_suspision_response_tunnel_t{
  * Structure used to keep information about IP address
  */
 typedef struct calulated_result_t{
-    unsigned long histogram_dns_request_ex_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size. 
+    unsigned long histogram_dns_request_ex_cout_of_used_letter [HISTOGRAM_SIZE_REQUESTS]; /*!< histogram values, ex of new letters, for size.
                                                                                             At first it is sum, but on the end it has to be devided
                                                                                             by count of requests */
     float ex_response; /*!< middle value respone */
@@ -288,7 +288,7 @@ typedef struct calulated_result_t{
  * \brief Structure containing setting of the module
  * Structure used to keep information about setting of the module.
  */
-typedef struct values_t{ 
+typedef struct values_t{
     unsigned int time_of_one_session;  /*< Time of collecting packets */
     unsigned int ex_request_max;    /*< maximal value of request middle value */
     unsigned int ex_request_min;    /*< minimal value of request middle value */
@@ -328,7 +328,7 @@ typedef struct values_t{
  * \brief Structure containing setting of the module
  * Structure used to keep information about setting of the module.
  */
-typedef struct measure_parameters_t{ 
+typedef struct measure_parameters_t{
     double ex_request_max;    /*< maximal value of request middle value */
     double ex_request_min;    /*< minimal value of request middle value */
     double ex_response_max;   /*< maximal value of response middle value */
@@ -352,11 +352,11 @@ typedef struct measure_parameters_t{
     unsigned long int sum_count_of_unique_letters_request;
     unsigned long int sum_2_count_of_unique_letters_request;
     unsigned long int sum_count_of_unique_letters_response;
-    unsigned long int sum_2_count_of_unique_letters_response;    
+    unsigned long int sum_2_count_of_unique_letters_response;
     unsigned long int sum_count_of_numbers;
-    unsigned long int sum_2_count_of_numbers; 
+    unsigned long int sum_2_count_of_numbers;
     double sum_percent_of_numbers;
-    double sum_2_percent_of_numbers;  
+    double sum_2_percent_of_numbers;
     unsigned long int requests;
     unsigned long int responses;
 }measure_parameters_t;
