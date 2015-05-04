@@ -2,10 +2,10 @@
  * \file parser_pcap_dns.h
  * \brief Parser for packets, it parses txt file from Tshark.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -101,7 +101,7 @@ int read_string(FILE * file, char * string, int maxsize);
  * \brief Read IPV6 from file
  * Function reads IPv6 from file, save it like 2x64b number.
  * \param[in] file pointer to file.
- * \param[in] pointer to memory where to save IP. 
+ * \param[in] pointer to memory where to save IP.
  */
 void read_ip_address_v6(FILE * file, uint64_t * ip);
 
