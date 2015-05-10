@@ -2,10 +2,10 @@
  * \file parser_pcap_dns.c
  * \brief Parser for packets, it parses txt file from Tshark.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -46,20 +46,20 @@ uint32_t read_ip_address_v4(FILE * file){
 	int ip=0;
 	char a[4];
 	char sign;
-	char num = 0;
+	int num = 0;
 	for (int i = 0; i < 4; i++){
 		ip <<= 8;
 		sign = fgetc(file);
 		num=0;
-		
+
 		while(sign >= '0' && sign <= '9'){
 			a[num++] = sign;
-			sign = fgetc(file);	
+			sign = fgetc(file);
 		}
 		a[num]=0;
 		ip |= atoi(a);
 	}
-	ungetc(sign, file);	
+	ungetc(sign, file);
 	return ip;
 }
 
@@ -67,29 +67,28 @@ int read_int(FILE * file){
 	char number[11];
 	unsigned char size=0;
 	int sign;
-	sign = fgetc(file);	
+	sign = fgetc(file);
 	while(sign >= '0' && sign <= '9'){
 		number[size++]=sign;
-		sign = fgetc(file);	
+		sign = fgetc(file);
 	}
 	number[size]=0;
-	ungetc(sign, file);	
-	return atoi(number);	
+	ungetc(sign, file);
+	return atoi(number);
 }
-
 
 double read_double(FILE * file){
 	char number[20];
 	unsigned char size=0;
 	int sign;
-	sign = fgetc(file);	
+	sign = fgetc(file);
 	while((sign >= '0' && sign <= '9') || sign == '.'){
 		number[size++]=sign;
-		sign = fgetc(file);	
+		sign = fgetc(file);
 	}
 	number[size]=0;
-	ungetc(sign, file);	
-	return atof(number);	
+	ungetc(sign, file);
+	return atof(number);
 }
 
 
@@ -97,14 +96,14 @@ double read_double(FILE * file){
 int read_string(FILE * file, char * string, int maxsize){
 	unsigned int size=0;
 	int sign;
-	sign = fgetc(file);	
+	sign = fgetc(file);
 	while(sign != ';' && sign != '\n' && sign != -1 && size < maxsize - 1){
 		string[size++] = sign;
-		sign = fgetc(file);	
+		sign = fgetc(file);
 	}
 	string[size]=0;
-	ungetc(sign, file);	
-	return size;	
+	ungetc(sign, file);
+	return size;
 }
 
 void read_ip_address_v6(FILE * file, uint64_t * ip){
@@ -122,25 +121,23 @@ void read_ip_address_v6(FILE * file, uint64_t * ip){
 		if(ip_from_str(str, &addr) == 1){
 			memcpy(&ip[0], &addr, 16);
 		}
-		ungetc(sign, file);	
+		ungetc(sign, file);
 	}
 }
 
 void read_rest_of_line(FILE * file){
 	int sign;
-	int size;
 	sign = fgetc(file);
 	while(sign != '\n' && sign != -1){
-		sign = fgetc(file);	
+		sign = fgetc(file);
 	}
 }
 
 void read_item(FILE * file){
 	int sign;
-	int size;
 	sign = fgetc(file);
 	while(sign != ';' && sign != '\n' && sign != -1){
-		sign = fgetc(file);	
+		sign = fgetc(file);
 	}
 }
 
@@ -169,7 +166,7 @@ int read_packet(FILE *file, packet_t * create){
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
-		
+
 		create->src_ip_v4 = read_ip_address_v4(file);
 		sign = fgetc(file);
 		create->dst_ip_v4 = read_ip_address_v4(file);
@@ -200,7 +197,7 @@ int read_packet(FILE *file, packet_t * create){
 		create->size = read_int(file);
 		sign = fgetc(file);
 	}
-	//read request string 
+	//read request string
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
@@ -209,18 +206,18 @@ int read_packet(FILE *file, packet_t * create){
 	}
 
 	if(create->is_response){
-		//read response ip 
+		//read response ip
 		sign = fgetc(file);
 		read_item(file);
 
-		//read txt string 
+		//read txt string
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
 			read_string(file, create->txt_response, MAX_LENGTH_OF_RESPONSE_STRING);
 			sign = fgetc(file);
 		}
-		//read cname string 
+		//read cname string
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
