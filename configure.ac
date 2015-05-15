@@ -155,6 +155,10 @@ AC_CHECK_PROG(FLEX, flex, yes, [""])
 
 AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
 
+PKG_CHECK_MODULES([FASTBIT],[fastbit],[libfastbit=yes],[AC_MSG_WARN([libfastbit was not found by pkg-config. The fbreader module will not be compiled.])])
+
+AM_CONDITIONAL(HAVE_LIBFASTBIT, test x${libfastbit} = xyes)
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])

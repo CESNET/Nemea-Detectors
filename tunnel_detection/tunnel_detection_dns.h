@@ -2,10 +2,10 @@
  * \file tunnel_detection_dns.h
  * \brief Modul that detects DNS tunnels.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
- * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -74,23 +74,23 @@
 #define FILE_NAME_REQUEST_COUNT_LETTERS "request_letters_count.dat" /*< Name of file with count of letters. */
 #define TITLE_REQUEST_COUNT_LETTERS "Count of letters per ip" /*< Title of data for DNS summary responses. */
 #define FILE_NAME_REQUESTS "requests.dat" /*< Name of file with requests. */
-#define TITLE_REQUESTS "DNS requests histogram of communication devided by IP" /*< Title of data for DNS requests devided by IP. */ 
+#define TITLE_REQUESTS "DNS requests histogram of communication devided by IP" /*< Title of data for DNS requests devided by IP. */
 #define FILE_NAME_RESPONSES "responses.dat" /*< Name of file with responses. */
-#define TITLE_RESPONSES "DNS responses histogram of communication devided by IP" /*< Title of data for DNS responses devided by IP. */ 
+#define TITLE_RESPONSES "DNS responses histogram of communication devided by IP" /*< Title of data for DNS responses devided by IP. */
 #define FILE_NAME_SUSPICION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
-#define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */ 
+#define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
 #define FILE_NAME_EVENT_ID "event_id.txt" /*< Name of file with last used event ID. */
 /* /} */
 
 /*!
  * \name Default values
- *  Defines macros used by DNS tunel detection 
+ *  Defines macros used by DNS tunel detection
  * \{ */
 #define COUNT_OF_ITEM_IN_LEAF 5 /*< Count of item in leaf of B+ tree. M value of B+ tree */
-#define READ_FROM_FILE 1 /*< Specify module configuration. Modul will read packets from FILE */ 
-#define READ_FROM_UNIREC 2 /*< Specify module configuration. Modul will read packets from UNIREC */  
-#define MEASURE_PARAMETERS 4 /*< Specify module configuration. Modul will measure detection parameters */ 
+#define READ_FROM_FILE 1 /*< Specify module configuration. Modul will read packets from FILE */
+#define READ_FROM_UNIREC 2 /*< Specify module configuration. Modul will read packets from UNIREC */
+#define MEASURE_PARAMETERS 4 /*< Specify module configuration. Modul will measure detection parameters */
 #define TIME_OF_ONE_SESSION 60  /*< Time of scaning the network before any decision */
 #define MAX_COUNT_OF_ROUND_IN_SUSPICTION 3 /*< Maximum count of round to be IP in suspicion */
 #define MAX_COUNT_OF_ROUND_IN_ATTACK 5 /*< Maximum count of round to stay IP in ATTACK MODE without noticing anomaly */
@@ -221,7 +221,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
  * \param[in] stat pointer to structure, where to save data.
  * \param[in] packet recieved packet.
  */
-void calculate_character_statistic(unsigned char * string, character_statistic_t * stat);
+void calculate_character_statistic(char * string, character_statistic_t * stat);
 
 /*!
  * \brief Calcutate information about IP address
@@ -304,7 +304,7 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item);
 
 /*!
  * \brief Detection function
- * One of main function on module. 
+ * One of main function on module.
  * Function tests every IP address on anomaly. When anomaly is founded it is written into file.
  * If there is no anomaly, the IP address is deleted from B+ tree.
  * \param[in] b_plus_tree pointer to B+ tree structure
@@ -318,7 +318,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
  * Function write info about anomaly to file, which is given in parametter.
  * It prits info about one IP address.
  * \param[in] ip_address ip address string
- * \param[in] item ip address with anomaly 
+ * \param[in] item ip address with anomaly
  * \param[in] file pointer to file with results
  * \param[in] print_time 1 - time is printed, 0 - time is not printed
  */
@@ -329,7 +329,7 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
  * Function write info about all anomalies to file, which is given in parametter.
  * It is about IP address which id givven in parametter
  * \param[in] ip_address ip address string
- * \param[in] item ip address with anomaly 
+ * \param[in] item ip address with anomaly
  * \param[in] file pointer to file with results
  */
 void print_founded_anomaly(char *ip_address, ip_address_t *item, FILE *file);
@@ -338,7 +338,7 @@ void print_founded_anomaly(char *ip_address, ip_address_t *item, FILE *file);
  * \brief Print ip which is in suspicion state
  * Function write info about ip which is in suspicion state.
  * \param[in] ip_address ip address string
- * \param[in] ip_item ip address with anomaly 
+ * \param[in] ip_item ip address with anomaly
  * \param[in] file pointer to file with other suspicion address
  */
 void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file);
@@ -347,17 +347,17 @@ void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file);
  * \brief Write summary results
  * Write summary results about detection, all ip addresses together.
  * \param[in] record_folder_name folder with results
- * \param[in] histogram_dns_requests data for histogram 
- * \param[in] histogram_dns_response data for histogram 
+ * \param[in] histogram_dns_requests data for histogram
+ * \param[in] histogram_dns_response data for histogram
  */
 void write_summary_result(char * record_folder_name, unsigned long * histogram_dns_requests, unsigned long * histogram_dns_response);
 
 
 /*!
- * \brief Write histogram values 
+ * \brief Write histogram values
  * Write histogram values about IP address to files for request, response, request count letters.
  * \param[in] ip_address ip address string
- * \param[in] item ip address with anomaly 
+ * \param[in] item ip address with anomaly
  * \param[in] file_requests file pointer
  * \param[in] file_responses file pointer
  * \param[in] file_requests_count_letters file pointer

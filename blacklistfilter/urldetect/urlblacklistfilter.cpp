@@ -56,11 +56,13 @@
 #include <idna.h>
 #include <unistd.h>
 
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include <libtrap/trap.h>
-#include <nemea-common.h>
+#include "../blacklist_downloader/blacklist_downloader.h"
 #ifdef __cplusplus
 }
 #endif
@@ -78,6 +80,12 @@ trap_module_info_t module_info = {
     "present in any blacklist that are available. If so the module creates\n"
     "a detection report (UniRec) with blacklist where the URL was found.\n"
     "The report is the send to further processing.\n"
+    "Usage:\n"
+    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D blacklists] [-n]\n"
+    "Module specific parameters:\n"
+    "   -f file         Specify file with blacklisted IP URLs.\n"
+    "   -D list         Switch to dynamic mode and specify which blacklists to use.\n"
+    "   -n              Do not send terminating Unirec when exiting program.\n"
     "Interfaces:\n"
     "   Inputs: 1 (UniRec record)\n"
     "   Outputs: 1 (UniRec record)\n", 
@@ -96,11 +104,20 @@ void signal_handler(int signal)
     if (signal == SIGTERM || signal == SIGINT) {
         stop = 1;
         trap_terminate();
-    } else if (signal == SIGUSR1) {
-        // set update variable
-        update = 1;
     }
 }
+
+/**
+ *
+ */
+void check_update()
+{
+   bld_lock_sync();
+   update = BLD_SYNC_FLAG;
+   bld_unlock_sync();
+}
+
+
 
 /**
  * Function for loading source files.
@@ -112,49 +129,64 @@ void signal_handler(int signal)
  * @param file Path to the file with sources.
  * @return BLIST_LOAD_ERROR if directory cannot be accessed, ALL_OK otherwise.
  */
-int load_url(cc_hash_table_t& blacklist, const char* file)
+int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
 {
-    ifstream in;
+    ifstream input; // data input
 
     string line, url, bl_flag_str;
     char *url_norm;
     int ret;
-    uint8_t bl;
-    uint32_t bl_flag;
+    uint64_t bl_flag;
     int line_num = 0;
 
     size_t str_pos;
 
+    url_blist_t bl_entry; // black list entry associated with ip address
 
-    in.open(string(file).c_str(), ifstream::in);
+    bool add_rem = false; // add or remove from table ?
 
-    if (!in.is_open()) {
+    input.open(file.c_str(), ifstream::in);
+
+    if (!input.is_open()) {
         cerr << "WARNING: File " << file << " cannot be opened!" << endl;
         return BLIST_LOAD_ERROR;
     }
 
     // load file line by line
-    while (!in.eof()) {
-        getline(in, line);
+    while (!input.eof()) {
+        getline(input, line);
         line_num++;
+       
+        // trim all white spaces (if any)
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
-        // don't add the remaining empty line
-        if (!line.length()) {
+        // transform all letters to lowercase (if any)
+        transform(line.begin(), line.end(), line.begin(), ::tolower);
+
+        // encountered a remove line?
+        if (line == "#remove") {
+            add_rem = true; // switch to remove mode
             continue;
         }
 
-        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-
+        // Skip empty lines
+        if (!line.length()) {
+            continue;
+        }
+        
+        // find URL-blacklist separator
         str_pos = line.find_first_of(',');
         if (str_pos == string::npos) {
+           // Blacklist index delimeter not found (bad format?), skip it
            cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
            continue;
         }
 
-        url = line.substr(0, str_pos);
-        bl_flag_str = line.substr(str_pos + 1, string::npos);
-        bl_flag = strtoul(bl_flag_str.c_str(), NULL, 10);
+        // Parse blacklist ID
+        bl_flag = strtoull((line.substr(str_pos + 1, string::npos)).c_str(), NULL, 10);
 
+        // Parse URL
+        url = line.substr(0, str_pos);
         ret = idna_to_ascii_lz(url.c_str(), &url_norm, 0);
         if (ret != IDNA_SUCCESS) {
 #ifdef DEBUG
@@ -163,115 +195,26 @@ int load_url(cc_hash_table_t& blacklist, const char* file)
             continue;
         }
 
-        bl = bl_flag & 0xFF;
-        if (bl == 0x0) {
-            cerr << "WARNING: Cannot determine source blacklist. Will be skipped." << endl;
-            free(url_norm);
-            continue;
+        // store normalized url
+        bl_entry.url = url_norm;
+
+        // store blacklist
+        bl_entry.bl = bl_flag;
+           
+        // put entry into its respective update list
+        if (!add_rem) {
+            add_update.push_back(bl_entry);
+        } else {
+            rm_update.push_back(bl_entry);
         }
 
-        // insert to table
-        ht_insert(&blacklist, url_norm, &bl, strlen(url_norm));
         free(url_norm);
     }
-    in.close();
+    input.close();
 
     return ALL_OK;
 }
 
-/**
- * Function for loading updates.
- * Function gets path to the directory with update files and loads the into 
- * the vectors used for update operation. Loaded entries are sorted depending 
- * on whterher they are removed from blacklist or added to blacklist.
- *
- * @param add_upd Vector with entries that will be added or updated.
- * @param rm_upd Vector with entries that will be removed.
- * @param file Path to the file with updates.
- * @return ALL_OK if everything goes well, BLIST_LOAD_ERROR if directory cannot be accessed.
- */
-int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const char* file)
-{
-    ifstream in;
-
-    string line, url, bl_flag_str;
-    char *url_norm;
-    int ret;
-    uint32_t bl_flag;
-    int line_num = 0;
-    size_t str_pos;
-
-    upd_item_t upd;
-    bool add_rem = false;
-
-    in.open(string(file).c_str(), ifstream::in);
-
-    if (!in.is_open()) {
-        cerr << "WARNING: File " << file << " cannot be opened!" << endl;
-        return BLIST_LOAD_ERROR;
-    }
-
-    // load file line by line
-    while (!in.eof()) {
-        getline(in, line);
-        line_num++;
-
-        // don't add the remaining empty line
-        if (!line.length()) {
-            continue;
-        }
-
-        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-#ifdef DEBUG
-        cout << line << endl;
-#endif
-
-        if (line == "#remove") {
-            add_rem = true;
-            continue;
-        }
-
-        str_pos = line.find_first_of(',');
-        if (str_pos == string::npos) {
-           cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << endl;
-           continue;
-        }
-
-        url = line.substr(0, str_pos);
-        bl_flag_str = line.substr(str_pos + 1, string::npos);
-        bl_flag = strtoul(bl_flag_str.c_str(), NULL, 10);
-
-
-        // normalize the URL
-        ret = idna_to_ascii_lz(url.c_str(), &url_norm, 0);
-        if (ret != IDNA_SUCCESS) {
-#ifdef DEBUG
-            cerr << "Unable to normalize URL. Will skip." << endl;
-#endif
-            continue;
-        }
-
-        upd.url = url_norm; 
-        // fill blacklist number
-        upd.bl = bl_flag & 0xFF;
-        if (upd.bl == 0x0) {
-            cerr << "WARNING: Cannot determine source blacklist. Will be skipped." << endl;
-            free(url_norm);
-            continue;
-        }
-        // put loaded update to apropriate vector (add/update or remove)
-        if (add_rem) {
-            rm_upd.push_back(upd);
-        } else {
-            add_upd.push_back(upd);
-        }
-    }
-    in.close();
-    free(url_norm);
-
-
-    return ALL_OK;
-}
 
 /**
  * Function for checking the URL.
@@ -287,29 +230,38 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
  * @param detect Record for reporting detection of blacklisted URL.
  * @return BLACKLISTED if the address is found in table, URL_CLEAR otherwise.
  */
-int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect)
+int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t *out, const void *record, void *detect)
 {
-    // get pointer to URL
-    char* url = ur_get_dyn(in, record, UR_HTTP_REQUEST_HOST);
-    uint8_t* bl = NULL;
+   uint64_t host_id, host_url_id, bl_id;
 
-    // try to find the URL in table.
-
-//#ifdef DEBUG
-    int s = ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST);
-//#endif
-    if (s == 0) {
+    // Skip flows with empty HTTP host
+    if (ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST) == 0) {
        return URL_CLEAR;
     }
 
-    bl = (uint8_t *) ht_get(&blacklist, url, (ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST) /*- 1*/));
+    string host = string(ur_get_dyn(in, record, UR_HTTP_REQUEST_HOST), ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST));
+    string host_url = host.append(string(ur_get_dyn(in, record, UR_HTTP_REQUEST_URL), ur_get_dyn_size(in, record, UR_HTTP_REQUEST_URL)));
 
-    if (bl != NULL) {
+    // Strip / (slash) from URL if it is last character
+    if (host_url[host_url.length() - 1] == '/') {
+        host_url.resize(host_url.length() - 1);
+    }
+
+    // Find URL in map
+    blacklist_map_t::iterator host_check = blacklist.find(host);
+    blacklist_map_t::iterator host_url_check = blacklist.find(host_url);
+
+    // Get detected blacklist ids and merge them together
+    host_id     = host_check     != blacklist.end() ? host_check->second : 0;
+    host_url_id = host_url_check != blacklist.end() ? host_url_check->second : 0;
+    bl_id       = host_id | host_url_id;
+
+    if (bl_id != 0) {
         // we found this URL in blacklist -- fill the detection record
-        ur_set(out, detect, UR_URL_BLACKLIST, *bl);
-#ifdef DEBUG
-        cout << "URL \"" << string(url,s) << "\" has been found in blacklist." << endl;
-#endif
+        ur_set(out, detect, UR_URL_BLACKLIST, bl_id);
+//#ifdef DEBUG
+        //cout << "URL \"" << host_url << "\" has been found in blacklist." << endl;
+//#endif
         return BLACKLISTED;
     }
     // URL was not found
@@ -324,10 +276,10 @@ int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t
  * @param blacklist Blacklist to be updated.
  * @param rm Vector with items to remove.
  */
-static void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
+static void update_remove(blacklist_map_t &blacklist, black_list_t &rm)
 {
-    for (int i = 0; i < rm.size(); i++) {
-        ht_remove_by_key(&blacklist, rm[i].url, strlen(rm[i].url));
+   for (int i = 0; i < rm.size(); i++) {
+      blacklist.erase(rm[i].url);
     }
 }
 
@@ -339,49 +291,32 @@ static void update_remove(cc_hash_table_t& blacklist, vector<upd_item_t>& rm)
  * @param blacklist Blacklist to be updated.
  * @param add Vector with items to add or update.
  */
-static void update_add(cc_hash_table_t& blacklist, vector<upd_item_t>& add)
+static int  update_add(blacklist_map_t &blacklist, black_list_t &add)
 {
-    int bl_index;
-    for (int i = 0; i < add.size(); i++) {
-        if ((bl_index = ht_get_index(&blacklist, add[i].url, strlen(add[i].url))) >= 0) {
-            *((uint8_t *) blacklist.table[bl_index].data) = add[i].bl;
-        } else {
-            if (ht_insert(&blacklist, add[i].url, &add[i].bl, strlen(add[i].url))) {
-#ifdef DEBUG
-                cerr << "Failure during adding new items. Update interrupted." << endl;
-#endif
-                return;
-            }
-        }
+   for (int i = 0; i < add.size(); i++) {
+      blacklist.insert(pair<string, uint64_t>(add[i].url, add[i].bl));
     }
 }
 
-#ifdef DEBUG
-static void show_blacklist(cc_hash_table_t& blacklist) {
-
-    for (int i = 0; i < blacklist.table_size; i++) {
-        if (blacklist.table[i].key != NULL) {
-            for (int k = 0; k < blacklist.table[i].key_length; k++) {
-                cout << blacklist.table[i].key[k];
-            }
-            cout << " | " << blacklist.table[i].key_length << " | "  << (short) *((uint8_t *) blacklist.table[i].data) << endl;
-        }
-    }
-}
-#endif
-
-
-char *BLACKLIST_COMMENT_AR = (char*)"#";
-
-static void setup_downloader(bl_down_args_t *args, const char *file)
+static void setup_downloader(bl_down_args_t *args, const char *file, const char *b_str)
 {
-   args->sites      = BL_ELEM_MALWARE_DOMAINS.id;
+   uint64_t sites;
+   uint8_t num = bl_translate_to_id((char*)b_str, &sites);
+
+   args->use_regex = (uint8_t*)malloc(sizeof(uint8_t) * num);
+   args->reg_pattern = (char**)malloc(sizeof(char *) * num);
+   args->comment_ar = (char*)malloc(sizeof(char) * num);
+
+   for (int i = 0; i < num; i++) {
+      args->comment_ar[i] = '#';
+      args->use_regex[i] = 1;
+      args->reg_pattern[i] = strdup(URL_REGEX);
+   }
+
+   args->sites      = sites;
    args->file       = (char*)file;
-   args->comment_ar = BLACKLIST_COMMENT_AR;
-   args->num        = 1;
+   args->num        = num;
    args->delay      = 3600;
-   args->use_regex  = 0; // We dont want to use regelar expression filter
-   args->reg_pattern     = NULL;
    args->update_mode     = DIFF_UPDATE_MODE;
    args->line_max_length = 1024;
    args->el_max_length   = 256;
@@ -400,96 +335,164 @@ int main (int argc, char** argv)
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
-
     bl_down_args_t bl_args;
     int retval = 0; // return value
+    int send_terminating_unirec = 1;
 
-    cc_hash_table_t blacklist;
+    //cc_hash_table_t blacklist;
+    blacklist_map_t blacklist;    
 
-    if (ht_init(&blacklist, BLACKLIST_DEF_SIZE, sizeof(uint8_t), 0, REHASH_ENABLE)) {
-        cerr << "Unable to initialize blacklist table. Unable to continue." << endl;
-        return EXIT_FAILURE;
-    }
+    // Update lists
+    black_list_t add_update;
+    black_list_t rm_update;
 
-    ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<HTTP>");
-    ur_template_t* det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST"); // + BLACKLIST_TYPE
+    // Unirec templates
+    ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,<HTTP>");
+    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST"); // + BLACKLIST_TYPE
 
     void *detection = ur_create(det, 2048);
 
     // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
-    // check if the directory with URLs is specified
-    if (argc != 2) {
-        cerr << "ERROR: Directory with sources not specified. Unable to continue." << endl;
-        trap_terminate();
-        trap_finalize();
-        ht_destroy(&blacklist);
-        ur_free_template(templ);
-        ur_free_template(det);
-        return EXIT_FAILURE;
-    }
-
     // set locale so we can use URL normalization library
     setlocale(LC_ALL, "");
  
-    // load source files
-    const char* source = argv[1];
+    int opt;
+    string file, bl_str;
+    int bl_mode = BL_STATIC_MODE; // default mode
 
-    setup_downloader(&bl_args, source); 
-    pid_t c_id = bl_down_init(&bl_args);
-    if (c_id < 0) {
-        fprintf(stderr, "Error: Could not initialize downloader!\n");
-        return 1;
-    } else {
-        while (!update) {
-            sleep(1);
+    // ********** Parse arguments **********
+    while ((opt = getopt(argc, argv, "nD:f:")) != -1) {
+        switch (opt) {
+            case 'D': // Dynamic mode
+                      bl_mode = BL_DYNAMIC_MODE;
+                      bl_str = string(optarg);
+                      break;
+            case 'f': // Specify file with blacklisted IPs
+                      file = string(optarg);
+                      break;
+            case 'n': // Do not send terminating Unirec
+                      send_terminating_unirec = 0;
+                      break;
         }
-        update = 0;
     }
 
-    retval = load_url(blacklist, source);
+    // ***** Check module arguments *****
+    if (file.length() == 0) {
+        fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D]\n", argv[0]);
+        ur_free_template(templ);
+        ur_free_template(det);
+        trap_terminate();
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    if (bl_mode == BL_DYNAMIC_MODE && bl_str.length() == 0) {
+        fprintf(stderr, "Error: Parameter -D needs argument.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>]\n", argv[0]);
+        ur_free_template(templ);
+        ur_free_template(det);
+        trap_terminate();
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+
+
+    // Initialize blacklist downloader
+    if (bl_mode == BL_DYNAMIC_MODE) {
+       setup_downloader(&bl_args, file.c_str(), bl_str.c_str()); 
+       if (bl_args.sites == 0) {
+           fprintf(stderr, "Error: No blacklists were specified!\n");
+           ur_free_template(templ);
+           ur_free_template(det);
+           trap_terminate();
+           trap_finalize();
+           return EXIT_FAILURE;
+        }
+       int ret = bl_down_init(&bl_args);
+       if (ret < 0) {
+           fprintf(stderr, "Error: Could not initialize downloader!\n");
+           return 1;
+       } else {
+           while (!update) {
+               sleep(1);
+               if (stop) {
+                  ur_free_template(templ);
+                  ur_free_template(det);
+                  trap_finalize();
+                  fprintf(stderr, "Quiting before first update\n");
+                  bld_finalize();
+                  return EXIT_FAILURE;
+               }
+               cout << "Checking signal value\n";
+               check_update();
+           }
+           update = 0;
+       }
+    }
+
+    // Load URLs from file
+    retval = load_update(add_update, rm_update, file);
 
     if (retval == BLIST_LOAD_ERROR) {
         trap_terminate();
         trap_finalize();
-        ht_destroy(&blacklist);
         ur_free_template(templ);
         ur_free_template(det);
+        if (bl_mode == BL_DYNAMIC_MODE) {
+           bld_finalize();
+        }
         return EXIT_FAILURE;
     }
-    const void *data;
-    uint16_t data_size;
 
-    // update vectors
-    vector<upd_item_t> add_update;
-    vector<upd_item_t> rm_update;
-
-    if (ht_is_empty(&blacklist)) {
+    // Add initial update
+    if (!add_update.empty()) {
+       if (!update_add(blacklist, add_update)) {
+          fprintf(stderr, "Update failed\n");
+          if (bl_mode == BL_DYNAMIC_MODE) {
+              bld_finalize();
+          }
+          return EXIT_FAILURE;
+       }
+    } else {
         cerr << "No addresses were loaded. Continuing makes no sense." << endl;
         trap_terminate();
         trap_finalize();
         ur_free_template(templ);
         ur_free_template(det);
-        ht_destroy(&blacklist);
+        if (bl_mode == BL_DYNAMIC_MODE) {
+           bld_finalize();
+        }
         return EXIT_FAILURE;
+
+
+
     }
-   
-#ifdef DEBUG
-    // for debug only (show contents of the blacklist table)
-    show_blacklist(blacklist);
-    // count marked addresses
-    unsigned int marked = 0;
-    unsigned int recieved = 0;
-#endif
- 
+    add_update.clear();
+    rm_update.clear();
+
+    // Create thread for Inactive timeout checking
+    /*pthread_t inactive_timeout_thread_id;
+    if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
+       fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
+       ur_free(detection);
+       ur_free_template(templ);
+       ur_free_template(tmpl_det);
+       fht_destroy(AGGR_TABLE);
+       ht_destroy(&hash_blacklist);
+       trap_finalize();
+       return EXIT_SUCCESS;
+    }*/
+
+
+    const void *data;
+    uint16_t data_size;
+
     // ***** Main processing loop *****
     while (!stop) {
                
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
-
 #ifdef DEBUG
         int dyn_size = ur_rec_dynamic_size(templ, data);
 #endif
@@ -514,6 +517,7 @@ int main (int argc, char** argv)
         retval = check_blacklist(blacklist, templ, det, data, detection);
 
         // is blacklisted? send report
+
         if (retval == BLACKLISTED) {
 #ifdef DEBUG
             ++marked;
@@ -526,8 +530,13 @@ int main (int argc, char** argv)
         }
 
         // should update?
-        if (update) {
-            retval = load_update(add_update, rm_update, source);
+        //cout << "Checking update";
+        fflush(stdout);
+        bld_lock_sync();
+        //cout << "...\n";
+        if (BLD_SYNC_FLAG) {
+           cout << "Processing update...\n";
+            retval = load_update(add_update, rm_update, file);
 
             if (retval == BLIST_LOAD_ERROR) {
                 cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
@@ -553,20 +562,24 @@ int main (int argc, char** argv)
 
             rm_update.clear();
             add_update.clear();
-            update = 0;       
+            BLD_SYNC_FLAG = 0;
+            cout << "Successfully updated\n";
         }
+        bld_unlock_sync();
     }
 
-   kill(c_id, SIGINT);
+    cout << "Terminating\n";
+    if (bl_mode == BL_DYNAMIC_MODE) {
+       bld_finalize();
+    }
 
     // send terminate message
-    trap_send_data(0, data, 1, TRAP_HALFWAIT);
+    trap_send_data(0, data, 1, TRAP_NO_WAIT);
 
     // clean up before termination
     ur_free_template(templ);
     ur_free_template(det);
     ur_free(detection);
-    ht_destroy(&blacklist);
     trap_finalize();
  
 
