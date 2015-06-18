@@ -51,6 +51,21 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=false])
 
+if test "$repobuild" = "true"; then
+AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
+	[$PWD/../unirec$PATH_SEPARATOR$PATH])
+else
+AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
+	[$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
+fi
+
+if test -z "$UNIRECPROC"; then
+	AC_MSG_ERROR([UniRec processor was not found. Add path to "process_fields.py" into PATH or install UniRec."])
+fi
+
+AC_SUBST(UNIRECPROC)
+
+
 
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
 		[enable debugging, default: no]),
@@ -284,6 +299,7 @@ echo "  Static binary......: $static"
 echo
 echo "Documentation..........: ${build_doc}"
 echo
+echo "UniRec processor.......: $UNIRECPROC"
 echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
