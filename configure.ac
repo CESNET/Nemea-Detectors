@@ -16,6 +16,7 @@ LT_INIT
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
+m4_include([m4/unirec_fields.m4])
 
 pkgdatadir=${datadir}/nemea
 PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
@@ -44,106 +45,92 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     [AC_MSG_ERROR([pthread not found])])
 
 AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
-		[enable local compilation without system installed Nemea libraries, default: no]),
+        [enable local compilation without system installed Nemea libraries, default: no]),
 [case "${enableval}" in
-	yes) repobuild=true ;;
-	no)  repobuild=false ;;
-	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
+    yes) repobuild=true ;;
+    no)  repobuild=false ;;
+    *)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=false])
 
-if test "$repobuild" = "true"; then
-AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-	[$PWD/../unirec$PATH_SEPARATOR$PATH])
-else
-AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-	[$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
-fi
-
-if test -z "$UNIRECPROC"; then
-	AC_MSG_ERROR([UniRec processor was not found. Add path to "process_fields.py" into PATH or install UniRec."])
-fi
-
-AC_SUBST(UNIRECPROC)
-
-
+UNIREC_PATH
 
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
-		[enable debugging, default: no]),
+        [enable debugging, default: no]),
 [case "${enableval}" in
-	yes) debug=true ;;
-	no)  debug=false ;;
-	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+    yes) debug=true ;;
+    no)  debug=false ;;
+    *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
 esac], [debug=false])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 if test "${repobuild}" = "false" -a -z "$TRAPLIB"; then
-	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
-	LDFLAGS="$LIBTRAP_LDFLAGS $LDFLAGS"
-	LIBS="$LIBTRAP_LIBS $LIBS"
-	CFLAGS="$LIBTRAP_CFLAGS $CFLAGS"
-	CXXFLAGS="$LIBTRAP_CFLAGS $CXXFLAGS"
+    PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
+    LDFLAGS="$LIBTRAP_LDFLAGS $LDFLAGS"
+    LIBS="$LIBTRAP_LIBS $LIBS"
+    CFLAGS="$LIBTRAP_CFLAGS $CFLAGS"
+    CXXFLAGS="$LIBTRAP_CFLAGS $CXXFLAGS"
 fi
 if test -z "$TRAPLIB"; then
-	# Check for TRAP toolkit as a superproject.
-	if test -d "$srcdir/../libtrap"; then
-	TRAPINC='$(top_srcdir)/../libtrap/include'
-	TRAPLIB='$(top_builddir)/../libtrap/src/.libs'
-	fi
-	# AC_SUBST command line variables from TRAPLIB and TRAPINC.
-	if test -n "$TRAPLIB"; then
-	AC_SUBST([TRAP_LTLIB], ["$TRAPLIB/libtrap.la"])
-	AC_SUBST([TRAP_INCLUDE], ["-I$TRAPINC"])
-	LDFLAGS="-L$TRAPLIB $LDFLAGS"
-	CFLAGS="-I$TRAPINC $CFLAGS"
-	CXXFLAGS="-I$TRAPINC $CXXFLAGS"
-	fi
+    # Check for TRAP toolkit as a superproject.
+    if test -d "$srcdir/../libtrap"; then
+    TRAPINC='$(top_srcdir)/../libtrap/include'
+    TRAPLIB='$(top_builddir)/../libtrap/src/.libs'
+    fi
+    # AC_SUBST command line variables from TRAPLIB and TRAPINC.
+    if test -n "$TRAPLIB"; then
+    AC_SUBST([TRAP_LTLIB], ["$TRAPLIB/libtrap.la"])
+    AC_SUBST([TRAP_INCLUDE], ["-I$TRAPINC"])
+    LDFLAGS="-L$TRAPLIB $LDFLAGS"
+    CFLAGS="-I$TRAPINC $CFLAGS"
+    CXXFLAGS="-I$TRAPINC $CXXFLAGS"
+    fi
 fi
 
 if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
-	PKG_CHECK_MODULES([UNIREC], [unirec], [UNIRECLIB="yes"], AC_MSG_WARN([UNIREC was not found by pkg-config]))
-	LDFLAGS="$UNIREC_LDFLAGS $LDFLAGS"
-	LIBS="$UNIREC_LIBS $LIBS"
-	CFLAGS="$UNIREC_CFLAGS $CFLAGS"
-	CXXFLAGS="$UNIREC_CFLAGS $CXXFLAGS"
+    PKG_CHECK_MODULES([UNIREC], [unirec], [UNIRECLIB="yes"], AC_MSG_WARN([UNIREC was not found by pkg-config]))
+    LDFLAGS="$UNIREC_LDFLAGS $LDFLAGS"
+    LIBS="$UNIREC_LIBS $LIBS"
+    CFLAGS="$UNIREC_CFLAGS $CFLAGS"
+    CXXFLAGS="$UNIREC_CFLAGS $CXXFLAGS"
 fi
 # Still empty? Check for *installed* UNIREC.
 if test -z "$UNIRECLIB"; then
-	# Check for UNIREC toolkit as a superproject.
-	if test -d "$srcdir/../unirec"; then
-	UNIRECINC='$(top_srcdir)/../'
-	UNIRECLIB='$(top_builddir)/../unirec'
-	fi
-	# AC_SUBST command line variables from UNIRECLIB and UNIRECINC.
-	if test -n "$UNIRECLIB"; then
-	AC_SUBST([UNIREC_LTLIB], ["$UNIRECLIB/libunirec.la"])
-	AC_SUBST([UNIREC_INCLUDE], ["-I$UNIRECINC"])
-	LDFLAGS="-L$UNIRECLIB  $LDFLAGS"
-	CFLAGS="-I$UNIRECINC $CFLAGS"
-	CXXFLAGS="-I$UNIRECINC $CXXFLAGS"
-	fi
+    # Check for UNIREC toolkit as a superproject.
+    if test -d "$srcdir/../unirec"; then
+    UNIRECINC='$(top_srcdir)/../'
+    UNIRECLIB='$(top_builddir)/../unirec'
+    fi
+    # AC_SUBST command line variables from UNIRECLIB and UNIRECINC.
+    if test -n "$UNIRECLIB"; then
+    AC_SUBST([UNIREC_LTLIB], ["$UNIRECLIB/libunirec.la"])
+    AC_SUBST([UNIREC_INCLUDE], ["-I$UNIRECINC"])
+    LDFLAGS="-L$UNIRECLIB  $LDFLAGS"
+    CFLAGS="-I$UNIRECINC $CFLAGS"
+    CXXFLAGS="-I$UNIRECINC $CXXFLAGS"
+    fi
 fi
 
 if test "${repobuild}" = "false" -a -z "$NEMEACOMMONLIB"; then
-	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
-	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
-	LIBS="$NEMEACOMMON_LIBS $LIBS"
-	CFLAGS="$NEMEACOMMON_CFLAGS $CFLAGS"
-	CXXFLAGS="$NEMEACOMMON_CFLAGS $CXXFLAGS"
+    PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
+    LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
+    LIBS="$NEMEACOMMON_LIBS $LIBS"
+    CFLAGS="$NEMEACOMMON_CFLAGS $CFLAGS"
+    CXXFLAGS="$NEMEACOMMON_CFLAGS $CXXFLAGS"
 fi
 if test -z "$NEMEACOMMONLIB"; then
-	# Check for NEMEACOMMON toolkit as a superproject.
-	if test -d "$srcdir/../common"; then
-	NEMEACOMMONINC='$(top_srcdir)/../common/include'
-	NEMEACOMMONLIB='$(top_builddir)/../common'
-	fi
-	# AC_SUBST command line variables from NEMEACOMMONLIB and NEMEACOMMONINC.
-	if test -n "$NEMEACOMMONLIB"; then
-	AC_SUBST([NEMEACOMMON_LTLIB], ["$NEMEACOMMONLIB/libnemea-common.la"])
-	AC_SUBST([NEMEACOMMON_INCLUDE], ["-I$NEMEACOMMONINC"])
-	LDFLAGS="-L$NEMEACOMMONLIB $LDFLAGS"
-	CFLAGS="-I$NEMEACOMMONINC $CFLAGS"
-	CXXFLAGS="-I$NEMEACOMMONINC $CXXFLAGS"
-	fi
+    # Check for NEMEACOMMON toolkit as a superproject.
+    if test -d "$srcdir/../common"; then
+    NEMEACOMMONINC='$(top_srcdir)/../common/include'
+    NEMEACOMMONLIB='$(top_builddir)/../common'
+    fi
+    # AC_SUBST command line variables from NEMEACOMMONLIB and NEMEACOMMONINC.
+    if test -n "$NEMEACOMMONLIB"; then
+    AC_SUBST([NEMEACOMMON_LTLIB], ["$NEMEACOMMONLIB/libnemea-common.la"])
+    AC_SUBST([NEMEACOMMON_INCLUDE], ["-I$NEMEACOMMONINC"])
+    LDFLAGS="-L$NEMEACOMMONLIB $LDFLAGS"
+    CFLAGS="-I$NEMEACOMMONINC $CFLAGS"
+    CXXFLAGS="-I$NEMEACOMMONINC $CXXFLAGS"
+    fi
 fi
 
 AC_CHECK_HEADER(idna.h,
@@ -156,12 +143,12 @@ AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes], AC_MSG_WARN([libnfdump not fo
 AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
 
 AC_CHECK_HEADER(pcap.h,
-	AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
+    AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
 
 AC_CHECK_HEADER(rrd.h,
-	AC_CHECK_LIB(rrd, rrd_update, [rrdtool=yes], AC_MSG_WARN([rrdtool not found. The rrd_updater module will not be compiled.])), AC_MSG_WARN([rrd.h not found. The rrd_updater module will not be compiled.]))
+    AC_CHECK_LIB(rrd, rrd_update, [rrdtool=yes], AC_MSG_WARN([rrdtool not found. The rrd_updater module will not be compiled.])), AC_MSG_WARN([rrd.h not found. The rrd_updater module will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_RRDTOOL, test x${rrdtool} = xyes)
 
@@ -207,7 +194,7 @@ AC_CHECK_FUNC(sigaction, AC_DEFINE(HAVE_SIGACTION, 1, [Define if you have the 's
 #RPM & Doxygen
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
-	AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
+    AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
 fi
 
 RPM_RELEASE=1

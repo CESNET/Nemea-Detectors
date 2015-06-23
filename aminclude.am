@@ -1,0 +1,6 @@
+BUILT_SOURCES = fields.h 
+
+EXTRA_DIST=fields.c process_fields.py
+
+fields.h field.c: $(UNIRECPROC)
+	$(PYTHON) $(UNIRECPROC)

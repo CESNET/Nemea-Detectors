@@ -51,6 +51,7 @@ synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \
 voip_fraud_detection \
+testunirec2 \
 warden_collector
 
 
