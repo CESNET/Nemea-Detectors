@@ -114,7 +114,7 @@ trap_module_info_t *module_info = NULL; /*{
   BASIC("NetFlow Amplification detection module","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('d', NULL, "path to log files, has to be ended by \"/\"", 1, "string") \
+   PARAM('d', NULL, "path to log files, has to be ended by slash", 1, "string") \
    PARAM('p', NULL, "port used for detection (53)", 1, "int32") \
    PARAM('n', NULL, "number of topN values chosen (10)", 1, "int32") \
    PARAM('q', NULL, "step of histogram (10)", 1, "int32") \
