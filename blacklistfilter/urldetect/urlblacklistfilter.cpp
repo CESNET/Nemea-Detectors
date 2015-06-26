@@ -63,11 +63,36 @@ extern "C" {
 #endif
 #include <libtrap/trap.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
+#include "fields.c"
 #ifdef __cplusplus
 }
 #endif
 
 #include "urlblacklistfilter.h"
+
+UR_FIELDS(
+  //BASIC_FLOW
+  ipaddr SRC_IP,      //Source address of a flow
+  ipaddr DST_IP,      //Destination address of a flow
+  uint16 SRC_PORT,    //Source transport-layer port
+  uint16 DST_PORT,    //Destination transport-layer port
+  uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+  uint32 PACKETS,     //Number of packets in a flow or in an interval
+  uint64 BYTES,       //Number of bytes in a flow or in an interval
+  time TIME_FIRST,    //Timestamp of the first packet of a flow
+  time TIME_LAST,     //Timestamp of the last packet of a flow
+  uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
+  //COLLECTOR_FLOW
+  uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
+  uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+  uint8 TOS,              //IP type of service
+  uint8 TTL,              //IP time to live
+  //HTTP
+  string HTTP_REQUEST_HOST,          //HTTP request host
+  string HTTP_REQUEST_URL,           //HTTP request url
+  //other
+  uint8 URL_BLACKLIST,               //ID of blacklist which contains recieved URL
+)
 
 //#define DEBUG 1
 
@@ -88,7 +113,7 @@ trap_module_info_t module_info = {
     "   -n              Do not send terminating Unirec when exiting program.\n"
     "Interfaces:\n"
     "   Inputs: 1 (UniRec record)\n"
-    "   Outputs: 1 (UniRec record)\n", 
+    "   Outputs: 1 (UniRec record)\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
 };
@@ -121,8 +146,8 @@ void check_update()
 
 /**
  * Function for loading source files.
- * Function gets path to the directory with source files and use these to fill the 
- * given blacklist with URLs. Since URL can have variable length its hashed first 
+ * Function gets path to the directory with source files and use these to fill the
+ * given blacklist with URLs. Since URL can have variable length its hashed first
  * and this hash used in blacklist for all operations.
  *
  * @param blacklist Blacklist table to be filled.
@@ -156,7 +181,7 @@ int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
     while (!input.eof()) {
         getline(input, line);
         line_num++;
-       
+
         // trim all white spaces (if any)
         line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
 
@@ -173,7 +198,7 @@ int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
         if (!line.length()) {
             continue;
         }
-        
+
         // find URL-blacklist separator
         str_pos = line.find_first_of(',');
         if (str_pos == string::npos) {
@@ -200,7 +225,7 @@ int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
 
         // store blacklist
         bl_entry.bl = bl_flag;
-           
+
         // put entry into its respective update list
         if (!add_rem) {
             add_update.push_back(bl_entry);
@@ -218,9 +243,9 @@ int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
 
 /**
  * Function for checking the URL.
- * Function gets the UniRec record with URL to check and tries to find it 
- * in the given blacklist. If the function succeedes then the appropriate 
- * field in detection record is filled with the number of blacklist asociated 
+ * Function gets the UniRec record with URL to check and tries to find it
+ * in the given blacklist. If the function succeedes then the appropriate
+ * field in detection record is filled with the number of blacklist asociated
  * with the URL. If the URL is clean nothing is done.
  *
  * @param blacklist Blacklist used for checking.
@@ -235,12 +260,12 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
    uint64_t host_id, host_url_id, bl_id;
 
     // Skip flows with empty HTTP host
-    if (ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST) == 0) {
+    if (ur_get_var_len(in, record, F_HTTP_REQUEST_HOST) == 0) {
        return URL_CLEAR;
     }
 
-    string host = string(ur_get_dyn(in, record, UR_HTTP_REQUEST_HOST), ur_get_dyn_size(in, record, UR_HTTP_REQUEST_HOST));
-    string host_url = host.append(string(ur_get_dyn(in, record, UR_HTTP_REQUEST_URL), ur_get_dyn_size(in, record, UR_HTTP_REQUEST_URL)));
+    string host = string(ur_get_ptr(in, record, F_HTTP_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_REQUEST_HOST));
+    string host_url = host.append(string(ur_get_ptr(in, record, F_HTTP_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_REQUEST_URL)));
 
     // Strip / (slash) from URL if it is last character
     if (host_url[host_url.length() - 1] == '/') {
@@ -258,7 +283,7 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
 
     if (bl_id != 0) {
         // we found this URL in blacklist -- fill the detection record
-        ur_set(out, detect, UR_URL_BLACKLIST, bl_id);
+        ur_set(out, detect, F_URL_BLACKLIST, bl_id);
 //#ifdef DEBUG
         //cout << "URL \"" << host_url << "\" has been found in blacklist." << endl;
 //#endif
@@ -270,7 +295,7 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
 
 /**
  * Function for updating the blacklist (remove).
- * Function removes all items specified in the vector of updates from 
+ * Function removes all items specified in the vector of updates from
  * the table since these items are no longer valid.
  *
  * @param blacklist Blacklist to be updated.
@@ -285,7 +310,7 @@ static void update_remove(blacklist_map_t &blacklist, black_list_t &rm)
 
 /**
  * Function for updating the blacklist (add/update).
- * Function adds the items specified in the vector of updates to 
+ * Function adds the items specified in the vector of updates to
  * the table. If the item already exists it writes the new data.
  *
  * @param blacklist Blacklist to be updated.
@@ -340,24 +365,43 @@ int main (int argc, char** argv)
     int send_terminating_unirec = 1;
 
     //cc_hash_table_t blacklist;
-    blacklist_map_t blacklist;    
+    blacklist_map_t blacklist;
 
     // Update lists
     black_list_t add_update;
     black_list_t rm_update;
 
     // Unirec templates
-    ur_template_t* templ = ur_create_template("<COLLECTOR_FLOW>,<HTTP>");
-    ur_template_t* det = ur_create_template("<COLLECTOR_FLOW>,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST"); // + BLACKLIST_TYPE
-
-    void *detection = ur_create(det, 2048);
+    char *errstr = NULL;
+    ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,HTTP_REQUEST_HOST,HTTP_REQUEST_URL,HTTP_REQUEST_REFERER", &errstr);
+    if (templ == NULL) {
+      cerr << "Error: Invalid UniRec specifier." << endl;
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
+      trap_finalize();
+      return EXIT_FAILURE;
+    }
+    ur_template_t* det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST", &errstr); // + BLACKLIST_TYPE
+    if (det == NULL) {
+      cerr << "Error: Invalid UniRec specifier." << endl;
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
+      ur_free_template(templ);
+      trap_finalize();
+      return EXIT_FAILURE;
+    }
+    void *detection = ur_create_record(det, 2048);
 
     // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
     // set locale so we can use URL normalization library
     setlocale(LC_ALL, "");
- 
+
     int opt;
     string file, bl_str;
     int bl_mode = BL_STATIC_MODE; // default mode
@@ -399,7 +443,7 @@ int main (int argc, char** argv)
 
     // Initialize blacklist downloader
     if (bl_mode == BL_DYNAMIC_MODE) {
-       setup_downloader(&bl_args, file.c_str(), bl_str.c_str()); 
+       setup_downloader(&bl_args, file.c_str(), bl_str.c_str());
        if (bl_args.sites == 0) {
            fprintf(stderr, "Error: No blacklists were specified!\n");
            ur_free_template(templ);
@@ -474,7 +518,7 @@ int main (int argc, char** argv)
     /*pthread_t inactive_timeout_thread_id;
     if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
        fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
-       ur_free(detection);
+       ur_free_record(detection);
        ur_free_template(templ);
        ur_free_template(tmpl_det);
        fht_destroy(AGGR_TABLE);
@@ -489,22 +533,22 @@ int main (int argc, char** argv)
 
     // ***** Main processing loop *****
     while (!stop) {
-               
+
         // retrieve data from server
         retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 #ifdef DEBUG
-        int dyn_size = ur_rec_dynamic_size(templ, data);
+        int dyn_size = ur_rec_varlen_size(templ, data);
 #endif
 
         // check the data size -- we can only check static part since URL is dynamic
-        if ((data_size - ur_rec_dynamic_size(templ,data)) != ur_rec_static_size(templ)) {
+        if ((data_size - ur_rec_varlen_size(templ,data)) != ur_rec_fixlen_size(templ)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Wrong data size. ";
-                cerr << "Expected: " << ur_rec_static_size(templ) << " ";
-                cerr << "Recieved: " << data_size - ur_rec_dynamic_size(templ,data) << " in static part." << endl;
+                cerr << "Expected: " << ur_rec_fixlen_size(templ) << " ";
+                cerr << "Recieved: " << data_size - ur_rec_varlen_size(templ,data) << " in static part." << endl;
                 break;
             }
         }
@@ -522,10 +566,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             ++marked;
 #endif
-            ur_transfer_static(templ, det, data, detection);
-
-            ur_set_dyn(det, detection, UR_HTTP_REQUEST_HOST, ur_get_dyn(templ, data, UR_HTTP_REQUEST_HOST), ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_HOST));
-            ur_set_dyn(det, detection, UR_HTTP_REQUEST_URL, ur_get_dyn(templ, data, UR_HTTP_REQUEST_URL), ur_get_dyn_size(templ, data, UR_HTTP_REQUEST_URL));
+            ur_copy_fields(det, detection, templ, data);
             trap_send_data(0, detection, ur_rec_size(det, detection), TRAP_HALFWAIT);
         }
 
@@ -547,7 +588,7 @@ int main (int argc, char** argv)
 #ifdef DEBUG
             cout << "Updating blacklist filter (" << add_update.size() << " additions / " << rm_update.size() << " removals)." << endl;
 #endif
-            
+
             if (!rm_update.empty()) {
                 update_remove(blacklist, rm_update);
             }
@@ -579,9 +620,9 @@ int main (int argc, char** argv)
     // clean up before termination
     ur_free_template(templ);
     ur_free_template(det);
-    ur_free(detection);
+    ur_free_record(detection);
     trap_finalize();
- 
+
 
 #ifdef DEBUG
     cout << marked << "/" << recieved << " were marked by blacklist." << endl;

@@ -66,6 +66,7 @@
 extern "C" {
 #endif
 #include <libtrap/trap.h>
+#include "fields.c"
 #ifdef __cplusplus
 }
 #endif
@@ -82,6 +83,38 @@ extern "C" {
 //#define DEBUG
 
 using namespace std;
+
+UR_FIELDS(
+    //BASIC_FLOW
+    ipaddr SRC_IP,      //Source address of a flow
+    ipaddr DST_IP,      //Destination address of a flow
+    uint16 SRC_PORT,    //Source transport-layer port
+    uint16 DST_PORT,    //Destination transport-layer port
+    uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+    uint32 PACKETS,     //Number of packets in a flow or in an interval
+    uint64 BYTES,       //Number of bytes in a flow or in an interval
+    time TIME_FIRST,    //Timestamp of the first packet of a flow
+    time TIME_LAST,     //Timestamp of the last packet of a flow
+    uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
+    //COLLECTOR_FLOW
+    uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
+    uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+    uint8 TOS,              //IP type of service
+    uint8 TTL,              //IP time to live
+   //AMPLIFICATION_ALERT
+   ipaddr SRC_IP,       //Source address of a flow
+   ipaddr DST_IP,       //Destination address of a flow
+   uint16 SRC_PORT,     //Source transport-layer port
+   uint32 REQ_FLOWS,    //Number of flows in an interval (requests)
+   uint32 REQ_PACKETS,  //Number of packets in a flow or in an interval (requests)
+   uint64 REQ_BYTES,    //Number of packets in a flow or in an interval (responses)
+   uint32 RSP_FLOWS,    //Number of flows in an interval (responses)
+   uint32 RSP_PACKETS,  //Number of packets in a flow or in an interval (responses)
+   uint64 RSP_BYTES,    //Number of bytes in a flow or in an interval (responses)
+   time TIME_FIRST,     //Timestamp of the first packet of a flow
+   time TIME_LAST,      //Timestamp of the last packet of a flow
+   uint32 EVENT_ID,     //Identification number of reported event
+)
 
 trap_module_info_t module_info = {
     (char *) "NetFlow Amplification detection module", // Module name
@@ -531,23 +564,37 @@ int main (int argc, char** argv) {
    }
 
    // declare demplates
-   ur_template_t *unirec_in = ur_create_template("<COLLECTOR_FLOW>");
-   ur_template_t* unirec_out = ur_create_template("<AMPLIFICATION_ALERT>");
-
+   char * errstr = NULL;
+   ur_template_t *unirec_in = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
    // check created templates
-   if ((unirec_in == NULL) || (unirec_out == NULL)) {
+   if (unirec_in == NULL) {
       cerr << "Error: Invalid UniRec specifier." << endl;
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
+      trap_finalize();
+      return ERROR;
+   }
+   ur_template_t* unirec_out = ur_create_template("SRC_IP,DST_IP,SRC_PORT,REQ_FLOWS,REQ_PACKETS,REQ_BYTES,RSP_FLOWS,RSP_PACKETS,RSP_BYTES,TIME_FIRST,TIME_LAST,EVENT_ID", &errstr);
+   // check created templates
+   if (unirec_out == NULL) {
+      cerr << "Error: Invalid UniRec specifier." << endl;
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
       trap_finalize();
       return ERROR;
    }
 
    // prepare detection record
-   void *detection = ur_create(unirec_out, 0);
+   void *detection = ur_create_record(unirec_out, 0);
    if (detection == NULL) {
       cerr << "Error: No memory available for detection record. Unable to continue." << endl;
       ur_free_template(unirec_in);
       ur_free_template(unirec_out);
-      ur_free(detection);
+      ur_free_record(detection);
       trap_finalize();
       return ERROR;
    }
@@ -568,19 +615,19 @@ int main (int argc, char** argv) {
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       // check the data size
-      if ((data_size != ur_rec_static_size(unirec_in))) {
+      if ((data_size != ur_rec_fixlen_size(unirec_in))) {
          if (data_size <= 1) { // end of data
             break;
          } else { // data corrupted
-            cerr << "ERROR: Wrong data size. Expected: " <<  ur_rec_static_size(unirec_in);
+            cerr << "ERROR: Wrong data size. Expected: " <<  ur_rec_fixlen_size(unirec_in);
             cerr << ", recieved: " << data_size << "." << endl;
             break;
          }
       }
 
       // get ports of flow
-      src_port = ur_get(unirec_in, data, UR_SRC_PORT);
-      dst_port = ur_get(unirec_in, data, UR_DST_PORT);
+      src_port = ur_get(unirec_in, data, F_SRC_PORT);
+      dst_port = ur_get(unirec_in, data, F_DST_PORT);
 
       // create actualy inspected key
       flow_key_t actual_key;
@@ -588,18 +635,18 @@ int main (int argc, char** argv) {
       // check if src or dst port is expected, otherwise next flow
       if (dst_port == config.port) {
          qr = BOOL_QUERY;
-         actual_key.dst = ur_get(unirec_in, data, UR_SRC_IP);
-         actual_key.src = ur_get(unirec_in, data, UR_DST_IP);
+         actual_key.dst = ur_get(unirec_in, data, F_SRC_IP);
+         actual_key.src = ur_get(unirec_in, data, F_DST_IP);
       } else if (src_port == config.port) {
          qr = BOOL_RESPONSE;
-         actual_key.src = ur_get(unirec_in, data, UR_SRC_IP);
-         actual_key.dst = ur_get(unirec_in, data, UR_DST_IP);
+         actual_key.src = ur_get(unirec_in, data, F_SRC_IP);
+         actual_key.dst = ur_get(unirec_in, data, F_DST_IP);
       } else  {
          continue;
       }
 
-      if (actual_timestamp < ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST))){ // since timestamps are not always ordered
-         actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST));
+      if (actual_timestamp < ur_time_get_sec(ur_get(unirec_in, data, F_TIME_LAST))){ // since timestamps are not always ordered
+         actual_timestamp = ur_time_get_sec(ur_get(unirec_in, data, F_TIME_LAST));
       }
 
       // iterator through history model
@@ -607,20 +654,20 @@ int main (int argc, char** argv) {
 
       if ((it = model.find(actual_key)) != model.end()) {
          // record exists - update information and add flow
-         if (it->second.last_t < ur_get(unirec_in, data, UR_TIME_LAST)){
-            it->second.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
+         if (it->second.last_t < ur_get(unirec_in, data, F_TIME_LAST)){
+            it->second.last_t = ur_get(unirec_in, data, F_TIME_LAST);
          }
 
          // create new flow information structure
          flow_item_t i;
-         i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
-         i.bytes = ur_get(unirec_in, data, UR_BYTES);
-         i.packets = ur_get(unirec_in, data, UR_PACKETS);
+         i.t = ur_get(unirec_in, data, F_TIME_FIRST);
+         i.bytes = ur_get(unirec_in, data, F_BYTES);
+         i.packets = ur_get(unirec_in, data, F_PACKETS);
 
          // add new flow
          if (qr == BOOL_QUERY){
-            it->second.total_bytes[QUERY] += ur_get(unirec_in, data, UR_BYTES);
-            it->second.total_packets[QUERY] += ur_get(unirec_in, data, UR_PACKETS);
+            it->second.total_bytes[QUERY] += ur_get(unirec_in, data, F_BYTES);
+            it->second.total_packets[QUERY] += ur_get(unirec_in, data, F_PACKETS);
             it->second.total_flows[QUERY] += 1;
 
             if (it->second.q.size() < config.max_flow_items){
@@ -639,8 +686,8 @@ int main (int argc, char** argv) {
                it->second.q_rem_pos = (it->second.q_rem_pos + 1) % config.max_flow_items;
             }
          } else {
-            it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, UR_BYTES);
-            it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, UR_PACKETS);
+            it->second.total_bytes[RESPONSE] += ur_get(unirec_in, data, F_BYTES);
+            it->second.total_packets[RESPONSE] += ur_get(unirec_in, data, F_PACKETS);
             it->second.total_flows[RESPONSE] += 1;
 
             if (it->second.r.size() < config.max_flow_items){
@@ -660,7 +707,7 @@ int main (int argc, char** argv) {
             }
          }
 
-         long t1 = ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST));
+         long t1 = ur_time_get_sec(ur_get(unirec_in, data, F_TIME_LAST));
          long t2 = ur_time_get_sec(it->second.first_t);
          long t = t1 - t2;
          /// -------------------------------------------------------------------
@@ -707,18 +754,18 @@ int main (int argc, char** argv) {
                }
 
                if (report_this == REPORT_COMPLEX){
-                  ur_set(unirec_out, detection, UR_SRC_IP, it->first.src);
-                  ur_set(unirec_out, detection, UR_DST_IP, it->first.dst);
-                  ur_set(unirec_out, detection, UR_SRC_PORT, config.port);
-                  ur_set(unirec_out, detection, UR_RSP_FLOWS, it->second.total_flows[RESPONSE] - it->second.total_flows[R_REPORTED]);
-                  ur_set(unirec_out, detection, UR_RSP_PACKETS, it->second.total_packets[RESPONSE] - it->second.total_packets[R_REPORTED]);
-                  ur_set(unirec_out, detection, UR_RSP_BYTES, it->second.total_bytes[RESPONSE] - it->second.total_bytes[R_REPORTED]);
-                  ur_set(unirec_out, detection, UR_REQ_FLOWS, it->second.total_flows[QUERY] - it->second.total_flows[Q_REPORTED]);
-                  ur_set(unirec_out, detection, UR_REQ_PACKETS, it->second.total_packets[QUERY] - it->second.total_packets[Q_REPORTED]);
-                  ur_set(unirec_out, detection, UR_REQ_BYTES, it->second.total_bytes[QUERY] - it->second.total_bytes[Q_REPORTED]);
-                  ur_set(unirec_out, detection, UR_TIME_FIRST, it->second.first_t);
-                  ur_set(unirec_out, detection, UR_TIME_LAST, ur_get(unirec_in, data, UR_TIME_LAST));
-                  ur_set(unirec_out, detection, UR_EVENT_ID, it->second.identifier);
+                  ur_set(unirec_out, detection, F_SRC_IP, it->first.src);
+                  ur_set(unirec_out, detection, F_DST_IP, it->first.dst);
+                  ur_set(unirec_out, detection, F_SRC_PORT, config.port);
+                  ur_set(unirec_out, detection, F_RSP_FLOWS, it->second.total_flows[RESPONSE] - it->second.total_flows[R_REPORTED]);
+                  ur_set(unirec_out, detection, F_RSP_PACKETS, it->second.total_packets[RESPONSE] - it->second.total_packets[R_REPORTED]);
+                  ur_set(unirec_out, detection, F_RSP_BYTES, it->second.total_bytes[RESPONSE] - it->second.total_bytes[R_REPORTED]);
+                  ur_set(unirec_out, detection, F_REQ_FLOWS, it->second.total_flows[QUERY] - it->second.total_flows[Q_REPORTED]);
+                  ur_set(unirec_out, detection, F_REQ_PACKETS, it->second.total_packets[QUERY] - it->second.total_packets[Q_REPORTED]);
+                  ur_set(unirec_out, detection, F_REQ_BYTES, it->second.total_bytes[QUERY] - it->second.total_bytes[Q_REPORTED]);
+                  ur_set(unirec_out, detection, F_TIME_FIRST, it->second.first_t);
+                  ur_set(unirec_out, detection, F_TIME_LAST, ur_get(unirec_in, data, F_TIME_LAST));
+                  ur_set(unirec_out, detection, F_EVENT_ID, it->second.identifier);
 
                   // send alert
                   ret = trap_send(0, detection, ur_rec_size(unirec_out, detection));
@@ -804,8 +851,8 @@ int main (int argc, char** argv) {
             /// DELETION OF WINDOW
             // delete flows from queries
             for (vector<flow_item_t>::iterator del = it->second.q.begin(); del != it->second.q.end(); ) {
-               //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
-               if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+               //F_TIME_LAST is used since F_TIME_FIRST could be occasionally more in past
+               if ((ur_time_get_sec(ur_get(unirec_in, data, F_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
                   del = it->second.q.erase(del);
                   it->second.q_rem_pos = 0;
                } else {
@@ -815,8 +862,8 @@ int main (int argc, char** argv) {
 
             // delete flows from responses
             for (vector<flow_item_t>::iterator del = it->second.r.begin(); del != it->second.r.end(); ) {
-               //UR_TIME_LAST is used since UR_TIME_FIRST could be occasionally more in past
-               if ((ur_time_get_sec(ur_get(unirec_in, data, UR_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
+               //F_TIME_LAST is used since F_TIME_FIRST could be occasionally more in past
+               if ((ur_time_get_sec(ur_get(unirec_in, data, F_TIME_LAST)) - ur_time_get_sec(del->t)) > (config.det_window - config.del_time)) {
                   del = it->second.r.erase(del);
                   it->second.r_rem_pos = 0;
                } else {
@@ -828,7 +875,7 @@ int main (int argc, char** argv) {
                model.erase(it);
             } else {
                // determine new first time of key was spotted
-               ur_time_t min_time = ur_get(unirec_in, data, UR_TIME_FIRST);
+               ur_time_t min_time = ur_get(unirec_in, data, F_TIME_FIRST);
 
                it->second.total_bytes[QUERY] = 0;
                it->second.total_packets[QUERY] = 0;
@@ -873,8 +920,8 @@ int main (int argc, char** argv) {
          // create flow data structure and fill it
          flow_data_t d;
 
-         d.first_t = ur_get(unirec_in, data, UR_TIME_FIRST);
-         d.last_t = ur_get(unirec_in, data, UR_TIME_LAST);
+         d.first_t = ur_get(unirec_in, data, F_TIME_FIRST);
+         d.last_t = ur_get(unirec_in, data, F_TIME_LAST);
          d.last_logged = 0;
          d.identifier = 0;
          d.q_rem_pos = 0;
@@ -882,14 +929,14 @@ int main (int argc, char** argv) {
 
          // create flow item
          flow_item_t i;
-         i.t = ur_get(unirec_in, data, UR_TIME_FIRST);
-         i.bytes = ur_get(unirec_in, data, UR_BYTES);
-         i.packets = ur_get(unirec_in, data, UR_PACKETS);
+         i.t = ur_get(unirec_in, data, F_TIME_FIRST);
+         i.bytes = ur_get(unirec_in, data, F_BYTES);
+         i.packets = ur_get(unirec_in, data, F_PACKETS);
 
          // add flow item
          if (qr == BOOL_RESPONSE) {
-            d.total_bytes[RESPONSE] = ur_get(unirec_in, data, UR_BYTES);
-            d.total_packets[RESPONSE] = ur_get(unirec_in, data, UR_PACKETS);
+            d.total_bytes[RESPONSE] = ur_get(unirec_in, data, F_BYTES);
+            d.total_packets[RESPONSE] = ur_get(unirec_in, data, F_PACKETS);
             d.total_flows[RESPONSE] = 1;
             d.total_bytes[QUERY] = 0;
             d.total_packets[QUERY] = 0;
@@ -897,8 +944,8 @@ int main (int argc, char** argv) {
 
             d.r.push_back(i);
          } else {
-            d.total_bytes[QUERY] = ur_get(unirec_in, data, UR_BYTES);
-            d.total_packets[QUERY] = ur_get(unirec_in, data, UR_PACKETS);
+            d.total_bytes[QUERY] = ur_get(unirec_in, data, F_BYTES);
+            d.total_packets[QUERY] = ur_get(unirec_in, data, F_PACKETS);
             d.total_flows[QUERY] = 1;
             d.total_bytes[RESPONSE] = 0;
             d.total_packets[RESPONSE] = 0;
@@ -930,7 +977,7 @@ int main (int argc, char** argv) {
    // clean up before termination
    ur_free_template(unirec_in);
    ur_free_template(unirec_out);
-   ur_free(detection);
+   ur_free_record(detection);
 
    trap_finalize();
 
