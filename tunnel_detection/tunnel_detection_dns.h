@@ -110,21 +110,21 @@
 #define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
 #define MIN_DNS_REQUEST_COUNT 1000 /*< Minimal value of dns count of packets */
 #define MIN_DNS_REQUEST_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
-#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 1500 /*< Minimal value of dns count in payload analysis for other anomaly */
+#define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count in payload analysis for other anomaly */
 #define MIN_DNS_RESPONSE_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
-#define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 1500 /*< Minimal value of dns count of packets */
+#define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count of packets */
 #define MIN_LENGTH_OF_TUNNEL_STRING 50 /*< Minimal length of string containing tunnel */
 #define REQUEST_MAX_COUNT_OF_USED_LETTERS 25  /*< Maximum number of used leeters for domain */
 #define RESPONSE_MAX_COUNT_OF_USED_LETTERS 30  /*< Maximum number of used leeters for domain */
 #define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.8 /*< Maximum percent of new subdomain, more than this can be tunel */
-#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.01 /*< Minimum percent of new subdomain, less than this can be anomaly */
-#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.01 /*< Minimum percent of searching unique domains, less than that can be anomaly */
-#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.8 /*< Maximum percent of searching unique domains, more than that can be tunnel */
-#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.01 /*< Minimum percent unique domains, less than that can be anomaly */
-#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.85 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
+#define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.005 /*< Minimum percent of new subdomain, less than this can be anomaly */
+#define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.005 /*< Minimum percent of searching unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.9 /*< Maximum percent of searching unique domains, more than that can be tunnel */
+#define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.005 /*< Minimum percent unique domains, less than that can be anomaly */
+#define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.9 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
 #define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.3 /*< Maximum percent of numbers in domain, more than that can be tunnel */
 #define MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST 0.3 /*< Maximum percent of mallformed packet in requests */
-#define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 12 /*< Maximum count of numbers in domain, more than that can be tunnel */
+#define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 15 /*< Maximum count of numbers in domain, more than that can be tunnel */
 #define REQUEST_PART_TUNNEL         0b00000001 /*< Define request part for suspision */
 #define REQUEST_PART_OTHER          0b00000010 /*< Define request part for suspision */
 #define RESPONSE_PART_TUNNEL        0b00000100 /*< Define request part for suspision */
@@ -215,13 +215,15 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
 
 
 /*!
- * \brief Calcutate information about string
- * Function create statistic about string. Information abou length, count of unique chatacters in string,....
+ * \brief Calcutate information about string and convert string to lower case
+ * Function create statistic about string. Information about length, count of unique chatacters in string,....
+ * The string is converted to lower case, it helps to detect same high level domain, because domains does not
+ * have to be case sensitive.
  * \param[in] string pointer to string.
  * \param[in] stat pointer to structure, where to save data.
  * \param[in] packet recieved packet.
  */
-void calculate_character_statistic(char * string, character_statistic_t * stat);
+void calculate_character_statistic_conv_to_lowercase(char * string, character_statistic_t * stat);
 
 /*!
  * \brief Calcutate information about IP address

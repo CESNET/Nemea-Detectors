@@ -48,6 +48,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <time.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
@@ -222,7 +223,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          if(packet->request_length > 0){
             found->counter_request.dns_request_string_count++;
             found->counter_request.histogram_dns_request_sum_for_cout_of_used_letter[index_to_histogram]++;
-            calculate_character_statistic(packet->request_string, &char_stat);
+            calculate_character_statistic_conv_to_lowercase(packet->request_string, &char_stat);
             found->counter_request.histogram_dns_request_ex_sum_of_used_letter[index_to_histogram] += char_stat.count_of_different_letters;
             //filter to immediatly save into prefix tree, if there is proofed tunnel, than dont capture more
             if(filter_trafic_to_save_in_prefix_tree_tunnel_suspicion(&char_stat)){
@@ -277,7 +278,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          //found->counter_response.sum_Xi4_response += size2*size2;
       if(found->state_response_other != STATE_NEW && found->suspision_response_other && found->suspision_response_other->state_response_size[index_to_histogram] == STATE_ATTACK){
          if(packet->request_length > 0){
-            calculate_character_statistic(packet->request_string, &char_stat);
+            calculate_character_statistic_conv_to_lowercase(packet->request_string, &char_stat);
             found->suspision_response_other->sum_of_inserting++;
             prefix_tree_insert(found->suspision_response_other->other_suspision, packet->request_string, char_stat.length);
             #ifdef TIME
@@ -291,7 +292,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
       }
       //response tunnel detection
       if(packet->request_length > 0){
-         calculate_character_statistic(packet->request_string, &char_stat);
+         calculate_character_statistic_conv_to_lowercase(packet->request_string, &char_stat);
          if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
             if(found->suspision_response_tunnel == NULL){
                found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
@@ -316,7 +317,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
       }
 
       if(packet->txt_response[0]!=0){
-         calculate_character_statistic(packet->txt_response, &char_stat);
+         calculate_character_statistic_conv_to_lowercase(packet->txt_response, &char_stat);
          if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
             if(found->suspision_response_tunnel == NULL){
                found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
@@ -340,7 +341,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          }
       }
       if(packet->cname_response[0]!=0){
-         calculate_character_statistic(packet->cname_response, &char_stat);
+         calculate_character_statistic_conv_to_lowercase(packet->cname_response, &char_stat);
          if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
             if(found->suspision_response_tunnel == NULL){
                found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
@@ -364,7 +365,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          }
       }
       if(packet->mx_response[0]!=0){
-         calculate_character_statistic(packet->mx_response, &char_stat);
+         calculate_character_statistic_conv_to_lowercase(packet->mx_response, &char_stat);
          if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
             if(found->suspision_response_tunnel == NULL){
                found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
@@ -388,7 +389,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
          }
       }
       if(packet->ns_response[0]!=0){
-         calculate_character_statistic(packet->ns_response, &char_stat);
+         calculate_character_statistic_conv_to_lowercase(packet->ns_response, &char_stat);
          if(char_stat.count_of_different_letters > values.response_max_count_of_used_letters){
             if(found->suspision_response_tunnel == NULL){
                found->suspision_response_tunnel = (ip_address_suspision_response_tunnel_t*)calloc(sizeof(ip_address_suspision_response_tunnel_t),1);
@@ -414,7 +415,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
    }
 }
 
-void calculate_character_statistic(char * string, character_statistic_t * stat)
+void calculate_character_statistic_conv_to_lowercase(char * string, character_statistic_t * stat)
 {
    char used[255];
    int i;
@@ -427,6 +428,8 @@ void calculate_character_statistic(char * string, character_statistic_t * stat)
       if(*string>='0' && *string<='9'){
          stat->count_of_numbers_in_string++;
       }
+      //convert to lover case
+      *string = tolower(*string);
       string++;
       stat->length++;
    }
@@ -2495,7 +2498,7 @@ int main(int argc, char **argv)
                   if(packet.request_string[0] != 0){
                      double percent_of_numbers_request;
                      measure.requests++;
-                     calculate_character_statistic(packet.request_string, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.request_string, &char_stat);
                      measure.sum_size_request += packet.size;
                      measure.sum_2_size_request += packet.size * packet.size;
                      measure.sum_count_of_unique_letters_request += char_stat.count_of_different_letters;
@@ -2512,30 +2515,30 @@ int main(int argc, char **argv)
                else{
                   int max_count_of_unique_letters = 0;
                   if(packet.request_string[0] != 0){
-                     calculate_character_statistic(packet.request_string, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.request_string, &char_stat);
                      max_count_of_unique_letters = char_stat.count_of_different_letters;
                      prefix_tree_insert(tree_measure, packet.request_string, char_stat.length);
                   }
                   if(packet.mx_response[0] != 0){
-                     calculate_character_statistic(packet.mx_response, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.mx_response, &char_stat);
                      if(char_stat.count_of_different_letters > max_count_of_unique_letters){
                         max_count_of_unique_letters = char_stat.count_of_different_letters;
                      }
                   }
                   if(packet.ns_response[0] != 0){
-                     calculate_character_statistic(packet.ns_response, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.ns_response, &char_stat);
                      if(char_stat.count_of_different_letters > max_count_of_unique_letters){
                         max_count_of_unique_letters = char_stat.count_of_different_letters;
                      }
                   }
                   if(packet.cname_response[0] != 0){
-                     calculate_character_statistic(packet.cname_response, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.cname_response, &char_stat);
                      if(char_stat.count_of_different_letters > max_count_of_unique_letters){
                         max_count_of_unique_letters = char_stat.count_of_different_letters;
                      }
                   }
                   if(packet.txt_response[0] != 0){
-                     calculate_character_statistic(packet.txt_response, &char_stat);
+                     calculate_character_statistic_conv_to_lowercase(packet.txt_response, &char_stat);
                      if(char_stat.count_of_different_letters > max_count_of_unique_letters){
                         max_count_of_unique_letters = char_stat.count_of_different_letters;
                      }
