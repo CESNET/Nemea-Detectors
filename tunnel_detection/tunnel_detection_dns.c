@@ -90,9 +90,9 @@ trap_module_info_t module_info = {
 
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
-   "   Outputs: 1\n",
+   "   Outputs: 2. First for Warden, Second for SDM.\n",
    1, // Number of input interfaces
-   1, // Number of output interfaces
+   2, // Number of output interfaces
 };
 /* ************************************************************************* */
 
@@ -827,12 +827,10 @@ int is_payload_on_ip_ok_request_tunnel(ip_address_t * item)
       //attack state
          tree = item->suspision_request_tunnel->tunnel_suspision;
          //percent of count of subdomains, is bigger than x percent
-         if(tree->count_of_inserting > values.min_dns_request_count_tunnel &&
-             ((
+         if(/*tree->count_of_inserting > values.min_dns_request_count_tunnel &&*/
+             (
              (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_domain_searching_just_once &&      //percent of searching unique domains
              (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_unique_domains   //percent of unique domains
-             )&&
-             (prefix_tree_most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION) > values.max_percent_of_subdomains_in_main_domain)
              )){  //percent of unique search
              item->suspision_request_tunnel->round_in_suspicion = 0;
             #ifdef DEBUG
@@ -877,8 +875,38 @@ int is_payload_on_ip_ok_request_tunnel(ip_address_t * item)
                printf("START OF REQUEST TUNNEL\n");
             #endif /*DEBUG*/
    		}
+   	    else if(tree->count_of_inserting > values.min_dns_request_count_tunnel_closer &&
+   	        ((
+   	        (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_domain_searching_just_once_closer &&      //percent of searching unique domains
+   	        (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones) > values.max_percent_of_unique_domains_closer   //percent of unique domains
+   	        )
+   	        )){
+				char buff[1000];
+					prefix_tree_domain_t* dom = item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
+				if(dom != NULL){
+					prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, buff);
+				}
+				if (strlen(buff) > values.request_max_count_of_used_letters_closer){
+					item->state_request_tunnel = STATE_ATTACK;
+					item->suspision_request_tunnel->event_id = get_event_id();
+					item->print |= REQUEST_PART_TUNNEL;
+					item->suspision_request_tunnel->round_in_suspicion = 0;
+				    #ifdef DEBUG
+				       printf("START OF REQUEST TUNNEL\n");
+				    #endif /*DEBUG*/
+				}
+   		}
    		//if there wasnt any problem
    	  	else{
+   	  		#ifdef DEBUG
+	   	  		printf("NOT PRUVED ANOMALY\n");
+	   	  		char buff[1000];
+			     prefix_tree_domain_t* dom = item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
+			      if(dom != NULL){
+			         prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, buff);
+			      }
+	   	  		printf("domain %s\tcount %d,  \t max_percent_of_domain_searching_just_once: %f, \t max_percent_of_unique_domains: %f, \t max_percent_of_subdomains_in_main_domain: %f\n", buff,tree->count_of_inserting, (double)(tree->count_of_domain_searched_just_ones) / (double)(tree->count_of_inserting_for_just_ones), (double)(tree->count_of_different_domains) / (double)(tree->count_of_inserting_for_just_ones), (prefix_tree_most_used_domain_percent_of_subdomains(tree, DEPTH_TUNNEL_SUSPICTION)));
+	   	    #endif /*DEBUG*/
    	        item->suspision_request_tunnel->round_in_suspicion++;
    	        //maximum round in suspicion
    	        if(item->suspision_request_tunnel->round_in_suspicion > values.max_count_of_round_in_attack){
@@ -1047,6 +1075,13 @@ void send_unirec_out(unirec_tunnel_notification_t * notification)
    trap_send_data(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection), TRAP_HALFWAIT);
 }
 
+void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
+{
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_SRC_IP, notification->ip);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_DST_PORT, 53);
+   trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
+}
+
 void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
 {
    ip_address_t * item;
@@ -1099,6 +1134,7 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
             //translate ip int to str
             ip_to_str(&(ip_address) ,ip_address_str);
             print_founded_anomaly_immediately(ip_address_str, item, file, print_time);
+            send_unirec_alert_to_sdm(&ip_address, item, ur_notification);
             print_time = 0;
             item->print=0;
             fflush(file);
@@ -1120,12 +1156,28 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
    b_plus_tree_destroy_list_item(b_item);
 }
 
+void send_unirec_alert_to_sdm(ip_addr_t * ip_address, ip_address_t *item, unirec_tunnel_notification_t * unirec_out)
+{
+   if(unirec_out == NULL){
+      return;
+   }
+   unirec_out->ip = *ip_address;
+   if(item->state_request_tunnel == STATE_ATTACK && item->state_response_tunnel == STATE_ATTACK){
+      send_unirec_out_sdm(unirec_out);
+   }
+}
+
+
 void send_unirec_alert_and_reset_records(ip_addr_t * ip_address, ip_address_t *item, unirec_tunnel_notification_t * unirec_out){
    prefix_tree_domain_t * dom;
    if(unirec_out == NULL){
       return;
    }
    unirec_out->ip = *ip_address;
+   if((item->suspision_request_tunnel && item->state_request_tunnel == STATE_ATTACK && item->suspision_request_tunnel->round_in_suspicion == 0) &&
+   	(item->suspision_response_tunnel && item->state_response_tunnel == STATE_ATTACK && item->suspision_response_tunnel->round_in_suspicion == 0)){
+
+   }
    //request tunnel
    if(item->suspision_request_tunnel && item->state_request_tunnel == STATE_ATTACK && item->suspision_request_tunnel->round_in_suspicion == 0){
       unirec_out->event_id = item->suspision_request_tunnel->event_id;
@@ -1846,6 +1898,10 @@ void load_default_values()
    values.max_count_of_round_in_attack = MAX_COUNT_OF_ROUND_IN_ATTACK;
    values.min_length_of_tunnel_string = MIN_LENGTH_OF_TUNNEL_STRING;
    values.time_of_one_session = TIME_OF_ONE_SESSION;
+   values.min_dns_request_count_tunnel_closer = MIN_DNS_REQUEST_COUNT_TUNNEL_CLOSER;
+   values.request_max_count_of_used_letters_closer = REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER;
+   values.max_percent_of_domain_searching_just_once_closer = MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE_CLOSER;
+   values.max_percent_of_unique_domains_closer = MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER;
 }
 
 int main(int argc, char **argv)
@@ -2018,7 +2074,8 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
       tmplt = ur_create_template(unirec_specifier);
       ur_notification.unirec_out = ur_create_template("<DNS_TUNNEL_ALERT>");
-      if (tmplt == NULL || ur_notification.unirec_out == NULL){
+      ur_notification.unirec_out_sdm = ur_create_template("<DNS_TUNNEL_FEEDBACK_SDM>");
+      if (tmplt == NULL || ur_notification.unirec_out == NULL || ur_notification.unirec_out_sdm == NULL){
          fprintf(stderr, "Error: Invalid UniRec specifier.\n");
          trap_finalize();
          return 4;
@@ -2026,6 +2083,14 @@ int main(int argc, char **argv)
       // prepare detection record
       ur_notification.detection = ur_create(ur_notification.unirec_out, MAX_LENGTH_OF_REQUEST_DOMAIN);
       if (ur_notification.detection == NULL) {
+         fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
+         ur_free_template(tmplt);
+         ur_free_template(ur_notification.unirec_out);
+         return 4;
+      }
+      // prepare output record for SDM
+      ur_notification.detection_sdm = ur_create(ur_notification.unirec_out_sdm, 0);
+      if (ur_notification.detection_sdm == NULL) {
          fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
          ur_free_template(tmplt);
          ur_free_template(ur_notification.unirec_out);
@@ -2650,6 +2715,9 @@ failed_trap:
       }
       if(ur_notification.detection != NULL){
          ur_free(ur_notification.detection);
+      }
+      if(ur_notification.detection_sdm != NULL){
+         ur_free(ur_notification.detection_sdm);
       }
 
       trap_finalize();

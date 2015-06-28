@@ -301,17 +301,21 @@ typedef struct values_t{
     unsigned int kurtosis_request_min;  /*< maximal value of request var */
     unsigned int min_dns_request_count; /*< minimal value of dns count of packets */
     unsigned int min_dns_request_count_tunnel;  /*< minimal value of dns count in payload analysis for tunnel */
-    unsigned int min_dns_request_count_other_anomaly;   /*< minimal value of dns count in payload analysis for other anomaly */
+    unsigned int min_dns_request_count_tunnel_closer;  /*< minimal value of dns count in payload analysis for tunnel, closer interval*/
+    unsigned int min_dns_request_count_other_anomaly;   /*< minimal value of dns count in payload analysis for other anomaly*/
     unsigned int min_dns_response_count_tunnel; /*< minimal value of dns count in payload analysis for tunnel */
     unsigned int min_dns_response_count_other_anomaly;  /*< minimal value of dns count in payload analysis for other anomaly */
     unsigned int request_max_count_of_used_letters; /*< maximum number of used leeters for domain */
+    unsigned int request_max_count_of_used_letters_closer; /*< maximum number of used leeters for domain */
     unsigned int response_max_count_of_used_letters;    /*< maximum number of used leeters for domain */
     float max_percent_of_new_subdomains;    /*< maximum percent of new subdomain, more than this can be tunel */
     float min_percent_of_new_subdomains;    /*< minimum percent of new subdomain, less than this can be anomaly */
     float min_percent_of_domain_searching_just_once;    /*< minimum percent of searching unique domains, less than that can be anomaly */
     float max_percent_of_domain_searching_just_once;    /*< maximum percent of searching unique domains, more than that can be tunnel */
+    float max_percent_of_domain_searching_just_once_closer;    /*< maximum percent of searching unique domains, more than that can be tunnel, closer interval*/
     float min_percent_of_unique_domains;    /*< minimum percent unique domains, less than that can be anomaly */
     float max_percent_of_unique_domains;    /*< maximum percent of searching unique domains, more than that can be tunne l*/
+    float max_percent_of_unique_domains_closer;    /*< maximum percent of searching unique domains, more than that can be tunnel, closer interval*/
     float max_percent_of_numbers_in_domain_prefix_tree_filter;  /*< maximum percent of numbers in domain, more than that can be tunnel */
     float max_percent_of_mallformed_packet_request; /*< maximum percent of mallformed packet in requests */
     float max_percent_of_subdomains_in_main_domain; /*< Maximal value of request middle value */
@@ -367,7 +371,9 @@ typedef struct measure_parameters_t{
  */
 typedef struct unirec_tunnel_notification_t{
     ur_template_t * unirec_out; /*< UniRec output template */
+    ur_template_t * unirec_out_sdm; /*< UniRec output template, for feedback to sdm */
     void *          detection; /*< pointer to UniRec data */
+    void *          detection_sdm; /*< pointer to UniRec data */
     ip_addr_t       ip; /*< ip address with anomaly */
     double          tunnel_per_new_domain; /*< percent of domains searched just ones */
     double          tunnel_per_subdomain;   /*< percent of different subdomains */

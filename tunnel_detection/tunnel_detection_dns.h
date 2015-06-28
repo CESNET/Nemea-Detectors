@@ -109,19 +109,23 @@
 #define VAR_RESPONSE_MIN 200 /*< Minimal value of response var*/
 #define KURTOSIS_REQUEST_MIN 0 /*< Maximal value of request var */
 #define MIN_DNS_REQUEST_COUNT 1000 /*< Minimal value of dns count of packets */
-#define MIN_DNS_REQUEST_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_REQUEST_COUNT_TUNNEL 150 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_REQUEST_COUNT_TUNNEL_CLOSER 30 /*< Minimal value of dns count in payload analysis for tunnel, closer interval */
 #define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count in payload analysis for other anomaly */
-#define MIN_DNS_RESPONSE_COUNT_TUNNEL 600 /*< Minimal value of dns count in payload analysis for tunnel */
+#define MIN_DNS_RESPONSE_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
 #define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count of packets */
 #define MIN_LENGTH_OF_TUNNEL_STRING 50 /*< Minimal length of string containing tunnel */
 #define REQUEST_MAX_COUNT_OF_USED_LETTERS 25  /*< Maximum number of used leeters for domain */
+#define REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER 60  /*< Maximum number of used leeters for domain, closer interval */
 #define RESPONSE_MAX_COUNT_OF_USED_LETTERS 30  /*< Maximum number of used leeters for domain */
 #define MAX_PERCENT_OF_NEW_SUBDOMAINS 0.8 /*< Maximum percent of new subdomain, more than this can be tunel */
 #define MIN_PERCENT_OF_NEW_SUBDOMAINS 0.005 /*< Minimum percent of new subdomain, less than this can be anomaly */
 #define MIN_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.005 /*< Minimum percent of searching unique domains, less than that can be anomaly */
 #define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE 0.9 /*< Maximum percent of searching unique domains, more than that can be tunnel */
+#define MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE_CLOSER 0.98 /*< Maximum percent of searching unique domains, more than that can be tunnel, closer interval */
 #define MIN_PERCENT_OF_UNIQUE_DOMAINS 0.005 /*< Minimum percent unique domains, less than that can be anomaly */
 #define MAX_PERCENT_OF_UNIQUE_DOMAINS 0.9 /*< Maximum percent of searching unique domains, more than that can be tunne l*/
+#define MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER 0.98 /*< Maximum percent of searching unique domains, more than that can be tunnel, closer interval*/
 #define MAX_PERCENT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 0.3 /*< Maximum percent of numbers in domain, more than that can be tunnel */
 #define MAX_PERCENT_OF_MALLFORMED_PACKET_REQUEST 0.3 /*< Maximum percent of mallformed packet in requests */
 #define MAX_COUNT_OF_NUMBERS_IN_DOMAIN_PREFIX_TREE_FILTER 15 /*< Maximum count of numbers in domain, more than that can be tunnel */
@@ -186,6 +190,15 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  * \param[in] count_of_btree count of trees in the array.
  */
 void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree);
+
+/*!
+ * \brief Send alerts of detected tunnel to SDM
+ * It will send informations about detected tunnel to SDM.
+ * \param[in] ip_address IP address with anomaly.
+ * \param[in] item value from b_plus_tree.
+ * \param[in] unirec_out structure with information about UniRec output.
+ */
+void send_unirec_alert_to_sdm(ip_addr_t * ip_address, ip_address_t *item, unirec_tunnel_notification_t * unirec_out_sdm);
 
 /*!
  * \brief Send alerts of detected anomalies.
@@ -408,5 +421,13 @@ void load_default_values();
  * \param[in] notification structure with data, which are send to UniRec
  */
 void send_unirec_out(unirec_tunnel_notification_t * notification);
+
+/*!
+ * \brief Send notifications to SDM to UniRec
+ * Sends notification data stored in structure unirec_tunnel_notification_t to UniRec.
+ * This function sends just SRC IP and DST PORT (Export to SDM).
+ * \param[in] notification structure with data, which are send to UniRec
+ */
+void send_unirec_out_sdm(unirec_tunnel_notification_t * notification);
 
  #endif /* _TUNNEL_DETECTION_DNS_ */
