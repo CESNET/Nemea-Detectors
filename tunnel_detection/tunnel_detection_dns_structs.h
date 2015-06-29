@@ -208,7 +208,8 @@ typedef struct ip_address_suspision_response_tunnel_t{
     unsigned char round_in_suspicion_response; /*!< number of round which Ip is in suspicion */
 }counter_response_t ;
 
-
+#define SDM_EXPORTED_TRUE 1
+#define SDM_EXPORTED_FALSE 0
 /*!
  * \brief Structure containing inforamtion about each IP adress
  * Structure used to keep information about each Ip address.
@@ -216,6 +217,7 @@ typedef struct ip_address_suspision_response_tunnel_t{
  typedef struct ip_address_t{
     unsigned char ip_version;            /*!< version of ip */
     unsigned char print;                 /*!< info about printing to results */
+    unsigned char sdm_exported;          /*!< info about printing to results */
     time_t time_last;                    /*!< time of last flow*/
     counter_request_t counter_request;   /*!< counter struct for requests */
     counter_response_t counter_response; /*!< counter struct for responses */
@@ -257,6 +259,7 @@ typedef struct calulated_result_t{
 #define END_OF_CUTTED_DOMAIN "max_length_domain"
 #define END_OF_CUTTED_DOMAIN_LENGTH 17
 
+#define MAX_LENGTH_SDM_CAPTURE_FILE_ID 100
 #define MAX_LENGTH_OF_REQUEST_DOMAIN 255
 #define MAX_LENGTH_OF_RESPONSE_STRING 1024
 #define MAX_LENGTH_OF_IP 46
