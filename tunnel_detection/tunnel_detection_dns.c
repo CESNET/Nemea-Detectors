@@ -1077,8 +1077,13 @@ void send_unirec_out(unirec_tunnel_notification_t * notification)
 
 void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
 {
+   char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
+   sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_DST_PORT, 53);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_TIMEOUT, 600);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
+   ur_set_from_string(notification->unirec_out_sdm, notification->detection_sdm, UR_SDM_CAPTURE_FILE_ID, sdm_capture_id);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
    trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
 }
 
@@ -1134,12 +1139,14 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
             //translate ip int to str
             ip_to_str(&(ip_address) ,ip_address_str);
             print_founded_anomaly_immediately(ip_address_str, item, file, print_time);
-            send_unirec_alert_to_sdm(&ip_address, item, ur_notification);
             print_time = 0;
             item->print=0;
             fflush(file);
          }
          send_unirec_alert_and_reset_records(&ip_address, item, ur_notification);
+      }
+      if(item->sdm_exported == SDM_EXPORTED_FALSE){
+            send_unirec_alert_to_sdm(&ip_address, item, ur_notification);
       }
       //check if it can be deleted
       if(item->state_request_other == STATE_NEW && item->state_request_tunnel == STATE_NEW && item->state_response_other == STATE_NEW && item->state_response_tunnel == STATE_NEW){
@@ -1161,8 +1168,11 @@ void send_unirec_alert_to_sdm(ip_addr_t * ip_address, ip_address_t *item, unirec
    if(unirec_out == NULL){
       return;
    }
-   unirec_out->ip = *ip_address;
-   if(item->state_request_tunnel == STATE_ATTACK && item->state_response_tunnel == STATE_ATTACK){
+   if((item->suspision_request_tunnel && item->state_request_tunnel == STATE_ATTACK && item->suspision_request_tunnel->round_in_suspicion == 0) &&
+    (item->suspision_response_tunnel && item->state_response_tunnel == STATE_ATTACK && item->suspision_response_tunnel->round_in_suspicion == 0)){
+      unirec_out->ip = *ip_address;
+      unirec_out->event_id = item->suspision_request_tunnel->event_id;
+      item->sdm_exported = SDM_EXPORTED_TRUE;
       send_unirec_out_sdm(unirec_out);
    }
 }
@@ -1174,10 +1184,7 @@ void send_unirec_alert_and_reset_records(ip_addr_t * ip_address, ip_address_t *i
       return;
    }
    unirec_out->ip = *ip_address;
-   if((item->suspision_request_tunnel && item->state_request_tunnel == STATE_ATTACK && item->suspision_request_tunnel->round_in_suspicion == 0) &&
-   	(item->suspision_response_tunnel && item->state_response_tunnel == STATE_ATTACK && item->suspision_response_tunnel->round_in_suspicion == 0)){
 
-   }
    //request tunnel
    if(item->suspision_request_tunnel && item->state_request_tunnel == STATE_ATTACK && item->suspision_request_tunnel->round_in_suspicion == 0){
       unirec_out->event_id = item->suspision_request_tunnel->event_id;
@@ -2074,7 +2081,7 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
       tmplt = ur_create_template(unirec_specifier);
       ur_notification.unirec_out = ur_create_template("<DNS_TUNNEL_ALERT>");
-      ur_notification.unirec_out_sdm = ur_create_template("<DNS_TUNNEL_FEEDBACK_SDM>");
+      ur_notification.unirec_out_sdm = ur_create_template("<SDM_CAPTURE_REQUEST>");
       if (tmplt == NULL || ur_notification.unirec_out == NULL || ur_notification.unirec_out_sdm == NULL){
          fprintf(stderr, "Error: Invalid UniRec specifier.\n");
          trap_finalize();
@@ -2089,7 +2096,7 @@ int main(int argc, char **argv)
          return 4;
       }
       // prepare output record for SDM
-      ur_notification.detection_sdm = ur_create(ur_notification.unirec_out_sdm, 0);
+      ur_notification.detection_sdm = ur_create(ur_notification.unirec_out_sdm, MAX_LENGTH_SDM_CAPTURE_FILE_ID);
       if (ur_notification.detection_sdm == NULL) {
          fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
          ur_free_template(tmplt);
