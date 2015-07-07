@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-	<module-name>Example module</module-name>
+	<module-name>Example  module</module-name>
 	<module-author>Erik Ohizd-hay</module-author>
 	<struct name="main struct">
 		<element type="required">
