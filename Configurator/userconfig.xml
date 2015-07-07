@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<module-name>Example module</module-name>
+	<struct>
+		<element name="Variable1">
+			52
+		</element>
+		<element name="Variable2">
+			11.1
+		</element>
+		<element name="Variable_optional">
+			4567
+		</element>
+		<element name="Variable_string">
+			ahoj
+		</element>
+		<struct name="first struct">
+			<element name="Struct_variable1">
+				74
+			</element>
+		</struct>
+		<element name="Last_param">
+			lastpar
+		</element>
+	</struct>
+</configuration>
