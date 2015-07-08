@@ -12,10 +12,18 @@ USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
 AM_INIT_AUTOMAKE([-Wall silent-rules subdir-objects])
-LT_INIT
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
+# Must be checked before default -g -O2 is set:
+AC_ARG_ENABLE([debug],
+        AC_HELP_STRING([--enable-debug],
+        [Enable build with debug symbols and without optimizations.]),
+        [if test "$enableval" = "yes"; then
+                CFLAGS="-Wall -g -O0 $CFLAGS"
+        fi], [CFLAGS="-Wall -O3 $CFLAGS"])
+
+LT_INIT()
 
 pkgdatadir=${datadir}/nemea
 PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
@@ -64,17 +72,6 @@ if test -z "$UNIRECPROC"; then
 fi
 
 AC_SUBST(UNIRECPROC)
-
-
-
-AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
-		[enable debugging, default: no]),
-[case "${enableval}" in
-	yes) debug=true ;;
-	no)  debug=false ;;
-	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
-esac], [debug=false])
-AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 if test "${repobuild}" = "false" -a -z "$TRAPLIB"; then
 	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
