@@ -21,7 +21,10 @@ AC_ARG_ENABLE([debug],
         [Enable build with debug symbols and without optimizations.]),
         [if test "$enableval" = "yes"; then
                 CFLAGS="-Wall -g -O0 $CFLAGS"
-        fi], [CFLAGS="-Wall -O3 $CFLAGS"])
+                CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
+        fi], [CFLAGS="-Wall -O3 $CFLAGS"
+              CXXFLAGS="-Wall -O3 $CXXFLAGS"])
+AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 LT_INIT()
 
