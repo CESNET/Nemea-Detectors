@@ -208,7 +208,8 @@ typedef struct ip_address_suspision_response_tunnel_t{
     unsigned char round_in_suspicion_response; /*!< number of round which Ip is in suspicion */
 }counter_response_t ;
 
-
+#define SDM_EXPORTED_TRUE 1
+#define SDM_EXPORTED_FALSE 0
 /*!
  * \brief Structure containing inforamtion about each IP adress
  * Structure used to keep information about each Ip address.
@@ -216,6 +217,7 @@ typedef struct ip_address_suspision_response_tunnel_t{
  typedef struct ip_address_t{
     unsigned char ip_version;            /*!< version of ip */
     unsigned char print;                 /*!< info about printing to results */
+    unsigned char sdm_exported;          /*!< info about printing to results */
     time_t time_last;                    /*!< time of last flow*/
     counter_request_t counter_request;   /*!< counter struct for requests */
     counter_response_t counter_response; /*!< counter struct for responses */
@@ -257,6 +259,7 @@ typedef struct calulated_result_t{
 #define END_OF_CUTTED_DOMAIN "max_length_domain"
 #define END_OF_CUTTED_DOMAIN_LENGTH 17
 
+#define MAX_LENGTH_SDM_CAPTURE_FILE_ID 100
 #define MAX_LENGTH_OF_REQUEST_DOMAIN 255
 #define MAX_LENGTH_OF_RESPONSE_STRING 1024
 #define MAX_LENGTH_OF_IP 46
@@ -301,17 +304,21 @@ typedef struct values_t{
     unsigned int kurtosis_request_min;  /*< maximal value of request var */
     unsigned int min_dns_request_count; /*< minimal value of dns count of packets */
     unsigned int min_dns_request_count_tunnel;  /*< minimal value of dns count in payload analysis for tunnel */
-    unsigned int min_dns_request_count_other_anomaly;   /*< minimal value of dns count in payload analysis for other anomaly */
+    unsigned int min_dns_request_count_tunnel_closer;  /*< minimal value of dns count in payload analysis for tunnel, closer interval*/
+    unsigned int min_dns_request_count_other_anomaly;   /*< minimal value of dns count in payload analysis for other anomaly*/
     unsigned int min_dns_response_count_tunnel; /*< minimal value of dns count in payload analysis for tunnel */
     unsigned int min_dns_response_count_other_anomaly;  /*< minimal value of dns count in payload analysis for other anomaly */
     unsigned int request_max_count_of_used_letters; /*< maximum number of used leeters for domain */
+    unsigned int request_max_count_of_used_letters_closer; /*< maximum number of used leeters for domain */
     unsigned int response_max_count_of_used_letters;    /*< maximum number of used leeters for domain */
     float max_percent_of_new_subdomains;    /*< maximum percent of new subdomain, more than this can be tunel */
     float min_percent_of_new_subdomains;    /*< minimum percent of new subdomain, less than this can be anomaly */
     float min_percent_of_domain_searching_just_once;    /*< minimum percent of searching unique domains, less than that can be anomaly */
     float max_percent_of_domain_searching_just_once;    /*< maximum percent of searching unique domains, more than that can be tunnel */
+    float max_percent_of_domain_searching_just_once_closer;    /*< maximum percent of searching unique domains, more than that can be tunnel, closer interval*/
     float min_percent_of_unique_domains;    /*< minimum percent unique domains, less than that can be anomaly */
     float max_percent_of_unique_domains;    /*< maximum percent of searching unique domains, more than that can be tunne l*/
+    float max_percent_of_unique_domains_closer;    /*< maximum percent of searching unique domains, more than that can be tunnel, closer interval*/
     float max_percent_of_numbers_in_domain_prefix_tree_filter;  /*< maximum percent of numbers in domain, more than that can be tunnel */
     float max_percent_of_mallformed_packet_request; /*< maximum percent of mallformed packet in requests */
     float max_percent_of_subdomains_in_main_domain; /*< Maximal value of request middle value */
@@ -367,7 +374,9 @@ typedef struct measure_parameters_t{
  */
 typedef struct unirec_tunnel_notification_t{
     ur_template_t * unirec_out; /*< UniRec output template */
+    ur_template_t * unirec_out_sdm; /*< UniRec output template, for feedback to sdm */
     void *          detection; /*< pointer to UniRec data */
+    void *          detection_sdm; /*< pointer to UniRec data */
     ip_addr_t       ip; /*< ip address with anomaly */
     double          tunnel_per_new_domain; /*< percent of domains searched just ones */
     double          tunnel_per_subdomain;   /*< percent of different subdomains */

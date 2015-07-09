@@ -2,11 +2,11 @@
  * \file blacklist_downloader.c
  * \brief Functions for downloading blacklist from website.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
- * \date 2014
+ * \date 2015
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -66,9 +66,6 @@ static int  COMMAND_INIT_SIZE = sizeof(COMMAND_INIT);
 
 static pid_t P_ID;
 static bl_down_config_t *CONFIG;
-
-static int child_exit;
-
 
 
 
@@ -329,7 +326,7 @@ char *filter_regex(char **str, int i)
  *        filter comments.
  * \param fd      File descriptor of wget output.
  * \param line    Line buffer.
- * \param el_ar   Element buffer. 
+ * \param el_ar   Element buffer.
  * \param c       Comment character.
  * \param index   Index of first empty index in element buffer.
  * \param bl_flag Blacklist flag.
@@ -340,7 +337,7 @@ int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, char c, 
    int i = index;
    char *trim_line;
    int uniq_index;
-   while (fgets(line, CONFIG->buf.line_max_length, fd) != NULL) {   
+   while (fgets(line, CONFIG->buf.line_max_length, fd) != NULL) {
       trim_line = trim_whitespace(line);
       filter_comments(&trim_line, c);
 
@@ -392,7 +389,7 @@ void bl_down_destroy_config()
    free(CONFIG->comment_ar);
    free(CONFIG->buf.file);
    free(CONFIG->cmd.ar);
-   free(CONFIG);  
+   free(CONFIG);
 }
 
 
@@ -436,6 +433,10 @@ void *bl_down_process(void *not_used_data)
       // Loop throu all blacklist sites
       for (int i = 0; i < CONFIG->cmd.cnt; i++) {
          // Execute command
+#ifdef DEBUG
+       printf("BLD: Executing cmd: %s\n", CONFIG->cmd.ar[i]);
+       fflush(stdout);
+#endif
          FILE *fd = popen(CONFIG->cmd.ar[i], "r");
          if (fd == NULL) {
             fprintf(stderr, "Error: popen failed!\n");
@@ -472,7 +473,7 @@ void *bl_down_process(void *not_used_data)
 
             // Substract old update from new update to get removed elements
             update_diff(CONFIG->buf.el_ar[swap_flag], el_count_ar[swap_flag], CONFIG->buf.el_ar[!swap_flag], el_count_ar[!swap_flag], CONFIG->buf.blf_ar[swap_flag], fu);
-            
+
             fclose(fu);
          }
          swap_flag = !swap_flag;
@@ -497,7 +498,7 @@ void *bl_down_process(void *not_used_data)
 #endif
    }
    // ***************************************************
-   
+
 #ifdef DEBUG
    printf("BLD: Cleaning up memory...\n");
 #endif
@@ -536,7 +537,7 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
 
    // Fill lookup table for blacklist id
    uint8_t num = fill_lookup(config, args->sites);
-  
+
    // Allocate memory for regex array
    config->preg = malloc(sizeof(regex_t) * num);
    config->use_regex = malloc(sizeof(uint8_t) * num);
@@ -574,7 +575,7 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
       fprintf(stderr, "Error: Could not allocate memory for line buffer!\n");
       goto setup_malloc_fail_linebuf;
    }
-  
+
    // Allocate memory for 2 blacklist element arrays
    config->buf.el_ar[0] = malloc(sizeof(char*) * args->el_max_count);
    config->buf.el_ar[1] = malloc(sizeof(char*) * args->el_max_count);
@@ -586,7 +587,7 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
       goto setup_malloc_fail_elbufitem;
    }
 
- 
+
    // Allocate memory for each element
    for (int i = 0; i < args->el_max_count; i++) {
       config->buf.el_ar[0][i] = malloc(sizeof(char) * (args->el_max_length + 1));
@@ -607,10 +608,10 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
    // Allocate memory for command strings, file names and regex
    for (int i = 0; i < num; i++) {
       // Determine type of source and compute command string size
-      int command_size;
+      int command_size = 0;
       int bad_type_flag = 0;
       int file_error_flag = 0;
-      char *dir_str;
+      char *dir_str = NULL;
       switch (stype_ar[i]) {
          case BL_STYPE_WEB: // command string in format: wget -q -O - $SOURCE
                             command_size = COMMAND_INIT_SIZE + strlen(source_ar[i]) + 1;
@@ -710,7 +711,6 @@ setup_malloc_fail_elbufitem:
    free(config->buf.el_ar[1]);
    free(config->buf.blf_ar[0]);
    free(config->buf.blf_ar[1]);
-setup_malloc_fail_elbuf:
    free(config->buf.line);
 setup_malloc_fail_linebuf:
    free(config->comment_ar);
@@ -732,7 +732,7 @@ setup_malloc_fail_config:
  *        new process and array of command strings that will be executed
  *        by this new process. Content of each website will be stored in
  *        provided file on same index, i.e. content of website on index 0
- *        in `page` will be stored to file on index 0 in `file`. 
+ *        in `page` will be stored to file on index 0 in `file`.
  * \param page  Array of websites from which will created process download blacklists.
  * \param file  Array of files names to which will creted process stores downloaded blacklists.
  * \param num   Number of websites/files.
@@ -789,7 +789,7 @@ void bld_unlock_sync()
 
 uint8_t bl_translate_to_id(char *str, uint64_t *sites)
 {
-   char *token, *state;
+   char *token, *state = NULL;
    uint8_t match_found, ret = 0;
    int i;
 

@@ -59,6 +59,7 @@
 #include <map>
 #include <utility>
 #include <algorithm>
+#include <getopt.h>
 #include <unistd.h>
 #include <vector>
 
@@ -116,7 +117,7 @@ UR_FIELDS(
    uint32 EVENT_ID,     //Identification number of reported event
 )
 
-trap_module_info_t module_info = {
+trap_module_info_t *module_info = NULL; /*{
     (char *) "NetFlow Amplification detection module", // Module name
     // Module description
     (char *) "This module detects amplification attacks from NetFlow data\n"
@@ -141,7 +142,26 @@ trap_module_info_t module_info = {
     "   -S <cnt>         count of records to store for query / response direction (max size of vector).\n",
     1, // Number of input interfaces
     1, // Number of output interfaces
-};
+};*/
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("NetFlow Amplification detection module","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
+
+#define MODULE_PARAMS(PARAM) \
+   PARAM('d', NULL, "path to log files, has to be ended by slash", 1, "string") \
+   PARAM('p', NULL, "port used for detection (53)", 1, "int32") \
+   PARAM('n', NULL, "number of topN values chosen (10)", 1, "int32") \
+   PARAM('q', NULL, "step of histogram (10)", 1, "int32") \
+   PARAM('a', NULL, "minimal amplification effect considered an attack (5)", 1, "int32") \
+   PARAM('t', NULL, "minimal threshold for number of flows in TOP-N (1000)", 1, "int32") \
+   PARAM('i', NULL, "minimal normalized threshold for count of flows in TOP-N (0.4)", 1, "float") \
+   PARAM('y', NULL, "minimal threshold for average size of responses in packets in TOP-N (0)", 1, "int32") \
+   PARAM('l', NULL, "minimal threshold for average size of responses in bytes in TOP-N (1000)", 1, "int32") \
+   PARAM('m', NULL, "maximal threshold for average size of queries in bytes in TOP-N (300)", 1, "int32") \
+   PARAM('w', NULL, "time window of detection / timeout of inactive flow (3600)", 1, "int32") \
+   PARAM('s', NULL, "time window of deletion / period of inactive flows checking(300)", 1, "int32") \
+   PARAM('S', NULL, "count of records to store for query / response direction (max size of vector).", 1, "uint32")
+
 
 static int stop = 0;
 
@@ -465,7 +485,9 @@ void time2str(ur_time_t t)
  * @param argc
  * @param argv
  */
-int main (int argc, char** argv) {
+int main (int argc, char** argv)
+{
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
    int ret;       // return value
 
@@ -479,7 +501,7 @@ int main (int argc, char** argv) {
    bool qr;
 
    // initialize TRAP interface
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    // set signal handling for termination
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
@@ -541,6 +563,7 @@ int main (int argc, char** argv) {
          default:
             cerr <<  "Error: Invalid arguments." << endl;
             trap_finalize();
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return ERROR;
       }
    }
@@ -548,18 +571,21 @@ int main (int argc, char** argv) {
    if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE){
       cerr << "Error: Wrong record vector(s) settings." << endl;
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ERROR;
    }
 
    if (trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK){
       cerr << "Error: Unable to set up intput timeout." << endl;
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ERROR;
    }
 
    if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT) != TRAP_E_OK){
       cerr << "Error: Unable set up output timeout." << endl;
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ERROR;
    }
 
@@ -585,6 +611,7 @@ int main (int argc, char** argv) {
         free(errstr);
       }
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ERROR;
    }
 
@@ -596,6 +623,7 @@ int main (int argc, char** argv) {
       ur_free_template(unirec_out);
       ur_free_record(detection);
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ERROR;
    }
 
@@ -980,6 +1008,6 @@ int main (int argc, char** argv) {
    ur_free_record(detection);
 
    trap_finalize();
-
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    return OK;
 }
