@@ -2,11 +2,11 @@
  * \file blacklist_downloader.c
  * \brief Functions for downloading blacklist from website.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
- * \date 2014
+ * \date 2015
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -66,9 +66,6 @@ static int  COMMAND_INIT_SIZE = sizeof(COMMAND_INIT);
 
 static pid_t P_ID;
 static bl_down_config_t *CONFIG;
-
-static int child_exit;
-
 
 
 
@@ -436,6 +433,10 @@ void *bl_down_process(void *not_used_data)
       // Loop throu all blacklist sites
       for (int i = 0; i < CONFIG->cmd.cnt; i++) {
          // Execute command
+#ifdef DEBUG
+       printf("BLD: Executing cmd: %s\n", CONFIG->cmd.ar[i]);
+       fflush(stdout);
+#endif
          FILE *fd = popen(CONFIG->cmd.ar[i], "r");
          if (fd == NULL) {
             fprintf(stderr, "Error: popen failed!\n");
@@ -607,10 +608,10 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
    // Allocate memory for command strings, file names and regex
    for (int i = 0; i < num; i++) {
       // Determine type of source and compute command string size
-      int command_size;
+      int command_size = 0;
       int bad_type_flag = 0;
       int file_error_flag = 0;
-      char *dir_str;
+      char *dir_str = NULL;
       switch (stype_ar[i]) {
          case BL_STYPE_WEB: // command string in format: wget -q -O - $SOURCE
                             command_size = COMMAND_INIT_SIZE + strlen(source_ar[i]) + 1;
@@ -710,7 +711,6 @@ setup_malloc_fail_elbufitem:
    free(config->buf.el_ar[1]);
    free(config->buf.blf_ar[0]);
    free(config->buf.blf_ar[1]);
-setup_malloc_fail_elbuf:
    free(config->buf.line);
 setup_malloc_fail_linebuf:
    free(config->comment_ar);
@@ -789,7 +789,7 @@ void bld_unlock_sync()
 
 uint8_t bl_translate_to_id(char *str, uint64_t *sites)
 {
-   char *token, *state;
+   char *token, *state = NULL;
    uint8_t match_found, ret = 0;
    int i;
 

@@ -59,6 +59,7 @@
 #include <map>
 #include <utility>
 #include <algorithm>
+#include <getopt.h>
 #include <unistd.h>
 #include <vector>
 

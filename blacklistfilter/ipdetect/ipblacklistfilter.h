@@ -1,14 +1,15 @@
 /**
  * \file ipblacklistfilter.h
- * \brief IP blacklist detector for Nemea -- header file
- * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \brief  Module for detecting blacklisted IP addresses, header file.
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
+ * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \date 2013
  * \date 2014
+ * \date 2015
  */
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013, 2014, 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -46,7 +47,6 @@
 
 #include <vector>
 #include <unirec/unirec.h>
-#include <cuckoo_hash_v2.h>
 #include <nemea-common.h>
 
 #ifndef BLACKLISTFILTER_H
@@ -116,7 +116,7 @@ extern "C" {
 /**
  * Time to wait between blacklist updates.
  */
-#define BLACKLIST_UPDATE_DELAY_TIME 600
+#define BLACKLIST_UPDATE_DELAY_TIME 300
 
 /**
  * Maximum length of one line to parse from blacklist website.
@@ -154,8 +154,6 @@ extern "C" {
 #define DEFAULT_HASH_TABLE_SIZE 500000
 
 
-// global definitions
-
 /**
  * Comments character for every blacklist website.
  */
@@ -164,27 +162,29 @@ char *BLACKLIST_COMMENT_AR = (char*)"#####";
 /**
  * Regular expression to parse IP address from blacklist. (only IPv4 for now).
  */
-
 char *BLACKLIST_REG_PATTERN = (char*)"\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
 
-// structure definitions
 
 /**
  * Structure for data aggregation
  */
 typedef struct {
-   uint32_t time_first;
-   uint32_t time_last;
-   char data[1];
+   /*@{*/
+   uint32_t time_first;/**< Timestamp of creation */
+   uint32_t time_last;/**< Timestamp of last update */
+   char data[1];/**< Buffer for data (BEWARE: dynamically allocated, so no size needed)*/
+   /*@}*/
 } aggr_data_t;
 
 /**
- * Structure for data aggregation
+ * Structure for data aggregation key
  */
 typedef struct {
-   ip_addr_t srcip;
-   ip_addr_t dstip;
-   uint8_t proto;
+   /*@{*/
+   ip_addr_t srcip;/**< Source address */
+   ip_addr_t dstip;/**< Destination address */
+   uint8_t proto;/**< Protocol */
+   /*@}*/
 } aggr_data_key_t;
 
 
@@ -193,7 +193,7 @@ typedef struct {
  */
 typedef struct {
     /*@{*/
-    ip_addr_t ip;
+    ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
@@ -216,32 +216,6 @@ typedef uint32_t ipv4_mask_map_t[33];
  * Array of IPv6 netmasks.
  */
 typedef uint64_t ipv6_mask_map_t[129][2];
-
-// function prototypes
-
-/*
- * Procedures for creating an array of masks.
- * Procedure gets a reference for array and fills it with every netmask
- * possible for the ip protocol. (33 for IPv4 and 129 for IPv6).
- */
-void create_v4_mask_map(ipv4_mask_map_t& m);
-void create_v6_mask_map(ipv6_mask_map_t& m);
-
-/*
- */
-//int load_ip (black_list_t& black_list_v4, black_list_t& black_list_v6, const char *source_dir);
-
-/*
- */
-//int v4_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv4_mask_map_t& v4mm);
-//int v6_blacklist_check(ur_template_t* ur_tmp, const void *record, black_list_t& black_list, ipv6_mask_map_t& v6mm);
-
-/*
- * Functions/procedures for updating blacklists.
- */
-int update_add(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& add_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
-void update_remove(cc_hash_table_t& bl_hash, black_list_t& bl_v4, black_list_t& bl_v6, black_list_t& rm_upd, ipv4_mask_map_t& m4, ipv6_mask_map_t& m6);
-
 
 
 #ifdef __cplusplus

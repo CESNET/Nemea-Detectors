@@ -2,6 +2,7 @@
  * \file tunnel_detection_dns.c
  * \brief Modul that detects DNS tunnels.
  * \author Zdenek Rosa <rosazden@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2015
  */
 /*
@@ -149,7 +150,7 @@ void calculate_limits_from_measuring(measure_parameters_t * measure)
    printf(" sum percent of numbers: %f\n", measure->sum_percent_of_numbers);
 }
 
-inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t * item, void * key)
+static inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t *item, void *key)
 {
    ip_addr_t ip_to_translate;
    if(item->ip_version == IP_VERSION_4){
@@ -168,7 +169,8 @@ void get_ip_str_from_ip_struct(ip_address_t * item, void * key,  char * ip_buff)
    ip_to_str(&addr ,ip_buff);
 }
 
-inline static unsigned int get_event_id(){
+static inline unsigned int get_event_id()
+{
    return values.event_id_counter++;
 }
 
@@ -1776,7 +1778,7 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
    fclose(file_suspision);
 }
 
-inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
+static inline int copy_string(char *dst, char *src, int size, int max_size_of_dst)
 {
    if (size > max_size_of_dst-1) {
       size = max_size_of_dst-1;
@@ -1786,7 +1788,7 @@ inline int copy_string(char * dst, char * src, int size, int max_size_of_dst)
    return size;
 }
 
-inline  void cut_max_domain(packet_t * packet)
+static inline void cut_max_domain(packet_t *packet)
 {
    char * end_of_domain = END_OF_CUTTED_DOMAIN;
    while((packet->request_length > 0 && packet->request_string[packet->request_length-1] != '.') || packet->request_length >= MAX_LENGTH_OF_REQUEST_DOMAIN - END_OF_CUTTED_DOMAIN_LENGTH -1){
