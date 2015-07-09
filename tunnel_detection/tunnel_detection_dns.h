@@ -151,7 +151,7 @@ void signal_handler(int signal);
  * \param[in] key key from b_plus_tree
  * \return ip_addr_t structure
  */
-inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t * item, void * key);
+static inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t *item, void *key);
 
 /*!
  * \brief Turns IP address from b_plus_tree to string

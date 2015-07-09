@@ -2,11 +2,11 @@
  * \file blacklist_downloader.h
  * \brief Header file for functions for downloading blackists from website.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
- * \date 2014
+ * \date 2015
  */
 
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -45,10 +45,10 @@
 #ifndef _H_BLACKLIST_DOWN
 #define _H_BLACKLIST_DOWN
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #include <regex.h>
 #include <stdint.h>
@@ -405,6 +405,5 @@ void bld_unlock_sync();
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif
