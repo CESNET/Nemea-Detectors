@@ -44,7 +44,7 @@
  * if advised of the possibility of such damage.
  *
  */
-	
+
 #include <string>
 #include <cctype>
 #include <algorithm>
@@ -96,20 +96,20 @@ trap_module_info_t module_info = {
 
 
 // Global variable used for storing actual timestamps received from input UniRec records
-uint32_t TIMESTAMP = 0; 
+uint32_t TIMESTAMP = 0;
 
 // Global variable used for storing aggregated records
-fht_table_t *AGGR_TABLE; 
+fht_table_t *AGGR_TABLE;
 
 // Global variables for storing periods of timeouts
 uint32_t TIMEOUT_ACTIVE = DEFAULT_TIMEOUT_ACTIVE;
 uint32_t TIMEOUT_INACTIVE = DEFAULT_TIMEOUT_INACTIVE;
 
 // Global variable for signaling the program to stop execution
-static int stop = 0; 
+static int stop = 0;
 
 // Global variable for signaling the program to update blacklists
-static int update = 0; 
+static int update = 0;
 
 /**
  * \brief Function for handling signals SIGTERM and SIGINT.
