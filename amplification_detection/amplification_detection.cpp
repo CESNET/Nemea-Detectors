@@ -114,20 +114,19 @@ trap_module_info_t *module_info = NULL; /*{
   BASIC("NetFlow Amplification detection module","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('d', NULL, "path to log files, has to be ended by slash", 1, "string") \
-   PARAM('p', NULL, "port used for detection (53)", 1, "int32") \
-   PARAM('n', NULL, "number of topN values chosen (10)", 1, "int32") \
-   PARAM('q', NULL, "step of histogram (10)", 1, "int32") \
-   PARAM('a', NULL, "minimal amplification effect considered an attack (5)", 1, "int32") \
-   PARAM('t', NULL, "minimal threshold for number of flows in TOP-N (1000)", 1, "int32") \
-   PARAM('i', NULL, "minimal normalized threshold for count of flows in TOP-N (0.4)", 1, "float") \
-   PARAM('y', NULL, "minimal threshold for average size of responses in packets in TOP-N (0)", 1, "int32") \
-   PARAM('l', NULL, "minimal threshold for average size of responses in bytes in TOP-N (1000)", 1, "int32") \
-   PARAM('m', NULL, "maximal threshold for average size of queries in bytes in TOP-N (300)", 1, "int32") \
-   PARAM('w', NULL, "time window of detection / timeout of inactive flow (3600)", 1, "int32") \
-   PARAM('s', NULL, "time window of deletion / period of inactive flows checking(300)", 1, "int32") \
-   PARAM('S', NULL, "count of records to store for query / response direction (max size of vector).", 1, "uint32")
-
+   PARAM('d', "log_dir", "path to log files, has to be ended by slash", required_argument, "string") \
+   PARAM('p', "port", "port used for detection (53)", required_argument, "int32") \
+   PARAM('n', "top", "number of top N values chosen (10)", required_argument, "int32") \
+   PARAM('q', "step", "step of histogram (10)", required_argument, "int32") \
+   PARAM('a', "min_ampf", "minimal amplification effect considered an attack (5)", required_argument, "int32") \
+   PARAM('t', "min_flow", "minimal threshold for number of flows in TOP-N (1000)", required_argument, "int32") \
+   PARAM('i', "min_count", "minimal normalized threshold for count of flows in TOP-N (0.4)", required_argument, "float") \
+   PARAM('y', "min_resp_pack", "minimal threshold for average size of responses in packets in TOP-N (0)", required_argument, "int32") \
+   PARAM('l', "min_resp_byte", "minimal threshold for average size of responses in bytes in TOP-N (1000)", required_argument, "int32") \
+   PARAM('m', "max_query", "maximal threshold for average size of queries in bytes in TOP-N (300)", required_argument, "int32") \
+   PARAM('w', "timeout", "time window of detection / timeout of inactive flow (3600)", required_argument, "int32") \
+   PARAM('s', "period", "time window of deletion / period of inactive flows checking(300)", required_argument, "int32") \
+   PARAM('S', "record", "count of records to store for query / response direction (max size of vector).", required_argument, "uint32")
 
 static int stop = 0;
 
@@ -453,7 +452,7 @@ void time2str(ur_time_t t)
  */
 int main (int argc, char** argv)
 {
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    int ret;       // return value
 
@@ -473,7 +472,7 @@ int main (int argc, char** argv)
 
    // parse parameters
    char opt;
-   while ((opt = getopt(argc, argv, "d:p:n:t:q:a:I:l:y:m:w:s:D:E:F:G:S:")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
          case 'd':
             log_path = optarg;
@@ -529,7 +528,7 @@ int main (int argc, char** argv)
          default:
             cerr <<  "Error: Invalid arguments." << endl;
             trap_finalize();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return ERROR;
       }
    }
@@ -537,21 +536,21 @@ int main (int argc, char** argv)
    if (config.max_flow_items < MINIMAL_RECORD_VECTOR_SIZE){
       cerr << "Error: Wrong record vector(s) settings." << endl;
       trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
 
    if (trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK){
       cerr << "Error: Unable to set up intput timeout." << endl;
       trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
 
    if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT) != TRAP_E_OK){
       cerr << "Error: Unable set up output timeout." << endl;
       trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
 
@@ -563,7 +562,7 @@ int main (int argc, char** argv)
    if ((unirec_in == NULL) || (unirec_out == NULL)) {
       cerr << "Error: Invalid UniRec specifier." << endl;
       trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
 
@@ -575,7 +574,7 @@ int main (int argc, char** argv)
       ur_free_template(unirec_out);
       ur_free(detection);
       trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
 
@@ -960,6 +959,6 @@ int main (int argc, char** argv)
    ur_free(detection);
 
    trap_finalize();
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return OK;
 }
