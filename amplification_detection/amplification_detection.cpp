@@ -84,32 +84,7 @@ extern "C" {
 
 using namespace std;
 
-trap_module_info_t *module_info = NULL; /*{
-    (char *) "NetFlow Amplification detection module", // Module name
-    // Module description
-    (char *) "This module detects amplification attacks from NetFlow data\n"
-    "It is based on the flow's analysis of incoming and outgoing packets and bytes.\n"
-    "Detection is triggered always when certain time window of src and dst ip is collected.\n"
-    "Interfaces:\n"
-    "   Inputs: 1 (UniRec record -- <COLLECTOR_FLOW>)\n"
-    "   Outputs: 1 (UniRec record -- <AMPLIFICATION_ALERT>)\n"
-    "Additional parameters:\n"
-    "   -d <path>        path to log files, has to be ended by \"/\"\n"
-    "   -p <port>        port used for detection (53)\n"
-    "   -n <num>         number of topN values chosen (10)\n"
-    "   -q <step>        step of histogram (10)\n"
-    "   -a <num>         minimal amplification effect considered an attack (5)\n"
-    "   -t <num>         minimal threshold for number of flows in TOP-N (1000)\n"
-    "   -i <num>         minimal normalized threshold for count of flows in TOP-N (0.4)\n"
-    "   -y <num>         minimal threshold for average size of responses in packets in TOP-N (0)\n"
-    "   -l <num>         minimal threshold for average size of responses in bytes in TOP-N (1000)\n"
-    "   -m <num>         maximal threshold for average size of queries in bytes in TOP-N (300)\n"
-    "   -w <sec>         time window of detection / timeout of inactive flow (3600)\n"
-    "   -s <sec>         time window of deletion / period of inactive flows checking(300)\n"
-    "   -S <cnt>         count of records to store for query / response direction (max size of vector).\n",
-    1, // Number of input interfaces
-    1, // Number of output interfaces
-};*/
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("NetFlow Amplification detection module","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
@@ -127,7 +102,7 @@ trap_module_info_t *module_info = NULL; /*{
    PARAM('m', "max_query", "maximal threshold for average size of queries in bytes in TOP-N (300)", required_argument, "int32") \
    PARAM('w', "timeout", "time window of detection / timeout of inactive flow (3600)", required_argument, "int32") \
    PARAM('s', "period", "time window of deletion / period of inactive flows checking(300)", required_argument, "int32") \
-   PARAM('S', "record", "count of records to store for query / response direction (max size of vector).", required_argument, "uint32")
+   PARAM('S', "record_count", "count of records to store for query / response direction (max size of vector).", required_argument, "uint32")
 
 static int stop = 0;
 
