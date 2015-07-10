@@ -218,6 +218,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
+                 alertfilter/Makefile
                  anonymizer/Makefile
                  astute/Makefile
                  attack_gen/Makefile

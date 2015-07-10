@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=anonymizer \
+SUBDIRS=alertfilter \
+anonymizer \
 astute \
 attack_gen \
 blacklistfilter \
