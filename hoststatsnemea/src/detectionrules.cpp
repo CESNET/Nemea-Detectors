@@ -76,7 +76,9 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        est_out_req_syn_cnt > SYN_SCAN_SYN_TO_ACK_RATIO * est_out_req_ack_cnt && // most of outgoing flows are SYN-only (no ACKs)
        est_out_req_syn_cnt > SYN_SCAN_REQUEST_TO_RESPONSE_RATIO * est_in_rsp_ack_cnt && // most targets don't answer with ACK
        rec.out_req_uniqueips >= SYN_SCAN_IPS && // a lot of different destinations
-       rec.out_req_syn_cnt > rec.out_all_flows/2) // it is more than half of total outgoing traffic of this address
+       rec.out_req_syn_cnt > rec.out_all_flows/2 && // it is more than half of total outgoing traffic of this address
+       rec.out_req_syn_cnt > 10*rec.in_all_syn_cnt) // there is not much incoming connections
+                                                    //  - this was added to filter out p2p communication
    {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_PORTSCAN_H);
       evt.addProto(TCP).addSrcAddr(addr);
