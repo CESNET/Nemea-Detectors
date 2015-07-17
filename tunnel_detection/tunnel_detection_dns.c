@@ -68,6 +68,9 @@ trap_module_info_t module_info = {
    "   -c          Read packet from file - MEASURE_PARAMETERS mode\n"
    "   -s          Folder with results and other information about detection\n"
    "               (on the end of module). Specify folder for data saving.\n"
+   "   -S          SDM setting. Set count of packet which will be recorded by SDM\n"
+   "               and timeout, after that the rule will be discard from\n"
+   "               SDM [COUNT of packets, TIMEOUT]\n"
    "   -d          File with results of detection anomaly (during modul runtime).\n"
    "   -f          Read packets from file\n"
    "   -g          Set Max and Min EX and VAR for suspision in requests,\n"
@@ -1082,10 +1085,9 @@ void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
    char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
    sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_TIMEOUT, 600);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_TIMEOUT, values.sdm_timeout);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, values.sdm_count_of_packets);
    ur_set_from_string(notification->unirec_out_sdm, notification->detection_sdm, UR_SDM_CAPTURE_FILE_ID, sdm_capture_id);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
    trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
 }
 
@@ -1911,6 +1913,8 @@ void load_default_values()
    values.request_max_count_of_used_letters_closer = REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER;
    values.max_percent_of_domain_searching_just_once_closer = MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE_CLOSER;
    values.max_percent_of_unique_domains_closer = MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER;
+   values.sdm_timeout = SDM_TIMEOUT;
+   values.sdm_count_of_packets = SDM_COUNT_OF_PACKETS;
 }
 
 int main(int argc, char **argv)
@@ -1953,7 +1957,7 @@ int main(int argc, char **argv)
    ur_notification.unirec_out = NULL;
    ur_notification.detection = NULL;
 
-   while ((opt = getopt(argc, argv, "a:b:c:u:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
+   while ((opt = getopt(argc, argv, "a:b:c:u:p:s:S:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -1966,6 +1970,12 @@ int main(int argc, char **argv)
             write_summary = 1;
             //if the folder does not exist it will create
             mkdir(optarg,  S_IRWXU|S_IRGRP|S_IXGRP);
+            break;
+         case 'S':
+            if (sscanf(optarg, "%d,%d", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
+               fprintf(stderr, "Missing 'S' argument\n");
+               goto failed_trap;
+            }
             break;
          case 'd':
                result_file = fopen ( optarg, "a+" );
