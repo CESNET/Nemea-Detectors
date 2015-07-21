@@ -55,13 +55,13 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
-		[enable local compilation without system installed Nemea libraries, default: no]),
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
+		[disable local compilation without system installed Nemea libraries, default: yea]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=false])
+esac], [repobuild=true])
 
 if test "$repobuild" = "true"; then
 AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
