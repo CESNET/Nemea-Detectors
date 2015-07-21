@@ -23,7 +23,8 @@ AC_ARG_ENABLE([debug],
                 CFLAGS="-Wall -g -O0 $CFLAGS"
                 CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
         fi], [CFLAGS="-Wall -O3 $CFLAGS"
-              CXXFLAGS="-Wall -O3 $CXXFLAGS"])
+              CXXFLAGS="-Wall -O3 $CXXFLAGS"
+              CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 LT_INIT()
