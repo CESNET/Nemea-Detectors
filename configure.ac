@@ -228,6 +228,11 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/ipdetect/Makefile
                  blacklistfilter/urldetect/Makefile
                  brute_force_detector/Makefile
+                 configurator_examples/Makefile
+                 configurator_examples/simple_types/Makefile
+                 configurator_examples/structures/Makefile
+                 configurator_examples/arrays/Makefile
+                 configurator_examples/complex_example/Makefile
                  deduplication/Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile
