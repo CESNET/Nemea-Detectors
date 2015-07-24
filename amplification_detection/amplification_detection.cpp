@@ -86,7 +86,6 @@ extern "C" {
 using namespace std;
 
 UR_FIELDS(
-    //BASIC_FLOW
     ipaddr SRC_IP,      //Source address of a flow
     ipaddr DST_IP,      //Destination address of a flow
     uint16 SRC_PORT,    //Source transport-layer port
@@ -96,23 +95,12 @@ UR_FIELDS(
     uint64 BYTES,       //Number of bytes in a flow or in an interval
     time TIME_FIRST,    //Timestamp of the first packet of a flow
     time TIME_LAST,     //Timestamp of the last packet of a flow
-    uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
-    //COLLECTOR_FLOW
-    uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
-    uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
-    uint8 TOS,              //IP type of service
-    uint8 TTL,              //IP time to live
-   //AMPLIFICATION_ALERT
-   ipaddr SRC_IP,       //Source address of a flow
-   ipaddr DST_IP,       //Destination address of a flow
-   uint16 SRC_PORT,     //Source transport-layer port
    uint32 REQ_FLOWS,    //Number of flows in an interval (requests)
    uint32 REQ_PACKETS,  //Number of packets in a flow or in an interval (requests)
    uint64 REQ_BYTES,    //Number of packets in a flow or in an interval (responses)
    uint32 RSP_FLOWS,    //Number of flows in an interval (responses)
    uint32 RSP_PACKETS,  //Number of packets in a flow or in an interval (responses)
    uint64 RSP_BYTES,    //Number of bytes in a flow or in an interval (responses)
-   time TIME_FIRST,     //Timestamp of the first packet of a flow
    time TIME_LAST,      //Timestamp of the last packet of a flow
    uint32 EVENT_ID,     //Identification number of reported event
 )
@@ -565,7 +553,7 @@ int main (int argc, char** argv)
 
    // declare demplates
    char * errstr = NULL;
-   ur_template_t *unirec_in = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+   ur_template_t *unirec_in = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST", &errstr);
    // check created templates
    if (unirec_in == NULL) {
       cerr << "Error: Invalid UniRec specifier." << endl;
@@ -577,7 +565,7 @@ int main (int argc, char** argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ERROR;
    }
-   ur_template_t* unirec_out = ur_create_template("SRC_IP,DST_IP,SRC_PORT,REQ_FLOWS,REQ_PACKETS,REQ_BYTES,RSP_FLOWS,RSP_PACKETS,RSP_BYTES,TIME_FIRST,TIME_LAST,EVENT_ID", &errstr);
+   ur_template_t* unirec_out = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,REQ_FLOWS,REQ_PACKETS,REQ_BYTES,RSP_FLOWS,RSP_PACKETS,RSP_BYTES,TIME_FIRST,TIME_LAST,EVENT_ID", &errstr);
    // check created templates
    if (unirec_out == NULL) {
       cerr << "Error: Invalid UniRec specifier." << endl;
@@ -615,7 +603,7 @@ int main (int argc, char** argv)
    // ***** Main processing loop *****
    while (!stop) {
       // retrieve data from server
-      ret = trap_recv(0, &data, &data_size);
+      ret = TRAP_RECEIVE(0, data, data_size, unirec_in);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       // check the data size
