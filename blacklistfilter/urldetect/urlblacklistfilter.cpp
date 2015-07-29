@@ -373,7 +373,7 @@ int main (int argc, char** argv)
 
     // Unirec templates
     char *errstr = NULL;
-    ur_template_t* templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,HTTP_REQUEST_HOST,HTTP_REQUEST_URL,HTTP_REQUEST_REFERER", &errstr);
+    ur_template_t* templ = ur_create_input_template(0,"SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,HTTP_REQUEST_HOST,HTTP_REQUEST_URL,HTTP_REQUEST_REFERER", &errstr);
     if (templ == NULL) {
       cerr << "Error: Invalid UniRec specifier." << endl;
       if(errstr != NULL){
@@ -383,7 +383,7 @@ int main (int argc, char** argv)
       trap_finalize();
       return EXIT_FAILURE;
     }
-    ur_template_t* det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST", &errstr); // + BLACKLIST_TYPE
+    ur_template_t* det = ur_create_output_template(0,"SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST", &errstr); // + BLACKLIST_TYPE
     if (det == NULL) {
       cerr << "Error: Invalid UniRec specifier." << endl;
       if(errstr != NULL){
@@ -535,7 +535,7 @@ int main (int argc, char** argv)
     while (!stop) {
 
         // retrieve data from server
-        retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+        retval = TRAP_RECEIVE(0, data, data_size, templ);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 #ifdef DEBUG
         int dyn_size = ur_rec_varlen_size(templ, data);

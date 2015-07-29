@@ -777,7 +777,7 @@ int main (int argc, char** argv)
 
   // UniRec templates for recieving data and reporting blacklisted IPs
   char *errstr = NULL;
-  ur_template_t *templ = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+  ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
   if (templ == NULL) {
     cerr << "Error: Invalid UniRec specifier." << endl;
     if(errstr != NULL){
@@ -787,7 +787,7 @@ int main (int argc, char** argv)
     trap_finalize();
     return EXIT_FAILURE;
   }
-  ur_template_t *tmpl_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE", &errstr);
+  ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE", &errstr);
   if (tmpl_det == NULL) {
     cerr << "Error: Invalid UniRec specifier." << endl;
     if(errstr != NULL){
@@ -983,7 +983,7 @@ int main (int argc, char** argv)
       const void *data;
       uint16_t data_size;
       // Retrieve data from sender
-      retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+      retval = TRAP_RECEIVE(0, data, data_size, templ);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
       // Check the data size

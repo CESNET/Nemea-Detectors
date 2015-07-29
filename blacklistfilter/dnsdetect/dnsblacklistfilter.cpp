@@ -88,23 +88,16 @@ UR_FIELDS(
     uint8 TOS,              //IP type of service
     uint8 TTL,              //IP time to live
     //DNS
-    uint16 DNS_ID,      //DNS transaction ID
-    uint16 DNS_ANSWERS,
-    uint8 DNS_RCODE,
     string DNS_NAME,
     uint16 DNS_QTYPE,
-    uint16 DNS_CLASS,
-    uint32 DNS_RR_TTL,
     uint16 DNS_RLENGTH,
     bytes* DNS_RDATA,
-    uint16 DNS_PSIZE,   //DNS payload size
     uint8 DNS_DO,       //DNSSEC OK bit
     //Blacklist items
     uint8 DNS_BLACKLIST,    //ID of blacklist which contains suspicious domain name
     uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
     uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flo
     uint8 BLACKLIST_TYPE,   //Type of the used blacklist (spam, C&C, malware, etc.)
-    uint8 URL_BLACKLIST,    //ID of blacklist which contains recieved URL
 )
 
 
@@ -385,7 +378,7 @@ void *check_dns(void *args)
     unsigned dets = 0, flows = 0;
 
     while (!stop) {
-        retval = trap_get_data(0x1, &record, &record_size, TRAP_WAIT);
+        retval = TRAP_RECEIVE(0x1, record, record_size, params->input);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) {
                 retval = EXIT_SUCCESS;
@@ -535,7 +528,7 @@ void* check_ip(void *args)
         cout << "IP: Waiting for data ..." << endl;
 #endif*/
         // recieve data
-        retval = trap_get_data(0x2, &record, &record_size, TRAP_WAIT);
+        retval = TRAP_RECEIVE(0x2, record, record_size, params->input);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) {
                 retval = EXIT_SUCCESS;
@@ -652,7 +645,7 @@ int main (int argc, char** argv)
 
     // link templates
     char *errstr = NULL;
-    dns_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_ID,DNS_ANSWERS,DNS_RCODE,DNS_NAME,DNS_QTYPE,DNS_CLASS,DNS_RR_TTL,DNS_RLENGTH,DNS_RDATA,DNS_PSIZE,DNS_DO", &errstr);
+    dns_input = ur_create_input_template(0x1, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RDATA", &errstr);
     if (dns_input == NULL) {
         cerr << "Error: Invalid UniRec specifier." << endl;
         if(errstr != NULL){
@@ -662,7 +655,7 @@ int main (int argc, char** argv)
         trap_finalize();
         return EXIT_FAILURE;
     }
-    ip_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+    ip_input = ur_create_input_template(0x2, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
     if (ip_input == NULL) {
         cerr << "Error: Invalid UniRec specifier." << endl;
         if(errstr != NULL){
@@ -673,7 +666,7 @@ int main (int argc, char** argv)
         trap_finalize();
         return EXIT_FAILURE;
     }
-    dns_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME", &errstr); // + DNS blacklist flag and BLACKLIST_TYPE
+    dns_det = ur_create_output_template(0x1, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME", &errstr); // + DNS blacklist flag and BLACKLIST_TYPE
     if (dns_det == NULL) {
         cerr << "Error: Invalid UniRec specifier." << endl;
         if(errstr != NULL){
@@ -683,7 +676,7 @@ int main (int argc, char** argv)
         trap_finalize();
         return EXIT_FAILURE;
     }
-    ip_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE", &errstr); // + BLACKLIST_TYPE
+    ip_det = ur_create_output_template(0x2, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE", &errstr); // + BLACKLIST_TYPE
     if (ip_det == NULL) {
         cerr << "Error: Invalid UniRec specifier." << endl;
         if(errstr != NULL){
