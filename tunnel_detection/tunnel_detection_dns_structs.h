@@ -327,6 +327,8 @@ typedef struct values_t{
     unsigned int min_length_of_tunnel_string;       /*< minimal length of string to be considered for tunnel */
     unsigned int max_count_of_numbers_in_domain_prefix_tree_filter; /*< maximum count of numbers in domain, more than that can be tunnel */
     unsigned int event_id_counter;                  /*!< Event ID counter for anomalies */
+    unsigned int sdm_timeout;   /*< Timeout, after that the rule will be discard from SDM */
+    unsigned int sdm_count_of_packets;  /*< Count of packet which will be recorded by SDM */
 }values_t;
 
 //********* values for measuring parameters *********

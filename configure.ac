@@ -23,7 +23,8 @@ AC_ARG_ENABLE([debug],
                 CFLAGS="-Wall -g -O0 $CFLAGS"
                 CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
         fi], [CFLAGS="-Wall -O3 $CFLAGS"
-              CXXFLAGS="-Wall -O3 $CXXFLAGS"])
+              CXXFLAGS="-Wall -O3 $CXXFLAGS"
+              CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
 LT_INIT()
@@ -54,13 +55,13 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
-		[enable local compilation without system installed Nemea libraries, default: no]),
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
+		[disable local compilation without system installed Nemea libraries, default: yea]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=false])
+esac], [repobuild=true])
 
 if test "$repobuild" = "true"; then
 AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
@@ -227,6 +228,11 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/ipdetect/Makefile
                  blacklistfilter/urldetect/Makefile
                  brute_force_detector/Makefile
+                 configurator_examples/Makefile
+                 configurator_examples/simple_types/Makefile
+                 configurator_examples/structures/Makefile
+                 configurator_examples/arrays/Makefile
+                 configurator_examples/complex_example/Makefile
                  deduplication/Makefile
                  delaybuffer/Makefile
                  dns_amp_twente/Makefile

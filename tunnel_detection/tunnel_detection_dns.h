@@ -84,6 +84,13 @@
 /* /} */
 
 /*!
+ * \name SDM output setting
+ *  Defines count of packets and timeout which will be set on output.
+ * \{ */
+#define SDM_COUNT_OF_PACKETS 1000 /*< Count of packet which will be recorded by SDM */
+#define SDM_TIMEOUT 300 /*< Timeout, after that the rule will be discard from SDM */
+ /* /} */
+/*!
  * \name Default values
  *  Defines macros used by DNS tunel detection
  * \{ */

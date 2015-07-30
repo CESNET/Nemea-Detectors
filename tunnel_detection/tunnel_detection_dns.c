@@ -51,6 +51,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
+#include <libtrap/trap.h>
+#include <unirec/unirec.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
 
@@ -67,6 +69,7 @@ trap_module_info_t *module_info = NULL;
   PARAM('b', "whitelist_ip", "File with whitelist of IPs which will not be analyzed.", required_argument, "string") \
   PARAM('c', "measure_param_file", "Read packet from file - MEASURE_PARAMETERS mode", required_argument, "string") \
   PARAM('s', "save_folder", "Folder with results and other information about detection (on the end of module). Specify folder for data saving.", required_argument, "string") \
+  PARAM('S', "SDM_setting", "SDM setting. Set count of packet which will be recorded by SDM and timeout, after that the rule will be discard from SDM [COUNT of packets, TIMEOUT].", required_argument, "string") \
   PARAM('d', "anomaly_file", "File with results of detection anomaly (during module runtime).", required_argument, "string") \
   PARAM('f', "packet_file", "Read packets from file", required_argument, "string") \
   PARAM('g', "suspicion_request", "Set Max and Min EX and VAR for suspicion in requests, [MIN EX, MAX EX, MIN VAR, MAX VAR].", required_argument, "string") \
@@ -1067,10 +1070,9 @@ void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
    char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
    sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_TIMEOUT, 600);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_TIMEOUT, values.sdm_timeout);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, values.sdm_count_of_packets);
    ur_set_from_string(notification->unirec_out_sdm, notification->detection_sdm, UR_SDM_CAPTURE_FILE_ID, sdm_capture_id);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, UR_PACKETS, 100);
    trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
 }
 
@@ -1897,6 +1899,8 @@ void load_default_values()
    values.request_max_count_of_used_letters_closer = REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER;
    values.max_percent_of_domain_searching_just_once_closer = MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE_CLOSER;
    values.max_percent_of_unique_domains_closer = MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER;
+   values.sdm_timeout = SDM_TIMEOUT;
+   values.sdm_count_of_packets = SDM_COUNT_OF_PACKETS;
 }
 
 int main(int argc, char **argv)
@@ -1953,6 +1957,12 @@ int main(int argc, char **argv)
             write_summary = 1;
             //if the folder does not exist it will create
             mkdir(optarg,  S_IRWXU|S_IRGRP|S_IXGRP);
+            break;
+         case 'S':
+            if (sscanf(optarg, "%d,%d", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
+               fprintf(stderr, "Missing 'S' argument\n");
+               goto failed_trap;
+            }
             break;
          case 'd':
                result_file = fopen ( optarg, "a+" );

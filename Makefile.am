@@ -6,6 +6,7 @@ attack_gen \
 blacklistfilter \
 basic2collector \
 brute_force_detector \
+configurator_examples \
 deduplication \
 delaybuffer \
 amplification_detection \
