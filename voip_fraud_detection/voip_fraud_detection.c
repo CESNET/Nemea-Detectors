@@ -45,41 +45,26 @@
 
 
 /** \brief Struct with information about module. */
-trap_module_info_t module_info = {
-   "voip_fraud_detection module", // Module name
-   // Module description
-   "This module detecting fraud in VoIP telephony - in SIP communication.\n"
-   "Firstly, it detects testing prefix enumeration in telephone numbers.\n"
-   "Secondly, it stores information about countries to which individual IP address calling."
-   " Module warnings, if is detected calling to different country."
-#ifndef ENABLE_GEOIP
-   " \n\n!!! This detection required geoip-api-c and GeoIP database. You have to configure it for allow this detection !!!"
-#endif
-   "\n\n"
-   "Optional parameters:\n"
-   "   -l  : path to log file\n"
-   "   -e  : event_id file (it can be \"disabled\")\n"
-   "   -c  : countries file (it can be \"disabled\")\n"
-   "   -m  : maximum prefix length\n"
-   "   -d  : minimum length of called number\n"
-   "   -s  : detection interval in seconds\n"
-   "   -t  : prefix examination detection threshold\n"
-#ifdef ENABLE_GEOIP
-   "   -o  : disable detection of calling to different country\n"
-   "   -a  : set learning mode for detection of calling to different country for defined period in seconds\n"
-   "   -w  : disable saving new country after calling to different country (every new calling will be reported repeatedly)\n"
-#endif
-   "   -p  : detection pause after attack in seconds\n"
-   "   -q  : limit of maximum item in prefix tree for one IP address\n"
-   "   -x  : time in seconds after it will be clear data without communication\n"
-   "   -n  : path to prefix examination statistic file\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: 1 (UniRec template: "UNIREC_INPUT_TEMPLATE")\n"
-   "   Outputs: 1 (UniRec template: "UNIREC_OUTPUT_TEMPLATE")\n",
-   1, // Number of input interfaces
-   1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('l', "log_file", "Path to a log file.", required_argument, "string") \
+  PARAM('e', "event_id_file", "Event_ID file. (it can be 'disabled')", required_argument, "string") \
+  PARAM('c', "countries_file", "Countries file. (it can be 'disabled')", required_argument, "string") \
+  PARAM('m', "max_prefix_length", "Maximum prefix length.", required_argument, "uint32") \
+  PARAM('d', "min_number_length", "Minimum length of called number.", required_argument, "uint32") \
+  PARAM('s', "detection_interval", "Detection interval in seconds", required_argument, "uint32") \
+  PARAM('t', "prefix_exam_limit", "Prefix examination detection threshold.", required_argument, "uint32") \
+  PARAM('o', "countries_detection_mode", "Disable detection of calling to different country.", no_argument, "none") \
+  PARAM('a', "learn_countries_period", "Set learning mode for detection of calling to different country for defined period in seconds.", required_argument, "uint32") \
+  PARAM('w', "disable_country_save", "Disable saving new country after calling to different country (every new calling will be reported repeatedly).", no_argument, "none") \
+  PARAM('p', "pause", "Detection pause after attack in seconds.", required_argument, "uint32") \
+  PARAM('q', "max_item_prefix_tree", "Limit of maximum item in prefix tree for one IP address.", required_argument, "uint32") \
+  PARAM('x', "clear_time", "Time in seconds after it will be clear data without communication.", required_argument, "uint32") \
+  PARAM('n', "prefix_stat_file", "Path to prefix examination statistic file.", required_argument, "string")
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
@@ -356,7 +341,8 @@ int main(int argc, char **argv)
    // ***** TRAP initialization *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
@@ -388,7 +374,7 @@ int main(int argc, char **argv)
 
    char opt;
 
-   while ((opt = getopt(argc, argv, "l:d:m:n:s:p:t:q:x:e:a:c:ow")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
          case 'l':
             modul_configuration.log_file = optarg;
@@ -451,6 +437,7 @@ int main(int argc, char **argv)
             break;
          default:
             PRINT_ERR("Error: Invalid arguments\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 1;
       }
    }
@@ -550,6 +537,7 @@ int main(int argc, char **argv)
    if (ur_template_in == NULL || ur_template_out == NULL) {
       PRINT_ERR("Error: Invalid UniRec specifier!\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return RETURN_ERROR;
    }
 
@@ -595,6 +583,7 @@ int main(int argc, char **argv)
       ur_free_template(ur_template_out);
       ur_free(detection_record);
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return RETURN_ERROR;
    }
 
@@ -1208,6 +1197,7 @@ int main(int argc, char **argv)
 
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return RETURN_OK;
 }
