@@ -53,6 +53,7 @@
 extern "C" {
    #include <libtrap/trap.h>
    #include <unirec/unirec.h>
+   #include "fields.h"
 }
 
 using namespace std;
@@ -130,7 +131,7 @@ void *data_reader_trap(void *args)
       uint16_t data_size;
 
       // Get new data from TRAP with exception handling
-      ret = trap_recv(0, &data, &data_size);
+      ret = TRAP_RECEIVE(0, data, data_size, tmpl_in);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TIMEOUT:
@@ -154,13 +155,13 @@ void *data_reader_trap(void *args)
       }
 
       // Check the correctness of recieved data
-      if (data_size < ur_rec_static_size(tmpl_in)) {
+      if (data_size < ur_rec_fixlen_size(tmpl_in)) {
          if (data_size > 1) {
             log(LOG_ERR, "Error: data with wrong size received (expected size: "
                "%lu, received size: %i.)\nHint: if you are using this module "
                "without flowdirection module change value 'port-flowdir' in "
                "the configuration file (hoststats.conf by default)",
-               ur_rec_static_size(tmpl_in), data_size);
+               ur_rec_fixlen_size(tmpl_in), data_size);
             terminated = true;
          }
          end_of_steam = true;
@@ -173,11 +174,11 @@ void *data_reader_trap(void *args)
          hs_time = time(NULL);
          alarm(1);
 
-         next_bf_change = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST))
+         next_bf_change = ur_time_get_sec(ur_get(tmpl_in, data, F_TIME_LAST))
             + MainProfile->active_timeout/2;
       }
 
-      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
+      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, F_TIME_LAST));
 
       if (flow_time >= next_bf_change) {
          // Swap/clear BloomFilters
@@ -258,7 +259,7 @@ void offline_analyzer()
       uint16_t data_size;
 
       // Get new data from TRAP with exception catch
-      ret = trap_recv(0, &data, &data_size);
+      ret = trap_recv(0, data, data_size, tmpl_in);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TERMINATED:
@@ -272,10 +273,10 @@ void offline_analyzer()
       }
 
       // Check the correctness of recieved data
-      if (data_size < ur_rec_static_size(tmpl_in)) {
+      if (data_size < ur_rec_fixlen_size(tmpl_in)) {
          if (data_size > 1) {
             log(LOG_ERR, "Error: data with wrong size received (expected size: "
-               "%lu, received size: %i)", ur_rec_static_size(tmpl_in), data_size);
+               "%lu, received size: %i)", ur_rec_fixlen_size(tmpl_in), data_size);
             return;
          }
          end_of_steam = true;
@@ -284,12 +285,12 @@ void offline_analyzer()
 
       // First flow
       if (flow_time == 0) {
-         hs_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
+         hs_time = ur_time_get_sec(ur_get(tmpl_in, data, F_TIME_LAST));
          next_bf_change = hs_time + MainProfile->active_timeout/2;
          check_time = hs_time + MainProfile->det_start_time;
       }
 
-      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, UR_TIME_LAST));
+      flow_time = ur_time_get_sec(ur_get(tmpl_in, data, F_TIME_LAST));
 
       if (flow_time > hs_time) {
          hs_time = flow_time;
