@@ -42,7 +42,7 @@
  */
 
 #include "prefix_examination.h"
-
+#include "fields.h"
 
 // Detection prefix examination in input suffix tree,
 // if attack is detected delete node and his descendants
@@ -392,21 +392,21 @@ int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_
             // Send attack information to output interface
 
             // fill in fields of detection event
-            ur_set(ur_template_out, detection_record, UR_EVENT_ID, event_id);
-            ur_set(ur_template_out, detection_record, UR_EVENT_TYPE, UR_EVT_T_VOIP_PREFIX_GUESS);
-            ur_set(ur_template_out, detection_record, UR_SRC_IP, *ip_src);
-            ur_set(ur_template_out, detection_record, UR_DETECTION_TIME, ur_time_from_sec_msec(detection_prefix_examination.time, 0));
-            ur_set(ur_template_out, detection_record, UR_TIME_FIRST, ur_time_from_sec_msec(hash_table_item->first_invite_request, 0));
-            ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_TO, detection_prefix_examination.sip_to, sizeof (char) * strlen(detection_prefix_examination.sip_to));
+            ur_set(ur_template_out, detection_record, F_EVENT_ID, event_id);
+            ur_set(ur_template_out, detection_record, F_EVENT_TYPE, EVT_T_VOIP_PREFIX_GUESS);
+            ur_set(ur_template_out, detection_record, F_SRC_IP, *ip_src);
+            ur_set(ur_template_out, detection_record, F_DETECTION_TIME, ur_time_from_sec_msec(detection_prefix_examination.time, 0));
+            ur_set(ur_template_out, detection_record, F_TIME_FIRST, ur_time_from_sec_msec(hash_table_item->first_invite_request, 0));
+            ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_SIP_TO, detection_prefix_examination.sip_to, sizeof (char) * strlen(detection_prefix_examination.sip_to));
             if (user_agent_str == NULL) {
-               ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_USER_AGENT, "", 0);
+               ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_USER_AGENT, "", 0);
             } else {
-               ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_USER_AGENT, user_agent_str, sizeof (char) * strlen(user_agent_str));
+               ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_USER_AGENT, user_agent_str, sizeof (char) * strlen(user_agent_str));
             }
-            ur_set(ur_template_out, detection_record, UR_VOIP_FRAUD_PREFIX_LENGTH, detection_prefix_examination.report_prefix_length);
-            ur_set(ur_template_out, detection_record, UR_VOIP_FRAUD_PREFIX_EXAMINATION_COUNT, detection_prefix_examination.prefix_examination_count);
-            ur_set(ur_template_out, detection_record, UR_VOIP_FRAUD_SUCCESSFUL_CALL_COUNT, detection_prefix_examination.successful_call);
-            ur_set(ur_template_out, detection_record, UR_VOIP_FRAUD_INVITE_COUNT, detection_prefix_examination.invite);
+            ur_set(ur_template_out, detection_record, F_VOIP_FRAUD_PREFIX_LENGTH, detection_prefix_examination.report_prefix_length);
+            ur_set(ur_template_out, detection_record, F_VOIP_FRAUD_PREFIX_EXAMINATION_COUNT, detection_prefix_examination.prefix_examination_count);
+            ur_set(ur_template_out, detection_record, F_VOIP_FRAUD_SUCCESSFUL_CALL_COUNT, detection_prefix_examination.successful_call);
+            ur_set(ur_template_out, detection_record, F_VOIP_FRAUD_INVITE_COUNT, detection_prefix_examination.invite);
 
             // send alert to output interface
             int return_code = trap_send(0, detection_record, ur_rec_size(ur_template_out, detection_record));

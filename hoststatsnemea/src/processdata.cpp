@@ -259,7 +259,7 @@ void offline_analyzer()
       uint16_t data_size;
 
       // Get new data from TRAP with exception catch
-      ret = trap_recv(0, data, data_size, tmpl_in);
+      ret = TRAP_RECEIVE(0, data, data_size, tmpl_in);
       if (ret != TRAP_E_OK) {
          switch (ret) {
          case TRAP_E_TERMINATED:

@@ -76,7 +76,11 @@
 
 /** \brief Length of country code (ISO 3166, 2 chars). */
 #define LENGTH_COUNTRY_CODE 2
-        
+
+
+#define EVT_T_VOIP_PREFIX_GUESS            40         //VoIP prefix guessing
+#define EVT_T_VOIP_CALL_DIFFERENT_COUNTRY  41         //VoIP call to different country
+
 /** \brief Definition of modul_configuration (modul_configuration_struct). */
 modul_configuration_t modul_configuration;
 
