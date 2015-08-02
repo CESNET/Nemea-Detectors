@@ -143,10 +143,6 @@ AC_CONFIG_FILES([Makefile
                  astute/Makefile
                  attack_gen/Makefile
                  basic2collector/Makefile
-                 blacklistfilter/Makefile
-                 blacklistfilter/dnsdetect/Makefile
-                 blacklistfilter/ipdetect/Makefile
-                 blacklistfilter/urldetect/Makefile
                  brute_force_detector/Makefile
                  configurator_examples/Makefile
                  configurator_examples/simple_types/Makefile
@@ -188,7 +184,6 @@ AC_CONFIG_FILES([Makefile
                  sampler/Makefile
                  sdmcap_controller/Makefile
                  simplebotnetdetector/Makefile
-                 sip_detector/Makefile
                  slowthreatdetector/Makefile
                  synflood/pcf/Makefile
                  synflood/synfindiff/Makefile
