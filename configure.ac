@@ -63,89 +63,9 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=true])
 
-if test "$repobuild" = "true"; then
-AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-	[$PWD/../unirec$PATH_SEPARATOR$PATH])
-else
-AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-	[$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
-fi
-
-if test -z "$UNIRECPROC"; then
-	AC_MSG_ERROR([UniRec processor was not found. Add path to "process_fields.py" into PATH or install UniRec."])
-fi
-
-AC_SUBST(UNIRECPROC)
-
-if test "${repobuild}" = "false" -a -z "$TRAPLIB"; then
-	PKG_CHECK_MODULES([LIBTRAP],[libtrap], [TRAPLIB="yes"], [AC_MSG_WARN([Libtrap was not found by pkg-config])])
-	LDFLAGS="$LIBTRAP_LDFLAGS $LDFLAGS"
-	LIBS="$LIBTRAP_LIBS $LIBS"
-	CFLAGS="$LIBTRAP_CFLAGS $CFLAGS"
-	CXXFLAGS="$LIBTRAP_CFLAGS $CXXFLAGS"
-fi
-if test -z "$TRAPLIB"; then
-	# Check for TRAP toolkit as a superproject.
-	if test -d "$srcdir/../libtrap"; then
-	TRAPINC='$(top_srcdir)/../libtrap/include'
-	TRAPLIB='$(top_builddir)/../libtrap/src/.libs'
-	fi
-	# AC_SUBST command line variables from TRAPLIB and TRAPINC.
-	if test -n "$TRAPLIB"; then
-	AC_SUBST([TRAP_LTLIB], ["$TRAPLIB/libtrap.la"])
-	AC_SUBST([TRAP_INCLUDE], ["-I$TRAPINC"])
-	LDFLAGS="-L$TRAPLIB $LDFLAGS"
-	CFLAGS="-I$TRAPINC $CFLAGS"
-	CXXFLAGS="-I$TRAPINC $CXXFLAGS"
-	fi
-fi
-
-if test "${repobuild}" = "false" -a -z "$UNIRECLIB"; then
-	PKG_CHECK_MODULES([UNIREC], [unirec], [UNIRECLIB="yes"], AC_MSG_WARN([UNIREC was not found by pkg-config]))
-	LDFLAGS="$UNIREC_LDFLAGS $LDFLAGS"
-	LIBS="$UNIREC_LIBS $LIBS"
-	CFLAGS="$UNIREC_CFLAGS $CFLAGS"
-	CXXFLAGS="$UNIREC_CFLAGS $CXXFLAGS"
-fi
-# Still empty? Check for *installed* UNIREC.
-if test -z "$UNIRECLIB"; then
-	# Check for UNIREC toolkit as a superproject.
-	if test -d "$srcdir/../unirec"; then
-	UNIRECINC='$(top_srcdir)/../'
-	UNIRECLIB='$(top_builddir)/../unirec'
-	fi
-	# AC_SUBST command line variables from UNIRECLIB and UNIRECINC.
-	if test -n "$UNIRECLIB"; then
-	AC_SUBST([UNIREC_LTLIB], ["$UNIRECLIB/libunirec.la"])
-	AC_SUBST([UNIREC_INCLUDE], ["-I$UNIRECINC"])
-	LDFLAGS="-L$UNIRECLIB  $LDFLAGS"
-	CFLAGS="-I$UNIRECINC $CFLAGS"
-	CXXFLAGS="-I$UNIRECINC $CXXFLAGS"
-	fi
-fi
-
-if test "${repobuild}" = "false" -a -z "$NEMEACOMMONLIB"; then
-	PKG_CHECK_MODULES([NEMEACOMMON], [nemea-common], [NEMEACOMMONLIB="yes"], AC_MSG_WARN([Nemea-common was not found by pkg-config]))
-	LDFLAGS="$NEMEACOMMON_LDFLAGS $LDFLAGS"
-	LIBS="$NEMEACOMMON_LIBS $LIBS"
-	CFLAGS="$NEMEACOMMON_CFLAGS $CFLAGS"
-	CXXFLAGS="$NEMEACOMMON_CFLAGS $CXXFLAGS"
-fi
-if test -z "$NEMEACOMMONLIB"; then
-	# Check for NEMEACOMMON toolkit as a superproject.
-	if test -d "$srcdir/../common"; then
-	NEMEACOMMONINC='$(top_srcdir)/../common/include'
-	NEMEACOMMONLIB='$(top_builddir)/../common'
-	fi
-	# AC_SUBST command line variables from NEMEACOMMONLIB and NEMEACOMMONINC.
-	if test -n "$NEMEACOMMONLIB"; then
-	AC_SUBST([NEMEACOMMON_LTLIB], ["$NEMEACOMMONLIB/libnemea-common.la"])
-	AC_SUBST([NEMEACOMMON_INCLUDE], ["-I$NEMEACOMMONINC"])
-	LDFLAGS="-L$NEMEACOMMONLIB $LDFLAGS"
-	CFLAGS="-I$NEMEACOMMONINC $CFLAGS"
-	CXXFLAGS="-I$NEMEACOMMONINC $CXXFLAGS"
-	fi
-fi
+AX_LIBTRAP_CHECK
+AX_UNIREC_CHECK
+AX_NEMEACOMMON_CHECK
 
 AC_CHECK_HEADER(idna.h,
          AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module from blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
