@@ -5,6 +5,7 @@ astute \
 attack_gen \
 basic2collector \
 brute_force_detector \
+brute_force_hist_detector \
 configurator_examples \
 deduplication \
 delaybuffer \

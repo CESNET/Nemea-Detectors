@@ -144,7 +144,8 @@ AC_CONFIG_FILES([Makefile
                  attack_gen/Makefile
                  basic2collector/Makefile
                  brute_force_detector/Makefile
-                 configurator_examples/Makefile
+                 brute_force_hist_detector/Makefile
+		 configurator_examples/Makefile
                  configurator_examples/simple_types/Makefile
                  configurator_examples/structures/Makefile
                  configurator_examples/arrays/Makefile
