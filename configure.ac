@@ -200,6 +200,7 @@ AC_CONFIG_FILES([Makefile
                  trapreplay/Makefile
                  tunnel_detection/Makefile
                  unirecfilter/Makefile
+                 vermon/Makefile
                  voip_fraud_detection/Makefile
                  warden_collector/Makefile
                ])

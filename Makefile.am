@@ -50,6 +50,7 @@ slowthreatdetector \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \
+vermon \
 voip_fraud_detection \
 warden_collector
 
