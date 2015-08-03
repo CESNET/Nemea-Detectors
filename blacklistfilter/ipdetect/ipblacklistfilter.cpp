@@ -77,16 +77,23 @@ trap_module_info_t module_info = {
     "a identification number of the list which blacklisted the address for both IP addresses and\n"
     "a number specifying intensity of the communication between those addresses. Unirec records\n"
     "are aggregated by source,destination address and protocol for a given time. After this time\n"
-    "aggregated UniRec is sent by output interface.\n"
+    "aggregated UniRec is sent by output interface.\n\n"
+    "This module uses configurator tool. To specify file with blacklist IP addresses or public\n"
+    "blacklists, use XML configuration file for IPBlacklistFilter (default is userConfigurationFile.xml).\n"
+    "To show, edit, add or remove public blacklist information, use XML configuration file for\n"
+    "blacklist downloader (default is bld_userConfigurationFile.xml).\n\n"
     "Usage:\n"
-    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size]\n"
+    "   ./ipblacklistfilter -i <trap_interface> [-c FILE] [-u FILE] [-C FILE] [-U FILE] [-D] [-n] [-I secs] [-A secs] [-s size]\n"
     "Module specific parameters:\n"
-    "	-f file		Specify file with blacklisted IP addresses/subnets.\n"
-    "	-D blacklists	Switch to dynamic mode and specify which blacklists to use.\n"
-    "	-n              Do not send terminating Unirec when exiting program.\n"
-    "	-A secs         Specify active timeout in seconds. [Default: 300]\n"
-    "	-I secs         Specify inactive timeout in seconds. [Default: 30]\n"
-    "	-s size         Size of aggregation hash table. [Default: 500000]\n"
+    "   -c FILE   Specify pattern configuration file for IPBlacklistFilter. [Default: patternFile.xml]\n"
+    "   -u FILE   Specify user configuration file for IPBlacklistFilter. [Default: userConfigurationFile.xml]\n"
+    "   -C FILE   Specify pattern configuration file for blacklist downloader. [Default: bld_patternFile.xml]\n"
+    "   -U FILE   Specify user configuration file for blacklist downloader. [Default: bld_userConfigurationFile.xml]\n"
+    "   -D        Switch to dynamic mode. Use blacklists specified in configuration file.\n"
+    "   -n        Do not send terminating Unirec when exiting program.\n"
+    "   -A secs   Specify active timeout in seconds. [Default: 300]\n"
+    "   -I secs   Specify inactive timeout in seconds. [Default: 30]\n"
+    "   -s size   Size of aggregation hash table. [Default: 500000]\n"
     "Interfaces:\n"
     "   Inputs: 1 (unirec record)\n"
     "   Outputs: 1 (unirec record)\n",
@@ -111,21 +118,33 @@ static int stop = 0;
 // Global variable for signaling the program to update blacklists
 static int update = 0;
 
+// Reconfiguration flag, set if signal SIGUSR2 received
+static int RECONF_FLAG = 0;
+
 /**
  * \brief Function for handling signals SIGTERM and SIGINT.
  * \param signal Number of received signal.
  */
 void signal_handler(int signal)
 {
-   if (signal == SIGTERM || signal == SIGINT) {
+   switch (signal) {
+   case SIGTERM:
+   case SIGINT:
       if (stop) {
          printf("Another terminating signal caught!\nTerminating without clean up!!!.\n");
          exit(EXIT_FAILURE);
       }
       stop = 1;
       printf("Terminating signal caught...\nPlease wait for clean up.\n");
-   } else {
+      break;
+   case SIGUSR1:
       update = 1;
+      break;
+   case SIGUSR2:
+      RECONF_FLAG = 1;
+      break;
+   default:
+      break;
    }
 }
 
@@ -710,35 +729,66 @@ void *inactive_timeout_thread_func(void *tmplt)
    return NULL;
 }
 
+
+
 /**
  * \brief Setup arguments structure for Blacklist Downloader.
  * \param args Pointer to arguments structure.
- * \param file File to which blacklist IP addresses will be written.
- * \param b_str Names of blacklists to use delimeted by comma.
+ * \param down_config Configuration structure parsed from XML file.
  */
-void setup_downloader(bl_down_args_t *args, const char *file, char *b_str)
+void setup_downloader(bl_down_args_t *args, downloader_config_struct_t *down_config)
 {
-   uint64_t sites;
-   uint8_t num = bl_translate_to_id(b_str, &sites);
-   args->use_regex = (uint8_t*)malloc(sizeof(uint8_t) * num);
-   args->reg_pattern = (char**)malloc(sizeof(char *) * num);
+   // Convert blacklist names to IDs and merge them together (binary OR)
+   args->sites = bld_translate_names_to_cumulative_id(
+                    down_config->blacklist_arr,
+                    BL_NAME_MAX_LENGTH);
 
-   for (int i = 0; i < num; i++) {
-      args->use_regex[i] = 1;
-      args->reg_pattern[i] = strdup(BLACKLIST_REG_PATTERN);
-   }
-
-   args->sites      = sites;
-   args->file       = (char*)file;
-   args->comment_ar = BLACKLIST_COMMENT_AR;
-   args->num        = num;
-   args->delay      = BLACKLIST_UPDATE_DELAY_TIME;
-   args->update_mode     = BLACKLIST_UPDATE_MODE;
-   args->line_max_length = BLACKLIST_LINE_MAX_LENGTH;
-   args->el_max_length   = BLACKLIST_EL_MAX_LENGTH;
-   args->el_max_count    = BLACKLIST_EL_MAX_COUNT;
+   // Set other arguments for downloader
+   args->file       = down_config->file;
+   args->delay      = down_config->delay;
+   args->update_mode     = 1;//down_config.update_mode;
+   args->line_max_length = down_config->line_max_len;
+   args->el_max_length   = down_config->element_max_len;
+   args->el_max_count    = down_config->element_max_cnt;
 }
 
+
+
+
+bool initialize_downloader(const char *patternFile, const char *userFile, downloader_config_struct_t *down_config)
+{
+   bl_down_args_t bl_args;
+
+   // Load configuration for BLD
+   if (!bld_load_xml_configs(patternFile, userFile)) {
+      cerr << "Error: Could not load XML configuration for blacklist downloader." << endl;
+      return false;
+   }
+   // Start Blacklist Downloader
+   setup_downloader(&bl_args, down_config);
+   if (bl_args.sites == 0) {
+      fprintf(stderr, "Error: No blacklists were specified!\n");
+      return false;
+   }
+
+   int ret = bl_down_init(&bl_args);
+   if (ret < 0) {
+      fprintf(stderr, "Error: Could not initialize downloader!\n");
+      return false;
+   } else {
+      // Wait for initial update
+      while (!update) {
+         sleep(1);
+         if (stop) {
+            return false;
+         }
+         check_update();
+      }
+      update = 0;
+   }
+
+   return true;
+}
 
 
 /*
@@ -748,10 +798,16 @@ int main (int argc, char** argv)
 {
    int retval = 0; // return value
    int send_terminating_unirec = 1;
-   bl_down_args_t bl_args;
    uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
    uint32_t hash_table_stash_size = 0;
    int8_t *fht_lock = NULL;
+
+   // Set defaukt files names
+   char *patternFile = (char*) "patternFile.xml";
+   char *userFile = (char*) "userConfigFile.xml";
+   char *bld_patternFile = (char*) "bld_patternFile.xml";
+   char *bld_userFile = (char*) "bld_userConfigFile.xml";
+
 
    // UniRec templates for recieving data and reporting blacklisted IPs
    ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
@@ -795,20 +851,29 @@ int main (int argc, char** argv)
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
    signal(SIGUSR1, signal_handler);
+   signal(SIGUSR2, signal_handler);
 
    int opt;
    string file, bl_str;
    int bl_mode = BL_STATIC_MODE; // default mode
 
    // ********** Parse arguments **********
-   while ((opt = getopt(argc, argv, "nD:f:A:I:s:")) != -1) {
+   while ((opt = getopt(argc, argv, "nDA:I:s:c:u:C:U:")) != -1) {
       switch (opt) {
+         case 'c': // pattern configuration file for IPBlacklistFilter
+                   patternFile = optarg;
+                   break;
+         case 'u': // user configuration file for IPBlacklistFilter
+                   userFile = optarg;
+                   break;
+         case 'C': // pattern configuration file for blacklist downloader
+                   bld_patternFile = optarg;
+                   break;
+         case 'U': // user configuration file for blacklist downlooader
+                   bld_userFile = optarg;
+                   break;
          case 'D': // Dynamic mode
                    bl_mode = BL_DYNAMIC_MODE;
-                   bl_str = string(optarg);
-                   break;
-         case 'f': // Specify file with blacklisted IPs
-                   file = string(optarg);
                    break;
          case 'n': // Do not send terminating Unirec
                    send_terminating_unirec = 0;
@@ -822,7 +887,7 @@ int main (int argc, char** argv)
          case 's': // FHT table size
                    hash_table_size = atoi(optarg);
                    break;
-         case '?': if (optopt == 'D' || optopt == 'f' || optopt == 'I' || optopt == 'A' || optopt == 's') {
+         case '?': if (optopt == 'I' || optopt == 'A' || optopt == 's') {
                       fprintf (stderr, "ERROR: Option -%c requires an argumet.\n", optopt);
                    } else {
                       fprintf (stderr, "ERROR: Unknown option -%c.\n", optopt);
@@ -834,21 +899,23 @@ int main (int argc, char** argv)
       }
    }
 
+
+
+   // Allocate memory for configuration
+   downloader_config_struct_t *down_config = (downloader_config_struct_t *) malloc(sizeof(downloader_config_struct_t));
+   if (down_config == NULL) {
+      cerr << "Error: Could not allocate memory for configuration structure." << endl;
+      return EXIT_FAILURE;
+   }
+
+   // Load configuration
+   if (loadConfiguration(patternFile, userFile, down_config)) {
+      cerr << "Error: Could not parse XML configuration." << endl;
+      return EXIT_FAILURE;
+   }
+
+
    // ***** Check module arguments *****
-   if (file.length() == 0) {
-      fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size]\n", argv[0]);
-      ur_free_template(templ);
-      ur_free_template(tmpl_det);
-      trap_finalize();
-      return EXIT_FAILURE;
-   }
-   if (bl_mode == BL_DYNAMIC_MODE && bl_str.length() == 0) {
-      fprintf(stderr, "Error: Parameter -D needs argument.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>] [-n] [-I secs] [-A secs] [-s size]\n", argv[0]);
-      ur_free_template(templ);
-      ur_free_template(tmpl_det);
-      trap_finalize();
-      return EXIT_FAILURE;
-   }
    hash_table_size = update_hash_table_size_to_pow2(hash_table_size);
    if ((AGGR_TABLE = fht_init(hash_table_size, sizeof(aggr_data_key_t), sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det), hash_table_stash_size)) == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for hash table\n");
@@ -860,44 +927,18 @@ int main (int argc, char** argv)
 
    // ***** Initialize Blacklist Downloader *****
    if (bl_mode == BL_DYNAMIC_MODE) {
-      // Start Blacklist Downloader
-      setup_downloader(&bl_args, file.c_str(), (char*) bl_str.c_str());
-      if (bl_args.sites == 0) {
-         fprintf(stderr, "Error: No blacklists were specified!\n");
+      // Load configuration for BLD
+      if (!initialize_downloader(bld_patternFile, bld_userFile, down_config)) {
          ur_free_template(templ);
          ur_free_template(tmpl_det);
          fht_destroy(AGGR_TABLE);
          trap_finalize();
          return EXIT_FAILURE;
-      }
-      int ret = bl_down_init(&bl_args);
-      if (ret < 0) {
-         fprintf(stderr, "Error: Could not initialize downloader!\n");
-         ur_free_template(templ);
-         ur_free_template(tmpl_det);
-         fht_destroy(AGGR_TABLE);
-         trap_finalize();
-         return EXIT_FAILURE;
-      } else {
-         // Wait for initial update
-         while (!update) {
-            sleep(1);
-            if (stop) {
-               ur_free_template(templ);
-               ur_free_template(tmpl_det);
-               fht_destroy(AGGR_TABLE);
-               trap_finalize();
-               if (bl_mode == BL_DYNAMIC_MODE) {
-                  fprintf(stderr, "Quiting before first update\n");
-                  bld_finalize();
-               }
-               return EXIT_FAILURE;
-            }
-            check_update();
-         }
-         update = 0;
       }
    }
+
+   // Set file string
+   file = down_config->file;
 
    // Load ip addresses from sources
    retval = load_update(add_update, rm_update, file);
@@ -1026,6 +1067,71 @@ int main (int argc, char** argv)
          rm_update.clear();
          BLD_SYNC_FLAG = 0;
       }
+
+      // Reconfigure module if needed
+      if (RECONF_FLAG) {
+         // TODO
+         // Terminate blacklist downloader thread if in dynamic mode
+         if (bl_mode == BL_DYNAMIC_MODE) {
+            // Need to unlock to avoid possible deadlock
+            bld_unlock_sync();
+            bld_finalize();
+            configuratorFreeUAMBS();
+            update = 0;
+            // No need to lock, blacklist downloader is no more
+         }
+
+         // CLEAR UPDATES VECTOR AND LIST VECTORS
+         add_update.clear();
+         rm_update.clear();
+         v4_list.clear();
+         v6_list.clear();
+
+         // LOAD NEW CONFIGURATION FOR BOTH FILTER AND DOWNLOADER
+         // Load configuration
+         // TODO specify file names (low)
+         if (loadConfiguration(patternFile, userFile, down_config)) {
+            cerr << "Error: Could not parse XML configuration." << endl;
+            return EXIT_FAILURE;
+         }
+
+         // START DOWNLOADER AGAIN
+         if (bl_mode == BL_DYNAMIC_MODE) {
+            if (!initialize_downloader(bld_patternFile, bld_userFile, down_config)) {
+               ur_free_template(templ);
+               ur_free_template(tmpl_det);
+               fht_destroy(AGGR_TABLE);
+               trap_finalize();
+               return EXIT_FAILURE;
+            }
+         }
+
+         // Load ip addresses from sources
+         file = down_config->file;
+         retval = load_update(add_update, rm_update, file);
+
+         // If update from file could not be processed, return error
+         if (retval == BLIST_FILE_ERROR) {
+            fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
+            ur_free_template(templ);
+            ur_free_template(tmpl_det);
+            fht_destroy(AGGR_TABLE);
+            trap_finalize();
+            if (bl_mode == BL_DYNAMIC_MODE) {
+               bld_finalize();
+            }
+            return EXIT_FAILURE;
+         }
+         // Add update
+         if (!add_update.empty()) {
+            update_add(v4_list, v6_list, add_update, v4_masks, v6_masks);
+         }
+         add_update.clear();
+         rm_update.clear();
+
+
+         RECONF_FLAG = 0;
+      }
       bld_unlock_sync();
       // Critical section ends here
     }
@@ -1035,6 +1141,7 @@ int main (int argc, char** argv)
     // Terminate blacklist downloader thread if in dynamic mode
     if (bl_mode == BL_DYNAMIC_MODE) {
         bld_finalize();
+        configuratorFreeUAMBS();
     }
 
    // Wait for inactive timeout flush thread

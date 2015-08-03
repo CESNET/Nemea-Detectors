@@ -153,6 +153,10 @@ extern "C" {
  */
 #define DEFAULT_HASH_TABLE_SIZE 500000
 
+/**
+ * Max length of blacklist name
+ */
+#define BL_NAME_MAX_LENGTH 32
 
 /**
  * Comments character for every blacklist website.
@@ -198,6 +202,21 @@ typedef struct {
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
 } ip_blist_t;
+
+/**
+ * Structure containing information used for configurating
+ * blacklist downloader.
+ */
+typedef struct __attribute__ ((__packed__)) {
+    char file[256];
+    uint32_t delay;
+    char update_mode[16];
+    uint32_t line_max_len;
+    uint32_t element_max_len;
+    uint32_t element_max_cnt;
+    char *blacklist_arr;
+} downloader_config_struct_t;
+
 
 /**
  * @typedef std::vector<ip_blist_t> black_list_t;
