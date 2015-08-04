@@ -4,6 +4,7 @@ SUBDIRS=anonymizer \
 astute \
 attack_gen \
 basic2collector \
+blacklistfilter \
 brute_force_detector \
 brute_force_hist_detector \
 configurator_examples \
