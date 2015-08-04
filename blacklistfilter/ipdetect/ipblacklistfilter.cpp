@@ -59,6 +59,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
+
+#include <config.h>
 #include <nemea-common.h>
 #include <unirec/unirec.h>
 #include <libtrap/trap.h>
@@ -68,38 +70,31 @@
 
 using namespace std;
 
-trap_module_info_t module_info = {
-    (char *)"IP blacklist detection module", // Module name
-    // Module description
-    (char *)"Module receives the UniRec record and checks if the source address\n"
-    "or destination address is present in any blacklist that are available.\n"
-    "If any of the addresses is blacklisted the record is changed by adding \n"
-    "a identification number of the list which blacklisted the address for both IP addresses and\n"
-    "a number specifying intensity of the communication between those addresses. Unirec records\n"
-    "are aggregated by source,destination address and protocol for a given time. After this time\n"
-    "aggregated UniRec is sent by output interface.\n\n"
-    "This module uses configurator tool. To specify file with blacklist IP addresses or public\n"
-    "blacklists, use XML configuration file for IPBlacklistFilter (default is userConfigurationFile.xml).\n"
-    "To show, edit, add or remove public blacklist information, use XML configuration file for\n"
-    "blacklist downloader (default is bld_userConfigurationFile.xml).\n\n"
-    "Usage:\n"
-    "   ./ipblacklistfilter -i <trap_interface> [-c FILE] [-u FILE] [-C FILE] [-U FILE] [-D] [-n] [-I secs] [-A secs] [-s size]\n"
-    "Module specific parameters:\n"
-    "   -c FILE   Specify pattern configuration file for IPBlacklistFilter. [Default: patternFile.xml]\n"
-    "   -u FILE   Specify user configuration file for IPBlacklistFilter. [Default: userConfigurationFile.xml]\n"
-    "   -C FILE   Specify pattern configuration file for blacklist downloader. [Default: bld_patternFile.xml]\n"
-    "   -U FILE   Specify user configuration file for blacklist downloader. [Default: bld_userConfigurationFile.xml]\n"
-    "   -D        Switch to dynamic mode. Use blacklists specified in configuration file.\n"
-    "   -n        Do not send terminating Unirec when exiting program.\n"
-    "   -A secs   Specify active timeout in seconds. [Default: 300]\n"
-    "   -I secs   Specify inactive timeout in seconds. [Default: 30]\n"
-    "   -s size   Size of aggregation hash table. [Default: 500000]\n"
-    "Interfaces:\n"
-    "   Inputs: 1 (unirec record)\n"
-    "   Outputs: 1 (unirec record)\n",
-    1, // Number of input interfaces
-    1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("IPBlacklistFilter", "Module receives the UniRec record and checks if the source address " \
+    "or destination address is present in any blacklist that are available. " \
+    "If any of the addresses is blacklisted the record is changed by adding " \
+    "a identification number of the list which blacklisted the address for both IP addresses and " \
+    "a number specifying intensity of the communication between those addresses. Unirec records " \
+    "are aggregated by source,destination address and protocol for a given time. After this time " \
+    "aggregated UniRec is sent by output interface. " \
+    "This module uses configurator tool. To specify file with blacklist IP addresses or public " \
+    "blacklists, use XML configuration file for IPBlacklistFilter (userConfigurationFile.xml). " \
+    "To show, edit, add or remove public blacklist information, use XML configuration file for " \
+    "blacklist downloader (bld_userConfigurationFile.xml).", 1, 1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('c', "", "Specify pattern configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/ipblacklistfilter/patternFile.xml]", required_argument, "string") \
+  PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/ipblacklistfilter/userConfigurationFile.xml]", required_argument, "string") \
+  PARAM('C', "", "Specify pattern configuration file for blacklist downloader. [Default: " SYSCONFDIR "/ipblacklistfilter/bld_patternFile.xml]", required_argument, "string") \
+  PARAM('U', "", "Specify user configuration file for blacklist downloader. [Default: " SYSCONFDIR "/ipblacklistfilter/bld_userConfigurationFile.xml]", required_argument, "string") \
+  PARAM('D', "", "Switch to dynamic mode. Use blacklists specified in configuration file.", no_argument, "none") \
+  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
+  PARAM('A', "", "Specify active timeout in seconds. [Default: 300]", required_argument, "uint32") \
+  PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
+  PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32")
 
 
 // Global variable used for storing actual timestamps received from input UniRec records
@@ -842,7 +837,28 @@ int main (int argc, char** argv)
    create_v6_mask_map(v6_masks);
 
    // TRAP initialization
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   //TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
+   trap_ifc_spec_t ifc_spec;
+   int ret = trap_parse_params(&argc, argv, &ifc_spec);
+   if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) {
+         trap_print_help(module_info);
+         return 0;
+      }
+      trap_free_ifc_spec(ifc_spec);
+      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      return 1;
+   }
+   ret = trap_init(module_info, ifc_spec);
+   if (ret != TRAP_E_OK) {
+      trap_free_ifc_spec(ifc_spec);
+      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 1;
+   }
+   trap_free_ifc_spec(ifc_spec);
+
 
    // Turn off buffer on output interface
    //trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
@@ -895,6 +911,7 @@ int main (int argc, char** argv)
                    ur_free_template(templ);
                    ur_free_template(tmpl_det);
                    trap_finalize();
+                   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                    return EXIT_FAILURE;
       }
    }
@@ -905,12 +922,20 @@ int main (int argc, char** argv)
    downloader_config_struct_t *down_config = (downloader_config_struct_t *) malloc(sizeof(downloader_config_struct_t));
    if (down_config == NULL) {
       cerr << "Error: Could not allocate memory for configuration structure." << endl;
+      ur_free_template(templ);
+      ur_free_template(tmpl_det);
+      trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return EXIT_FAILURE;
    }
 
    // Load configuration
    if (loadConfiguration(patternFile, userFile, down_config)) {
       cerr << "Error: Could not parse XML configuration." << endl;
+      ur_free_template(templ);
+      ur_free_template(tmpl_det);
+      trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return EXIT_FAILURE;
    }
 
@@ -922,6 +947,7 @@ int main (int argc, char** argv)
       ur_free_template(templ);
       ur_free_template(tmpl_det);
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return EXIT_FAILURE;
    }
 
@@ -933,6 +959,7 @@ int main (int argc, char** argv)
          ur_free_template(tmpl_det);
          fht_destroy(AGGR_TABLE);
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return EXIT_FAILURE;
       }
    }
@@ -953,6 +980,7 @@ int main (int argc, char** argv)
       if (bl_mode == BL_DYNAMIC_MODE) {
          bld_finalize();
       }
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return EXIT_FAILURE;
    }
 
@@ -973,6 +1001,7 @@ int main (int argc, char** argv)
        ur_free_template(tmpl_det);
        fht_destroy(AGGR_TABLE);
        trap_finalize();
+       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
        return EXIT_SUCCESS;
     }
 
@@ -1070,7 +1099,6 @@ int main (int argc, char** argv)
 
       // Reconfigure module if needed
       if (RECONF_FLAG) {
-         // TODO
          // Terminate blacklist downloader thread if in dynamic mode
          if (bl_mode == BL_DYNAMIC_MODE) {
             // Need to unlock to avoid possible deadlock
@@ -1089,7 +1117,6 @@ int main (int argc, char** argv)
 
          // LOAD NEW CONFIGURATION FOR BOTH FILTER AND DOWNLOADER
          // Load configuration
-         // TODO specify file names (low)
          if (loadConfiguration(patternFile, userFile, down_config)) {
             cerr << "Error: Could not parse XML configuration." << endl;
             return EXIT_FAILURE;
@@ -1102,6 +1129,7 @@ int main (int argc, char** argv)
                ur_free_template(tmpl_det);
                fht_destroy(AGGR_TABLE);
                trap_finalize();
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                return EXIT_FAILURE;
             }
          }
@@ -1120,6 +1148,7 @@ int main (int argc, char** argv)
             if (bl_mode == BL_DYNAMIC_MODE) {
                bld_finalize();
             }
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return EXIT_FAILURE;
          }
          // Add update
@@ -1167,6 +1196,7 @@ int main (int argc, char** argv)
    fht_destroy(AGGR_TABLE);
 
    TRAP_DEFAULT_FINALIZATION();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return EXIT_SUCCESS;
 }
