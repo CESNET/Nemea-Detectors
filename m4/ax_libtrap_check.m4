@@ -10,6 +10,9 @@ dnl @version 2015-08-02
 dnl @license BSD
 
 AC_DEFUN([AX_LIBTRAP_CHECK], [
+  AC_CHECK_HEADERS([getopt.h])
+  AC_CHECK_FUNCS([getopt_long])
+
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
   echo "do pkgconfig"
