@@ -154,7 +154,6 @@ enum BLDOWNLOADER_UPDATE_MODE {
 typedef struct {
    uint64_t sites;
    char *file;
-   char *comment_ar;
    char **reg_pattern;
    int delay;
    int update_mode;
@@ -201,7 +200,6 @@ typedef struct {
 typedef struct {
    bl_down_cmd_t cmd;
    int delay;
-   char *comment_ar;
    regex_t *preg;
    uint8_t *use_regex;
    int update_mode;

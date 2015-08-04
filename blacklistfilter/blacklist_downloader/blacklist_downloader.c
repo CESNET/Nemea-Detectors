@@ -344,12 +344,11 @@ char *filter_regex(char **str, int i)
  * \param fd      File descriptor of wget output.
  * \param line    Line buffer.
  * \param el_ar   Element buffer.
- * \param c       Comment character.
  * \param index   Index of first empty index in element buffer.
  * \param bl_flag Blacklist flag.
  * \return Count of legit IP addresses.
  */
-int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, char c, int index, int bl_flag, int regex_index)
+int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, int index, int bl_flag, int regex_index)
 {
    int i = index;
    char *trim_line;
@@ -415,7 +414,6 @@ void bl_down_destroy_config()
    free(CONFIG->buf.el_ar[0]);
    free(CONFIG->buf.el_ar[1]);
    free(CONFIG->buf.line);
-   free(CONFIG->comment_ar);
    free(CONFIG->buf.file);
    free(CONFIG->cmd.ar);
    free(CONFIG);
@@ -471,7 +469,7 @@ void *bl_down_process(void *not_used_data)
             fprintf(stderr, "Error: popen failed!\n");
          }
          el_count_ar[swap_flag] = bl_down_parse(fd, CONFIG->buf.line, CONFIG->buf.el_ar[swap_flag], CONFIG->buf.blf_ar[swap_flag],
-                                                CONFIG->comment_ar[i], el_count_ar[swap_flag], CONFIG->lut_id[i], i);
+                                                el_count_ar[swap_flag], CONFIG->lut_id[i], i);
          int ret = pclose(fd);
          ret = WEXITSTATUS(ret);
 
@@ -591,13 +589,6 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
       goto setup_malloc_fail_file;
    }
 
-   // Allocate memory for comment array
-   config->comment_ar = malloc(sizeof(char) * num);
-   if (config->comment_ar == NULL) {
-      fprintf(stderr, "Error: Could not allocate memory for comment array!\n");
-      goto setup_malloc_fail_comment;
-   }
-
    // Allocate memory for line buffer
    config->buf.line = malloc(sizeof(char) * args->line_max_length);
    if (config->buf.line == NULL) {
@@ -688,8 +679,6 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
                                free(dir_str);
                                break;
       }
-      // Copy comment
-      config->comment_ar[i] = args->comment_ar[i];
    }
 
    // Copy file name
@@ -739,8 +728,6 @@ setup_malloc_fail_elbufitem:
    free(config->buf.blf_ar[1]);
    free(config->buf.line);
 setup_malloc_fail_linebuf:
-   free(config->comment_ar);
-setup_malloc_fail_comment:
    free(config->buf.file);
 setup_malloc_fail_file:
    free(config->cmd.ar);
