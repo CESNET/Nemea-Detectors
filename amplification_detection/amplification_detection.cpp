@@ -448,7 +448,7 @@ int main (int argc, char** argv)
 
    // parse parameters
    char opt;
-   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'd':
             log_path = optarg;
