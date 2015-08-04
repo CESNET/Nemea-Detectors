@@ -143,9 +143,11 @@ AC_CONFIG_FILES([Makefile
                  astute/Makefile
                  attack_gen/Makefile
                  basic2collector/Makefile
+                 blacklistfilter/Makefile
+                 blacklistfilter/ipdetect/Makefile
                  brute_force_detector/Makefile
                  brute_force_hist_detector/Makefile
-		 configurator_examples/Makefile
+                 configurator_examples/Makefile
                  configurator_examples/simple_types/Makefile
                  configurator_examples/structures/Makefile
                  configurator_examples/arrays/Makefile
