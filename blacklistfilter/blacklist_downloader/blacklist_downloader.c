@@ -868,7 +868,7 @@ uint64_t bld_translate_names_to_cumulative_id(char *names, int length)
  *
  *
  */
-uint8_t bld_load_xml_configs(const char *patternFile, const char *userFile)
+uint8_t bld_load_xml_configs(const char *patternFile, const char *userFile, int patternType)
 {
    // Check if config was already loaded
    if (BLD_CONFLOAD_FLAG) {
@@ -876,7 +876,7 @@ uint8_t bld_load_xml_configs(const char *patternFile, const char *userFile)
    }
 
    // Load sources from XML file to global structure
-   if (loadConfiguration((char*)patternFile, (char*)userFile, &BLD_RECORDS)) {
+   if (loadConfiguration((char*)patternFile, (char*)userFile, &BLD_RECORDS, patternType)) {
       return 0;
    }
 

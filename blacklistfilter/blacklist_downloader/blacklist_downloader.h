@@ -264,7 +264,7 @@ typedef struct __attribute__ ((__packed__)) {
 } blacklist_sources_t;
 
 
-uint8_t bld_load_xml_configs(const char *patterFile, const char *userFile);
+uint8_t bld_load_xml_configs(const char *patterFile, const char *userFile, int patternType);
 uint64_t bld_translate_names_to_cumulative_id(char *names, int length);
 uint8_t bl_translate_to_id(char *str, uint64_t *sites);
 int bl_down_init(bl_down_args_t *args);
