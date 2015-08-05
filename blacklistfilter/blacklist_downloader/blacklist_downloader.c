@@ -53,7 +53,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include "blacklist_downloader.h"
-
+#include <nemea-common.h>
 
 
 //#define DEBUG
@@ -63,10 +63,11 @@ static int STOP = 0;
 static char COMMAND_INIT[]    = "wget -q -O - ";
 static int  COMMAND_INIT_SIZE = sizeof(COMMAND_INIT);
 
+static int BLD_CONFLOAD_FLAG = 0;
 
 static pid_t P_ID;
 static bl_down_config_t *CONFIG;
-
+static blacklist_sources_t BLD_RECORDS;
 
 
 /**
@@ -94,14 +95,30 @@ uint8_t fill_lookup(bl_down_config_t *config, uint64_t in)
  * \param sites     Bitfield of used blacklists.
  * \param source_ar Array to fill with sources.
  * \param stype_ar  Array to fill with sources type.
+ * \param regex_ar  Array to fill with regular expressions.
  */
-void get_sources_info(uint64_t sites, char **source_ar, int *stype_ar)
+void get_sources_info(uint64_t sites, char **source_ar, int *stype_ar, char **regex_ar)
 {
    int index = 0;
-   for (int i = 0; i < BL_BLACKLIST_ELEM_COUNT; i++) {
-      if ((1ULL << i) & sites) {
-         stype_ar[index] = BL_ELEM_AR[i]->source_type;
-         source_ar[index++] = BL_ELEM_AR[i]->source;
+   for (int i = 0; i < configuratorGetArrElemCount(BLD_RECORDS.arr); i++) {
+      if ((1ULL << BLD_RECORDS.arr[i].id) & sites) {
+         // Set obtain method
+         if (strcmp(BLD_RECORDS.arr[i].method, "web") == 0) {
+            stype_ar[index] = BL_STYPE_WEB;
+         } else if (strcmp(BLD_RECORDS.arr[i].method, "warden") == 0) {
+            stype_ar[index] = BL_STYPE_WARDEN;
+         } else {
+            fprintf(stderr, "Warning: Undefined method '%s', skipping record\n", BLD_RECORDS.arr[i].method);
+            continue;
+         }
+
+
+         // Set source regex
+         regex_ar[index] = BLD_RECORDS.arr[i].regex;
+
+         // Set source location
+         source_ar[index++] = BLD_RECORDS.arr[i].source;
+
       }
    }
 }
@@ -326,24 +343,31 @@ char *filter_regex(char **str, int i)
  *        filter comments.
  * \param fd      File descriptor of wget output.
  * \param line    Line buffer.
- * \param el_ar   Element buffer. 
- * \param c       Comment character.
+ * \param el_ar   Element buffer.
  * \param index   Index of first empty index in element buffer.
  * \param bl_flag Blacklist flag.
  * \return Count of legit IP addresses.
  */
-int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, char c, int index, int bl_flag, int regex_index)
+int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, int index, int bl_flag, int regex_index)
 {
    int i = index;
    char *trim_line;
    int uniq_index;
-   while (fgets(line, CONFIG->buf.line_max_length, fd) != NULL) {   
-      trim_line = trim_whitespace(line);
-      filter_comments(&trim_line, c);
 
-      if (CONFIG->use_regex[regex_index]) {
-         trim_line = filter_regex(&trim_line, regex_index);
-      }
+#ifdef DEBUG
+   char f_debug_name[256];
+   sprintf(f_debug_name, "%d_debug", bl_flag);
+   FILE *f_down = fopen(f_debug_name, "w");
+#endif
+
+   while (fgets(line, CONFIG->buf.line_max_length, fd) != NULL) {
+#ifdef DEBUG
+   fprintf(f_down, "%s", line);
+#endif
+
+      trim_line = trim_whitespace(line);
+
+      trim_line = filter_regex(&trim_line, regex_index);
 
       if (strlen(trim_line) > 0) {
          trim_line[CONFIG->buf.el_max_length] = 0; // Cut line to max element length
@@ -358,6 +382,10 @@ int bl_down_parse(FILE *fd, char *line, char **el_ar, uint32_t *blf_ar, char c, 
          }
       }
    }
+
+#ifdef DEBUG
+   fclose(f_down);
+#endif
 
    return i;
 }
@@ -386,10 +414,9 @@ void bl_down_destroy_config()
    free(CONFIG->buf.el_ar[0]);
    free(CONFIG->buf.el_ar[1]);
    free(CONFIG->buf.line);
-   free(CONFIG->comment_ar);
    free(CONFIG->buf.file);
    free(CONFIG->cmd.ar);
-   free(CONFIG);  
+   free(CONFIG);
 }
 
 
@@ -442,7 +469,7 @@ void *bl_down_process(void *not_used_data)
             fprintf(stderr, "Error: popen failed!\n");
          }
          el_count_ar[swap_flag] = bl_down_parse(fd, CONFIG->buf.line, CONFIG->buf.el_ar[swap_flag], CONFIG->buf.blf_ar[swap_flag],
-                                                CONFIG->comment_ar[i], el_count_ar[swap_flag], CONFIG->lut_id[i], i);
+                                                el_count_ar[swap_flag], CONFIG->lut_id[i], i);
          int ret = pclose(fd);
          ret = WEXITSTATUS(ret);
 
@@ -473,7 +500,7 @@ void *bl_down_process(void *not_used_data)
 
             // Substract old update from new update to get removed elements
             update_diff(CONFIG->buf.el_ar[swap_flag], el_count_ar[swap_flag], CONFIG->buf.el_ar[!swap_flag], el_count_ar[!swap_flag], CONFIG->buf.blf_ar[swap_flag], fu);
-            
+
             fclose(fu);
          }
          swap_flag = !swap_flag;
@@ -484,21 +511,34 @@ void *bl_down_process(void *not_used_data)
 #endif
       // Critical section
       bld_lock_sync();
-      BLD_SYNC_FLAG = 0x1;
+      BLD_SYNC_FLAG |= 0x1;
       bld_unlock_sync();
      // End of critical section
 #ifdef DEBUG
-      printf("...UNLOCK -> signaling success\nBLD: Going to sleep...\n");
+      printf("...UNLOCK -> signaling flag set\nBLD: Checking terminating signal...");
       fflush(stdout);
 #endif
-      sleep(CONFIG->delay);
+      if (!(BLD_SYNC_FLAG & 0x10)) {
 #ifdef DEBUG
-      printf("BLD: Waking up from sleep.\n");
-      fflush(stdout);
+         printf("no signal received, going to sleep\n");
+         fflush(stdout);
 #endif
+         sleep(CONFIG->delay);
+#ifdef DEBUG
+         printf("BLD: Waking up from sleep.\n");
+         fflush(stdout);
+#endif
+
+      } else {
+#ifdef DEBUG
+         printf("terminating signal received, skipping sleep\n");
+         fflush(stdout);
+#endif
+         ;
+      }
    }
    // ***************************************************
-   
+
 #ifdef DEBUG
    printf("BLD: Cleaning up memory...\n");
 #endif
@@ -511,7 +551,6 @@ void *bl_down_process(void *not_used_data)
 }
 
 
-
 /**
  * \brief Allocate memory and setup config structure.
  * \param args Arguments passed in by module.
@@ -522,7 +561,8 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
    // Create array of blacklist sites
    char *source_ar[64];
    int stype_ar[64];
-   get_sources_info(args->sites, (char**)source_ar, (int *)stype_ar);
+   char *regex_ar[64];
+   get_sources_info(args->sites, (char**)source_ar, (int *)stype_ar, (char**)regex_ar);
 
    // Convert process id to string
    char pid_str[16] = {0};
@@ -537,13 +577,13 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
 
    // Fill lookup table for blacklist id
    uint8_t num = fill_lookup(config, args->sites);
-  
+
+   // Initialize warden scripts count
+   config->warden_scripts.count = 0;
+
    // Allocate memory for regex array
    config->preg = malloc(sizeof(regex_t) * num);
-   config->use_regex = malloc(sizeof(uint8_t) * num);
-   if (config->preg == NULL || config->use_regex == NULL) {
-      free(config->preg);
-      free(config->use_regex);
+   if (config->preg == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for regex array!\n");
       goto setup_malloc_fail_regex;
    }
@@ -562,20 +602,13 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
       goto setup_malloc_fail_file;
    }
 
-   // Allocate memory for comment array
-   config->comment_ar = malloc(sizeof(char) * num);
-   if (config->comment_ar == NULL) {
-      fprintf(stderr, "Error: Could not allocate memory for comment array!\n");
-      goto setup_malloc_fail_comment;
-   }
-
    // Allocate memory for line buffer
    config->buf.line = malloc(sizeof(char) * args->line_max_length);
    if (config->buf.line == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for line buffer!\n");
       goto setup_malloc_fail_linebuf;
    }
-  
+
    // Allocate memory for 2 blacklist element arrays
    config->buf.el_ar[0] = malloc(sizeof(char*) * args->el_max_count);
    config->buf.el_ar[1] = malloc(sizeof(char*) * args->el_max_count);
@@ -587,7 +620,7 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
       goto setup_malloc_fail_elbufitem;
    }
 
- 
+
    // Allocate memory for each element
    for (int i = 0; i < args->el_max_count; i++) {
       config->buf.el_ar[0][i] = malloc(sizeof(char) * (args->el_max_length + 1));
@@ -659,8 +692,6 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
                                free(dir_str);
                                break;
       }
-      // Copy comment
-      config->comment_ar[i] = args->comment_ar[i];
    }
 
    // Copy file name
@@ -669,15 +700,12 @@ bl_down_config_t *bl_down_setup_config(bl_down_args_t *args)
 
    // Compile regex
    for (int i = 0; i < num; i++) {
-      config->use_regex[i] = args->use_regex[i];
-      if (args->use_regex[i] && args->reg_pattern[i] != NULL) {
-         int res;
-         char reg_err_buf[100];
-         if ((res = regcomp(&config->preg[i], args->reg_pattern[i], REG_EXTENDED)) != 0) {
-            regerror(res, &config->preg[i], reg_err_buf, 99);
-            fprintf(stderr, "Error: %s\n", reg_err_buf);
-            goto setup_malloc_fail_cmdstr;
-         }
+      int res;
+      char reg_err_buf[100];
+      if ((res = regcomp(&config->preg[i], regex_ar[i], REG_EXTENDED)) != 0) {
+         regerror(res, &config->preg[i], reg_err_buf, 99);
+         fprintf(stderr, "Error: %s\n", reg_err_buf);
+         goto setup_malloc_fail_cmdstr;
       }
    }
 
@@ -713,8 +741,6 @@ setup_malloc_fail_elbufitem:
    free(config->buf.blf_ar[1]);
    free(config->buf.line);
 setup_malloc_fail_linebuf:
-   free(config->comment_ar);
-setup_malloc_fail_comment:
    free(config->buf.file);
 setup_malloc_fail_file:
    free(config->cmd.ar);
@@ -732,7 +758,7 @@ setup_malloc_fail_config:
  *        new process and array of command strings that will be executed
  *        by this new process. Content of each website will be stored in
  *        provided file on same index, i.e. content of website on index 0
- *        in `page` will be stored to file on index 0 in `file`. 
+ *        in `page` will be stored to file on index 0 in `file`.
  * \param page  Array of websites from which will created process download blacklists.
  * \param file  Array of files names to which will creted process stores downloaded blacklists.
  * \param num   Number of websites/files.
@@ -744,15 +770,25 @@ int bl_down_init(bl_down_args_t *args)
    P_ID = getpid();
    BLD_SYNC_FLAG = 0;
 
+   // Check if configuration was loaded
+   if (!BLD_CONFLOAD_FLAG) {
+      fprintf(stderr, "Warning: Configuration for BLD was not loaded.\n");
+      return -1;
+   }
+
    // Setup config structure
    if ((CONFIG = bl_down_setup_config(args)) == NULL) {
+      configuratorFreeUAMBS();
       return -1; // Error occured
    }
 
    // create a second thread
    if (pthread_create(&BL_THREAD, NULL, &bl_down_process, NULL)) {
+      configuratorFreeUAMBS();
       return -2; // Error occured
    }
+
+   configuratorFreeUAMBS();
 
    return 1;
 }
@@ -766,6 +802,8 @@ void bld_finalize()
    pthread_kill(BL_THREAD, SIGUSR1);
 
    pthread_join(BL_THREAD, NULL);
+
+   BLD_CONFLOAD_FLAG = 0;
 }
 
 /**
@@ -787,30 +825,62 @@ void bld_unlock_sync()
 
 
 
-uint8_t bl_translate_to_id(char *str, uint64_t *sites)
+/**
+ *
+ *
+ *
+ */
+uint64_t bld_translate_names_to_cumulative_id(char *names, int length)
 {
-   char *token, *state = NULL;
-   uint8_t match_found, ret = 0;
-   int i;
+   uint64_t cumulative_id = 0;
+   uint8_t found_flag;
 
-   *sites = 0;
-   for (token = strtok_r(str, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
-      match_found = 0;
-      for (i = 0; i < BL_BLACKLIST_ELEM_COUNT; i++) {
-         if (strcmp(token, BL_ELEM_AR[i]->id_name) == 0) {
-            match_found = 1;
-            break;
-         }
-      }
-
-      if (match_found) {
-         (*sites) |= BL_ELEM_AR[i]->id;
-         ret++;
-      } else {
-         fprintf(stderr, "Blacklist '%s' does not exists, ignoring it.\n", token);
-      }
+   // Check if config was loaded, if not return 0
+   if (!BLD_CONFLOAD_FLAG) {
+      return 0;
    }
 
-   return ret;
+   // Cycle through all names
+   for (int i = 0; i < configuratorGetArrElemCount(names); i++) {
+       // Find blacklist record with this name
+       found_flag = 0;
+
+       for (int j = 0; j < configuratorGetArrElemCount(BLD_RECORDS.arr); j++) {
+          if (strcmp(names + i*length, BLD_RECORDS.arr[j].name) == 0) {
+             // Found matching name, update cumulative id
+             cumulative_id |= 1ULL << BLD_RECORDS.arr[j].id;
+             found_flag = 1;
+             break;
+          }
+       }
+
+       // Show warning if blacklist name was not found
+       if (!found_flag) {
+          fprintf(stderr, "Warning: Blacklist with name '%s' was not found!\n", names + i*length);
+       }
+   }
+
+   return cumulative_id;
 }
 
+/**
+ *
+ *
+ *
+ */
+uint8_t bld_load_xml_configs(const char *patternFile, const char *userFile, int patternType)
+{
+   // Check if config was already loaded
+   if (BLD_CONFLOAD_FLAG) {
+      return 1;
+   }
+
+   // Load sources from XML file to global structure
+   if (loadConfiguration((char*)patternFile, (char*)userFile, &BLD_RECORDS, patternType)) {
+      return 0;
+   }
+
+   BLD_CONFLOAD_FLAG = 1;
+
+   return 1;
+}

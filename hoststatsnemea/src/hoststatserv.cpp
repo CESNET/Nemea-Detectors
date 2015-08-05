@@ -41,6 +41,9 @@
  * if advised of the possibility of such damage.
  *
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <string>
 #include <csignal>
@@ -51,6 +54,7 @@
 #include "processdata.h"
 #include "config.h"
 #include <unistd.h>
+#include <getopt.h>
 
 //TRAP
 extern "C" {
@@ -77,51 +81,25 @@ static bool send_eos = true;
 
 ///////////////////////////////////////////////////
 // Struct with information about Nemea module
-trap_module_info_t module_info = {
-   (char *) "HostStatsNemea module", // Module name
-   // Module description
-   (char *)
-      "This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)\n"
-      "\n"
-      "USAGE ./hoststatsnemea TRAP_INTERFACE [-c file] [-F]\n"
-      "\n"
-      "Parameters:\n"
-      "   -c file  Load configuration from file.\n"
-      "   -F       Run module in OFFLINE mode. It is used for analysis of already\n"
-      "            captured flows. As a source can be used module such as nfreader,\n"
-      "            trapreplay, etc.\n"
-      "   -n       Don't send end-of-stream message.\n"
-      "Note: Other parameters are taken from configuration file. If configuration file\n"
-      "      is not specified, hoststats.conf is used by default.\n"
-      "\n"
-      "Example of how to run this module:\n"
-      "   Edit the configuration file \"hoststats.conf\" and especially the line\n"
-      "   \"detection-log\" with the folder path to save the event log.\n"
-      "   (optional) Use FlowDirection or DedupAggregator output as an input for \n"
-      "              this module.\n"
-      "   Run module: ./hoststatsnemea -i \"tt;localhost,12345;12346,5\"\n"
-      "\n"
-      "TRAP Interfaces:\n"
-      "   Inputs: 1 \n"
-      "      (port-flowdir = 0: \"<COLLECTOR_FLOW>,DIRECTION_FLAGS\")\n"
-      "      (port-flowdir = 1: \"<COLLECTOR_FLOW>\")\n"
-      "      Note: port-flowdir is a parameter in \"hoststats.conf\"\n"
-      "             \n"
-      "   Outputs: 1 (\"EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,SRC_PORT,\n"
-      "                DST_PORT,PROTOCOL,EVENT_SCALE,NOTE\") \n",
-   1, // Number of input TRAP interfaces
-   1, // Number of output TRAP interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("HostStatsNemea module","This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)",1,1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('c', "config", "Load configuration from file.", required_argument, "string") \
+  PARAM('F', "offline", "Run module in OFFLINE mode. It is used for analysis of already captured flows. As a source can be used module such as nfreader, trapreplay, etc.", no_argument, "none") \
+  PARAM('n', "no_message", "Don't send end-of-stream message.", no_argument, "none")
 
 /** \brief Parse arguments
  * \param[in] argc Argument count
  * \param[in] argv Argument values
  */
-int arguments(int argc, char *argv[])
+int arguments(int argc, char *argv[], const char *module_getopt_string, const struct option *long_options)
 {
    char opt;
 
-   while ((opt = getopt(argc, argv, "c:Fn")) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'c':  // configuration file
          Configuration::setConfigPath(string(optarg));
@@ -200,20 +178,23 @@ bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
 int main(int argc, char *argv[])
 {
    /* Inicialization and processing of TRAP arguments */
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    /* Configure output interface */
    if (trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT)
       != TRAP_E_OK) {
       fprintf(stderr, "ERROR: trap_ifcctl() failed.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
    /* Parse command line arguments */
-   if (arguments(argc, argv) == 0) {
+   if (arguments(argc, argv, module_getopt_string, long_options) == 0) {
       fprintf(stderr, "ERROR: Unrecognized parameter(s). Use \"-h\" for help\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
@@ -223,6 +204,7 @@ int main(int argc, char *argv[])
       Configuration::freeConfiguration();
       fprintf(stderr, "ERROR: Failed to load configuration.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
@@ -426,5 +408,6 @@ exitA:
    Configuration::freeConfiguration();
    // Necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
 }

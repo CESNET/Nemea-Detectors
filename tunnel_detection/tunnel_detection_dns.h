@@ -84,6 +84,13 @@
 /* /} */
 
 /*!
+ * \name SDM output setting
+ *  Defines count of packets and timeout which will be set on output.
+ * \{ */
+#define SDM_COUNT_OF_PACKETS 1000 /*< Count of packet which will be recorded by SDM */
+#define SDM_TIMEOUT 300 /*< Timeout, after that the rule will be discard from SDM */
+ /* /} */
+/*!
  * \name Default values
  *  Defines macros used by DNS tunel detection
  * \{ */
@@ -151,7 +158,7 @@ void signal_handler(int signal);
  * \param[in] key key from b_plus_tree
  * \return ip_addr_t structure
  */
-inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t * item, void * key);
+static inline ip_addr_t get_ip_addr_t_from_ip_struct(ip_address_t *item, void *key);
 
 /*!
  * \brief Turns IP address from b_plus_tree to string

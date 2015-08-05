@@ -136,156 +136,6 @@ enum bl_down_blacklist_list {
   BL_BLACKLIST_ELEM_COUNT    // Used as a count of blacklist elements, DO NOT remove, ADD new elements above it.
 };
 
-/**
- * Blacklist elements specification.
- */
-static bl_down_blacklist_elem_t BL_ELEM_MALWARE_DOMAINS = {
-   1ULL << BL_MALWARE_DOMAINS,
-   (char *) "MALWARE_DOMAINS",
-   (char *) "http://mirror2.malwaredomains.com/files/justdomains",
-   BL_STYPE_WEB,
-   BL_TYPE_MALWARE };
-static bl_down_blacklist_elem_t BL_ELEM_ZEUS_TRACKER    = {
-   1ULL << BL_ZEUS_TRACKER,
-   (char *) "ZEUS_TRACKER",
-   (char *) "https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist",
-   BL_STYPE_WEB,
-   BL_TYPE_CC_SERVER };
-static bl_down_blacklist_elem_t BL_ELEM_SPYEYE_TRACKER  = {
-   1ULL << BL_SPYEYE_TRACKER,
-   (char *) "SPYEYE_TRACKER",
-   (char *) "https://spyeyetracker.abuse.ch/blocklist.php?download=ipblocklist",
-   BL_STYPE_WEB,
-   BL_TYPE_CC_SERVER };
-static bl_down_blacklist_elem_t BL_ELEM_PALEVO_TRACKER  = {
-   1ULL << BL_PALEVO_TRACKER,
-   (char *) "PALEVO_TRACKER",
-   (char *) "https://palevotracker.abuse.ch/blocklists.php?download=ipblocklist",
-   BL_STYPE_WEB,
-   BL_TYPE_MALWARE };
-static bl_down_blacklist_elem_t BL_ELEM_FEODO_TRACKER   = {
-   1ULL << BL_FEODO_TRACKER,
-   (char *) "FEODO_TRACKER",
-   (char *) "https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist",
-   BL_STYPE_WEB,
-   BL_TYPE_MALWARE };
-static bl_down_blacklist_elem_t BL_ELEM_SPAMHAUS        = {
-   1ULL << BL_SPAMHAUS,
-   (char *) "SPAMHAUS",
-   (char *) "http://www.spamhaus.org/drop/drop.txt",
-   BL_STYPE_WEB,
-   BL_TYPE_SPAM };
-static bl_down_blacklist_elem_t BL_ELEM_PHISHTANK       = {
-   1ULL << BL_PHISHTANK,
-   (char *) "PHISHTANK",
-   (char *) "http://data.phishtank.com/data/online-valid.csv",
-   BL_STYPE_WEB,
-   BL_TYPE_PHISH };
-static bl_down_blacklist_elem_t BL_ELEM_TOR             = {
-   1ULL << BL_TOR,
-   (char *) "TOR",
-   (char *) "http://torstatus.blutmagie.de/ip_list_exit.php",
-   BL_STYPE_WEB,
-   BL_TYPE_TOR };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_DARKSPACE = {
-   1ULL << BL_WARDEN_DARKSPACE,
-   (char *) "WARDEN_DARKSPACE",
-   (char *) "darkspace",
-   BL_STYPE_WARDEN,
-   BL_TYPE_DARKSPACE };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_PORTSCAN = {
-   1ULL << BL_WARDEN_PORTSCAN,
-   (char *) "WARDEN_PORTSCAN",
-   (char *) "portscan",
-   BL_STYPE_WARDEN,
-   BL_TYPE_PORTSCAN };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_BRUTEFORCE = {
-   1ULL << BL_WARDEN_BRUTEFORCE,
-   (char *) "WARDEN_BRUTEFORCE",
-   (char *) "bruteforce",
-   BL_STYPE_WARDEN,
-   BL_TYPE_BRUTEFORCE };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_PROBE = {
-   1ULL << BL_WARDEN_PROBE,
-   (char *) "WARDEN_PROBE",
-   (char *) "probe",
-   BL_STYPE_WARDEN,
-   BL_TYPE_PROBE };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_SPAM = {
-   1ULL << BL_WARDEN_SPAM,
-   (char *) "WARDEN_SPAM",
-   (char *) "spam",
-   BL_STYPE_WARDEN,
-   BL_TYPE_SPAM };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_PHISH = {
-   1ULL << BL_WARDEN_PHISH,
-   (char *) "WARDEN_PHISH",
-   (char *) "phishing",
-   BL_STYPE_WARDEN,
-   BL_TYPE_PHISH };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_BOTNET = {
-   1ULL << BL_WARDEN_BOTNET,
-   (char *) "WARDEN_BOTNET",
-   (char *) "botnet_c_c",
-   BL_STYPE_WARDEN,
-   BL_TYPE_CC_SERVER };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_DOS = {
-   1ULL << BL_WARDEN_DOS,
-   (char *) "WARDEN_DOS",
-   (char *) "dos",
-   BL_STYPE_WARDEN,
-   BL_TYPE_DOS };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_MALWARE = {
-   1ULL << BL_WARDEN_MALWARE,
-   (char *) "WARDEN_MALWARE",
-   (char *) "malware",
-   BL_STYPE_WARDEN,
-   BL_TYPE_MALWARE };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_COPYRIGHT = {
-   1ULL << BL_WARDEN_COPYRIGHT,
-   (char *) "WARDEN_COPYRIGHT",
-   (char *) "copyright",
-   BL_STYPE_WARDEN,
-   BL_TYPE_COPYRIGHT };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_WEBATTACK = {
-   1ULL << BL_WARDEN_WEBATTACK,
-   (char *) "WARDEN_WEBATTACK",
-   (char *) "webattack",
-   BL_STYPE_WARDEN,
-   BL_TYPE_WEBATTACK };
-static bl_down_blacklist_elem_t BL_ELEM_WARDEN_OTHER = {
-   1ULL << BL_WARDEN_OTHER,
-   (char *) "WARDEN_OTHER",
-   (char *) "other",
-   BL_STYPE_WARDEN,
-   BL_TYPE_OTHER };
-
-
-/**
- * Blacklist elements array. (For easy manipulation)
- */
-static bl_down_blacklist_elem_t *BL_ELEM_AR[] = {
-   &BL_ELEM_MALWARE_DOMAINS,
-   &BL_ELEM_ZEUS_TRACKER,
-   &BL_ELEM_SPYEYE_TRACKER,
-   &BL_ELEM_PALEVO_TRACKER,
-   &BL_ELEM_FEODO_TRACKER,
-   &BL_ELEM_SPAMHAUS,
-   &BL_ELEM_PHISHTANK,
-   &BL_ELEM_TOR,
-   &BL_ELEM_WARDEN_DARKSPACE,
-   &BL_ELEM_WARDEN_PORTSCAN,
-   &BL_ELEM_WARDEN_BRUTEFORCE,
-   &BL_ELEM_WARDEN_PROBE,
-   &BL_ELEM_WARDEN_SPAM,
-   &BL_ELEM_WARDEN_PHISH,
-   &BL_ELEM_WARDEN_BOTNET,
-   &BL_ELEM_WARDEN_DOS,
-   &BL_ELEM_WARDEN_MALWARE,
-   &BL_ELEM_WARDEN_COPYRIGHT,
-   &BL_ELEM_WARDEN_WEBATTACK,
-   &BL_ELEM_WARDEN_OTHER,
-};
 
 
 /**
@@ -304,9 +154,7 @@ enum BLDOWNLOADER_UPDATE_MODE {
 typedef struct {
    uint64_t sites;
    char *file;
-   char *comment_ar;
    char **reg_pattern;
-   int num;
    int delay;
    int update_mode;
    uint8_t *use_regex;
@@ -352,7 +200,6 @@ typedef struct {
 typedef struct {
    bl_down_cmd_t cmd;
    int delay;
-   char *comment_ar;
    regex_t *preg;
    uint8_t *use_regex;
    int update_mode;
@@ -396,11 +243,35 @@ static const uint64_t BL_WARDEN_SOURCES = 1LLU << BL_WARDEN_DARKSPACE  |
                                    1LLU << BL_WARDEN_OTHER;
 
 
+/**
+ * Structure containing information about blacklist source.
+ */
+typedef struct __attribute__ ((__packed__)) {
+   uint64_t id;
+   char method[16];
+   char name[64];
+   char source[256];
+   char type[32];
+   char regex[128];
+} blacklist_source_t;
+
+
+/**
+ * Struct containing array of blacklist sources.
+ */
+typedef struct __attribute__ ((__packed__)) {
+   blacklist_source_t *arr;
+} blacklist_sources_t;
+
+
+uint8_t bld_load_xml_configs(const char *patterFile, const char *userFile, int patternType);
+uint64_t bld_translate_names_to_cumulative_id(char *names, int length);
 uint8_t bl_translate_to_id(char *str, uint64_t *sites);
 int bl_down_init(bl_down_args_t *args);
 void bld_finalize();
 void bld_lock_sync();
 void bld_unlock_sync();
+
 
 #ifdef __cplusplus
 }

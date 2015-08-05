@@ -29,7 +29,7 @@ if test "$LIBGEOIP" == "yes" && test "$GEOIP_H" == "yes"; then
 	CFLAGS+=" -D ENABLE_GEOIP"
 	LIBS+=" -lGeoIP"
 else
-	AC_MSG_WARN([For detection of calling to different country need GeoIP!])
+	AC_MSG_ERROR([For detection of calling to different country need GeoIP!])
 fi
 
 # Checks for library nemea-common.
