@@ -65,7 +65,7 @@
 #include <unirec/unirec.h>
 #include <libtrap/trap.h>
 #include "ipblacklistfilter.h"
-
+#include "patternstrings.h"
 
 
 using namespace std;
@@ -750,12 +750,12 @@ void setup_downloader(bl_down_args_t *args, downloader_config_struct_t *down_con
 
 
 
-bool initialize_downloader(const char *patternFile, const char *userFile, downloader_config_struct_t *down_config)
+bool initialize_downloader(const char *patternFile, const char *userFile, downloader_config_struct_t *down_config, int patternType)
 {
    bl_down_args_t bl_args;
 
    // Load configuration for BLD
-   if (!bld_load_xml_configs(patternFile, userFile)) {
+   if (!bld_load_xml_configs(patternFile, userFile, patternType)) {
       cerr << "Error: Could not load XML configuration for blacklist downloader." << endl;
       return false;
    }
@@ -930,7 +930,7 @@ int main (int argc, char** argv)
    }
 
    // Load configuration
-   if (loadConfiguration(patternFile, userFile, down_config)) {
+   if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
       cerr << "Error: Could not parse XML configuration." << endl;
       ur_free_template(templ);
       ur_free_template(tmpl_det);
@@ -954,7 +954,7 @@ int main (int argc, char** argv)
    // ***** Initialize Blacklist Downloader *****
    if (bl_mode == BL_DYNAMIC_MODE) {
       // Load configuration for BLD
-      if (!initialize_downloader(bld_patternFile, bld_userFile, down_config)) {
+      if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
          ur_free_template(templ);
          ur_free_template(tmpl_det);
          fht_destroy(AGGR_TABLE);
@@ -1117,14 +1117,14 @@ int main (int argc, char** argv)
 
          // LOAD NEW CONFIGURATION FOR BOTH FILTER AND DOWNLOADER
          // Load configuration
-         if (loadConfiguration(patternFile, userFile, down_config)) {
+         if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
             cerr << "Error: Could not parse XML configuration." << endl;
             return EXIT_FAILURE;
          }
 
          // START DOWNLOADER AGAIN
          if (bl_mode == BL_DYNAMIC_MODE) {
-            if (!initialize_downloader(bld_patternFile, bld_userFile, down_config)) {
+            if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
                ur_free_template(templ);
                ur_free_template(tmpl_det);
                fht_destroy(AGGR_TABLE);
