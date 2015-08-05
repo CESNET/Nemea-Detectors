@@ -511,18 +511,31 @@ void *bl_down_process(void *not_used_data)
 #endif
       // Critical section
       bld_lock_sync();
-      BLD_SYNC_FLAG = 0x1;
+      BLD_SYNC_FLAG |= 0x1;
       bld_unlock_sync();
      // End of critical section
 #ifdef DEBUG
-      printf("...UNLOCK -> signaling success\nBLD: Going to sleep...\n");
+      printf("...UNLOCK -> signaling flag set\nBLD: Checking terminating signal...");
       fflush(stdout);
 #endif
-      sleep(CONFIG->delay);
+      if (!(BLD_SYNC_FLAG & 0x10)) {
 #ifdef DEBUG
-      printf("BLD: Waking up from sleep.\n");
-      fflush(stdout);
+         printf("no signal received, going to sleep\n");
+         fflush(stdout);
 #endif
+         sleep(CONFIG->delay);
+#ifdef DEBUG
+         printf("BLD: Waking up from sleep.\n");
+         fflush(stdout);
+#endif
+
+      } else {
+#ifdef DEBUG
+         printf("terminating signal received, skipping sleep\n");
+         fflush(stdout);
+#endif
+         ;
+      }
    }
    // ***************************************************
 
