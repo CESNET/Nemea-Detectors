@@ -86,9 +86,7 @@ trap_module_info_t *module_info = NULL;
     "blacklist downloader (bld_userConfigurationFile.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('c', "", "Specify pattern configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/ipblacklistfilter/patternFile.xml]", required_argument, "string") \
   PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/ipblacklistfilter/userConfigurationFile.xml]", required_argument, "string") \
-  PARAM('C', "", "Specify pattern configuration file for blacklist downloader. [Default: " SYSCONFDIR "/ipblacklistfilter/bld_patternFile.xml]", required_argument, "string") \
   PARAM('U', "", "Specify user configuration file for blacklist downloader. [Default: " SYSCONFDIR "/ipblacklistfilter/bld_userConfigurationFile.xml]", required_argument, "string") \
   PARAM('D', "", "Switch to dynamic mode. Use blacklists specified in configuration file.", no_argument, "none") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
@@ -798,10 +796,8 @@ int main (int argc, char** argv)
    int8_t *fht_lock = NULL;
 
    // Set defaukt files names
-   char *patternFile = (char*) "patternFile.xml";
-   char *userFile = (char*) "userConfigFile.xml";
-   char *bld_patternFile = (char*) "bld_patternFile.xml";
-   char *bld_userFile = (char*) "bld_userConfigFile.xml";
+   char *userFile = (char*) SYSCONFDIR "/userConfigFile.xml";
+   char *bld_userFile = (char*) SYSCONFDIR "/bld_userConfigFile.xml";
 
 
    // UniRec templates for recieving data and reporting blacklisted IPs
@@ -874,16 +870,10 @@ int main (int argc, char** argv)
    int bl_mode = BL_STATIC_MODE; // default mode
 
    // ********** Parse arguments **********
-   while ((opt = getopt(argc, argv, "nDA:I:s:c:u:C:U:")) != -1) {
+   while ((opt = getopt(argc, argv, "nDA:I:s:u:U:")) != -1) {
       switch (opt) {
-         case 'c': // pattern configuration file for IPBlacklistFilter
-                   patternFile = optarg;
-                   break;
          case 'u': // user configuration file for IPBlacklistFilter
                    userFile = optarg;
-                   break;
-         case 'C': // pattern configuration file for blacklist downloader
-                   bld_patternFile = optarg;
                    break;
          case 'U': // user configuration file for blacklist downlooader
                    bld_userFile = optarg;
