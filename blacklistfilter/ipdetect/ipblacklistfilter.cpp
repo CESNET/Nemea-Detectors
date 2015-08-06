@@ -796,8 +796,8 @@ int main (int argc, char** argv)
    int8_t *fht_lock = NULL;
 
    // Set defaukt files names
-   char *userFile = (char*) SYSCONFDIR "/userConfigFile.xml";
-   char *bld_userFile = (char*) SYSCONFDIR "/bld_userConfigFile.xml";
+   char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
+   char *bld_userFile = (char*) SYSCONFDIR "/ipblacklistfilter/bld_userConfigFile.xml";
 
 
    // UniRec templates for recieving data and reporting blacklisted IPs
