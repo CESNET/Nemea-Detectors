@@ -9,3 +9,5 @@ ipblacklistfilter_CFLAGS=-g -std=gnu99
 ipblacklistfilter_CXXFLAGS=-std=c++98 -g
 pkgdocdir=${docdir}/ipblacklistfilter
 pkgdoc_DATA=README
+ipblacklistfiltersysconfdir=${sysconfdir}/ipblacklistfilter
+dist_ipblacklistfiltersysconf_DATA=userConfigFile.xml bld_userConfigFile.xml
