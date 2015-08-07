@@ -60,7 +60,10 @@
 #include <unistd.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <nemea-common.h>
 #include <unirec/unirec.h>
 #include <libtrap/trap.h>
