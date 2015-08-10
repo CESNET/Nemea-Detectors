@@ -78,45 +78,32 @@ UR_FIELDS (
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t module_info = {
-   "DNS-tunnel-detection module", // Module name
-   // Module description
-   "Modul that detects DNS tunnels on the network.\n"
-   "Parameters:\n"
-   "   -p N        Show progess - print a dot every N flows.\n"
-   "   -a          File with whitelist of domain which will not be analysed\n"
-   "   -b          File with whitelist of IPs which will not be analysed\n"
-   "   -c          Read packet from file - MEASURE_PARAMETERS mode\n"
-   "   -s          Folder with results and other information about detection\n"
-   "               (on the end of module). Specify folder for data saving.\n"
-   "   -d          File with results of detection anomaly (during modul runtime).\n"
-   "   -f          Read packets from file\n"
-   "   -g          Set Max and Min EX and VAR for suspision in requests,\n"
-   "               [MIN EX, MAX EX, MIN VAR, MAX VAR]\n"
-   "   -r          Set Max and Min EX and VAR for suspision in responses,\n"
-   "               [MIN EX, MAX EX, MIN VAR, MAX VAR]\n"
-   "   -j          Set Max count of used letters not to be in suspision mode\n"
-   "               [MAX number for Request, MAX number for response]\n"
-   "   -k          Max and Min percent of subdomain [MAX, MIN]\n"
-   "   -l          Max count and percent of numbers in domain not to be in\n"
-   "               suspicion mode [MAX count, MAX percent]\n"
-   "   -m          Max percent of mallformed packet to be in traffic anoly [MAX]\n"
-   "   -n          MIN count of suspected requests to be traffic anomaly\n"
-   "               or tunnel [MIN for traffic anomaly, MIN for tunnel]\n"
-   "   -o          MIN count of suspected responses to be traffic anomaly or\n"
-   "               tunnel [MIN for traffic anomaly, MIN for tunnel]\n"
-   "   -q          Max and Min percent of searching just ones [MAX, MIN]\n"
-   "   -t          MAX round in SUSPICTION MODE and ATTACK MODE [SUSPICTION, ATTACK]\n"
-   "   -w          MIN length of string to be tunnel [MIN]\n"
-   "   -z          Length of collecting packets berore analysis in sec [time in sec]\n"
+trap_module_info_t *module_info = NULL;
 
-   "Interfaces:\n"
-   "   Inputs: 1 (flow records)\n"
-   "   Outputs: 2. First for Warden, Second for SDM.\n",
-   1, // Number of input interfaces
-   2, // Number of output interfaces
-};
-/* ************************************************************************* */
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("DNS-tunnel-detection module","Module that detects DNS tunnels on the network.",1,2)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
+  PARAM('a', "whitelist_domain", "File with whitelist of domain which will not be analyzed.", required_argument, "string") \
+  PARAM('b', "whitelist_ip", "File with whitelist of IPs which will not be analyzed.", required_argument, "string") \
+  PARAM('c', "measure_param_file", "Read packet from file - MEASURE_PARAMETERS mode", required_argument, "string") \
+  PARAM('s', "save_folder", "Folder with results and other information about detection (on the end of module). Specify folder for data saving.", required_argument, "string") \
+  PARAM('S', "SDM_setting", "SDM setting. Set count of packet which will be recorded by SDM and timeout, after that the rule will be discard from SDM [COUNT of packets, TIMEOUT].", required_argument, "string") \
+  PARAM('d', "anomaly_file", "File with results of detection anomaly (during module runtime).", required_argument, "string") \
+  PARAM('f', "packet_file", "Read packets from file", required_argument, "string") \
+  PARAM('g', "suspicion_request", "Set Max and Min EX and VAR for suspicion in requests, [MIN EX, MAX EX, MIN VAR, MAX VAR].", required_argument, "string") \
+  PARAM('r', "suspicion_response", "Set Max and Min EX and VAR for suspicion in responses, [MIN EX, MAX EX, MIN VAR, MAX VAR].", required_argument, "string") \
+  PARAM('j', "suspicion_max_letters", "Set Max count of used letters not to be in suspicion mode, [MAX number for Request, MAX number for response].", required_argument, "string") \
+  PARAM('k', "subdomain_percent", "Max and Min percent of subdomain, [MAX, MIN].", required_argument, "string") \
+  PARAM('l', "suspicion_max_numbers", "Max count and percent of numbers in domain not to be in suspicion mode, [MAX count, MAX percent].", required_argument, "string") \
+  PARAM('m', "max_malformed", "Max percent of malformed packet to be in traffic anomaly [MAX].", required_argument, "float") \
+  PARAM('n', "min_suspected_requests", "MIN count of suspected requests to be traffic anomaly or tunnel [MIN for traffic anomaly, MIN for tunnel].", required_argument, "string") \
+  PARAM('o', "min_suspected_responses", "MIN count of suspected responses to be traffic anomaly or tunnel [MIN for traffic anomaly, MIN for tunnel].", required_argument, "string") \
+  PARAM('q', "searching", "Max and Min percent of searching just ones [MAX, MIN].", required_argument, "string") \
+  PARAM('t', "max_round", "MAX round in SUSPICION MODE and ATTACK MODE [SUSPICION, ATTACK]", required_argument, "string") \
+  PARAM('w', "tunnel_length", "MIN length of string to be tunnel [MIN].", required_argument, "int32") \
+  PARAM('z', "collect_length", "Length of collecting packets before analysis in sec [time in sec]", required_argument, "int32")
 
 static int stop = 0;
 static int stats = 0;
@@ -1103,10 +1090,9 @@ void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
    char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
    sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_TIMEOUT, 600);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, 100);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_TIMEOUT, values.sdm_timeout);
+   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, values.sdm_count_of_packets);
    ur_set_string(notification->unirec_out_sdm, notification->detection_sdm, F_SDM_CAPTURE_FILE_ID, sdm_capture_id);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, 100);
    trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
 }
 
@@ -1867,7 +1853,7 @@ unsigned int read_event_id_from_file(char * file_name)
    fp = fopen(file_name,"r"); // read mode
    unsigned int id=0;
 
-   if ( fp == NULL )
+   if (fp == NULL)
    {
       fprintf(stderr, "Error while opening the file with last event ID.\nThe file will be created, last event_id = 0.\n");
       return 0;
@@ -1886,7 +1872,7 @@ int write_event_id_to_file(char * file_name, unsigned int event_id)
    FILE *fp;
    fp = fopen(file_name,"w"); // read mode
 
-   if ( fp == NULL )
+   if (fp == NULL)
    {
       fprintf(stderr, "Error while creating the file with last event ID.\n Last ID: %u, will not be saved", event_id);
       return 0;
@@ -1932,6 +1918,8 @@ void load_default_values()
    values.request_max_count_of_used_letters_closer = REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER;
    values.max_percent_of_domain_searching_just_once_closer = MAX_PERCENT_OF_DOMAIN_SEARCHING_JUST_ONCE_CLOSER;
    values.max_percent_of_unique_domains_closer = MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER;
+   values.sdm_timeout = SDM_TIMEOUT;
+   values.sdm_count_of_packets = SDM_COUNT_OF_PACKETS;
 }
 
 int main(int argc, char **argv)
@@ -1958,6 +1946,7 @@ int main(int argc, char **argv)
    //load default values from defined constants
    load_default_values();
    // ***** TRAP initialization *****
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    //signal(SIGTERM, signal_handler);
@@ -1973,9 +1962,8 @@ int main(int argc, char **argv)
    ur_notification.unirec_out = NULL;
    ur_notification.detection = NULL;
 
-   while ((opt = getopt(argc, argv, "a:b:c:p:s:f:d:g:j:k:l:m:n:o:q:r:z:i:")) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-            break;
          case 'p':
             progress = atoi(optarg);
             break;
@@ -1984,6 +1972,12 @@ int main(int argc, char **argv)
             write_summary = 1;
             //if the folder does not exist it will create
             mkdir(optarg,  S_IRWXU|S_IRGRP|S_IXGRP);
+            break;
+         case 'S':
+            if (sscanf(optarg, "%d,%d", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
+               fprintf(stderr, "Missing 'S' argument\n");
+               goto failed_trap;
+            }
             break;
          case 'd':
                result_file = fopen ( optarg, "a+" );
@@ -2105,6 +2099,7 @@ int main(int argc, char **argv)
       if (tmplt == NULL || ur_notification.unirec_out == NULL || ur_notification.unirec_out_sdm == NULL) {
          fprintf(stderr, "Error: Invalid UniRec specifier.\n");
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 4;
       }
       // prepare detection record
@@ -2113,6 +2108,7 @@ int main(int argc, char **argv)
          fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
          ur_free_template(tmplt);
          ur_free_template(ur_notification.unirec_out);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 4;
       }
       // prepare output record for SDM
@@ -2121,6 +2117,7 @@ int main(int argc, char **argv)
          fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
          ur_free_template(tmplt);
          ur_free_template(ur_notification.unirec_out);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 4;
       }
    }
@@ -2542,12 +2539,14 @@ int main(int argc, char **argv)
       if (input == NULL) {
          fprintf(stderr, "Error: Input file couldn`t be opened.\n");
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
       }
       tree_measure = prefix_tree_initialize(PREFIX, 0, '.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
       if (tree_measure == NULL) {
          fprintf(stderr, "Error: Prefix tree could not be created\n");
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
       }
       //loop till end of file
@@ -2749,5 +2748,6 @@ failed_trap:
 
       trap_finalize();
    }
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
 }

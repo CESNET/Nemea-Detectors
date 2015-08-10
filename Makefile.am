@@ -3,9 +3,11 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS=anonymizer \
 astute \
 attack_gen \
-blacklistfilter \
 basic2collector \
+blacklistfilter \
 brute_force_detector \
+brute_force_hist_detector \
+configurator_examples \
 deduplication \
 delaybuffer \
 amplification_detection \
@@ -36,7 +38,6 @@ report_handler \
 sampler \
 sdmcap_controller \
 simplebotnetdetector \
-sip_detector \
 test_threads \
 timestamp_checker \
 traffic_delayer \
@@ -50,6 +51,7 @@ slowthreatdetector \
 synflood/synfindiff \
 synflood/synrate \
 synflood/pcf \
+vermon \
 voip_fraud_detection \
 testunirec2 \
 warden_collector

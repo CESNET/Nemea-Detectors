@@ -41,6 +41,9 @@
  * if advised of the possibility of such damage.
  *
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <string>
 #include <csignal>
@@ -116,11 +119,11 @@ trap_module_info_t *module_info = NULL;
  * \param[in] argc Argument count
  * \param[in] argv Argument values
  */
-int arguments(int argc, char *argv[], const char *module_getopt_string)
+int arguments(int argc, char *argv[], const char *module_getopt_string, const struct option *long_options)
 {
    char opt;
 
-   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'c':  // configuration file
          Configuration::setConfigPath(string(optarg));
@@ -211,7 +214,7 @@ int main(int argc, char *argv[])
    }
 
    /* Parse command line arguments */
-   if (arguments(argc, argv, module_getopt_string) == 0) {
+   if (arguments(argc, argv, module_getopt_string, long_options) == 0) {
       fprintf(stderr, "ERROR: Unrecognized parameter(s). Use \"-h\" for help\n");
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
