@@ -15,7 +15,6 @@ AM_INIT_AUTOMAKE([-Wall silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
-m4_include([m4/unirec_fields.m4])
 # Must be checked before default -g -O2 is set:
 AC_ARG_ENABLE([debug],
         AC_HELP_STRING([--enable-debug],
@@ -163,7 +162,6 @@ AC_CONFIG_FILES([Makefile
                  fbreader/Makefile
                  flow_gen/Makefile
                  flow_meter/Makefile
-                 flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
                  flow_statistic/Makefile
