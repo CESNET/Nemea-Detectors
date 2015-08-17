@@ -53,7 +53,6 @@ synflood/synrate \
 synflood/pcf \
 vermon \
 voip_fraud_detection \
-testunirec2 \
 warden_collector
 
 
