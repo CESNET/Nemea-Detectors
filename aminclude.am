@@ -1,6 +1,6 @@
 BUILT_SOURCES = fields.h fields.c
 
-fields.h field.c: $(UNIRECPROC)
+fields.h fields.c: $(UNIRECPROC)
 	$(PYTHON) $(UNIRECPROC)
 
 CLEANFILES = fields.c fields.h
