@@ -21,7 +21,7 @@ pkgdocdir=${docdir}/hoststatsnemea
 pkgdoc_DATA=README
 dist_sysconf_DATA=hoststats.conf hoststats.conf.default
 BUILT_SOURCES = src/fields.h src/fields.c
-src/fields.h src/field.c: $(UNIRECPROC)
+src/fields.h src/fields.c: $(UNIRECPROC)
 	$(PYTHON) $(UNIRECPROC)
 
 CLEANFILES = src/fields.c src/fields.h
