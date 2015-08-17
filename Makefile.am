@@ -16,7 +16,6 @@ entropy_module \
 email_reporter \
 example \
 flow_gen \
-flow_sanity_check \
 flowcounter \
 flowdirection \
 flow_statistic \
