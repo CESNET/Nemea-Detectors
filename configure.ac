@@ -73,8 +73,14 @@ AC_CHECK_HEADER(idna.h,
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
 # Checks for libraries.
-AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes], AC_MSG_WARN([libnfdump not found. The nfreader module will not be compiled.]))
+AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
+  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
+    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
+  )]
+)
+
 AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
+AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes)
 
 AC_CHECK_HEADER(pcap.h,
 	AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
