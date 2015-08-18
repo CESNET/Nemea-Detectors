@@ -17,7 +17,6 @@ entropy_module \
 email_reporter \
 example \
 flow_gen \
-flow_sanity_check \
 flowcounter \
 flowdirection \
 flow_statistic \
@@ -59,9 +58,14 @@ warden_collector
 
 EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter rrd_updater fbreader
 
+if HAVE_LIBNF
+SUBDIRS += nfreader
+else
 if HAVE_LIBNFDUMP
 SUBDIRS += nfreader
 endif
+endif
+
 if HAVE_LIBPCAP
 SUBDIRS += flow_meter portscan_detector
 endif
