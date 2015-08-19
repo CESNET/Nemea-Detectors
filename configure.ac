@@ -169,6 +169,7 @@ AC_CONFIG_FILES([Makefile
                  fbreader/Makefile
                  flow_gen/Makefile
                  flow_meter/Makefile
+                 flow_sanity_check/Makefile
                  flowcounter/Makefile
                  flowdirection/Makefile
                  flow_statistic/Makefile
