@@ -29,15 +29,14 @@ AC_DEFUN([AX_UNIREC_CHECK], [
   AC_SUBST(UNIRECPROC)
 
   PKG_CHECK_MODULES([unirec], [unirec], [UNIRECLIB="yes"], [
-    # AC_MSG_WARN([unirec was not found by pkg-config])
     AC_MSG_CHECKING([for unirec in parent directory])
     # Check for unirec as a superproject.
     if test -d "$srcdir/../unirec"; then
       UNIRECINC='$(top_srcdir)/../'
-      UNIRECLIB='$(top_builddir)/../unirec'
+      UNIRECLIB='$(top_builddir)/../unirec/.libs/'
     elif test -d "$srcdir/../../unirec"; then
       UNIRECINC='$(top_srcdir)/../../'
-      UNIRECLIB='$(top_builddir)/../../unirec'
+      UNIRECLIB='$(top_builddir)/../../unirec/.libs/'
     fi
 
     # AC_SUBST command line variables from UNIRECLIB and UNIRECINC.

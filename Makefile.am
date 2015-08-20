@@ -17,7 +17,6 @@ entropy_module \
 email_reporter \
 example \
 flow_gen \
-flow_sanity_check \
 flowcounter \
 flowdirection \
 flow_statistic \
@@ -54,7 +53,6 @@ synflood/synrate \
 synflood/pcf \
 vermon \
 voip_fraud_detection \
-testunirec2 \
 warden_collector
 
 
@@ -82,14 +80,6 @@ SUBDIRS += fbreader
 endif
 
 RPMDIR = RPMBUILD
-
-if DEBUG
-AM_CFLAGS = -g -O0
-AM_CXXFLAGS = -g -O0
-else
-AM_CFLAGS = -O2
-AM_CXXFLAGS = -O2
-endif
 
 if MAKE_RPMS
 RPMFILENAME=$(PACKAGE_NAME)-$(VERSION)
