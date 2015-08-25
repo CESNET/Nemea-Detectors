@@ -5,6 +5,7 @@ urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            ../blacklist_downloader/blacklist_downloader.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec
 urlblacklistfilter_CFLAGS=-O2 -std=gnu99
-urlblacklistfilter_CXXFLAGS=-std=c++98 -O2
+urlblacklistfilter_CXXFLAGS=-std=c++98 -O2 -Wno-write-strings
 pkgdocdir=${docdir}/urlblacklistfilter
 pkgdoc_DATA=README
+include ../../aminclude.am

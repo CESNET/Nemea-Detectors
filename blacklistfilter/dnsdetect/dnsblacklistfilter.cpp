@@ -58,6 +58,7 @@
 extern "C" {
 #endif
 #include <libtrap/trap.h>
+#include "fields.c"
 #ifdef __cplusplus
 }
 #endif
@@ -67,6 +68,39 @@ extern "C" {
 #define DEBUG
 //#undef DEBUG
 
+    // link templates
+
+UR_FIELDS(
+    //BASIC_FLOW
+    ipaddr SRC_IP,      //Source address of a flow
+    ipaddr DST_IP,      //Destination address of a flow
+    uint16 SRC_PORT,    //Source transport-layer port
+    uint16 DST_PORT,    //Destination transport-layer port
+    uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+    uint32 PACKETS,     //Number of packets in a flow or in an interval
+    uint64 BYTES,       //Number of bytes in a flow or in an interval
+    time TIME_FIRST,    //Timestamp of the first packet of a flow
+    time TIME_LAST,     //Timestamp of the last packet of a flow
+    uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
+    //COLLECTOR_FLOW
+    uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
+    uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+    uint8 TOS,              //IP type of service
+    uint8 TTL,              //IP time to live
+    //DNS
+    string DNS_NAME,
+    uint16 DNS_QTYPE,
+    uint16 DNS_RLENGTH,
+    bytes* DNS_RDATA,
+    uint8 DNS_DO,       //DNSSEC OK bit
+    //Blacklist items
+    uint8 DNS_BLACKLIST,    //ID of blacklist which contains suspicious domain name
+    uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
+    uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flo
+    uint8 BLACKLIST_TYPE,   //Type of the used blacklist (spam, C&C, malware, etc.)
+)
+
+
 using namespace std;
 
 trap_module_info_t module_info = {
@@ -74,7 +108,7 @@ trap_module_info_t module_info = {
     // Module description
     (char *)"Interfaces:\n"
     "   Inputs: 2 (UniRec record)\n"
-    "   Outputs: 2 (UniRec record)\n", 
+    "   Outputs: 2 (UniRec record)\n",
     2, // Number of input interfaces
     2, // Number of output interfaces
 };
@@ -96,7 +130,7 @@ void signal_handler(int signal)
 
 /**
  * Function for loading domain names for startup.
- * Function goes through all files listed in "path" folders and load the domain 
+ * Function goes through all files listed in "path" folders and load the domain
  * names to the table for use in cheking thread.
  *
  * @param blacklist Table for storing loaded domain names.
@@ -176,8 +210,8 @@ int load_dns(cc_hash_table_t* blacklist, const char* path)
 
 /**
  * Function for loading updates.
- * Function gets path to the directory with update files and loads them the into 
- * the vectors used for update operation. Loaded entries are sorted depending 
+ * Function gets path to the directory with update files and loads them the into
+ * the vectors used for update operation. Loaded entries are sorted depending
  * on whterher they are removed from blacklist or added to blacklist.
  *
  * @param add_upd Vector with entries that will be added or updated.
@@ -252,7 +286,7 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
                 continue;
             }
 
-            upd.dns = url_norm; 
+            upd.dns = url_norm;
             // fill blacklist number
             upd.bl = strtoul(file->d_name, NULL, 0);
             if (upd.bl == 0x0) {
@@ -270,14 +304,14 @@ int load_update(vector<upd_item_t>& add_upd, vector<upd_item_t>& rm_upd, const c
         in.close();
         free(url_norm);
     }
-    
+
     closedir(dp);
     return 0;
 }
 
 /**
  * Function for updating the blacklist (remove).
- * Function removes all items specified in the vector of updates from 
+ * Function removes all items specified in the vector of updates from
  * the table since these items are no longer valid.
  *
  * @param blacklist Blacklist to be updated.
@@ -292,7 +326,7 @@ static void update_remove(cc_hash_table_t* blacklist, vector<upd_item_t>& rm)
 
 /**
  * Function for updating the blacklist (add/update).
- * Function adds the items specified in the vector of updates to 
+ * Function adds the items specified in the vector of updates to
  * the table. If the item already exists it writes the new data.
  *
  * @param blacklist Blacklist to be updated.
@@ -317,9 +351,9 @@ static void update_add(cc_hash_table_t* blacklist, vector<upd_item_t>& add)
 
 /**
  * Function for checking incomming DNS queries for blacklisted domain names.
- * Function recieves UniRec with DNS query and checks if the requested domain 
- * name is in blacklist. If the domain name is found in blacklist the detection 
- * record is filled and sent with the number of source blacklist. Function also 
+ * Function recieves UniRec with DNS query and checks if the requested domain
+ * name is in blacklist. If the domain name is found in blacklist the detection
+ * record is filled and sent with the number of source blacklist. Function also
  * updates the IP table with the ip address associated with the domain name.
  * NOTE: The function is executed by a thread.
  *
@@ -344,7 +378,7 @@ void *check_dns(void *args)
     unsigned dets = 0, flows = 0;
 
     while (!stop) {
-        retval = trap_get_data(0x1, &record, &record_size, TRAP_WAIT);
+        retval = TRAP_RECEIVE(0x1, record, record_size, params->input);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) {
                 retval = EXIT_SUCCESS;
@@ -354,14 +388,14 @@ void *check_dns(void *args)
                 break;
             }
         }
-        if ((record_size - ur_rec_dynamic_size(params->input,record)) != ur_rec_static_size(params->input)) {
+        if ((record_size - ur_rec_varlen_size(params->input,record)) != ur_rec_fixlen_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
                 break;
             } else {
                 cerr << "ERROR: Wrong data size. ";
-                cerr << "Expected: " << ur_rec_static_size(params->input) << " ";
-                cerr << "Recieved: " << record_size - ur_rec_dynamic_size(params->input,record) << " in static part." << endl;
+                cerr << "Expected: " << ur_rec_fixlen_size(params->input) << " ";
+                cerr << "Recieved: " << record_size - ur_rec_varlen_size(params->input,record) << " in static part." << endl;
                 retval = EXIT_FAILURE;
                 break;
             }
@@ -369,20 +403,20 @@ void *check_dns(void *args)
 
         flows++;
 
-        if (ur_get(params->input, record, UR_DNS_QTYPE) != 1 && ur_get(params->input, record, UR_DNS_QTYPE) != 28)
+        if (ur_get(params->input, record, F_DNS_QTYPE) != 1 && ur_get(params->input, record, F_DNS_QTYPE) != 28)
             continue;
 
 #ifdef DEBUG
-        char *dn = ur_get_dyn(params->input, record, UR_DNS_NAME);
+        char *dn = ur_get_ptr(params->input, record, F_DNS_NAME);
 //        cout << "DNS: Checking obtained domain name " << dn << " ..." << endl;
 #endif
 
-	int s = ur_get_dyn_size(params->input, record, UR_DNS_NAME) - 1;
+	int s = ur_get_var_len(params->input, record, F_DNS_NAME);
         if (s < 0) {
             s = 0;
         }
         // check blacklist for recieved domain name
-        is_dns = ht_get(params->dns_table, ur_get_dyn(params->input, record, UR_DNS_NAME), s);
+        is_dns = ht_get(params->dns_table, ur_get_ptr(params->input, record, F_DNS_NAME), s);
         if (is_dns != NULL) {
 
 #ifdef DEBUG
@@ -390,33 +424,30 @@ void *check_dns(void *args)
             dets++;
 #endif
             //create detection record (must be created here because of dynamic items)
-            params->detection = ur_create(params->output, ur_get_dyn_size(params->input, record, UR_DNS_NAME));
+            params->detection = ur_create_record(params->output, ur_get_var_len(params->input, record, F_DNS_NAME));
 
-            ur_transfer_static(params->input, params->output, record, params->detection);
-            
+            ur_copy_fields(params->output, params->detection, params->input, record);
+
             // set blacklist
-            ur_set(params->output, params->detection, UR_DNS_BLACKLIST, *(uint8_t *) is_dns);
-            
-            // copy DNS NAME to detection record
-            memcpy(ur_get_dyn(params->output, params->detection, UR_DNS_NAME), dn, ur_get_dyn_size(params->input, record, UR_DNS_NAME));
-            *(uint16_t*)ur_get_ptr(params->output, params->detection, UR_DNS_NAME) = ur_get_dyn_size(params->input, record, UR_DNS_NAME);
+            ur_set(params->output, params->detection, F_DNS_BLACKLIST, *(uint8_t *) is_dns);
+
 #ifdef DEBUG
-            dn = ur_get_dyn(params->output, params->detection, UR_DNS_NAME);
+            dn = ur_get_ptr(params->output, params->detection, F_DNS_NAME);
 #endif
-            
+
             trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
 
-            ur_free(params->detection);
+            ur_free_record(params->detection);
 
 #ifdef DEBUG
-            if (ur_get(params->input, record, UR_DNS_RLENGTH) == 4) {
-                string resp = string(ur_get_dyn(params->input, record, UR_DNS_RDATA));
+            if (ur_get(params->input, record, F_DNS_RLENGTH) == 4) {
+                string resp = string(ur_get_ptr(params->input, record, F_DNS_RDATA), ur_get_var_len(params->input, record, F_DNS_RDATA));
                 cout << "DNS: Updating IP table for IP thread " << resp << " ..." << endl;
             }
 #endif
-             
-            if (ur_get(params->input, record, UR_DNS_RLENGTH) == 4 || ur_get(params->input, record, UR_DNS_RLENGTH) == 16) {
-                char *ip = ur_get_dyn(params->input, record, UR_DNS_RDATA);
+
+            if (ur_get(params->input, record, F_DNS_RLENGTH) == 4 || ur_get(params->input, record, F_DNS_RLENGTH) == 16) {
+                char *ip = ur_get_ptr(params->input, record, F_DNS_RDATA);
                 void *bl = NULL;
                 ip_addr_t ip_conv;
                 if (ip_from_str(ip, &ip_conv)) {
@@ -465,9 +496,9 @@ void *check_dns(void *args)
 
 /**
  * Function for checking IP addresses for blacklisted entries.
- * Function recieves UniRec and checks if both source and destination addresses 
+ * Function recieves UniRec and checks if both source and destination addresses
  * are in blacklist. If the address is found in blacklist the detection
- * record is filled and sent with the number of source blacklist. Addresses for 
+ * record is filled and sent with the number of source blacklist. Addresses for
  * its blacklist are obtained from the DNS thread.
  * NOTE: The function is executed by a thread.
  *
@@ -497,7 +528,7 @@ void* check_ip(void *args)
         cout << "IP: Waiting for data ..." << endl;
 #endif*/
         // recieve data
-        retval = trap_get_data(0x2, &record, &record_size, TRAP_WAIT);
+        retval = TRAP_RECEIVE(0x2, record, record_size, params->input);
         if (retval != TRAP_E_OK) {
             if (retval == TRAP_E_TERMINATED) {
                 retval = EXIT_SUCCESS;
@@ -511,13 +542,13 @@ void* check_ip(void *args)
         cout << "IP: Checking data ..." << endl;
 #endif*/
         // check the recieved data size
-        if (record_size != ur_rec_static_size(params->input)) {
+        if (record_size != ur_rec_fixlen_size(params->input)) {
             if (record_size <= 1) { // trap terminated
                 retval = EXIT_SUCCESS;
                 break;
             } else {
                 cerr << "ERROR: Wrong data size. ";
-                cerr << "Expected: " << ur_rec_static_size(params->input) << " ";
+                cerr << "Expected: " << ur_rec_fixlen_size(params->input) << " ";
                 cerr << "Recieved: " << record_size << endl;
                 retval = EXIT_FAILURE;
                 break;
@@ -525,8 +556,8 @@ void* check_ip(void *args)
         }
 
         flows++;
-        
-        ip = ur_get(params->input, record, UR_SRC_IP);    
+
+        ip = ur_get(params->input, record, F_SRC_IP);
 
         // try to match the blacklist for src IP
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
@@ -538,8 +569,8 @@ void* check_ip(void *args)
         uint8_t ip_bl = 0x0;
 
         if (bl != NULL) {
-            ur_set(params->output, params->detection, UR_SRC_IP, ur_get(params->input, record, UR_SRC_IP));
-            ur_set(params->output, params->detection, UR_SRC_BLACKLIST, *(uint8_t*) bl);
+            ur_set(params->output, params->detection, F_SRC_IP, ur_get(params->input, record, F_SRC_IP));
+            ur_set(params->output, params->detection, F_SRC_BLACKLIST, *(uint8_t*) bl);
             ip_bl |= ((*(uint8_t*) bl) << 4);
             marked = true;
 #ifdef DEBUG
@@ -548,14 +579,14 @@ void* check_ip(void *args)
 #endif
         }
 
-        ip = ur_get(params->output, record, UR_DST_IP);
+        ip = ur_get(params->output, record, F_DST_IP);
 
         // try to match the blacklist for dst IP
         bl = ht_get_v2(params->ip_table, (char *) ip.bytes);
 
         if (bl != NULL) {
-            ur_set(params->output, params->detection, UR_DST_IP, ur_get(params->input, record, UR_DST_IP));
-            ur_set(params->output, params->detection, UR_DST_BLACKLIST, *(uint8_t*) bl);
+            ur_set(params->output, params->detection, F_DST_IP, ur_get(params->input, record, F_DST_IP));
+            ur_set(params->output, params->detection, F_DST_BLACKLIST, *(uint8_t*) bl);
             ip_bl |= (*(uint8_t*) bl);
             marked = true;
 #ifdef DEBUG
@@ -568,9 +599,9 @@ void* check_ip(void *args)
 #ifdef DEBUG
             cout << "IP: Sending report ..." << endl;
             dets++;
-#endif            
-            ur_set(params->output, params->detection, UR_BLACKLIST_TYPE, ip_bl);
-            ur_transfer_static(params->input, params->output, record, params->detection);
+#endif
+            ur_set(params->output, params->detection, F_BLACKLIST_TYPE, ip_bl);
+            ur_copy_fields(params->output, params->detection, params->input, record);
             trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
             marked = false;
         }
@@ -613,10 +644,48 @@ int main (int argc, char** argv)
     ur_template_t *dns_input, *ip_input, *dns_det, *ip_det;
 
     // link templates
-    dns_input = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,<DNS>");
-    ip_input = ur_create_template("<COLLECTOR_FLOW>");
-    dns_det = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME"); // + DNS blacklist flag and BLACKLIST_TYPE
-    ip_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE"); // + BLACKLIST_TYPE
+    char *errstr = NULL;
+    dns_input = ur_create_input_template(0x1, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RDATA", &errstr);
+    if (dns_input == NULL) {
+        cerr << "Error: Invalid UniRec specifier." << endl;
+        if(errstr != NULL){
+            fprintf(stderr, "%s\n", errstr);
+            free(errstr);
+        }
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    ip_input = ur_create_input_template(0x2, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+    if (ip_input == NULL) {
+        cerr << "Error: Invalid UniRec specifier." << endl;
+        if(errstr != NULL){
+            fprintf(stderr, "%s\n", errstr);
+            free(errstr);
+        }
+        ur_free_template(dns_input);
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    dns_det = ur_create_output_template(0x1, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,DNS_BLACKLIST,DNS_NAME", &errstr); // + DNS blacklist flag and BLACKLIST_TYPE
+    if (dns_det == NULL) {
+        cerr << "Error: Invalid UniRec specifier." << endl;
+        if(errstr != NULL){
+            fprintf(stderr, "%s\n", errstr);
+            free(errstr);
+        }
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
+    ip_det = ur_create_output_template(0x2, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,BLACKLIST_TYPE", &errstr); // + BLACKLIST_TYPE
+    if (ip_det == NULL) {
+        cerr << "Error: Invalid UniRec specifier." << endl;
+        if(errstr != NULL){
+            fprintf(stderr, "%s\n", errstr);
+            free(errstr);
+        }
+        trap_finalize();
+        return EXIT_FAILURE;
+    }
 
     dns_thread_params.input = dns_input;
     dns_thread_params.output = dns_det;
@@ -624,7 +693,7 @@ int main (int argc, char** argv)
     ip_thread_params.output = ip_det;
 
     // create detection records
-    ip_thread_params.detection = ur_create(ip_thread_params.output, 0);
+    ip_thread_params.detection = ur_create_record(ip_thread_params.output, 0);
 
     trap_ifc_spec_t ifc_spec; // interface specification for TRAP
 
@@ -644,8 +713,8 @@ int main (int argc, char** argv)
                            ip_thread_params.input, ip_thread_params.output);
          return retval;
     }
-    
-    // Initialize TRAP library (create and init all interfaces)     
+
+    // Initialize TRAP library (create and init all interfaces)
     retval = trap_init(&module_info, ifc_spec);
     if (retval != TRAP_E_OK) {
         cerr << "ERROR: TRAP couldn't be initialized: " << trap_last_error_msg << endl;
@@ -738,7 +807,7 @@ int main (int argc, char** argv)
     // Main thread should wait for termination of both working threads
     for (int i = 0; i < THR_COUNT; i++) {
         retval = pthread_join(threads[i], &thr_exit_state);
-        
+
         // thread couldn't be joined (something very wrong happened)
         if (retval) {
             cerr << "ERROR: Problem when joining threads. Terminating ..." << endl;
@@ -773,6 +842,6 @@ int main (int argc, char** argv)
     DESTROY_STRUCTURES(ip_thread_params.ip_table, dns_thread_params.dns_table,
                        dns_thread_params.input, dns_thread_params.output,
                        ip_thread_params.input, ip_thread_params.output);
-    ur_free(ip_thread_params.detection);
+    ur_free_record(ip_thread_params.detection);
     return EXIT_SUCCESS;
 }

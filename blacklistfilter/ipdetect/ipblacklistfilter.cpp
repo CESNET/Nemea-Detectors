@@ -69,9 +69,32 @@
 #include <libtrap/trap.h>
 #include "ipblacklistfilter.h"
 #include "patternstrings.h"
-
+#include "fields.c"
 
 using namespace std;
+
+UR_FIELDS(
+    //BASIC_FLOW
+    ipaddr SRC_IP,      //Source address of a flow
+    ipaddr DST_IP,      //Destination address of a flow
+    uint16 SRC_PORT,    //Source transport-layer port
+    uint16 DST_PORT,    //Destination transport-layer port
+    uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+    uint32 PACKETS,     //Number of packets in a flow or in an interval
+    uint64 BYTES,       //Number of bytes in a flow or in an interval
+    time TIME_FIRST,    //Timestamp of the first packet of a flow
+    time TIME_LAST,     //Timestamp of the last packet of a flow
+    uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
+    //COLLECTOR_FLOW
+    uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
+    uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+    uint8 TOS,              //IP type of service
+    uint8 TTL,              //IP time to live
+    //Blacklist items
+    uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
+    uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
+    uint32 EVENT_SCALE,     //Attack intensity
+)
 
 trap_module_info_t *module_info = NULL;
 
@@ -228,7 +251,7 @@ uint8_t update_aggr(ur_template_t *tmplt, aggr_data_t *data)
    uint8_t ret = 1;
 
    // Update aggregation count
-   ur_set(tmplt, data->data, UR_EVENT_SCALE, ur_get(tmplt, data->data, UR_EVENT_SCALE) +1);
+   ur_set(tmplt, data->data, F_EVENT_SCALE, ur_get(tmplt, data->data, F_EVENT_SCALE) +1);
    data->time_last = TIMESTAMP;
 
    // Check Active timeout
@@ -478,21 +501,21 @@ int v4_blacklist_check(ur_template_t* ur_tmp,
    int search_result;
 
    // Check source IP
-   ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-      ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
+   ip_addr_t ip = ur_get(ur_tmp, record, F_SRC_IP);
+   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+      ur_set(ur_det, detected, F_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
       marked = true;
    } else {
-      ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+      ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
    }
 
    // Check destination IP
-   ip = ur_get(ur_tmp, record, UR_DST_IP);
-   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-      ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
+   ip = ur_get(ur_tmp, record, F_DST_IP);
+   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+      ur_set(ur_det, detected, F_DST_BLACKLIST, net_bl[search_result].in_blacklist);
       marked = true;
    } else {
-      ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+      ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
    }
 
    // Check result
@@ -530,21 +553,21 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
    int search_result;
 
    // Check source IP
-   ip_addr_t ip = ur_get(ur_tmp, record, UR_SRC_IP);
-   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-      ur_set(ur_det, detected, UR_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
+   ip_addr_t ip = ur_get(ur_tmp, record, F_SRC_IP);
+   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+      ur_set(ur_det, detected, F_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
       marked = true;
    } else {
-      ur_set(ur_det, detected, UR_SRC_BLACKLIST, 0x0);
+      ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
    }
 
    // Check destination IP
-   ip = ur_get(ur_tmp, record, UR_DST_IP);
-   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, UR_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-      ur_set(ur_det, detected, UR_DST_BLACKLIST, net_bl[search_result].in_blacklist);
+   ip = ur_get(ur_tmp, record, F_DST_IP);
+   if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
+      ur_set(ur_det, detected, F_DST_BLACKLIST, net_bl[search_result].in_blacklist);
       marked = true;
    } else {
-      ur_set(ur_det, detected, UR_DST_BLACKLIST, 0x0);
+      ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
    }
 
    // Check result
@@ -709,7 +732,7 @@ void *inactive_timeout_thread_func(void *tmplt)
          // Check flow last seen timestamp
          if (TIMESTAMP - ((aggr_data_t*)iter->data_ptr)->time_last >= TIMEOUT_INACTIVE) {
             // Inactive timeout expired, send data to output
-            trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_static_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+            trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
             fht_remove_iter(iter);
          }
       }
@@ -718,14 +741,12 @@ void *inactive_timeout_thread_func(void *tmplt)
    // The program is terminating, empty stored flows
    fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
    while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
-      trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_static_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+      trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
          fht_remove_iter(iter);
    }
 
    return NULL;
 }
-
-
 
 /**
  * \brief Setup arguments structure for Blacklist Downloader.
@@ -794,6 +815,7 @@ int main (int argc, char** argv)
 {
    int retval = 0; // return value
    int send_terminating_unirec = 1;
+   bl_down_args_t bl_args;
    uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
    uint32_t hash_table_stash_size = 0;
    int8_t *fht_lock = NULL;
@@ -801,25 +823,6 @@ int main (int argc, char** argv)
    // Set defaukt files names
    char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
    char *bld_userFile = (char*) SYSCONFDIR "/ipblacklistfilter/bld_userConfigFile.xml";
-
-
-   // UniRec templates for recieving data and reporting blacklisted IPs
-   ur_template_t *templ = ur_create_template("<COLLECTOR_FLOW>");
-   ur_template_t *tmpl_det = ur_create_template("<COLLECTOR_FLOW>,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE");
-
-   // Create detection record
-   void *detection = NULL;
-   detection = ur_create(tmpl_det, 0);
-   if (detection == NULL) {
-       cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
-       ur_free_template(templ);
-       ur_free_template(tmpl_det);
-       return EXIT_FAILURE;
-   }
-
-   // Buffers for aggregated records
-   aggr_data_t *new_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det));
-   aggr_data_t *kicked_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det));
 
    // For use with prefixes
    black_list_t v4_list;
@@ -858,6 +861,43 @@ int main (int argc, char** argv)
    }
    trap_free_ifc_spec(ifc_spec);
 
+// UniRec templates for recieving data and reporting blacklisted IPs
+  char *errstr = NULL;
+  ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+  if (templ == NULL) {
+    cerr << "Error: Invalid UniRec specifier." << endl;
+    if(errstr != NULL){
+      fprintf(stderr, "%s\n", errstr);
+      free(errstr);
+    }
+    trap_finalize();
+    return EXIT_FAILURE;
+  }
+  ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE", &errstr);
+  if (tmpl_det == NULL) {
+    cerr << "Error: Invalid UniRec specifier." << endl;
+    if(errstr != NULL){
+      fprintf(stderr, "%s\n", errstr);
+      free(errstr);
+    }
+    trap_finalize();
+    ur_free_template(templ);
+    return EXIT_FAILURE;
+  }
+
+   // Buffers for aggregated records
+   aggr_data_t *new_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det));
+   aggr_data_t *kicked_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det));
+
+   // Create detection record
+   void *detection = NULL;
+   detection = ur_create_record(tmpl_det, 0);
+   if (detection == NULL) {
+       cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
+       ur_free_template(templ);
+       ur_free_template(tmpl_det);
+       return EXIT_FAILURE;
+   }
 
    // Turn off buffer on output interface
    //trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
@@ -935,7 +975,7 @@ int main (int argc, char** argv)
 
    // ***** Check module arguments *****
    hash_table_size = update_hash_table_size_to_pow2(hash_table_size);
-   if ((AGGR_TABLE = fht_init(hash_table_size, sizeof(aggr_data_key_t), sizeof(aggr_data_t) + ur_rec_static_size(tmpl_det), hash_table_stash_size)) == NULL) {
+   if ((AGGR_TABLE = fht_init(hash_table_size, sizeof(aggr_data_key_t), sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det), hash_table_stash_size)) == NULL) {
       fprintf(stderr, "Error: Could not allocate memory for hash table\n");
       ur_free_template(templ);
       ur_free_template(tmpl_det);
@@ -989,7 +1029,7 @@ int main (int argc, char** argv)
     pthread_t inactive_timeout_thread_id;
     if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
        fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
-       ur_free(detection);
+       ur_free_record(detection);
        ur_free_template(templ);
        ur_free_template(tmpl_det);
        fht_destroy(AGGR_TABLE);
@@ -1004,7 +1044,7 @@ int main (int argc, char** argv)
       const void *data;
       uint16_t data_size;
       // Retrieve data from sender
-      retval = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+      retval = TRAP_RECEIVE(0, data, data_size, templ);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
       // Check the data size
@@ -1020,10 +1060,10 @@ int main (int argc, char** argv)
       }
 
       // Update timestamp from record
-      update_timestamp(ur_get(templ, data, UR_TIME_FIRST) >> 32);
+      update_timestamp(ur_get(templ, data, F_TIME_FIRST) >> 32);
 
       // Try to match the IP addresses to blacklist
-      if (ip_is4(&(ur_get(templ, data, UR_SRC_IP)))) {
+      if (ip_is4(&(ur_get(templ, data, F_SRC_IP)))) {
          // Check blacklisted IPs
          retval = v4_blacklist_check(templ, tmpl_det, data, detection, v4_masks, v6_masks, v4_list);
       } else {
@@ -1036,14 +1076,14 @@ int main (int argc, char** argv)
          aggr_data_key_t aggr_data_key;
          uint8_t kicked_flag;
 
-         aggr_data_key.srcip = ur_get(templ, data, UR_SRC_IP);
-         aggr_data_key.dstip = ur_get(templ, data, UR_DST_IP);
-         aggr_data_key.proto = ur_get(templ, data, UR_PROTOCOL);
+         aggr_data_key.srcip = ur_get(templ, data, F_SRC_IP);
+         aggr_data_key.dstip = ur_get(templ, data, F_DST_IP);
+         aggr_data_key.proto = ur_get(templ, data, F_PROTOCOL);
 
          new_data->time_first = TIMESTAMP;
          new_data->time_last = TIMESTAMP;
-         ur_transfer_static(templ, tmpl_det, data, detection);
-         ur_set(tmpl_det, detection, UR_EVENT_SCALE, 1);
+         ur_copy_fields(tmpl_det, detection, templ, data);
+         ur_set(tmpl_det, detection, F_EVENT_SCALE, 1);
          memcpy(new_data->data, detection, ur_rec_size(tmpl_det, detection));
 
          // Create new aggregation record or find old one already in table
@@ -1054,7 +1094,7 @@ int main (int argc, char** argv)
             // Update old record
             if (!update_aggr(tmpl_det, aggr_data)) {
                // If Active timeout has run out, send data to output
-               trap_send_data(0, aggr_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
+               trap_send_data(0, aggr_data->data, ur_rec_fixlen_size(tmpl_det), TRAP_HALFWAIT);
                fht_remove_locked(AGGR_TABLE, &aggr_data_key, fht_lock);
             }
             fht_unlock_data(fht_lock);
@@ -1063,7 +1103,7 @@ int main (int argc, char** argv)
 
          // If data was kicked out from table, send them to output
          if (kicked_flag) {
-            trap_send_data(0, kicked_data->data, ur_rec_static_size(tmpl_det), TRAP_HALFWAIT);
+            trap_send_data(0, kicked_data->data, ur_rec_fixlen_size(tmpl_det), TRAP_HALFWAIT);
          }
       }
 
@@ -1181,7 +1221,7 @@ int main (int argc, char** argv)
 
    // Clean up before termination
    if (detection != NULL) {
-      ur_free(detection);
+      ur_free_record(detection);
       detection = NULL;
    }
    ur_free_template(templ);

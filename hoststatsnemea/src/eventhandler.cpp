@@ -43,6 +43,7 @@
 #include <fstream>
 extern "C" {
    #include <libtrap/trap.h>
+   #include "fields.h"
 }
 #include <unirec/ipaddr_cpp.h>
 
@@ -129,63 +130,64 @@ void reportEvent(const Event& event)
 
    // Allocate memory for Warden report
    const uint16_t WT_NOTE_SIZE = 200;
-   void *rec = ur_create(tmpl_out, WT_NOTE_SIZE);
+   void *rec = ur_create_record(tmpl_out, WT_NOTE_SIZE);
    if (rec == NULL) {
       log(LOG_ERR, "Failed to allocate new memory for a Warden detection report.");
       return;
    }
 
    // TIMESTAMPS AND EVENT TYPE
-   ur_set(tmpl_out, rec, UR_EVENT_TYPE, event.type);
-   ur_set(tmpl_out, rec, UR_TIME_FIRST, ur_time_from_sec_msec(event.time_first,0));
-   ur_set(tmpl_out, rec, UR_TIME_LAST, ur_time_from_sec_msec(event.time_last, 0));
+   ur_set(tmpl_out, rec, F_EVENT_TYPE, event.type);
+   ur_set(tmpl_out, rec, F_TIME_FIRST, ur_time_from_sec_msec(event.time_first,0));
+   ur_set(tmpl_out, rec, F_TIME_LAST, ur_time_from_sec_msec(event.time_last, 0));
 
    // SRC IP ADDRESS
    if (!event.src_addr.empty()) {
-      ur_set(tmpl_out, rec, UR_SRC_IP, event.src_addr.front());
+      ur_set(tmpl_out, rec, F_SRC_IP, event.src_addr.front());
    } else {
-      ur_set(tmpl_out, rec, UR_SRC_IP, ip_from_int(0));
+      ur_set(tmpl_out, rec, F_SRC_IP, ip_from_int(0));
    }
 
    // DST IP ADDRESS
    if (!event.dst_addr.empty()) {
-      ur_set(tmpl_out, rec, UR_DST_IP, event.dst_addr.front());
+      ur_set(tmpl_out, rec, F_DST_IP, event.dst_addr.front());
    } else {
-      ur_set(tmpl_out, rec, UR_DST_IP, ip_from_int(0));
+      ur_set(tmpl_out, rec, F_DST_IP, ip_from_int(0));
    }
 
    // SRC PORT
    if (!event.src_port.empty()) {
-      ur_set(tmpl_out, rec, UR_SRC_PORT, event.src_port.front());
+      ur_set(tmpl_out, rec, F_SRC_PORT, event.src_port.front());
    } else {
-      ur_set(tmpl_out, rec, UR_SRC_PORT, 0);
+      ur_set(tmpl_out, rec, F_SRC_PORT, 0);
    }
 
    // DST PORT
    if (!event.dst_port.empty()) {
-      ur_set(tmpl_out, rec, UR_DST_PORT, event.dst_port.front());
+      ur_set(tmpl_out, rec, F_DST_PORT, event.dst_port.front());
    } else {
-      ur_set(tmpl_out, rec, UR_DST_PORT, 0);
+      ur_set(tmpl_out, rec, F_DST_PORT, 0);
    }
 
    // PROTOCOL
    if (!event.proto.empty()) {
-      ur_set(tmpl_out, rec, UR_PROTOCOL, event.proto.front());
+      ur_set(tmpl_out, rec, F_PROTOCOL, event.proto.front());
    } else {
-      ur_set(tmpl_out, rec, UR_PROTOCOL, 0);
+      ur_set(tmpl_out, rec, F_PROTOCOL, 0);
    }
 
    // EVENT SCALE
-   ur_set(tmpl_out, rec, UR_EVENT_SCALE, event.scale);
+   ur_set(tmpl_out, rec, F_EVENT_SCALE, event.scale);
 
    // NOTE
-   int offset = snprintf((char *) rec + ur_rec_static_size(tmpl_out),
-      WT_NOTE_SIZE, event.note.c_str());
+   char buffer [WT_NOTE_SIZE];
+   int offset = snprintf(buffer, WT_NOTE_SIZE,
+      event.note.c_str());
    if (offset > 0) {
-      ur_set_dyn_offset(tmpl_out, rec, UR_NOTE, offset);
+      ur_set_string(tmpl_out, rec, F_NOTE, buffer);
    } else {
       log(LOG_ERR, "Failed to create dynamic Unirec item.");
-      ur_free(rec);
+      ur_free_record(rec);
       return;
    }
 
@@ -194,7 +196,7 @@ void reportEvent(const Event& event)
       log(LOG_ERR, "Error: trap_send()");
    }
 
-   ur_free(rec);
+   ur_free_record(rec);
 }
 
 
@@ -202,13 +204,13 @@ string getTypeString(uint8_t type)
 {
    switch (type)
    {
-      case UR_EVT_T_PORTSCAN:   return "portscan";
-      case UR_EVT_T_PORTSCAN_H: return "portscan_h";
-      case UR_EVT_T_PORTSCAN_V: return "portscan_v";
-      case UR_EVT_T_BRUTEFORCE: return "bruteforce";
-      case UR_EVT_T_DOS:        return "dos";
-      case UR_EVT_T_DNSAMP:     return "dnsamp";
-      case UR_EVT_T_SYNFLOOD:   return "synflood";
+      case EVT_T_PORTSCAN:   return "portscan";
+      case EVT_T_PORTSCAN_H: return "portscan_h";
+      case EVT_T_PORTSCAN_V: return "portscan_v";
+      case EVT_T_BRUTEFORCE: return "bruteforce";
+      case EVT_T_DOS:        return "dos";
+      case EVT_T_DNSAMP:     return "dnsamp";
+      case EVT_T_SYNFLOOD:   return "synflood";
       default: return string("type_")+int2str((int)type);
    }
 }

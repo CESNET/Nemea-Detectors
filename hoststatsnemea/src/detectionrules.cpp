@@ -80,7 +80,7 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        rec.out_req_syn_cnt > 10*rec.in_all_syn_cnt) // there is not much incoming connections
                                                     //  - this was added to filter out p2p communication
    {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_PORTSCAN_H);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_PORTSCAN_H);
       evt.addProto(TCP).addSrcAddr(addr);
       evt.setScale(rec.out_all_syn_cnt - rec.out_all_ack_cnt);
       evt.setNote("horizontal SYN scan");
@@ -107,7 +107,7 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
       est_out_rsp_flows < est_in_req_flows/2) // less than half of requests are replied
        // && est_out_rsp_flows > est_in_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
    ) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DOS);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DOS);
       evt.addDstAddr(addr);
       evt.setScale(rec.in_all_flows);
       evt.setNote("in: %u flows, %u packets; out: %u flows, %u packets; approx."
@@ -147,7 +147,7 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
       est_in_rsp_flows < est_out_req_flows/2) // less than half of requests are replied
       // && est_in_rsp_flows > est_out_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
    ) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DOS);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DOS);
       evt.addSrcAddr(addr);
       evt.setScale(rec.out_all_flows);
       evt.setNote("out: %u flows, %u packets; in: %u flows, %u packets; approx."
@@ -213,7 +213,7 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
          // at least BRUTEFORCE_IPS_RATIO responses to same address
          ssh_rec.out_rsp_syn_cnt > BRUTEFORCE_IPS_RATIO * ssh_rec.out_all_uniqueips)
       ) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_BRUTEFORCE);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addDstAddr(addr);
       evt.setScale(ssh_rec.in_req_syn_cnt);
       evt.setNote("victim");
@@ -245,7 +245,7 @@ void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec)
          ssh_rec.out_all_uniqueips >= BRUTEFORCE_IPS
       ))
    ) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_BRUTEFORCE);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_BRUTEFORCE);
       evt.addProto(TCP).addDstPort(22).addSrcAddr(addr);
       evt.setScale(ssh_rec.out_req_syn_cnt);
       evt.setNote("attacker");
@@ -263,7 +263,7 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
 
    // Misused server
    if (dns_rec.out_rsp_overlimit_cnt > DNS_AMPLIF_THRESHOLD) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DNSAMP);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DNSAMP);
       evt.addSrcPort(53).addSrcAddr(addr);
       evt.setScale(dns_rec.out_rsp_overlimit_cnt);
       evt.setNote("DNS amplification - misused server");
@@ -272,7 +272,7 @@ void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec)
 
    // Victim
    if (dns_rec.in_rsp_overlimit_cnt > DNS_AMPLIF_THRESHOLD) {
-      Event evt(rec.first_rec_ts, rec.last_rec_ts, UR_EVT_T_DNSAMP);
+      Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DNSAMP);
       evt.addDstPort(53).addDstAddr(addr);
       evt.setScale(dns_rec.in_rsp_overlimit_cnt);
       evt.setNote("DNS amplification - victim");

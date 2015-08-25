@@ -52,6 +52,15 @@ extern "C" {
 #define TCP 6
 #define UDP 17
 
+//EVENT_TYPE   Type of detected event
+#define EVT_T_PORTSCAN                      1         //Portscan (unspecified type)
+#define EVT_T_PORTSCAN_H                    2         //Horizontal portscan (one or a few ports, many addresses)
+#define EVT_T_PORTSCAN_V                    3         //Vertical portscan (one address, many ports)
+#define EVT_T_DOS                          10         //Denial of service attack (unspecified type)
+#define EVT_T_SYNFLOOD                     11         //TCP SYN flood
+#define EVT_T_DNSAMP                       15         //DNS Amplification attack
+#define EVT_T_BRUTEFORCE                   30         //Bruteforce password guessing
+
 // Struct containing information about a detected event (attack/incident/anomaly)
 class Event
 {

@@ -15,28 +15,28 @@ dnl @license BSD
 AC_DEFUN([AX_UNIREC_CHECK], [
   # UniRec processor
   if test "$repobuild" = "true"; then
-    AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-          [${srcdir}/../unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$PATH])
+  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+      [$PWD/../unirec$PATH_SEPARATOR$PATH])
   else
-    AC_PATH_PROG(UNIRECPROC, process_fields.py, [],
-          [$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
+  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+      [$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
   fi
 
   if test -z "$UNIRECPROC"; then
-          AC_MSG_ERROR([UniRec processor was not found. Add path to "process_fields.py" into PATH or install UniRec."])
+      AC_MSG_ERROR([UniRec processor was not found. Add path to "unirec_generate_fields_files.py" into PATH or install UniRec."])
   fi
+
   AC_SUBST(UNIRECPROC)
 
   PKG_CHECK_MODULES([unirec], [unirec], [UNIRECLIB="yes"], [
-    # AC_MSG_WARN([unirec was not found by pkg-config])
     AC_MSG_CHECKING([for unirec in parent directory])
     # Check for unirec as a superproject.
     if test -d "$srcdir/../unirec"; then
       UNIRECINC='$(top_srcdir)/../'
-      UNIRECLIB='$(top_builddir)/../unirec'
+      UNIRECLIB='$(top_builddir)/../unirec/.libs/'
     elif test -d "$srcdir/../../unirec"; then
       UNIRECINC='$(top_srcdir)/../../'
-      UNIRECLIB='$(top_builddir)/../../unirec'
+      UNIRECLIB='$(top_builddir)/../../unirec/.libs/'
     fi
 
     # AC_SUBST command line variables from UNIRECLIB and UNIRECINC.
