@@ -732,7 +732,7 @@ void *inactive_timeout_thread_func(void *tmplt)
          // Check flow last seen timestamp
          if (TIMESTAMP - ((aggr_data_t*)iter->data_ptr)->time_last >= TIMEOUT_INACTIVE) {
             // Inactive timeout expired, send data to output
-            trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+            trap_send(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt));
             fht_remove_iter(iter);
          }
       }
@@ -741,7 +741,7 @@ void *inactive_timeout_thread_func(void *tmplt)
    // The program is terminating, empty stored flows
    fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
    while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
-      trap_send_data(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt), TRAP_HALFWAIT);
+      trap_send(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt));
          fht_remove_iter(iter);
    }
 
@@ -859,6 +859,7 @@ int main (int argc, char** argv)
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       return 1;
    }
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
    trap_free_ifc_spec(ifc_spec);
 
 // UniRec templates for recieving data and reporting blacklisted IPs
@@ -1094,7 +1095,7 @@ int main (int argc, char** argv)
             // Update old record
             if (!update_aggr(tmpl_det, aggr_data)) {
                // If Active timeout has run out, send data to output
-               trap_send_data(0, aggr_data->data, ur_rec_fixlen_size(tmpl_det), TRAP_HALFWAIT);
+               trap_send(0, aggr_data->data, ur_rec_fixlen_size(tmpl_det));
                fht_remove_locked(AGGR_TABLE, &aggr_data_key, fht_lock);
             }
             fht_unlock_data(fht_lock);
@@ -1103,7 +1104,7 @@ int main (int argc, char** argv)
 
          // If data was kicked out from table, send them to output
          if (kicked_flag) {
-            trap_send_data(0, kicked_data->data, ur_rec_fixlen_size(tmpl_det), TRAP_HALFWAIT);
+            trap_send(0, kicked_data->data, ur_rec_fixlen_size(tmpl_det));
          }
       }
 
@@ -1216,7 +1217,7 @@ int main (int argc, char** argv)
 
    // If set, send terminating message to modules on output
    if (send_terminating_unirec) {
-      trap_send_data(0, "TERMINATE", 1, TRAP_HALFWAIT);
+      trap_send(0, "TERMINATE", 1);
    }
 
    // Clean up before termination

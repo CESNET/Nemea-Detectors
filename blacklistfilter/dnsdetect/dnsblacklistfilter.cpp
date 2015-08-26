@@ -435,7 +435,7 @@ void *check_dns(void *args)
             dn = ur_get_ptr(params->output, params->detection, F_DNS_NAME);
 #endif
 
-            trap_send_data(0, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
+            trap_send(0, params->detection, ur_rec_size(params->output, params->detection));
 
             ur_free_record(params->detection);
 
@@ -602,7 +602,7 @@ void* check_ip(void *args)
 #endif
             ur_set(params->output, params->detection, F_BLACKLIST_TYPE, ip_bl);
             ur_copy_fields(params->output, params->detection, params->input, record);
-            trap_send_data(1, params->detection, ur_rec_size(params->output, params->detection), TRAP_HALFWAIT);
+            trap_send(1, params->detection, ur_rec_size(params->output, params->detection));
             marked = false;
         }
     }
@@ -723,7 +723,8 @@ int main (int argc, char** argv)
                            ip_thread_params.input, ip_thread_params.output);
         return retval;
     }
-
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+    trap_ifcctl(TRAPIFC_OUTPUT, 1, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
     // free interface specification structure
     trap_free_ifc_spec(ifc_spec);
 

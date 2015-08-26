@@ -398,7 +398,7 @@ int main (int argc, char** argv)
 
     // initialize TRAP interface (nothing special is needed so we can use the macro)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
     // set locale so we can use URL normalization library
     setlocale(LC_ALL, "");
 
@@ -567,7 +567,7 @@ int main (int argc, char** argv)
             ++marked;
 #endif
             ur_copy_fields(det, detection, templ, data);
-            trap_send_data(0, detection, ur_rec_size(det, detection), TRAP_HALFWAIT);
+            trap_send(0, detection, ur_rec_size(det, detection));
         }
 
         // should update?
@@ -615,7 +615,8 @@ int main (int argc, char** argv)
     }
 
     // send terminate message
-    trap_send_data(0, data, 1, TRAP_NO_WAIT);
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+    trap_send(0, data, 1);
 
     // clean up before termination
     ur_free_template(templ);
