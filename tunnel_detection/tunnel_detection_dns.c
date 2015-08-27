@@ -2090,9 +2090,9 @@ int main(int argc, char **argv)
             input_packet_file_name = optarg;
       }
    }
-
-   if (file_or_port & READ_FROM_UNIREC || file_or_port == 0) {
+   if (input_packet_file_name == NULL) {
       TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+
       trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
       trap_ifcctl(TRAPIFC_OUTPUT, 1, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
       tmplt = ur_create_input_template(0, "BYTES,DNS_NAME,DST_PORT,SRC_IP,DST_IP,DNS_QTYPE,DNS_RDATA", NULL);
@@ -2231,9 +2231,8 @@ int main(int argc, char **argv)
    //add trees to array, you can work with it in cycle
    btree[0] = btree_ver4;
    btree[1] = btree_ver6;
-
    // ***** Main processing loop for Unirec records *****
-   if (file_or_port == READ_FROM_UNIREC) {
+   if (input_packet_file_name == NULL) {
       ip_addr_t * ip_in_packet;
       const void *data;
       uint16_t data_size;
@@ -2403,7 +2402,7 @@ int main(int argc, char **argv)
          //stop=1;
       }
    }
-   else if (file_or_port & READ_FROM_FILE) {
+   else if (input_packet_file_name != NULL && file_or_port != MEASURE_PARAMETERS) {
    //***** Main processing loop for file *****
       //read packets from file
       //initialization of parser
