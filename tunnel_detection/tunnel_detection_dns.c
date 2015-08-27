@@ -1082,7 +1082,7 @@ void send_unirec_out(unirec_tunnel_notification_t * notification)
    ur_set(notification->unirec_out, notification->detection, F_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);
    ur_set(notification->unirec_out, notification->detection, F_TIME_FIRST, ur_time_from_sec_msec(notification->time_first,0));
    ur_set(notification->unirec_out, notification->detection, F_TIME_LAST, ur_time_from_sec_msec(notification->time_last,0));
-   trap_send_data(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection), TRAP_HALFWAIT);
+   trap_send(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection));
 }
 
 void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
@@ -1093,7 +1093,7 @@ void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_TIMEOUT, values.sdm_timeout);
    ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, values.sdm_count_of_packets);
    ur_set_string(notification->unirec_out_sdm, notification->detection_sdm, F_SDM_CAPTURE_FILE_ID, sdm_capture_id);
-   trap_send_data(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm), TRAP_NO_WAIT);
+   trap_send(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm));
 }
 
 void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
@@ -2092,7 +2092,9 @@ int main(int argc, char **argv)
    }
 
    if (file_or_port & READ_FROM_UNIREC || file_or_port == 0) {
-      TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+      TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+      trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+      trap_ifcctl(TRAPIFC_OUTPUT, 1, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
       tmplt = ur_create_input_template(0, "BYTES,DNS_NAME,DST_PORT,SRC_IP,DST_IP,DNS_QTYPE,DNS_RDATA", NULL);
       ur_notification.unirec_out = ur_create_output_template(0, "EVENT_ID,SRC_IP,TUNNEL_PER_NEW_DOMAIN,TUNNEL_PER_SUBDOMAIN,TUNNEL_TYPE,TUNNEL_DOMAIN,TUNNEL_CNT_PACKET,TIME_FIRST,TIME_LAST", NULL);
       ur_notification.unirec_out_sdm = ur_create_output_template(1, "SRC_IP,TIMEOUT,PACKETS,SDM_CAPTURE_FILE_ID", NULL);
@@ -2731,7 +2733,7 @@ failed_trap:
    if (file_or_port & READ_FROM_UNIREC) {
       // send terminate message
       char dummy[1] = {0};
-      trap_send_data(0, dummy, 1, TRAP_HALFWAIT);
+      trap_send(0, dummy, 1);
       // clean up before termination
       if (tmplt != NULL) {
          ur_free_template(tmplt);
