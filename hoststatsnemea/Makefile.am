@@ -16,8 +16,12 @@ HOSTSTATSNEMEASRCS=src/aux_func.h \
 bin_PROGRAMS=hoststatsnemea
 hoststatsnemea_SOURCES=$(HOSTSTATSNEMEASRCS)
 hoststatsnemea_LDADD=-lnemea-common -ltrap -lunirec
-hoststatsnemea_CXXFLAGS=-pthread
+hoststatsnemea_CXXFLAGS=-pthread -Wno-write-strings
 pkgdocdir=${docdir}/hoststatsnemea
 pkgdoc_DATA=README
 dist_sysconf_DATA=hoststats.conf hoststats.conf.default
+BUILT_SOURCES = src/fields.h src/fields.c
+src/fields.h src/fields.c: $(UNIRECPROC)
+	$(PYTHON) $(UNIRECPROC)
 
+CLEANFILES = src/fields.c src/fields.h

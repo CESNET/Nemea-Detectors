@@ -54,6 +54,18 @@ extern "C" {
    #include <unirec/unirec.h>
 }
 
+#define DIR_FLAG_REQ   0x8   //Request
+#define DIR_FLAG_RSP   0x4   //Response
+#define DIR_FLAG_SF    0x2   //Single flow
+#define DIR_FLAG_NRC   0x1   //Not recognized
+
+#define TCP_FIN        0x1   //Finish bit flag
+#define TCP_SYN        0x2   //Synchronize bit flag
+#define TCP_RST        0x4   //Reset bit flag
+#define TCP_PSH        0x8   //Push bit flag
+#define TCP_ACK        0x10   //Acknowledgement bit flag
+#define TCP_URG        0x20   //Urgent bit flag
+
 /* -------------------- MAIN PROFILE -------------------- */
 
 class HostProfile {

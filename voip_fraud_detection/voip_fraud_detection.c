@@ -42,7 +42,37 @@
  */
 
 #include "voip_fraud_detection.h"
+#include "fields.c"
 
+UR_FIELDS (
+   string INVEA_SIP_CALLING_PARTY,
+   string INVEA_SIP_CALLED_PARTY,
+   string INVEA_SIP_CALL_ID,
+   string INVEA_SIP_USER_AGENT,
+   uint8 INVEA_VOIP_PACKET_TYPE,
+   ipaddr SRC_IP,
+   ipaddr DST_IP,
+   uint64 LINK_BIT_FIELD,
+   uint16 SRC_PORT,
+   uint16 DST_PORT,
+   string INVEA_SIP_REQUEST_URI,
+   string VOIP_FRAUD_USER_AGENT,
+   uint16 VOIP_FRAUD_PREFIX_LENGTH,
+   uint32 VOIP_FRAUD_SUCCESSFUL_CALL_COUNT,
+   uint32 VOIP_FRAUD_INVITE_COUNT,
+   uint32 VOIP_FRAUD_PREFIX_EXAMINATION_COUNT,
+   string VOIP_FRAUD_SIP_TO,
+   string VOIP_FRAUD_SIP_FROM,
+   string VOIP_FRAUD_COUNTRY_CODE,
+   uint64 INVEA_SIP_STATS,
+   uint64 INVEA_RTCP_PACKETS,
+   uint64 INVEA_RTCP_OCTETS,
+   string INVEA_SIP_VIA,
+   uint32 EVENT_ID,
+   uint8 EVENT_TYPE,
+   time DETECTION_TIME,
+   time TIME_FIRST
+)
 
 /** \brief Struct with information about module. */
 trap_module_info_t *module_info = NULL;
@@ -325,8 +355,8 @@ int is_numeric_participant(char * str, int str_len)
 void get_string_from_unirec(char * string_output, int * string_len, int unirec_field_id, int max_length)
 {
    char * ur_string;
-   *string_len = ur_get_dyn_size(ur_template_in, in_rec, unirec_field_id);
-   ur_string = ur_get_dyn(ur_template_in, in_rec, unirec_field_id);
+   *string_len = ur_get_var_len(ur_template_in, in_rec, unirec_field_id);
+   ur_string = ur_get_ptr_by_id(ur_template_in, in_rec, unirec_field_id);
    if (*string_len > max_length) *string_len = max_length;
    memcpy(string_output, ur_string, sizeof (char) * (*string_len));
    string_output[*string_len] = '\0';
@@ -530,8 +560,8 @@ int main(int argc, char **argv)
 
    // ***** Create UniRec templates *****
 
-   ur_template_in = ur_create_template(UNIREC_INPUT_TEMPLATE);
-   ur_template_out = ur_create_template(UNIREC_OUTPUT_TEMPLATE);
+   ur_template_in = ur_create_input_template(0, UNIREC_INPUT_TEMPLATE, NULL);
+   ur_template_out = ur_create_output_template(0, UNIREC_OUTPUT_TEMPLATE, NULL);
 
    // check of template creation
    if (ur_template_in == NULL || ur_template_out == NULL) {
@@ -542,7 +572,7 @@ int main(int argc, char **argv)
    }
 
    // prepare detection record
-   detection_record = ur_create(ur_template_out, UR_MAX_SIZE);
+   detection_record = ur_create_record(ur_template_out, UR_MAX_SIZE);
 
    // check of detection record
    if (detection_record == NULL) {
@@ -581,7 +611,7 @@ int main(int argc, char **argv)
       // fatal error, module exits
       ur_free_template(ur_template_in);
       ur_free_template(ur_template_out);
-      ur_free(detection_record);
+      ur_free_record(detection_record);
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return RETURN_ERROR;
@@ -607,7 +637,7 @@ int main(int argc, char **argv)
    char user_agent[MAX_LENGTH_USER_AGENT + 1];
    unsigned int call_id_len, user_agent_len;
    char * sip_to, * sip_from, * sip_request_uri;
-   unsigned int sip_from_len, sip_to_len, sip_request_uri_len;
+   int sip_from_len, sip_to_len, sip_request_uri_len;
 
    // load Event ID from file
    event_id_load(modul_configuration.event_id_file);
@@ -620,7 +650,7 @@ int main(int argc, char **argv)
       uint16_t in_rec_size;
 
       // Receive data from input interface 0.
-      ret = trap_recv(0, &in_rec, &in_rec_size);
+      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, ur_template_in);
 
       // Handle possible errors
       if (ret != TRAP_E_OK) {
@@ -636,11 +666,11 @@ int main(int argc, char **argv)
       }
 
       // Check size of received data
-      if (in_rec_size < ur_rec_static_size(ur_template_in)) {
+      if (in_rec_size < ur_rec_fixlen_size(ur_template_in)) {
          if (in_rec_size <= 1) {
             break; // End of data (used for testing purposes)
          } else {
-            PRINT_ERR("Error: data with wrong size received (expected size: >= ", ushortint_to_str(ur_rec_static_size(ur_template_in)), ", received size: ", ushortint_to_str(in_rec_size), ")\n");
+            PRINT_ERR("Error: data with wrong size received (expected size: >= ", ushortint_to_str(ur_rec_fixlen_size(ur_template_in)), ", received size: ", ushortint_to_str(in_rec_size), ")\n");
             break;
          }
       }
@@ -652,7 +682,7 @@ int main(int argc, char **argv)
 
       // get type of packet
       uint8_t voip_packet_type;
-      voip_packet_type = ur_get(ur_template_in, in_rec, UR_INVEA_VOIP_PACKET_TYPE);
+      voip_packet_type = ur_get(ur_template_in, in_rec, F_INVEA_VOIP_PACKET_TYPE);
 
       // if voip_packet_type is monitored
       if (voip_packet_type == VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED \
@@ -667,27 +697,27 @@ int main(int argc, char **argv)
          time(&time_actual);
 
          // get source IP (unirec)
-         ip_src = &ur_get(ur_template_in, in_rec, UR_SRC_IP);
+         ip_src = &ur_get(ur_template_in, in_rec, F_SRC_IP);
          ip_to_str(ip_src, ip_src_str);
 
          // get destination IP (unirec)
-         ip_dst = &ur_get(ur_template_in, in_rec, UR_DST_IP);
+         ip_dst = &ur_get(ur_template_in, in_rec, F_DST_IP);
          ip_to_str(ip_dst, ip_dst_str);
 
          // get SIP_REQUEST_URI from UniRec
-         get_string_from_unirec(sip_request_uri_orig, &sip_request_uri_len, UR_INVEA_SIP_REQUEST_URI, MAX_LENGTH_SIP_TO);
+         get_string_from_unirec(sip_request_uri_orig, &sip_request_uri_len, F_INVEA_SIP_REQUEST_URI, MAX_LENGTH_SIP_TO);
 
          // get SIP_FROM from UniRec
-         get_string_from_unirec(sip_from_orig, &sip_from_len, UR_INVEA_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM);
+         get_string_from_unirec(sip_from_orig, &sip_from_len, F_INVEA_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM);
 
          // get SIP_TO from UniRec
-         get_string_from_unirec(sip_to_orig, &sip_to_len, UR_INVEA_SIP_CALLED_PARTY, MAX_LENGTH_SIP_TO);
+         get_string_from_unirec(sip_to_orig, &sip_to_len, F_INVEA_SIP_CALLED_PARTY, MAX_LENGTH_SIP_TO);
 
          // get Call-ID from UniRec
-         get_string_from_unirec(call_id, &call_id_len, UR_INVEA_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
+         get_string_from_unirec(call_id, &call_id_len, F_INVEA_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
 
          // get User-Agent from UniRec
-         get_string_from_unirec(user_agent, &user_agent_len, UR_INVEA_SIP_USER_AGENT, MAX_LENGTH_USER_AGENT);
+         get_string_from_unirec(user_agent, &user_agent_len, F_INVEA_SIP_USER_AGENT, MAX_LENGTH_USER_AGENT);
 
          // cut "sip:" or "sips:" from sip_request_uri, sip_to and sip_from
          int invalid_request_uri = cut_sip_identifier(&sip_request_uri, sip_request_uri_orig, &sip_request_uri_len);
@@ -712,14 +742,14 @@ int main(int argc, char **argv)
 
             // get id of monitoring probes
             uint64_t link_bit_field;
-            link_bit_field = ur_get(ur_template_in, in_rec, UR_LINK_BIT_FIELD);
+            link_bit_field = ur_get(ur_template_in, in_rec, F_LINK_BIT_FIELD);
 
             PRINT_OUT_NOTDATETIME(" LINK_BIT_FIELD: ", uint_to_str(link_bit_field), "; ");
             PRINT_OUT_NOTDATETIME("SRC_IP: ", ip_src_str, "; DST_IP: ", ip_dst_str, "; voip_packet_type: ", uint_to_str(voip_packet_type), "; ");
 
             uint16_t src_port, dst_port;
-            src_port = ur_get(ur_template_in, in_rec, UR_SRC_PORT);
-            dst_port = ur_get(ur_template_in, in_rec, UR_DST_PORT);
+            src_port = ur_get(ur_template_in, in_rec, F_SRC_PORT);
+            dst_port = ur_get(ur_template_in, in_rec, F_DST_PORT);
 
             PRINT_OUT_NOTDATETIME("SRC_PORT: ", uint_to_str(src_port), "; ");
             PRINT_OUT_NOTDATETIME("DST_PORT: ", uint_to_str(dst_port), "\n");
@@ -732,7 +762,7 @@ int main(int argc, char **argv)
 
          // get SIP_STATS from UniRec
          uint64_t sip_stats;
-         sip_stats = ur_get(ur_template_in, in_rec, UR_INVEA_SIP_STATS);
+         sip_stats = ur_get(ur_template_in, in_rec, F_INVEA_SIP_STATS);
 
          uint32_t invite_stats;
          uint16_t bye_stats;
@@ -854,7 +884,7 @@ int main(int argc, char **argv)
 
                if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 1) {
                   // set rtp_data=1, if some packets are in the flow record
-                  if (ur_get(ur_template_in, in_rec, UR_INVEA_RTCP_PACKETS) > 0 && ur_get(ur_template_in, in_rec, UR_INVEA_RTCP_OCTETS) > 0) {
+                  if (ur_get(ur_template_in, in_rec, F_INVEA_RTCP_PACKETS) > 0 && ur_get(ur_template_in, in_rec, F_INVEA_RTCP_OCTETS) > 0) {
                      ((node_data_t *) (prefix_tree_node->parent->value))->rtp_data = 1;
                   }
                }
@@ -931,9 +961,9 @@ int main(int argc, char **argv)
                // if at least one INVITE requests is in flow record
                if (invite_stats > 0) {
                   // print debug information about INVITE request
-                  int sip_via_len = ur_get_dyn_size(ur_template_in, in_rec, UR_INVEA_SIP_VIA);
-                  char *sip_via = ur_get_dyn(ur_template_in, in_rec, UR_INVEA_SIP_VIA);
-                  uint64_t link_bit_field = ur_get(ur_template_in, in_rec, UR_LINK_BIT_FIELD);
+                  int sip_via_len = ur_get_var_len(ur_template_in, in_rec, F_INVEA_SIP_VIA);
+                  char *sip_via = ur_get_ptr_by_id(ur_template_in, in_rec, F_INVEA_SIP_VIA);
+                  uint64_t link_bit_field = ur_get(ur_template_in, in_rec, F_LINK_BIT_FIELD);
                   printf("%s;INVITE;IP_SRC:%s;IP_DST:%s;LINK_BIT_FIELD:%u;\n", get_actual_time_string(), ip_src_str, ip_dst_str, link_bit_field);
                   printf("From:\"%.*s\";\n", sip_from_len, sip_from);
                   printf("To:\"%.*s\";\n", sip_to_len, sip_to);
@@ -1190,7 +1220,7 @@ int main(int argc, char **argv)
    // destroy templates (free memory)
    ur_free_template(ur_template_in);
    ur_free_template(ur_template_out);
-   ur_free(detection_record);
+   ur_free_record(detection_record);
 
    PRINT_OUT_LOG("... VoIP fraud detection module exit! (version:", MODULE_VERSION, ")\n");
    PRINT_OUT_LOG("-----------------------------------------------------\n");

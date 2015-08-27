@@ -44,7 +44,9 @@
 
 #include "subprofiles.h"
 #include "detectionrules.h"
-
+extern "C" {
+   #include "fields.h"
+}
 
 /* HOW TO ADD NEW SUBPROFILE:
  * 1) In subprofiles.h create new class derived from class "SubprofileBase".
@@ -217,10 +219,10 @@ SSHSubprofile::~SSHSubprofile()
 // Flow filter
 bool SSHSubprofile::flow_filter(const void* data, const ur_template_t* tmplt)
 {
-   return (ur_get(tmplt, data, UR_PROTOCOL) == 6
+   return (ur_get(tmplt, data, F_PROTOCOL) == 6
       && (
-         ur_get(tmplt, data, UR_SRC_PORT) == 22 ||
-         ur_get(tmplt, data, UR_DST_PORT) == 22
+         ur_get(tmplt, data, F_SRC_PORT) == 22 ||
+         ur_get(tmplt, data, F_DST_PORT) == 22
       ));
 }
 
@@ -238,19 +240,19 @@ bool SSHSubprofile::update_src_ip(hosts_record_t &main_record, const void *data,
 
    /* Update items */
    bool src_present = bloomfilters_get_presence(ips);
-   uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
+   uint8_t tcp_flags = ur_get(tmplt, data, F_TCP_FLAGS);
    ssh_data_t &src_host_rec = *main_record.ssh_data;
 
    if (!src_present) INC(src_host_rec.out_all_uniqueips);
 
-   if (dir_flags & UR_DIR_FLAG_REQ) {
+   if (dir_flags & DIR_FLAG_REQ) {
       // request flows
-      ADD(src_host_rec.out_req_packets, ur_get(tmplt, data, UR_PACKETS));
-      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_req_syn_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      ADD(src_host_rec.out_req_packets, ur_get(tmplt, data, F_PACKETS));
+      if (tcp_flags & TCP_SYN) INC(src_host_rec.out_req_syn_cnt);
+   } else if (dir_flags & DIR_FLAG_RSP) {
       // respose flows
-      ADD(src_host_rec.out_rsp_packets, ur_get(tmplt, data, UR_PACKETS));
-      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_rsp_syn_cnt);
+      ADD(src_host_rec.out_rsp_packets, ur_get(tmplt, data, F_PACKETS));
+      if (tcp_flags & TCP_SYN) INC(src_host_rec.out_rsp_syn_cnt);
    }
    return 1;
 }
@@ -269,19 +271,19 @@ bool SSHSubprofile::update_dst_ip(hosts_record_t &main_record, const void *data,
 
    /* Update items */
    bool dst_present = bloomfilters_get_presence(ips);
-   uint8_t tcp_flags = ur_get(tmplt, data, UR_TCP_FLAGS);
+   uint8_t tcp_flags = ur_get(tmplt, data, F_TCP_FLAGS);
    ssh_data_t &dst_host_rec = *main_record.ssh_data;
 
    if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
 
-   if (dir_flags & UR_DIR_FLAG_REQ) {
+   if (dir_flags & DIR_FLAG_REQ) {
       // request flows
-      ADD(dst_host_rec.in_req_packets, ur_get(tmplt, data, UR_PACKETS));
-      if (tcp_flags & UR_TCP_SYN) INC(dst_host_rec.in_req_syn_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      ADD(dst_host_rec.in_req_packets, ur_get(tmplt, data, F_PACKETS));
+      if (tcp_flags & TCP_SYN) INC(dst_host_rec.in_req_syn_cnt);
+   } else if (dir_flags & DIR_FLAG_RSP) {
       // respose flows
-      ADD(dst_host_rec.in_rsp_packets, ur_get(tmplt, data, UR_PACKETS));
-      if (tcp_flags & UR_TCP_SYN) INC(dst_host_rec.in_rsp_syn_cnt);
+      ADD(dst_host_rec.in_rsp_packets, ur_get(tmplt, data, F_PACKETS));
+      if (tcp_flags & TCP_SYN) INC(dst_host_rec.in_rsp_syn_cnt);
    }
    return 1;
 }
@@ -322,11 +324,11 @@ DNSSubprofile::~DNSSubprofile()
 // Flow filter
 bool DNSSubprofile::flow_filter(const void* data, const ur_template_t* tmplt)
 {
-   return ((ur_get(tmplt, data, UR_PROTOCOL) == 6  ||
-            ur_get(tmplt, data, UR_PROTOCOL) == 17)
+   return ((ur_get(tmplt, data, F_PROTOCOL) == 6  ||
+            ur_get(tmplt, data, F_PROTOCOL) == 17)
             &&
-           (ur_get(tmplt, data, UR_SRC_PORT) == 53 ||
-            ur_get(tmplt, data, UR_DST_PORT) == 53));
+           (ur_get(tmplt, data, F_SRC_PORT) == 53 ||
+            ur_get(tmplt, data, F_DST_PORT) == 53));
 }
 
 // Update a record of source IP address
@@ -343,7 +345,7 @@ bool DNSSubprofile::update_src_ip(hosts_record_t& main_record, const void* data,
 
    /* Update items */
    dns_data_t &src_host_rec = *main_record.dns_data;
-   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(tmplt, data, UR_BYTES) >=
+   if (dir_flags & DIR_FLAG_RSP && ur_get(tmplt, data, F_BYTES) >=
       DNS_BYTES_OVERLIMIT) {
       INC(src_host_rec.out_rsp_overlimit_cnt);
    }
@@ -364,7 +366,7 @@ bool DNSSubprofile::update_dst_ip(hosts_record_t& main_record, const void* data,
 
    /* Update items */
    dns_data_t &dst_host_rec = *main_record.dns_data;
-   if (dir_flags & UR_DIR_FLAG_RSP && ur_get(tmplt, data, UR_BYTES) >=
+   if (dir_flags & DIR_FLAG_RSP && ur_get(tmplt, data, F_BYTES) >=
       DNS_BYTES_OVERLIMIT) {
       INC(dst_host_rec.in_rsp_overlimit_cnt);
    }

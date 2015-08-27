@@ -143,6 +143,18 @@
 #define REQUEST_AND_RESPONSE_PART   0b00001111 /*< Define request and response part for suspision*/
 /* /} */
 
+//TUNNEL_TYPE   Type of detected event
+#define TUN_T_REQUEST_TUNNEL        1             //Request anomaly - detected tunnel
+#define TUN_T_REQUEST_OTHER         2             //Request anomaly - detected other anomaly than tunnel
+#define TUN_T_REQUEST_MALFORMED_P   3             //Request anomaly - malformed packets
+#define TUN_T_RESPONSE_TUNNEL_REQ   4             //Response anomaly - detected tunnel in request string field
+#define TUN_T_RESPONSE_TUNNEL_TXT   5             //Response anomaly - detected tunnel in TXT field
+#define TUN_T_RESPONSE_TUNNEL_CNAME 6             //Response anomaly - detected tunnel in CNAME field
+#define TUN_T_RESPONSE_TUNNEL_MX    7             //Response anomaly - detected tunnel in MX field
+#define TUN_T_RESPONSE_TUNNEL_NS    8             //Response anomaly - detected tunnel in NS field
+#define TUN_T_RESPONSE_OTHER        9             //Response anomaly - detected other anomaly than tunnel
+#define TUN_T_RESPONSE_MALFORMED_P  10            //Response anomaly - malformed packets
+
 
 /*!
  * \brief Signal function.

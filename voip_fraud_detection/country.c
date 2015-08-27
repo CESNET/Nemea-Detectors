@@ -45,6 +45,7 @@
 
 #include "country.h"
 #include "voip_fraud_detection.h"
+#include "fields.h"
 
 #ifdef ENABLE_GEOIP
 
@@ -598,15 +599,15 @@ int country_different_call_detection(cc_hash_table_v2_t * hash_table, ip_item_t 
                   // Send attack information to output interface
 
                   // fill in fields of detection event
-                  ur_set(ur_template_out, detection_record, UR_EVENT_ID, event_id);
-                  ur_set(ur_template_out, detection_record, UR_EVENT_TYPE, UR_EVT_T_VOIP_CALL_DIFFERENT_COUNTRY);
-                  ur_set(ur_template_out, detection_record, UR_SRC_IP, *ip_src);
-                  ur_set(ur_template_out, detection_record, UR_DST_IP, *ip_dst);
-                  ur_set(ur_template_out, detection_record, UR_DETECTION_TIME, ur_time_from_sec_msec(time_detected, 0));
-                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_COUNTRY_CODE, GeoIP_code_by_id(geoip_id), sizeof (char) * LENGTH_COUNTRY_CODE);
-                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_FROM, sip_from, sizeof (char) * strlen(sip_from));
-                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_SIP_TO, sip_to, sizeof (char) * strlen(sip_to));
-                  ur_set_dyn(ur_template_out, detection_record, UR_VOIP_FRAUD_USER_AGENT, user_agent, sizeof (char) * strlen(user_agent));
+                  ur_set(ur_template_out, detection_record, F_EVENT_ID, event_id);
+                  ur_set(ur_template_out, detection_record, F_EVENT_TYPE, F_EVT_T_VOIP_CALL_DIFFERENT_COUNTRY);
+                  ur_set(ur_template_out, detection_record, F_SRC_IP, *ip_src);
+                  ur_set(ur_template_out, detection_record, F_DST_IP, *ip_dst);
+                  ur_set(ur_template_out, detection_record, F_DETECTION_TIME, ur_time_from_sec_msec(time_detected, 0));
+                  ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_COUNTRY_CODE, GeoIP_code_by_id(geoip_id), sizeof (char) * LENGTH_COUNTRY_CODE);
+                  ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_SIP_FROM, sip_from, sizeof (char) * strlen(sip_from));
+                  ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_SIP_TO, sip_to, sizeof (char) * strlen(sip_to));
+                  ur_set_var(ur_template_out, detection_record, F_VOIP_FRAUD_USER_AGENT, user_agent, sizeof (char) * strlen(user_agent));
 
                   // send alert to output interface
                   int return_code = trap_send(0, detection_record, ur_rec_size(ur_template_out, detection_record));

@@ -47,7 +47,9 @@
 #include "aux_func.h"
 #include "config.h"
 #include "detectionrules.h"
-
+extern "C" {
+   #include "fields.h"
+}
 using namespace std;
 
 extern uint32_t hs_time;
@@ -172,37 +174,37 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       bool subprofiles)
 {
    // basic filter for fragments of flows
-   if (ur_get(tmpl_in, record, UR_SRC_PORT) == 0 &&
-       ur_get(tmpl_in, record, UR_DST_PORT) == 0 &&
-       ur_get(tmpl_in, record, UR_PROTOCOL) == 17) {
+   if (ur_get(tmpl_in, record, F_SRC_PORT) == 0 &&
+       ur_get(tmpl_in, record, F_DST_PORT) == 0 &&
+       ur_get(tmpl_in, record, F_PROTOCOL) == 17) {
       // Skip UDP flows with source and destination port "0"
       return;
    }
 
    // create key for the BloomFilter
    bloom_key_t bloom_key;
-   bloom_key.src_ip = ur_get(tmpl_in, record, UR_SRC_IP);
-   bloom_key.dst_ip = ur_get(tmpl_in, record, UR_DST_IP);
+   bloom_key.src_ip = ur_get(tmpl_in, record, F_SRC_IP);
+   bloom_key.dst_ip = ur_get(tmpl_in, record, F_DST_IP);
 
    // common part
-   uint8_t tcp_flags = ur_get(tmpl_in, record, UR_TCP_FLAGS);
+   uint8_t tcp_flags = ur_get(tmpl_in, record, F_TCP_FLAGS);
    uint8_t dir_flags;
    if (port_flowdir) {
       // ignore flowdir from record and create custom
-      dir_flags = UR_DIR_FLAG_NRC;
-      uint16_t src_port = ur_get(tmpl_in, record, UR_SRC_PORT);
-      uint16_t dst_port = ur_get(tmpl_in, record, UR_DST_PORT);
+      dir_flags = DIR_FLAG_NRC;
+      uint16_t src_port = ur_get(tmpl_in, record, F_SRC_PORT);
+      uint16_t dst_port = ur_get(tmpl_in, record, F_DST_PORT);
 
       if (((src_port < 10000) || (dst_port < 10000)) && (src_port != dst_port)) {
          if (src_port < dst_port) {
-            dir_flags = UR_DIR_FLAG_RSP;
+            dir_flags = DIR_FLAG_RSP;
          } else {
-            dir_flags = UR_DIR_FLAG_REQ;
+            dir_flags = DIR_FLAG_REQ;
          }
       }
    } else {
       // use flowdir from unirec
-      dir_flags = ur_get(tmpl_in, record, UR_DIRECTION_FLAGS);
+      dir_flags = ur_get(tmpl_in, record, F_DIRECTION_FLAGS);
    }
 
    // Macros
@@ -239,43 +241,43 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
 
    // UPDATE STATS
    // all flows
-   ADD(src_host_rec.out_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
-   ADD(src_host_rec.out_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
+   ADD(src_host_rec.out_all_bytes, ur_get(tmpl_in, record, F_BYTES));
+   ADD(src_host_rec.out_all_packets, ur_get(tmpl_in, record, F_PACKETS));
    if (!src_present) INC(src_host_rec.out_all_uniqueips);
    INC(src_host_rec.out_all_flows);
 
-   if (tcp_flags & UR_TCP_FIN) INC(src_host_rec.out_all_fin_cnt);
-   if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_all_syn_cnt);
-   if (tcp_flags & UR_TCP_RST) INC(src_host_rec.out_all_rst_cnt);
-   if (tcp_flags & UR_TCP_PSH) INC(src_host_rec.out_all_psh_cnt);
-   if (tcp_flags & UR_TCP_ACK) INC(src_host_rec.out_all_ack_cnt);
-   if (tcp_flags & UR_TCP_URG) INC(src_host_rec.out_all_urg_cnt);
+   if (tcp_flags & TCP_FIN) INC(src_host_rec.out_all_fin_cnt);
+   if (tcp_flags & TCP_SYN) INC(src_host_rec.out_all_syn_cnt);
+   if (tcp_flags & TCP_RST) INC(src_host_rec.out_all_rst_cnt);
+   if (tcp_flags & TCP_PSH) INC(src_host_rec.out_all_psh_cnt);
+   if (tcp_flags & TCP_ACK) INC(src_host_rec.out_all_ack_cnt);
+   if (tcp_flags & TCP_URG) INC(src_host_rec.out_all_urg_cnt);
 
-   src_host_rec.out_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
+   src_host_rec.out_linkbitfield |= ur_get(tmpl_in, record, F_LINK_BIT_FIELD);
 
-   if (dir_flags & UR_DIR_FLAG_REQ) {
+   if (dir_flags & DIR_FLAG_REQ) {
       // request flows
       bool req_present = bf_dir_active->containsinsert((const unsigned char *)
          &bloom_key, sizeof(bloom_key_t));
       bf_dir_learn->insert((const unsigned char *) &bloom_key,
          sizeof(bloom_key_t));
 
-      ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
-      ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(src_host_rec.out_req_bytes, ur_get(tmpl_in, record, F_BYTES));
+      ADD(src_host_rec.out_req_packets, ur_get(tmpl_in, record, F_PACKETS));
       if (!req_present) INC(src_host_rec.out_req_uniqueips);
       INC(src_host_rec.out_req_flows);
 
-      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_req_syn_cnt);
-      if (tcp_flags & UR_TCP_RST) INC(src_host_rec.out_req_rst_cnt);
-      if (tcp_flags & UR_TCP_PSH) INC(src_host_rec.out_req_psh_cnt);
-      if (tcp_flags & UR_TCP_ACK) INC(src_host_rec.out_req_ack_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      if (tcp_flags & TCP_SYN) INC(src_host_rec.out_req_syn_cnt);
+      if (tcp_flags & TCP_RST) INC(src_host_rec.out_req_rst_cnt);
+      if (tcp_flags & TCP_PSH) INC(src_host_rec.out_req_psh_cnt);
+      if (tcp_flags & TCP_ACK) INC(src_host_rec.out_req_ack_cnt);
+   } else if (dir_flags & DIR_FLAG_RSP) {
       // response flows
-      ADD(src_host_rec.out_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(src_host_rec.out_rsp_packets, ur_get(tmpl_in, record, F_PACKETS));
       INC(src_host_rec.out_rsp_flows);
 
-      if (tcp_flags & UR_TCP_SYN) INC(src_host_rec.out_rsp_syn_cnt);
-      if (tcp_flags & UR_TCP_ACK) INC(src_host_rec.out_rsp_ack_cnt);
+      if (tcp_flags & TCP_SYN) INC(src_host_rec.out_rsp_syn_cnt);
+      if (tcp_flags & TCP_ACK) INC(src_host_rec.out_rsp_ack_cnt);
    }
 
    if (subprofiles) {
@@ -312,41 +314,41 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
 
    // UPDATE STATS
    // all flows
-   ADD(dst_host_rec.in_all_bytes, ur_get(tmpl_in, record, UR_BYTES));
-   ADD(dst_host_rec.in_all_packets, ur_get(tmpl_in, record, UR_PACKETS));
+   ADD(dst_host_rec.in_all_bytes, ur_get(tmpl_in, record, F_BYTES));
+   ADD(dst_host_rec.in_all_packets, ur_get(tmpl_in, record, F_PACKETS));
    if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
    INC(dst_host_rec.in_all_flows);
 
-   if (tcp_flags & UR_TCP_FIN) INC(dst_host_rec.in_all_fin_cnt);
-   if (tcp_flags & UR_TCP_SYN) INC(dst_host_rec.in_all_syn_cnt);
-   if (tcp_flags & UR_TCP_RST) INC(dst_host_rec.in_all_rst_cnt);
-   if (tcp_flags & UR_TCP_PSH) INC(dst_host_rec.in_all_psh_cnt);
-   if (tcp_flags & UR_TCP_ACK) INC(dst_host_rec.in_all_ack_cnt);
-   if (tcp_flags & UR_TCP_URG) INC(dst_host_rec.in_all_urg_cnt);
+   if (tcp_flags & TCP_FIN) INC(dst_host_rec.in_all_fin_cnt);
+   if (tcp_flags & TCP_SYN) INC(dst_host_rec.in_all_syn_cnt);
+   if (tcp_flags & TCP_RST) INC(dst_host_rec.in_all_rst_cnt);
+   if (tcp_flags & TCP_PSH) INC(dst_host_rec.in_all_psh_cnt);
+   if (tcp_flags & TCP_ACK) INC(dst_host_rec.in_all_ack_cnt);
+   if (tcp_flags & TCP_URG) INC(dst_host_rec.in_all_urg_cnt);
 
-   dst_host_rec.in_linkbitfield |= ur_get(tmpl_in, record, UR_LINK_BIT_FIELD);
+   dst_host_rec.in_linkbitfield |= ur_get(tmpl_in, record, F_LINK_BIT_FIELD);
 
-   if (dir_flags & UR_DIR_FLAG_REQ) {
+   if (dir_flags & DIR_FLAG_REQ) {
       // request flows
       bool req_present = bf_dir_active->containsinsert((const unsigned char *)
          &bloom_key, sizeof(bloom_key_t));
       bf_dir_learn->insert((const unsigned char *) &bloom_key,
          sizeof(bloom_key_t));
 
-      ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, UR_BYTES));
-      ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(dst_host_rec.in_req_bytes, ur_get(tmpl_in, record, F_BYTES));
+      ADD(dst_host_rec.in_req_packets, ur_get(tmpl_in, record, F_PACKETS));
       if (!req_present) INC(dst_host_rec.in_req_uniqueips);
       INC(dst_host_rec.in_req_flows);
 
-      if (tcp_flags & UR_TCP_RST) INC(dst_host_rec.in_req_rst_cnt);
-      if (tcp_flags & UR_TCP_PSH) INC(dst_host_rec.in_req_psh_cnt);
-      if (tcp_flags & UR_TCP_ACK) INC(dst_host_rec.in_req_ack_cnt);
-   } else if (dir_flags & UR_DIR_FLAG_RSP) {
+      if (tcp_flags & TCP_RST) INC(dst_host_rec.in_req_rst_cnt);
+      if (tcp_flags & TCP_PSH) INC(dst_host_rec.in_req_psh_cnt);
+      if (tcp_flags & TCP_ACK) INC(dst_host_rec.in_req_ack_cnt);
+   } else if (dir_flags & DIR_FLAG_RSP) {
       // response flows
-      ADD(dst_host_rec.in_rsp_packets, ur_get(tmpl_in, record, UR_PACKETS));
+      ADD(dst_host_rec.in_rsp_packets, ur_get(tmpl_in, record, F_PACKETS));
       INC(dst_host_rec.in_rsp_flows);
 
-      if (tcp_flags & UR_TCP_ACK) INC(dst_host_rec.in_rsp_ack_cnt);
+      if (tcp_flags & TCP_ACK) INC(dst_host_rec.in_rsp_ack_cnt);
    }
 
    if (subprofiles) {

@@ -55,10 +55,10 @@
 #include "config.h"
 #include <unistd.h>
 #include <getopt.h>
-
 //TRAP
 extern "C" {
    #include <libtrap/trap.h>
+   #include "fields.c"
 }
 using namespace std;
 
@@ -77,7 +77,31 @@ static bool offline_mode = false; // Run in offline mode
 static bool send_eos = true;
 
 // Define section
-#define DEF_REQUIRED_TMPL "<COLLECTOR_FLOW>"  // required input UniRec items
+#define DEF_REQUIRED_TMPL "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"  // required input UniRec items
+
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   uint64 LINK_BIT_FIELD,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 DIR_BIT_FIELD,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS,
+   uint8 TOS,
+   uint8 TTL,
+   uint32 EVENT_SCALE,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 EVENT_TYPE,
+   uint8 PROTOCOL,
+   uint8 DIRECTION_FLAGS,
+   bytes* NOTE
+)
 
 ///////////////////////////////////////////////////
 // Struct with information about Nemea module
@@ -149,12 +173,11 @@ bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
 {
    bool subset = true;
    string items;
-   ur_field_id_t ur_set_id;
-   ur_iter_t ur_set_iter = UR_ITER_BEGIN;
+   ur_field_id_t ur_set_id = UR_ITER_BEGIN;
 
    /* Iterate over all required UniRec items */
-   while ((ur_set_id = ur_iter_fields_tmplt(subs_tmpl, &ur_set_iter))
-      != UR_INVALID_FIELD) {
+   while ((ur_set_id = ur_iter_fields(subs_tmpl, ur_set_id))
+      != UR_ITER_END) {
       if (ur_is_present(main_tmpl, ur_set_id)) {
          continue;
       }
@@ -163,7 +186,7 @@ bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
       if (!items.empty()) {
          items += ",";
       }
-      items += UR_FIELD_NAMES[ur_set_id];
+      items += ur_get_name(ur_set_id);
    }
 
    /* Result check */
@@ -221,27 +244,17 @@ int main(int argc, char *argv[])
    }
 
    /* Some variables initialization because of goto */
-   ur_field_id_t dir_flag_id = UR_DIRECTION_FLAGS;
+   ur_field_id_t dir_flag_id = F_DIRECTION_FLAGS;
    ur_template_t *coll_tmpl = NULL;
 
-   /* Create UniRec template */
-   std::string input_tmpl_str = trim(config->getValue("input-template"));
-   if (input_tmpl_str.empty()) {
-      log(LOG_ERR, "ERROR: Input template 'input-template' is not specified "
-         "the configuration file.");
-      config->unlock();
-      goto exitA;
-   }
 
-   tmpl_in = ur_create_template(input_tmpl_str.c_str());
-   tmpl_out = ur_create_template("EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
-      "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE");
+   tmpl_in = ur_create_input_template(0, DEF_REQUIRED_TMPL, NULL);
+   tmpl_out = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
+      "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE", NULL);
 
    if (tmpl_in == NULL || tmpl_out == NULL) {
       if (tmpl_in == NULL) {
-         log(LOG_ERR, "ERROR: Failed to create input UniRec template. Make "
-            "sure that input template value 'input-template' in the "
-            "configuration file is correct.");
+         log(LOG_ERR, "ERROR: Failed to create input UniRec template.");
       }
       if (tmpl_out == NULL) {
          log(LOG_ERR, "ERROR: Failed to create output UniRec template. "
@@ -254,23 +267,6 @@ int main(int argc, char *argv[])
       goto exitA;
    }
 
-   /* Verify that common required UniRec items are in the input template */
-   coll_tmpl = ur_create_template(DEF_REQUIRED_TMPL);
-   if (coll_tmpl == NULL) {
-      log(LOG_ERR, "ERROR: ur_create failed - internal error.");
-      config->unlock();
-      goto exitB;
-   }
-
-   if (!is_template_subset(tmpl_in, coll_tmpl)) {
-      log(LOG_ERR, "ERROR: Generally required UniRec items (%s) are not "
-         "in the input template.", DEF_REQUIRED_TMPL);
-      ur_free_template(coll_tmpl);
-      config->unlock();
-      goto exitB;
-   }
-   ur_free_template(coll_tmpl);
-
    /* Verify that 'DIRECTION_FLAGS' item is present in the input template when
     * port-flowdir is deactivated */
    if (!config->get_cfg_val("port flowdirection", "port-flowdir") &&
@@ -278,7 +274,7 @@ int main(int argc, char *argv[])
       log(LOG_ERR, "ERROR: Unirec item '%s' is missing in the input template.\n"
          "Hint: if you are using this module without flowdirection module "
          "change value 'port-flowdir' in the configuration file.",
-         UR_FIELD_NAMES[dir_flag_id]);
+         ur_get_name(dir_flag_id));
       config->unlock();
       goto exitB;
    }
@@ -305,7 +301,7 @@ int main(int argc, char *argv[])
 
       /* Active subprofile - check presence of required UniRec items
        * in the input template */
-      ur_template_t *sbp_tmpl = ur_create_template(sbp_ptr->get_template().c_str());
+      ur_template_t *sbp_tmpl = ur_create_template(sbp_ptr->get_template().c_str(), NULL);
       if (sbp_tmpl == NULL) {
          log(LOG_ERR, "ERROR: Creation of the subprofile '%s' UniRec "
             "template failed. Probably internal error in the subprofile "
