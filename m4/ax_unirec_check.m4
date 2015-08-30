@@ -16,10 +16,10 @@ AC_DEFUN([AX_UNIREC_CHECK], [
   # UniRec processor
   if test "$repobuild" = "true"; then
   AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
-      [$PWD/../unirec$PATH_SEPARATOR$PATH])
+      [$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$PATH])
   else
   AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
-      [$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
+      [$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
   fi
 
   if test -z "$UNIRECPROC"; then
@@ -37,6 +37,9 @@ AC_DEFUN([AX_UNIREC_CHECK], [
     elif test -d "$srcdir/../../unirec"; then
       UNIRECINC='$(top_srcdir)/../../'
       UNIRECLIB='$(top_builddir)/../../unirec/.libs/'
+    elif test -d "$srcdir/../nemea-framework/unirec"; then
+      UNIRECINC='$(top_srcdir)/../nemea-framework/'
+      UNIRECLIB='$(top_builddir)/../nemea-framework/unirec/.libs'
     fi
 
     # AC_SUBST command line variables from UNIRECLIB and UNIRECINC.

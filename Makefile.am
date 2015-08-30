@@ -1,83 +1,9 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=alertfilter \
-anonymizer \
-astute \
-attack_gen \
-basic2collector \
-blacklistfilter \
-brute_force_detector \
-brute_force_hist_detector \
-configurator_examples \
-deduplication \
-delaybuffer \
-amplification_detection \
-dns_amp_twente \
-entropy_module \
-email_reporter \
-example \
-flow_gen \
-flowcounter \
-flowdirection \
-flow_statistic \
-flowtools_reader \
-heartbleed_detector \
-hoststatsnemea \
-ipspoofingdetector \
-ipv6stats \
-logger \
-logreplay \
-merger \
-nemea2sdmcap \
-pca \
-p2pbotnet_detection \
-p2pdetector \
-protocolcounters \
-python_example \
-report_handler \
-sampler \
-sdmcap_controller \
-simplebotnetdetector \
-test_threads \
-timestamp_checker \
-traffic_delayer \
-traffic_merger \
-traffic_repeater \
-transitfilter \
-trapdump \
-trapreplay \
-tunnel_detection \
-slowthreatdetector \
-synflood/synfindiff \
-synflood/synrate \
-synflood/pcf \
-vermon \
-voip_fraud_detection \
-warden_collector
-
-
-EXTRA_DIST = nfreader flow_meter portscan_detector debug_sender unirecfilter rrd_updater fbreader
-
-if HAVE_LIBNF
-SUBDIRS += nfreader
-else
-if HAVE_LIBNFDUMP
-SUBDIRS += nfreader
-endif
-endif
-
-if HAVE_LIBPCAP
-SUBDIRS += flow_meter portscan_detector
-endif
-if HAVE_BISON
-SUBDIRS += unirecfilter
-endif
-if HAVE_RRDTOOL
-SUBDIRS += rrd_updater
-endif
-if HAVE_LIBFASTBIT
-SUBDIRS += fbreader
-endif
+SUBDIRS=amplification_detection \
+	hoststatsnemea \
+	tunnel_detection \
+	voip_fraud_detection
 
 RPMDIR = RPMBUILD
 

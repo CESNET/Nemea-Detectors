@@ -1,0 +1,46 @@
+language: c
+compiler:
+  - gcc
+  - clang
+os:
+  - linux
+
+branches:
+  only:
+    - master
+    - coverity
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "QCSTWF5FdxycapZ3JmhS/k/z/SXUsJv6BD+pgGkGNsq/MhYT2k8hxLpHzL7Js9gaTFTST/fXinSQA+YCDYJWEZ5vcWYmOCm7j3dUwKxr+FExRptB8rsgpO593CPbLBndju6GN+v+4mTH+CHUlgbPkv4ylFtZrujMffbpBv2YOmo/5TaSsJcC46cXAZAjqEa608aA63FHMZNmPLyMC8ObVysOM7e8eutu+LY4bQBcVUC74y3vgqUTSbyYwZEFw80G9WWSEbffvjc6+N8Nhd6BrTgnPuoev6v3pBjANZyMKFj5dMpsHKAPqSDWETthcfGJGGzsDzs0oCHcI1+4Cew1zq5HGPzNZf45TM9rpnirEHZV+E6PeXajIIad6K85EbFF0QW4zqir4KBhRmW6i7hpkvEZQmaAj66PwOD6Mw2aZlSg6lS5PzNVlNtk2bwVWicSdku7eBc3cG1eaR7NTghAdEJm8LkjyzO/U+RNrOOMUWUNTay8OZO7mIaoNmy21MGyjQGDEnMi5oCLtnfo6Bz4UEaw6bjLhO+qbGya4chyoUIItEVzl/QD1+j2aaJyPG0Wxhi92PeFb0V1gA5MBjkrYCzYz4HfwyvjDhL9zYorvUCrSVNrKYUrOd/J/pSDpF46qtv6v+POvgvQucNHJd4S/0SNKk3LYxYOPOCRfaJjbXQ="
+
+addons:
+  coverity_scan:
+    project:
+      name: "CESNET/Nemea-Detectors"
+      description: "Build submitted via Travis CI"
+    notification_email: cejkat@cesnet.cz
+    build_command_prepend: "( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && ./configure;"
+    build_command:   "make -j 4"
+    branch_pattern: coverity
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-c++
+      - autoconf
+      - pkg-config
+      - make
+      - automake
+      - libxml2-devel
+      - libxml2
+
+script:
+  - git clone https://github.com/CESNET/nemea-framework /tmp/fw
+  - ( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; )
+  - ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
+

@@ -3,15 +3,15 @@
 
 AC_PREREQ([2.63])
 AC_INIT([nemea-modules], [1.0.0], [traffic-analysis@cesnet.cz])
-AC_CONFIG_SRCDIR([trapdump/trapdump.c])
+AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
-AM_INIT_AUTOMAKE([-Wall silent-rules subdir-objects])
+AM_INIT_AUTOMAKE([silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -45,8 +45,6 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_CHECK_PROG(PYTHON, python, python, [""])
-AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
 AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
@@ -72,38 +70,8 @@ AC_CHECK_HEADER(idna.h,
 
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
-# Checks for libraries.
-AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
-  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
-    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
-  )]
-)
-
-AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
-AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes)
-
-AC_CHECK_HEADER(pcap.h,
-	AC_CHECK_LIB(pcap, pcap_open, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
-
-AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
-
-AC_CHECK_HEADER(rrd.h,
-	AC_CHECK_LIB(rrd, rrd_update, [rrdtool=yes], AC_MSG_WARN([rrdtool not found. The rrd_updater module will not be compiled.])), AC_MSG_WARN([rrd.h not found. The rrd_updater module will not be compiled.]))
-
-AM_CONDITIONAL(HAVE_RRDTOOL, test x${rrdtool} = xyes)
-
-AC_CHECK_PROG(BISON, bison, yes, [""])
-AC_CHECK_PROG(FLEX, flex, yes, [""])
-
-AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
-
-PKG_CHECK_MODULES([FASTBIT],[fastbit],[libfastbit=yes],[AC_MSG_WARN([libfastbit was not found by pkg-config. The fbreader module will not be compiled.])])
-
-AM_CONDITIONAL(HAVE_LIBFASTBIT, test x${libfastbit} = xyes)
-
-
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -119,14 +87,13 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
-AC_CHECK_TYPES([ptrdiff_t])
 
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([alarm clock_gettime floor gettimeofday localeconv memset mkdir pow setlocale sqrt strchr strdup strerror strstr strtol strtoul])
+AC_CHECK_FUNCS([alarm clock_gettime floor gettimeofday localeconv memset pow regcomp setlocale sqrt strchr strdup strerror strstr strtol strtoul strtoull])
 
 # Check for sigaction
 AC_CHECK_FUNC(sigaction, AC_DEFINE(HAVE_SIGACTION, 1, [Define if you have the 'sigaction' function]))
@@ -145,72 +112,12 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
-                 alertfilter/Makefile
-                 anonymizer/Makefile
-                 astute/Makefile
-                 attack_gen/Makefile
-                 basic2collector/Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/ipdetect/Makefile
-                 brute_force_detector/Makefile
-                 brute_force_hist_detector/Makefile
-                 configurator_examples/Makefile
-                 configurator_examples/simple_types/Makefile
-                 configurator_examples/structures/Makefile
-                 configurator_examples/arrays/Makefile
-                 configurator_examples/complex_example/Makefile
-                 deduplication/Makefile
-                 delaybuffer/Makefile
-                 dns_amp_twente/Makefile
                  amplification_detection/Makefile
-                 email_reporter/Makefile
-                 entropy_module/Makefile
-                 example/Makefile
-                 fbreader/Makefile
-                 flow_gen/Makefile
-                 flow_meter/Makefile
-                 flowcounter/Makefile
-                 flowdirection/Makefile
-                 flow_statistic/Makefile
-                 flowtools_reader/Makefile
-                 heartbleed_detector/Makefile
                  hoststatsnemea/Makefile
-                 ipspoofingdetector/Makefile
-                 ipv6stats/Makefile
-                 logger/Makefile
-                 logreplay/Makefile
-                 merger/Makefile
-                 nemea-modules.spec
-                 nemea2sdmcap/Makefile
-                 nfreader/Makefile
-                 p2pbotnet_detection/Makefile
-                 p2pdetector/Makefile
-                 pca/Makefile
-                 portscan_detector/Makefile
-                 protocolcounters/Makefile
-                 python_example/Makefile
-                 rrd_updater/Makefile
-                 sampler/Makefile
-                 sdmcap_controller/Makefile
-                 simplebotnetdetector/Makefile
-                 slowthreatdetector/Makefile
-                 synflood/pcf/Makefile
-                 synflood/synfindiff/Makefile
-                 synflood/synrate/Makefile
-                 test_threads/Makefile
-                 timestamp_checker/Makefile
-                 traffic_delayer/Makefile
-                 traffic_merger/Makefile
-                 report_handler/Makefile
-                 traffic_repeater/Makefile
-                 transitfilter/Makefile
-                 trapdump/Makefile
-                 trapreplay/Makefile
                  tunnel_detection/Makefile
-                 unirecfilter/Makefile
-                 vermon/Makefile
                  voip_fraud_detection/Makefile
-                 warden_collector/Makefile
                ])
 
 
