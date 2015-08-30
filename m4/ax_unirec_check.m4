@@ -19,8 +19,6 @@ AC_DEFUN([AX_UNIREC_CHECK], [
       [$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$PATH])
   else
   search_path="$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR"
-  echo "$search_path"
-  ls -l /tmp/nfw/bin
   AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
       [$search_path])
   fi
