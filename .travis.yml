@@ -42,5 +42,5 @@ addons:
 script:
   - git clone https://github.com/CESNET/nemea-framework /tmp/fw
   - ( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; )
-  - ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
+  - ./bootstrap.sh && export PATH=/tmp/nfw/bin:$PATH; ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
 
