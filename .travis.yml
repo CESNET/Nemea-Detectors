@@ -21,7 +21,7 @@ addons:
       name: "CESNET/Nemea-Detectors"
       description: "Build submitted via Travis CI"
     notification_email: cejkat@cesnet.cz
-    build_command_prepend: "( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && ./configure;"
+    build_command_prepend: "( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig --disable-repobuild && ./configure;"
     build_command:   "make -j 4"
     branch_pattern: coverity
 
