@@ -84,6 +84,7 @@ trap_module_info_t *module_info = NULL;
   BASIC("DNS-tunnel-detection module","Module that detects DNS tunnels on the network.",1,2)
 
 #define MODULE_PARAMS(PARAM) \
+  PARAM('i', "ifc", "Specification of interface types and their parameters", required_argument, "string") \
   PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
   PARAM('a', "whitelist_domain", "File with whitelist of domain which will not be analyzed.", required_argument, "string") \
   PARAM('b', "whitelist_ip", "File with whitelist of IPs which will not be analyzed.", required_argument, "string") \
