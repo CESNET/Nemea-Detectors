@@ -24,6 +24,9 @@ AC_DEFUN([AX_NEMEACOMMON_CHECK], [
     elif test -d "${srcdir}/../../common"; then
       NEMEACOMMONINC='${srcdir}/../../common/include'
       NEMEACOMMONLIB='${top_builddir}/../../common/.libs'
+    elif test -d "${srcdir}/nemea-framework/common"; then
+      NEMEACOMMONINC='${top_srcdir}/nemea-framework/common/include'
+      NEMEACOMMONLIB='${top_builddir}/nemea-framework/common/.libs'
     elif test -d "$srcdir/../nemea-framework/common"; then
       NEMEACOMMONINC='$(top_srcdir)/../nemea-framework/common/include'
       NEMEACOMMONLIB='$(top_builddir)/../nemea-framework/common/.libs'
