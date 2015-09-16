@@ -49,8 +49,8 @@ using namespace std;
 #define SYN_SCAN_REQUEST_TO_RESPONSE_RATIO 5
 #define SYN_SCAN_IPS 200
 
-#define DOS_VICTIM_CONNECTIONS_SYNFLOOD 270000
-#define DOS_VICTIM_CONNECTIONS_OTHERS 1000000
+#define DOS_VICTIM_CONNECTIONS_SYNFLOOD 270000U
+#define DOS_VICTIM_CONNECTIONS_OTHERS 1000000U
 #define DOS_VICTIM_PACKET_RATIO 2
 
 #define DOS_ATTACKER_CONNECTIONS_SYNFLOOD 270000U
@@ -137,12 +137,12 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
 
    bool ddos_tcp_attacker = false;
    if (( // TCP (syn flood)
-      rec.out_all_flows >= DOS_ATTACKER_CONNECTIONS_SYNFLOOD * max(rec.out_all_uniqueips,(uint16_t)1U) &&
+      rec.out_all_flows / max(rec.out_all_uniqueips,1U) >= DOS_ATTACKER_CONNECTIONS_SYNFLOOD &&
       rec.out_all_packets < DOS_ATTACKER_PACKET_RATIO * rec.out_all_flows &&
       rec.out_all_syn_cnt > 2 * rec.out_all_ack_cnt &&
       (ddos_tcp_attacker = true)
    ) || ( // UDP & others...
-      est_out_req_flows >= DOS_ATTACKER_CONNECTIONS_OTHERS * max(rec.out_all_uniqueips,(uint16_t)1U) && // number of connection requests per target
+      est_out_req_flows / max(rec.out_all_uniqueips,1U) >= DOS_ATTACKER_CONNECTIONS_OTHERS && // number of connection requests per target
       est_out_req_packets < DOS_ATTACKER_PACKET_RATIO * est_out_req_flows && // packets per flow < 2
       est_in_rsp_flows < est_out_req_flows/2) // less than half of requests are replied
       // && est_in_rsp_flows > est_out_req_flows * DOS_MIN_RSP_RATIO) // more then 2% of requests are replied
