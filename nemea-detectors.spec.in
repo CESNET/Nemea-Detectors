@@ -1,9 +1,9 @@
-Summary: Package with basic NEMEA modules
-Name: nemea-modules
+Summary: Package with detection modules of the Nemea system
+Name: nemea-detectors
 Version: @PACKAGE_VERSION@
 Release: @RELEASE@
 URL: http://www.liberouter.org/
-Source: https://www.liberouter.org/repo/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Source: https://www.github.com/CESNET/Nemea-Detectors/%{name}-%{version}-%{release}.tar.gz
 Group: Liberouter
 License: BSD
 Vendor: CESNET, z.s.p.o.
@@ -29,6 +29,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/nemea/*
-%{_docdir}/nemea-modules/*/README
+%{_docdir}/nemea-detectors/*/README*
 %{_sysconfdir}/nemea/*
 

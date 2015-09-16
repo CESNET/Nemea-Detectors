@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [1.0.0], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.0.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -118,6 +118,7 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
+                 nemea-detectors.spec
                ])
 
 
