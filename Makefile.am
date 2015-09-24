@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=amplification_detection \
+	blacklistfilter \
 	hoststatsnemea \
 	tunnel_detection \
 	voip_fraud_detection
