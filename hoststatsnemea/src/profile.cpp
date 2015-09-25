@@ -45,7 +45,7 @@
 #include <limits>
 #include "profile.h"
 #include "aux_func.h"
-#include "config.h"
+#include "hs_config.h"
 #include "detectionrules.h"
 extern "C" {
    #include "fields.h"

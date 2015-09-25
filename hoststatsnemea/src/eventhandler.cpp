@@ -36,7 +36,7 @@
  */
 
 #include "eventhandler.h"
-#include "config.h"
+#include "hs_config.h"
 #include "aux_func.h"
 #include "profile.h"
 

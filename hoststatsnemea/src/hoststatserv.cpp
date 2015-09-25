@@ -52,7 +52,7 @@
 #include "profile.h"
 #include "aux_func.h"
 #include "processdata.h"
-#include "config.h"
+#include "hs_config.h"
 #include <unistd.h>
 #include <getopt.h>
 //TRAP

@@ -43,6 +43,7 @@
  * if advised of the possibility of such damage.
  *
  */
+#include <config.h>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -50,8 +51,7 @@
 #include <cstdlib>
 #include <pthread.h>
 #include "aux_func.h"
-#include "config.h"
-#include "../../config.h"
+#include "hs_config.h"
 
 using namespace std;
 

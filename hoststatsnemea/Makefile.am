@@ -1,6 +1,6 @@
 HOSTSTATSNEMEASRCS=src/aux_func.h \
 		   src/config.cpp \
-		   src/config.h \
+		   src/hs_config.h \
 		   src/detectionrules.cpp \
 		   src/detectionrules.h \
 		   src/eventhandler.cpp \
