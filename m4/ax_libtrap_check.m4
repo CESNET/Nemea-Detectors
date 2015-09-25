@@ -53,6 +53,7 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
     else
       AC_MSG_RESULT([no])
       TRAPLIB=""
+      PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
     fi
   fi
   if test -n "$TRAPLIB"; then

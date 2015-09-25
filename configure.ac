@@ -116,6 +116,7 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/ipdetect/Makefile
                  amplification_detection/Makefile
                  hoststatsnemea/Makefile
+                 hoststatsnemea/src/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
                  nemea-detectors.spec

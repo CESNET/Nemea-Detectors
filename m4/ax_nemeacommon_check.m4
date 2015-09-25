@@ -38,6 +38,7 @@ AC_DEFUN([AX_NEMEACOMMON_CHECK], [
     else
       AC_MSG_RESULT([no])
       NEMEACOMMONLIB=""
+      PKG_CHECK_MODULES([nemeacommon], [nemea-common], [NEMEACOMMONLIB="yes"])
     fi
   fi
   if test -n "$NEMEACOMMONLIB"; then

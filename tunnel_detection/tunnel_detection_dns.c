@@ -53,7 +53,7 @@
 #include <time.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
-#include "fields.c"
+#include "fields.h"
 
 UR_FIELDS (
    ipaddr DST_IP,

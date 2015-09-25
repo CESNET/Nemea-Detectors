@@ -58,7 +58,7 @@
 //TRAP
 extern "C" {
    #include <libtrap/trap.h>
-   #include "fields.c"
+   #include "fields.h"
 }
 using namespace std;
 

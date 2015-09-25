@@ -69,7 +69,7 @@
 #include <libtrap/trap.h>
 #include "ipblacklistfilter.h"
 #include "patternstrings.h"
-#include "fields.c"
+#include "fields.h"
 
 using namespace std;
 

@@ -42,7 +42,7 @@
  */
 
 #include "voip_fraud_detection.h"
-#include "fields.c"
+#include "fields.h"
 
 UR_FIELDS (
    string INVEA_SIP_CALLING_PARTY,

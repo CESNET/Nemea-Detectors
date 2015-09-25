@@ -63,7 +63,7 @@ extern "C" {
 #endif
 #include <libtrap/trap.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
-#include "fields.c"
+#include "fields.h"
 #ifdef __cplusplus
 }
 #endif
