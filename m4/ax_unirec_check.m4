@@ -15,11 +15,11 @@ dnl @license BSD
 AC_DEFUN([AX_UNIREC_CHECK], [
   # UniRec processor
   if test "$repobuild" = "true"; then
-  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
-      [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$PATH])
-  else
-  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
-      [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
+    AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+        [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR$PATH])
+    else
+    AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+        [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR])
   fi
 
   if test -z "$UNIRECPROC"; then
