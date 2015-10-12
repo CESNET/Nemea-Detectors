@@ -146,6 +146,8 @@ void *data_reader_trap(void *args)
          case TRAP_E_TERMINATED:
             terminated = true;
             continue;
+         case TRAP_E_FORMAT_CHANGED:
+            continue;
          default:
             log(LOG_ERR, "Error: getting new data from TRAP failed: %s",
                trap_last_error_msg);

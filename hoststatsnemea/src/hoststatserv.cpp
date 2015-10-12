@@ -77,7 +77,7 @@ static bool offline_mode = false; // Run in offline mode
 static bool send_eos = true;
 
 // Define section
-#define DEF_REQUIRED_TMPL "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"  // required input UniRec items
+#define DEF_REQUIRED_TMPL "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD"  // required input UniRec items
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -92,15 +92,13 @@ UR_FIELDS (
    uint8 DIR_BIT_FIELD,
    uint8 PROTOCOL,
    uint8 TCP_FLAGS,
-   uint8 TOS,
-   uint8 TTL,
    uint32 EVENT_SCALE,
    uint16 DST_PORT,
    uint16 SRC_PORT,
    uint8 EVENT_TYPE,
    uint8 PROTOCOL,
    uint8 DIRECTION_FLAGS,
-   bytes* NOTE
+   string NOTE
 )
 
 ///////////////////////////////////////////////////
@@ -246,15 +244,14 @@ int main(int argc, char *argv[])
    /* Some variables initialization because of goto */
    ur_field_id_t dir_flag_id = F_DIRECTION_FLAGS;
    ur_template_t *coll_tmpl = NULL;
-
-
+   printf("%s\n", DEF_REQUIRED_TMPL);
    tmpl_in = ur_create_input_template(0, DEF_REQUIRED_TMPL, NULL);
    tmpl_out = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
       "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE", NULL);
 
    if (tmpl_in == NULL || tmpl_out == NULL) {
       if (tmpl_in == NULL) {
-         log(LOG_ERR, "ERROR: Failed to create input UniRec template.");
+         log(LOG_ERR, "ERROR: Failed to create input UniRec template.eeeee");
       }
       if (tmpl_out == NULL) {
          log(LOG_ERR, "ERROR: Failed to create output UniRec template. "

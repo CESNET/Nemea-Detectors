@@ -207,7 +207,7 @@ bool SubprofileBase::bloomfilters_get_presence(const bloom_key_t &key, int index
 
 /******************************* SSH subprofile *******************************/
 // Constructor
-SSHSubprofile::SSHSubprofile() : SubprofileBase("ssh", "<COLLECTOR_FLOW>", 1)
+SSHSubprofile::SSHSubprofile() : SubprofileBase("ssh", "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD", 1)
 {
 }
 
@@ -312,7 +312,7 @@ bool SSHSubprofile::delete_record(hosts_record_t &record)
 
 /******************************* DNS subprofile *******************************/
 // Constructor
-DNSSubprofile::DNSSubprofile() : SubprofileBase("dns", "<COLLECTOR_FLOW>")
+DNSSubprofile::DNSSubprofile() : SubprofileBase("dns", "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD")
 {
 }
 
