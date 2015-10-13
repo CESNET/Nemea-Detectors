@@ -244,14 +244,14 @@ int main(int argc, char *argv[])
    /* Some variables initialization because of goto */
    ur_field_id_t dir_flag_id = F_DIRECTION_FLAGS;
    ur_template_t *coll_tmpl = NULL;
-   printf("%s\n", DEF_REQUIRED_TMPL);
+
    tmpl_in = ur_create_input_template(0, DEF_REQUIRED_TMPL, NULL);
    tmpl_out = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
       "DST_IP,SRC_PORT,DST_PORT,PROTOCOL,EVENT_SCALE,NOTE", NULL);
 
    if (tmpl_in == NULL || tmpl_out == NULL) {
       if (tmpl_in == NULL) {
-         log(LOG_ERR, "ERROR: Failed to create input UniRec template.eeeee");
+         log(LOG_ERR, "ERROR: Failed to create input UniRec template.");
       }
       if (tmpl_out == NULL) {
          log(LOG_ERR, "ERROR: Failed to create output UniRec template. "
