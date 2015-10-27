@@ -223,7 +223,6 @@ int main(int argc, char **argv)
    uint8_t tcp_flags = 0;
    uint8_t protocol = 0;
 
-   char ip_buffer[20];
    uint32_t int_src_ip = 0;
    uint32_t int_dst_ip = 0;
    uint64_t ip_to_tree = 0;
@@ -306,8 +305,6 @@ int main(int argc, char **argv)
       ip_to_tree = ip_to_tree << 32;
       ip_to_tree += int_src_ip;
 
-      ip_to_str(src_ip ,ip_buffer);
-
       if (packets <= MAX_PACKETS && protocol == TCP_PROTOCOL && (tcp_flags & TCP_FLAGS_SYN)) {
          insertet_item = b_plus_tree_insert_or_find_item(b_plus_tree, &ip_to_tree);
          if (insertet_item == NULL) {
@@ -334,7 +331,6 @@ int main(int argc, char **argv)
 
          // B+ tree pruning
          if (ins_addr_cnt >= NUM_INSERTS_PRUNE_TREE) {
-            uint64_t *key_pt = NULL;
             item_t *value_pt = NULL;
             b_plus_tree_item *b_item = NULL;
             int is_there_next = 0;
@@ -342,7 +338,7 @@ int main(int argc, char **argv)
             // Create a structure for iterating throw the leaves 
             b_item = b_plus_tree_create_list_item(b_plus_tree);
             if (b_item == NULL) {
-               fprintf(stderr,"ERROR: could not initialize a list iterator structure\n");
+               fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
                goto cleanup;
             }
 
@@ -353,14 +349,7 @@ int main(int argc, char **argv)
                value_pt = b_item->value;
                if (value_pt == NULL) {
                   //there is problem in the tree. This case should be unreachable
-                  fprintf(stderr,"ERROR during iteration through the tree. Value is NULL\n");
-                  goto cleanup;
-               }
-               // Get the key from B+ item structure
-               key_pt = b_item->key;
-               if (key_pt == NULL) {
-                  //there is problem in the tree. This case should be unreachable
-                  fprintf(stderr,"ERROR during iteration through the tree. Key is NULL\n");
+                  fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
                   goto cleanup;
                }
 
