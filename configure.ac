@@ -119,6 +119,7 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/src/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
+                 vportscan_detector/Makefile
                  nemea-detectors.spec
                ])
 
