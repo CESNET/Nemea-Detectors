@@ -66,7 +66,7 @@
 #define FALSE 0
 
 #define NUM_INSERTS_PRUNE_TREE 100000
-#define NUM_OF_PORTS_IN_ALERT 5
+#define NUM_OF_PORTS_IN_ALERT 25
 #define PORTS_BUFFER_SIZE(ports_num) ((ports_num * 5) + (ports_num - 1)) * 2 // buffer used for concatenating subset of scanned ports into string
 
 UR_FIELDS (
@@ -320,7 +320,7 @@ int main(int argc, char **argv)
             ur_copy_fields(out_tmplt, out_rec, in_tmplt, recv_data);
 
             ur_set(out_tmplt, out_rec, F_EVENT_TYPE, 1);
-            ur_set(out_tmplt, out_rec, F_EVENT_SCALE, NUM_OF_PORTS_IN_ALERT);
+            ur_set(out_tmplt, out_rec, F_EVENT_SCALE, MAX_PORTS);
             
             concat_ports_str = create_ports_string(insertet_item);
             ur_set_string(out_tmplt, out_rec, F_DST_PORT_LIST, concat_ports_str);
