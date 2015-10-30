@@ -56,18 +56,21 @@
 #define MAX_PACKETS 4 // Maximum number of packets in suspicious flow
 #define MAX_PORTS 50 // After reaching this maximum of scanned ports for one IP address, alert is sent
 #define MAX_AGE_OF_IP_IN_SEC(num_hours) num_hours*60*60 // This determines maximum age of the unchanged IP address in the B+ tree
-#define MAX_AGE_OF_PORTS_TABLE_IN_SEC 60*60 // This determines maximum age of the unchanged ports table for one IP address
+#define MAX_AGE_OF_PORTS_TABLE_IN_SEC 6*60 // This determines maximum age of the unchanged ports table for one IP address
 
-#define TCP_PROTOCOL 6
-#define TCP_FLAGS_SYN 0x2
+#define  TIME_BEFORE_PRUNING 1*60
+
+#define TCP_PROTOCOL 0x6
+#define UDP_PROTOCOL 0x11
 
 #define NUM_OF_ITEMS_IN_TREE_LEAF 5
 #define TRUE 1
 #define FALSE 0
 
-#define NUM_INSERTS_PRUNE_TREE 100000
 #define NUM_OF_PORTS_IN_ALERT 25
 #define PORTS_BUFFER_SIZE(ports_num) ((ports_num * 5) + (ports_num - 1)) * 2 // buffer used for concatenating subset of scanned ports into string
+
+#define NUM_OF_PROTOCOLS 2
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -102,8 +105,10 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 typedef struct item_s item_t;
 
 struct item_s {
-   time_t time_stamp;
-   uint16_t ports[MAX_PORTS];
+   time_t ts_modified;
+   time_t ts_item_added;
+   uint16_t ports[NUM_OF_PROTOCOLS][MAX_PORTS];
+   uint8_t ports_cnts[NUM_OF_PROTOCOLS];
 };
 
 /***********************************************/
@@ -124,10 +129,18 @@ int compare_64b(void * a, void * b)
    }
 }
 
-char *create_ports_string(void *p)
+char *create_ports_string(void *p, int protocol)
 {
    static char buffer[PORTS_BUFFER_SIZE(NUM_OF_PORTS_IN_ALERT)];
    memset(buffer, 0, PORTS_BUFFER_SIZE(NUM_OF_PORTS_IN_ALERT) * sizeof(char));
+
+   int arr_idx = 0;
+
+   if (protocol == TCP_PROTOCOL) {
+      arr_idx = 0;
+   } else if (protocol == UDP_PROTOCOL) {
+      arr_idx = 1;
+   }
 
    if (p == NULL) {
       return NULL;
@@ -137,7 +150,7 @@ char *create_ports_string(void *p)
    int x = 0, bytes_printed = 0, ret_val = 0;
 
    for (x = 0; x < NUM_OF_PORTS_IN_ALERT; x++) {
-      ret_val = sprintf(buffer + bytes_printed, "%d", info->ports[x]);
+      ret_val = sprintf(buffer + bytes_printed, "%d", info->ports[arr_idx][x]);
 
       if (ret_val > 0) {
          bytes_printed += ret_val;
@@ -156,7 +169,8 @@ char *create_ports_string(void *p)
    }
 
    // After sending the alert, reset the ports table
-   memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
+   memset((void *) (info->ports[arr_idx]), 0, MAX_PORTS * sizeof(uint16_t));
+   info->ports_cnts[arr_idx] = 0;
    return buffer;
 }
 
@@ -164,11 +178,12 @@ char *create_ports_string(void *p)
 /**
  * Function returns 1 in case of alert, 0 after successful added port and -1 in case of error.
  */
-int insert_port(void *p, int port)
+int insert_port(void *p, int port, int protocol)
 {
    time_t act_time = 0;
    int x = 0, free_idx = -1;
    item_t *info = NULL;
+   int arr_idx = 0;
 
    if (p == NULL) {
       return -1;
@@ -177,29 +192,40 @@ int insert_port(void *p, int port)
    info = (item_t *) p;
    time(&act_time);
 
-   // If the ports table was not modified longer than MAX_AGE_OF_PORTS_TABLE_IN_SEC, reset the table (zero values)
-   if ((act_time - info->time_stamp) > MAX_AGE_OF_PORTS_TABLE_IN_SEC) {
-      memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
+   if (protocol == TCP_PROTOCOL) {
+      arr_idx = 0;
+   } else if (protocol == UDP_PROTOCOL) {
+      arr_idx = 1;
    }
 
+   // If the ports table was not modified longer than MAX_AGE_OF_PORTS_TABLE_IN_SEC, reset the table (zero values)
+   if ((act_time - info->ts_modified) > MAX_AGE_OF_PORTS_TABLE_IN_SEC) {
+      memset((void *) (info->ports[arr_idx]), 0, MAX_PORTS * sizeof(uint16_t));
+      info->ports_cnts[arr_idx] = 0;
+   }
+
+
    for (x = 0; x < MAX_PORTS; x++) {
-      if (info->ports[x] == port) {
-         info->ports[x] = 0; // The port was found in the table, delete it (only once scanned ports are important)
-         time(&info->time_stamp); // Actualize the time of table modification
+      if (info->ports[arr_idx][x] == port) {
+         info->ports[arr_idx][x] = 0; // The port was found in the table, delete it (only once scanned ports are important)
+         info->ports_cnts[arr_idx]--;
+         time(&info->ts_modified); // Update the time of table modification
          return 0;
       }
    }
 
+   // Find free index for a new port
    for (x = 0; x < MAX_PORTS; x++) {
-      if (info->ports[x] == 0) {
-         free_idx = x; // Insert the new port into first free index
-         time(&info->time_stamp); // Actualize the time of table modification
+      if (info->ports[arr_idx][x] == 0) {
+         free_idx = x;
          break;
       }
    }
 
    if (free_idx != -1) {
-      info->ports[free_idx] = port;
+      info->ports[arr_idx][free_idx] = port; // Insert the new port into first free index
+      info->ports_cnts[arr_idx]++;
+      time(&info->ts_modified); // Update the time of table modification
    } else {
       return 1; // Signalize alert after reaching MAX_PORTS scanned ports
    }
@@ -209,7 +235,9 @@ int insert_port(void *p, int port)
 
 int main(int argc, char **argv)
 {
-   uint32_t ins_addr_cnt = 0;
+   uint8_t item_in_tree = FALSE;
+   time_t ts_last_pruning;
+   time_t ts_actual_time;
    char *concat_ports_str = NULL;
    int ret_val = 0;
    const void *recv_data;
@@ -220,7 +248,6 @@ int main(int argc, char **argv)
    ip_addr_t *dst_ip = NULL;
    uint16_t dst_port = 0;
    uint32_t packets = 0;
-   uint8_t tcp_flags = 0;
    uint8_t protocol = 0;
 
    uint32_t int_src_ip = 0;
@@ -270,6 +297,9 @@ int main(int argc, char **argv)
 
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
 
+   // Initialize time of last pruning of the B+ tree
+   time(&ts_last_pruning);
+
    while (!stop) {
       ret_val = TRAP_RECEIVE(0, recv_data, recv_data_size, in_tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret_val, continue, break);
@@ -294,7 +324,6 @@ int main(int argc, char **argv)
 
       packets = ur_get(in_tmplt, recv_data, F_PACKETS);
       dst_port = ur_get(in_tmplt, recv_data, F_DST_PORT);
-      tcp_flags = ur_get(in_tmplt, recv_data, F_TCP_FLAGS);
       protocol = ur_get(in_tmplt, recv_data, F_PROTOCOL);
 
       int_src_ip = ip_get_v4_as_int(src_ip);
@@ -305,21 +334,33 @@ int main(int argc, char **argv)
       ip_to_tree = ip_to_tree << 32;
       ip_to_tree += int_src_ip;
 
-      if (packets <= MAX_PACKETS && protocol == TCP_PROTOCOL && (tcp_flags & TCP_FLAGS_SYN)) {
+      if (packets <= MAX_PACKETS && (protocol == TCP_PROTOCOL || protocol == UDP_PROTOCOL)) {
+         if (b_plus_tree_is_item_in_tree(b_plus_tree, &ip_to_tree) == TRUE) {
+            item_in_tree = TRUE;
+         } else {
+            item_in_tree = FALSE;
+         }
+
          insertet_item = b_plus_tree_insert_or_find_item(b_plus_tree, &ip_to_tree);
          if (insertet_item == NULL) {
             fprintf(stderr, "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
             fflush(stderr);
             goto cleanup;
          }
-         if (insert_port(insertet_item, dst_port) == 1) {
+
+         // Initialize time of item insertion
+         if (item_in_tree == FALSE) {
+            time(&((item_t *) insertet_item)->ts_item_added);
+         }
+
+         if (insert_port(insertet_item, dst_port, protocol) == 1) {
             // Scan detected
             ur_copy_fields(out_tmplt, out_rec, in_tmplt, recv_data);
 
             ur_set(out_tmplt, out_rec, F_EVENT_TYPE, 1);
             ur_set(out_tmplt, out_rec, F_EVENT_SCALE, MAX_PORTS);
             
-            concat_ports_str = create_ports_string(insertet_item);
+            concat_ports_str = create_ports_string(insertet_item, protocol);
             ur_set_string(out_tmplt, out_rec, F_DST_PORT_LIST, concat_ports_str);
 
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
@@ -327,10 +368,11 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, continue, break);
          }
 
-         ins_addr_cnt++;
-
          // B+ tree pruning
-         if (ins_addr_cnt >= NUM_INSERTS_PRUNE_TREE) {
+         time(&ts_actual_time);
+         if ((ts_actual_time - ts_last_pruning) > TIME_BEFORE_PRUNING) {
+            printf("--- PRUNING ---\n");
+            printf("values before pruning: %ld\n", b_plus_tree_get_count_of_values(b_plus_tree));
             item_t *value_pt = NULL;
             b_plus_tree_item *b_item = NULL;
             int is_there_next = 0;
@@ -354,14 +396,16 @@ int main(int argc, char **argv)
                }
 
                // Delete the item if it wasn't modified longer than MAX_AGE_OF_IP_IN_SEC(1)
-               if (value_pt->time_stamp > MAX_AGE_OF_IP_IN_SEC(1)) {
+               if ( ((ts_actual_time - value_pt->ts_modified) > 5 * 60) || (((ts_actual_time - value_pt->ts_item_added) > 5 * 60) && (value_pt->ports_cnts[0] <= 1 && value_pt->ports_cnts[1] <= 1)) ) {
                   is_there_next = b_plus_tree_delete_item_from_list(b_plus_tree, b_item);
                } else { // Get next item from the list
                   is_there_next = b_plus_tree_get_next_item_from_list(b_plus_tree, b_item);
                }
             }
 
-            ins_addr_cnt = 0;
+            time(&ts_last_pruning);
+            printf("values after pruning: %ld\n", b_plus_tree_get_count_of_values(b_plus_tree));
+            fflush(stdout);
          }
 
       } else {
