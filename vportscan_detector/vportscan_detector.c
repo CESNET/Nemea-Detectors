@@ -107,7 +107,7 @@ typedef struct item_s item_t;
 struct item_s {
    time_t ts_modified;
    time_t ts_item_added;
-   uint16_t ports[NUM_OF_PROTOCOLS][MAX_PORTS];
+   uint16_t ports[MAX_PORTS];
    uint8_t ports_cnts[NUM_OF_PROTOCOLS];
 };
 
@@ -129,18 +129,10 @@ int compare_64b(void * a, void * b)
    }
 }
 
-char *create_ports_string(void *p, int protocol)
+char *create_ports_string(void *p)
 {
    static char buffer[PORTS_BUFFER_SIZE(NUM_OF_PORTS_IN_ALERT)];
    memset(buffer, 0, PORTS_BUFFER_SIZE(NUM_OF_PORTS_IN_ALERT) * sizeof(char));
-
-   int arr_idx = 0;
-
-   if (protocol == TCP_PROTOCOL) {
-      arr_idx = 0;
-   } else if (protocol == UDP_PROTOCOL) {
-      arr_idx = 1;
-   }
 
    if (p == NULL) {
       return NULL;
@@ -150,7 +142,7 @@ char *create_ports_string(void *p, int protocol)
    int x = 0, bytes_printed = 0, ret_val = 0;
 
    for (x = 0; x < NUM_OF_PORTS_IN_ALERT; x++) {
-      ret_val = sprintf(buffer + bytes_printed, "%d", info->ports[arr_idx][x]);
+      ret_val = sprintf(buffer + bytes_printed, "%d", info->ports[x]);
 
       if (ret_val > 0) {
          bytes_printed += ret_val;
@@ -169,8 +161,8 @@ char *create_ports_string(void *p, int protocol)
    }
 
    // After sending the alert, reset the ports table
-   memset((void *) (info->ports[arr_idx]), 0, MAX_PORTS * sizeof(uint16_t));
-   info->ports_cnts[arr_idx] = 0;
+   memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
+   memset((void *) (info->ports_cnts), 0, NUM_OF_PROTOCOLS * sizeof(uint8_t));
    return buffer;
 }
 
@@ -181,7 +173,7 @@ char *create_ports_string(void *p, int protocol)
 int insert_port(void *p, int port, int protocol)
 {
    time_t act_time = 0;
-   int x = 0, free_idx = -1;
+   int x = 0;
    item_t *info = NULL;
    int arr_idx = 0;
 
@@ -200,33 +192,46 @@ int insert_port(void *p, int port, int protocol)
 
    // If the ports table was not modified longer than MAX_AGE_OF_PORTS_TABLE_IN_SEC, reset the table (zero values)
    if ((act_time - info->ts_modified) > MAX_AGE_OF_PORTS_TABLE_IN_SEC) {
-      memset((void *) (info->ports[arr_idx]), 0, MAX_PORTS * sizeof(uint16_t));
-      info->ports_cnts[arr_idx] = 0;
+      memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
+      memset((void *) (info->ports_cnts), 0, NUM_OF_PROTOCOLS * sizeof(uint8_t));
    }
 
-
-   for (x = 0; x < MAX_PORTS; x++) {
-      if (info->ports[arr_idx][x] == port) {
-         info->ports[arr_idx][x] = 0; // The port was found in the table, delete it (only once scanned ports are important)
-         info->ports_cnts[arr_idx]--;
-         time(&info->ts_modified); // Update the time of table modification
-         return 0;
+   if (protocol == TCP_PROTOCOL) {
+      for (x = 0; x < info->ports_cnts[0]; x++) {
+         if (info->ports[x] == port) { // The port was found in the table, delete it (only once scanned ports are important)
+            if (info->ports_cnts[0] > 1) {
+               info->ports[x] = info->ports[info->ports_cnts[0] - 1];
+               info->ports[info->ports_cnts[0] - 1] = 0;
+            } else {
+               info->ports[x] = 0;
+            }
+            info->ports_cnts[arr_idx]--;
+            time(&info->ts_modified); // Update the time of table modification
+            return 0;
+         }
+      }
+   } else if (protocol == UDP_PROTOCOL) {
+      for (x = (MAX_PORTS - 1); x >= (MAX_PORTS - info->ports_cnts[1]); x--) {
+         if (info->ports[x] == port) { // The port was found in the table, delete it (only once scanned ports are important)
+            if (info->ports_cnts[1] > 1) {
+               info->ports[x] = info->ports[MAX_PORTS - info->ports_cnts[1]];
+               info->ports[MAX_PORTS - info->ports_cnts[1]] = 0;
+            } else {
+               info->ports[x] = 0;
+            }
+            info->ports_cnts[arr_idx]--;
+            time(&info->ts_modified); // Update the time of table modification
+            return 0;
+         }
       }
    }
 
-   // Find free index for a new port
-   for (x = 0; x < MAX_PORTS; x++) {
-      if (info->ports[arr_idx][x] == 0) {
-         free_idx = x;
-         break;
-      }
-   }
+   info->ports[info->ports_cnts[arr_idx]] = port; // Insert the new port into first free index
+   info->ports_cnts[arr_idx]++;
+   time(&info->ts_modified); // Update the time of table modification
 
-   if (free_idx != -1) {
-      info->ports[arr_idx][free_idx] = port; // Insert the new port into first free index
-      info->ports_cnts[arr_idx]++;
-      time(&info->ts_modified); // Update the time of table modification
-   } else {
+
+   if (info->ports_cnts[0] + info->ports_cnts[1] >= MAX_PORTS) {
       return 1; // Signalize alert after reaching MAX_PORTS scanned ports
    }
 
@@ -360,7 +365,7 @@ int main(int argc, char **argv)
             ur_set(out_tmplt, out_rec, F_EVENT_TYPE, 1);
             ur_set(out_tmplt, out_rec, F_EVENT_SCALE, MAX_PORTS);
             
-            concat_ports_str = create_ports_string(insertet_item, protocol);
+            concat_ports_str = create_ports_string(insertet_item);
             ur_set_string(out_tmplt, out_rec, F_DST_PORT_LIST, concat_ports_str);
 
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
