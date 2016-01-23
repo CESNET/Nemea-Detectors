@@ -42,7 +42,7 @@ AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
 fi
 
 if test -z "$UNIRECPROC"; then
-    AC_MSG_ERROR([UniRec processor was not found. Add path to "unirec_generate_fields_files.py" into PATH or install UniRec."])
+    AC_MSG_ERROR([UniRec processor was not found. Add path to "ur_processor.sh" into PATH or install UniRec."])
 fi
 
 AC_SUBST(UNIRECPROC)
