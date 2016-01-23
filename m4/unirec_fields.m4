@@ -34,10 +34,10 @@ dnl if advised of the possibility of such damage.
 
 AC_DEFUN([UNIREC_PATH],[
 if test "x$repobuild" = "xtrue"; then
-AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
     [$PWD/../unirec$PATH_SEPARATOR$PATH])
 else
-AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
     [$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR])
 fi
 
