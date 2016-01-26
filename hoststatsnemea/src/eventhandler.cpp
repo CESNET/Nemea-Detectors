@@ -182,7 +182,7 @@ void reportEvent(const Event& event)
    // NOTE
    char buffer [WT_NOTE_SIZE];
    int offset = snprintf(buffer, WT_NOTE_SIZE,
-      event.note.c_str());
+      "%s", event.note.c_str());
    if (offset > 0) {
       ur_set_string(tmpl_out, rec, F_NOTE, buffer);
    } else {
