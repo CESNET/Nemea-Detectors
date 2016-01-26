@@ -45,15 +45,15 @@ AC_DEFUN([AX_UNIREC_CHECK_INTERNAL_PARENT], [
 AC_DEFUN([AX_UNIREC_CHECK], [
   # UniRec processor
   if test "$repobuild" = "true"; then
-  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+  AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
       [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR$PATH])
   else
-  AC_PATH_PROG(UNIRECPROC, unirec_generate_fields_files.py, [],
+  AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
       [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR])
   fi
 
   if test -z "$UNIRECPROC"; then
-      AC_MSG_ERROR([UniRec processor was not found. Add path to "unirec_generate_fields_files.py" into PATH or install UniRec."])
+      AC_MSG_ERROR([UniRec processor was not found. Add path to "ur_processor.sh" into PATH or install UniRec."])
   fi
 
   AC_SUBST(UNIRECPROC)
