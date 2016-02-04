@@ -321,6 +321,8 @@ int main(int argc, char **argv)
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
 
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, continue, break);
+
+            b_plus_tree_delete_item(b_plus_tree, &ip_to_tree);
          }
 
       } else {
