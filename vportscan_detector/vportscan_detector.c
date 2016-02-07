@@ -93,7 +93,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Vertical portscan detector", "-", 1, 1)
+  BASIC("Vertical portscan detector", "Threshold-based detector for vertical port scans", 1, 1)
 
 #define MODULE_PARAMS(PARAM)
 
@@ -179,7 +179,6 @@ int insert_port(void *p, int port)
 
 int main(int argc, char **argv)
 {
-   uint8_t item_in_tree = FALSE;
    time_t ts_last_pruning;
    time_t ts_cur_time;
    int ret_val = 0;
@@ -282,12 +281,6 @@ int main(int argc, char **argv)
       ip_to_tree |= int_src_ip;
 
       if (packets <= MAX_PACKETS && (protocol == TCP_PROTOCOL && (tcp_flags == TCP_FLAGS_SYN))) {
-         if (b_plus_tree_is_item_in_tree(b_plus_tree, &ip_to_tree) == TRUE) {
-            item_in_tree = TRUE;
-         } else {
-            item_in_tree = FALSE;
-         }
-
          new_item = b_plus_tree_insert_or_find_item(b_plus_tree, &ip_to_tree);
          if (new_item == NULL) {
             fprintf(stderr, "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
