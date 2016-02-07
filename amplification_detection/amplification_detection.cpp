@@ -86,22 +86,21 @@ extern "C" {
 using namespace std;
 
 UR_FIELDS(
-    ipaddr SRC_IP,      //Source address of a flow
-    ipaddr DST_IP,      //Destination address of a flow
-    uint16 SRC_PORT,    //Source transport-layer port
-    uint16 DST_PORT,    //Destination transport-layer port
-    uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
-    uint32 PACKETS,     //Number of packets in a flow or in an interval
-    uint64 BYTES,       //Number of bytes in a flow or in an interval
-    time TIME_FIRST,    //Timestamp of the first packet of a flow
-    time TIME_LAST,     //Timestamp of the last packet of a flow
+   ipaddr SRC_IP,      //Source address of a flow
+   ipaddr DST_IP,      //Destination address of a flow
+   uint16 SRC_PORT,    //Source transport-layer port
+   uint16 DST_PORT,    //Destination transport-layer port
+   uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+   uint32 PACKETS,     //Number of packets in a flow or in an interval
+   uint64 BYTES,       //Number of bytes in a flow or in an interval
+   time TIME_FIRST,    //Timestamp of the first packet of a flow
+   time TIME_LAST,     //Timestamp of the last packet of a flow
    uint32 REQ_FLOWS,    //Number of flows in an interval (requests)
    uint32 REQ_PACKETS,  //Number of packets in a flow or in an interval (requests)
    uint64 REQ_BYTES,    //Number of packets in a flow or in an interval (responses)
    uint32 RSP_FLOWS,    //Number of flows in an interval (responses)
    uint32 RSP_PACKETS,  //Number of packets in a flow or in an interval (responses)
    uint64 RSP_BYTES,    //Number of bytes in a flow or in an interval (responses)
-   time TIME_LAST,      //Timestamp of the last packet of a flow
    uint32 EVENT_ID,     //Identification number of reported event
 )
 
