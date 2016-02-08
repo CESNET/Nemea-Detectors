@@ -87,7 +87,7 @@ UR_FIELDS (
    uint8 EVENT_TYPE,
    time TIME_FIRST,
    time TIME_LAST,
-   uint8 PORT_CNT,
+   uint32 PORT_CNT
 )
 
 trap_module_info_t *module_info = NULL;
