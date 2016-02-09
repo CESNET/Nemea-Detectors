@@ -8,6 +8,8 @@ SUBDIRS=amplification_detection \
 
 RPMDIR = RPMBUILD
 
+EXTRA_DIST=README.md
+
 if MAKE_RPMS
 RPMFILENAME=$(PACKAGE_NAME)-$(VERSION)
 .PHONY: rpm
