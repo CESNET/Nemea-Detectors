@@ -70,10 +70,10 @@ UR_FIELDS (
    uint16 DNS_QTYPE,
    uint16 DST_PORT,
    uint8 TUNNEL_TYPE,
-   bytes* DNS_NAME,
-   bytes* DNS_RDATA,
-   bytes* SDM_CAPTURE_FILE_ID,
-   bytes* TUNNEL_DOMAIN
+   bytes DNS_NAME,
+   bytes DNS_RDATA,
+   bytes SDM_CAPTURE_FILE_ID,
+   bytes TUNNEL_DOMAIN
 )
 
 /* ****************************** Modify here ****************************** */
