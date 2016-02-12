@@ -52,11 +52,110 @@
 #define TCP_ACK        0x10   //Acknowledgement bit flag
 #define TCP_URG        0x20   //Urgent bit flag
 
+/**
+ * \brief Struct containing general detector configuration.
+ */
+struct general_detector_config {
+   float syn_scan_threshold;
+   float syn_scan_syn_to_ack_ratio;
+   float syn_scan_request_to_response_ratio;
+   float syn_scan_ips;
+
+   uint32_t dos_victim_connections_synflood;
+   uint32_t dos_victim_connections_others;
+   float dos_victim_packet_ratio;
+
+   uint32_t dos_attacker_connections_synflood;
+   uint32_t dos_attacker_connections_others;
+   float dos_attacker_packet_ratio;
+
+   float dos_req_rsp_est_ratio;
+   float dos_rsp_req_est_ratio;
+
+   float dos_min_rsp_ratio;
+
+   general_detector_config() {
+      syn_scan_threshold = 200;
+      syn_scan_syn_to_ack_ratio = 20;
+      syn_scan_request_to_response_ratio = 5;
+      syn_scan_ips = 200;
+
+      dos_victim_connections_synflood = 270000;
+      dos_victim_connections_others = 1000000;
+      dos_victim_packet_ratio = 2;
+
+      dos_attacker_connections_synflood = 270000;
+      dos_attacker_connections_others = 1000000;
+      dos_attacker_packet_ratio = 2;
+
+      dos_req_rsp_est_ratio = 4.0 / 5.0;
+      dos_rsp_req_est_ratio = 1.0 - dos_req_rsp_est_ratio;
+
+      dos_min_rsp_ratio = 0.02;
+   }
+};
+
+/**
+ * \brief Struct containing ssh detector configuration.
+ */
+struct ssh_detector_config {
+   float scan_threshold;
+   float scan_flag_ratio;
+   float scan_packet_ratio;
+   float scan_ip_ratio;
+
+   float bruteforce_out_threshold;
+   float bruteforce_ips;
+   float bruteforce_ips_ratio;
+   float bruteforce_req_threshold;
+   float bruteforce_req_min_packet_ratio;
+   float bruteforce_req_max_packet_ratio;
+   float bruteforce_data_threshold;
+   float bruteforce_data_min_packet_ratio;
+   float bruteforce_data_max_packet_ratio;
+   float bruteforce_server_ratio;
+
+   ssh_detector_config() {
+      scan_threshold = 100;
+      scan_flag_ratio = 5;
+      scan_packet_ratio = 5;
+      scan_ip_ratio = 0.5;
+
+      bruteforce_out_threshold = 10;
+      bruteforce_ips = 5;
+      bruteforce_ips_ratio = 20;
+      bruteforce_req_threshold = 60;
+      bruteforce_req_min_packet_ratio = 5;
+      bruteforce_req_max_packet_ratio = 20;
+      bruteforce_data_threshold = bruteforce_req_threshold * 0.5;
+      bruteforce_data_min_packet_ratio = 10;
+      bruteforce_data_max_packet_ratio = 25;
+      bruteforce_server_ratio = 3;
+   }
+};
+
+/**
+ * \brief Struct containing dns detector configuration.
+ */
+struct dns_detector_config {
+   float dns_amplif_threshold;
+
+   dns_detector_config() {
+      dns_amplif_threshold = 10000;
+   }
+};
+
+
 // General detector
 void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec);
+extern struct general_detector_config general_conf;
+
 // SSH detector
 void check_new_rules_ssh(const hosts_key_t &addr, const hosts_record_t &rec);
+extern struct ssh_detector_config ssh_conf;
+
 // DNS detector
 void check_new_rules_dns(const hosts_key_t &addr, const hosts_record_t &rec);
+extern struct dns_detector_config dns_conf;
 
 #endif
