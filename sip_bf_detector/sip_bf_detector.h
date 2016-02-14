@@ -52,7 +52,9 @@
 #include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+extern "C" {
 #include <b_plus_tree.h>
+}
 
 #define SIP_MSG_TYPE_STATUS      99
 #define SIP_STATUS_FORBIDDEN     403
