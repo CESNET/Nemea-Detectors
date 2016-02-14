@@ -41,7 +41,38 @@
  *
  */
 
-//information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <libtrap/trap.h>
+#include <unirec/unirec.h>
+#include <b_plus_tree.h>
 
 #define SIP_MSG_TYPE_STATUS      99
 #define SIP_STATUS_FORBIDDEN     403
+#define SIP_STATUS_OK            200
+#define MAX_LENGTH_SIP_FROM      100
+#define MAX_LENGTH_SIP_TO        100
+#define MAX_LENGTH_CSEQ          100
+#define CSEQ_EXPECTED            "2 R"
+
+/** \brief UniRec input template definition. */
+#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
+
+/** \brief UniRec output template definition. */
+#define UNIREC_OUTPUT_TEMPLATE "SIP_MSG_TYPE"
+
+class SIPAttackedServer {
+public:
+   SIPAttackedServer() : m_count(0) {}
+   ~SIPAttackedServer() {}
+   void increaseCount() {m_count++;}
+private:
+   int32_t m_count;  
+};
