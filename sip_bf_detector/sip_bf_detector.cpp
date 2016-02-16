@@ -83,15 +83,39 @@ void print_statistics(void *tree)
 int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char *user, size_t user_length, uint16_t status_code)
 {
    uint32_t src_ip = ip_get_v4_as_int(ip_src);
+/* NOT WORKING PIECE OF CODE!!
+   printf("Searching: %"PRIu32"\n", src_ip);
+   AttackedServer *server = (AttackedServer*)b_plus_tree_search(tree, &src_ip);
+   if (server == NULL) {
+      printf("Not found.\nInserting: %"PRIu32"\n", src_ip);
+      server = (AttackedServer*)b_plus_tree_insert_item(tree, &src_ip);
+      if (server == NULL) {
+         printf("FAIL.\n");
+         return 0;
+      } else {
+         server->initialize(ip_src);
+      }
+   }
+
+   server->m_count++;
+   printf("OK.\n");
+*/
+
+/* WORKING PIECE OF CODE!!
+   printf("Searching: %"PRIu32"\n", src_ip);
    int key_exists = b_plus_tree_is_item_in_tree(tree, &src_ip);
+   printf("Result = %d\nFind or insert: %"PRIu32"\n", key_exists, src_ip);
    AttackedServer *server = (AttackedServer*)b_plus_tree_insert_or_find_item(tree, &src_ip);
-   if (!server)
+   if (!server) {
+      printf("FAIL.");
       return -1;
+   }
 
    if (!key_exists)
       server->initialize(ip_src);
 
    server->m_count++;
+*/
    return 0;
 }
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' or '?' + string after it
@@ -139,7 +163,7 @@ int compare_ipv4(void *a, void *b)
    uint32_t *h1, *h2;
    h1 = (uint32_t*)a;
    h2 = (uint32_t*)b;
-
+   printf("Comparing %"PRIu32" and %"PRIu32"\n", *h1, *h2);
    if (*h1 == *h2) {
       return EQUAL;
    }
