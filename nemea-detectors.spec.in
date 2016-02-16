@@ -11,7 +11,7 @@ Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Requires: libtrap nemea-common
 BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
-Provides: nemea-modules
+Provides: nemea-detectors
 
 %description
 
