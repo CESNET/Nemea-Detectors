@@ -4,9 +4,12 @@ SUBDIRS=amplification_detection \
 	blacklistfilter \
 	hoststatsnemea \
 	tunnel_detection \
-	voip_fraud_detection
+	voip_fraud_detection \
+	vportscan_detector
 
 RPMDIR = RPMBUILD
+
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md
 
 if MAKE_RPMS
 RPMFILENAME=$(PACKAGE_NAME)-$(VERSION)

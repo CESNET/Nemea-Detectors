@@ -52,6 +52,7 @@
 #include "profile.h"
 #include "aux_func.h"
 #include "processdata.h"
+#include "detectionrules.h"
 #include "hs_config.h"
 #include <unistd.h>
 #include <getopt.h>
@@ -194,7 +195,57 @@ bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
    return subset;
 }
 
-/** \brief Main function
+/**
+ * \brief Initializes detectors configuration.
+ * \param [out] error Contains parameter name if an error occur.
+ * \return True on success, false when invalid configuration value is found.
+ */
+void init_detectors_configuration() {
+
+   Configuration *config = Configuration::getInstance();
+
+   // Load general detector configuration.
+   general_conf.syn_scan_threshold = config->get_cfg_val("syn-scan-threshold", "syn-scan-threshold", 200);
+   general_conf.syn_scan_syn_to_ack_ratio = config->get_cfg_val("syn-scan-syn-to-ack-ratio", "syn-scan-syn-to-ack-ratio", 20);
+   general_conf.syn_scan_request_to_response_ratio = config->get_cfg_val("syn-scan-request-to-response-ratio", "syn-scan-request-to-response-ratio", 5);
+   general_conf.syn_scan_ips = config->get_cfg_val("syn-scan-ips", "syn-scan-ips", 200);
+
+   general_conf.dos_victim_connections_synflood = config->get_cfg_val("dos-victim-connections-synflood", "dos-victim-connections-synflood", 270000, 0);
+   general_conf.dos_victim_connections_others = config->get_cfg_val("dos-victim-connections-others", "dos-victim-connections-others", 1000000, 0);
+   general_conf.dos_victim_packet_ratio = config->get_cfg_val("dos-victim-packet-ratio", "dos-victim-packet-ratio", 2);
+
+   general_conf.dos_attacker_connections_synflood = config->get_cfg_val("dos-attacker-connections-synflood", "dos-attacker-connections-synflood", 270000, 0);
+   general_conf.dos_attacker_connections_others = config->get_cfg_val("dos-attacker-connections-others", "dos-attacker-connections-others", 1000000, 0);
+   general_conf.dos_attacker_packet_ratio = config->get_cfg_val("dos-attacker-packet-ratio", "dos-attacker-packet-ratio", 2);
+
+   general_conf.dos_req_rsp_est_ratio = config->get_cfg_val("dos-req-rsp-est-ratio", "dos-req-rsp-est-ratio", 0.8);
+   general_conf.dos_rsp_req_est_ratio = config->get_cfg_val("dos-rsp-req-est-ratio", "dos-rsp-req-est-ratio", 0.2);
+
+   general_conf.dos_min_rsp_ratio = config->get_cfg_val("dos-min-rsp-ratio", "dos-min-rsp-ratio", 0.02);
+
+   // Load ssh detector configuration.
+   ssh_conf.scan_threshold = config->get_cfg_val("scan-threshold", "scan-threshold", 100);
+   ssh_conf.scan_flag_ratio = config->get_cfg_val("scan-flag-ratio", "scan-flag-ratio", 5);
+   ssh_conf.scan_packet_ratio = config->get_cfg_val("scan-packet-ratio", "scan-packet-ratio", 5);
+   ssh_conf.scan_ip_ratio = config->get_cfg_val("scan-ip-ratio", "scan-ip-ratio", 0.5);
+
+   ssh_conf.bruteforce_out_threshold = config->get_cfg_val("bruteforce-out-threshold", "bruteforce-out-threshold", 10);
+   ssh_conf.bruteforce_ips = config->get_cfg_val("bruteforce-ips", "bruteforce-ips", 5);
+   ssh_conf.bruteforce_ips_ratio = config->get_cfg_val("bruteforce-ips-ratio", "bruteforce-ips-ratio", 20);
+   ssh_conf.bruteforce_req_threshold = config->get_cfg_val("bruteforce-req-threshold", "bruteforce-req-threshold", 60);
+   ssh_conf.bruteforce_req_min_packet_ratio = config->get_cfg_val("bruteforce-req-min-packet-ratio", "bruteforce-req-min-packet-ratio", 5);
+   ssh_conf.bruteforce_req_max_packet_ratio = config->get_cfg_val("bruteforce-req-max-packet-ratio", "bruteforce-req-max-packet-ratio", 20);
+   ssh_conf.bruteforce_data_threshold = config->get_cfg_val("bruteforce-data-threshold", "bruteforce-data-threshold", 30);
+   ssh_conf.bruteforce_data_min_packet_ratio = config->get_cfg_val("bruteforce-data-min-packet-ratio", "bruteforce-data-min-packet-ratio", 10);
+   ssh_conf.bruteforce_data_max_packet_ratio = config->get_cfg_val("bruteforce-data-max-packet-ratio", "bruteforce-data-max-packet-ratio", 25);
+   ssh_conf.bruteforce_server_ratio = config->get_cfg_val("bruteforce-server-ratio", "bruteforce-server-ratio", 3);
+
+   // Load dns detector configuration.
+   dns_conf.dns_amplif_threshold = config->get_cfg_val("dns-amplif-threshold", "dns-amplif-threshold", 10000);
+}
+
+/**
+ * \brief Main function
  */
 int main(int argc, char *argv[])
 {
@@ -322,6 +373,10 @@ int main(int argc, char *argv[])
       config->unlock();
       goto exitC;
    }
+
+
+   /* Init detectors configuration. */
+   init_detectors_configuration();
 
    /* Configuration loaded */
    config->unlock();

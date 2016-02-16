@@ -5,13 +5,13 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-detectors], [1.0.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
-AM_INIT_AUTOMAKE([silent-rules subdir-objects])
+AM_INIT_AUTOMAKE([foreign silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])

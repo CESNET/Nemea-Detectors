@@ -312,6 +312,30 @@ bool Configuration::get_cfg_val(std::string name, std::string param)
    return value;
 }
 
+/** \brief Get float configuration value
+ * Get the value from the configuration file.
+ * If the value is not specified, returns def_value.
+ * \param[in] name Meaning of the value for error messages
+ * \param[in] param Name of the value in the configuration file
+ * \param[in] def_value Default float value
+ * \return Float configuration value
+ */
+float Configuration::get_cfg_val(std::string name, std::string param, float def_value)
+{
+   float value;
+   string value_str = trim(getValue(param));
+
+   if (value_str.empty()) {
+      log(LOG_WARNING, "Warning: %s '%s' is not specified in the configuration "
+         "file. Using %f as default.", name.c_str(), param.c_str(), def_value);
+      value = def_value;
+   } else {
+      value = strtof(value_str.c_str(), NULL);
+   }
+
+   return value;
+}
+
 // Static variables Initialization
 string Configuration::configFilePath = "";
 ConfigurationStatus Configuration::initStatus = NOT_INIT;
