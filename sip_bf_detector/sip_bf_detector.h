@@ -63,6 +63,8 @@ extern "C" {
 #define MAX_LENGTH_SIP_TO        100
 #define MAX_LENGTH_CSEQ          100
 #define CSEQ_EXPECTED            "2 R"
+#define IP_VERSION_4_BYTES       4
+#define IP_VERSION_6_BYTES       32
 
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
@@ -70,11 +72,24 @@ extern "C" {
 /** \brief UniRec output template definition. */
 #define UNIREC_OUTPUT_TEMPLATE "SIP_MSG_TYPE"
 
-class SIPAttackedServer {
-public:
-   SIPAttackedServer() : m_count(0) {}
-   ~SIPAttackedServer() {}
-   void increaseCount() {m_count++;}
-private:
-   int32_t m_count;  
+struct AttackedServer{
+   void initialize(ip_addr_t *ip_addr);
+   void destroy();
+   char *m_ip_addr;
+   uint32_t m_count;
 };
+
+void AttackedServer::initialize(ip_addr_t *ip_addr)
+{
+   m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
+   ip_to_str(ip_addr,m_ip_addr);
+   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
+   m_count = 0;
+}
+
+void AttackedServer::destroy()
+{
+   free(m_ip_addr);
+}
+
+

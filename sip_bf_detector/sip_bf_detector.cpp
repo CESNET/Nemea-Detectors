@@ -64,6 +64,36 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
+void print_statistics(void *tree)
+{
+   int is_there_next;
+   b_plus_tree_item *b_item;
+
+   b_item = b_plus_tree_create_list_item(tree);
+   is_there_next = b_plus_tree_get_list(tree, b_item);
+   while (is_there_next == 1) {
+      AttackedServer *server = (AttackedServer*)(b_item->value);
+      printf("IP: %s, count: %"PRIu32"\n", server->m_ip_addr, server->m_count);
+      is_there_next = b_plus_tree_get_next_item_from_list(tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+}
+
+int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char *user, size_t user_length, uint16_t status_code)
+{
+   uint32_t src_ip = ip_get_v4_as_int(ip_src);
+   int key_exists = b_plus_tree_is_item_in_tree(tree, &src_ip);
+   AttackedServer *server = (AttackedServer*)b_plus_tree_insert_or_find_item(tree, &src_ip);
+   if (!server)
+      return -1;
+
+   if (!key_exists)
+      server->initialize(ip_src);
+
+   server->m_count++;
+   return 0;
+}
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' or '?' + string after it
 
 int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
@@ -104,11 +134,12 @@ int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
    return 0;
 }
 
-int compare_ipv4(void * a, void * b)
+int compare_ipv4(void *a, void *b)
 {
-   uint64_t *h1, *h2;
-   h1 = (uint64_t*)a;
-   h2 = (uint64_t*)b;
+   uint32_t *h1, *h2;
+   h1 = (uint32_t*)a;
+   h2 = (uint32_t*)b;
+
    if (*h1 == *h2) {
       return EQUAL;
    }
@@ -118,6 +149,17 @@ int compare_ipv4(void * a, void * b)
    return MORE;
 }
 
+int compare_ipv6(void * a, void * b)
+{
+   int ret;
+   ret = memcmp(a, b, IP_VERSION_6_BYTES * 2);
+   if (ret == 0) {
+      return EQUAL;
+   } else if (ret < 0) {
+      return LESS;
+   }
+   return MORE;
+}
 
 void get_string_from_unirec(char *string_output, int *string_len, int unirec_field_id, int max_length, const void *in_rec, ur_template_t *in_tmplt)
 {
@@ -132,14 +174,12 @@ void get_string_from_unirec(char *string_output, int *string_len, int unirec_fie
 int main(int argc, char **argv)
 {
    int ret;
-   uint64_t msg_type, status_code;
-   uint32_t src_ip, dst_ip;
-   ip_addr_t * ip_src, * ip_dst;
-   char sip_from_orig[MAX_LENGTH_SIP_FROM + 1];
+   uint16_t msg_type, status_code;
+   ip_addr_t *ip_src, *ip_dst;
+   char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
    char *sip_from;
-   char sip_cseq[MAX_LENGTH_CSEQ + 1];
    int sip_from_len, sip_cseq_len;
-   void *tree_ipv4;
+   void *tree_ipv4, *tree_ipv6;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -165,7 +205,8 @@ int main(int argc, char **argv)
       return -1;
    }
 
-   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(SIPAttackedServer), 8);
+   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(AttackedServer), 4);
+   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(AttackedServer), 64);
 
    while (!stop) {
       const void *in_rec;
@@ -198,17 +239,26 @@ int main(int argc, char **argv)
          continue;
 
       ip_src = &ur_get(in_tmplt, in_rec, F_SRC_IP);
-      src_ip = ip_get_v4_as_int(ip_src);
       ip_dst = &ur_get(in_tmplt, in_rec, F_DST_IP);
-      dst_ip = ip_get_v4_as_int(ip_dst);
-      /*printf("USER: %s, SERVER_IP: %s, HACKER_IP: %s, RESULT: %" PRIu64 "\n", sip_from, ip_src_str, ip_dst_str, status_code);*/
+      if (ip_is_null(ip_src) || ip_is_null(ip_dst))
+         continue;
+
+      void *tree = ip_is4(ip_src) ? tree_ipv4 : tree_ipv6;
+      int retval = insert_attack_attempt(tree, ip_src, ip_dst, sip_from, sip_from_len, status_code);
+      if (retval != 0)
+         continue;
+
       ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
       ur_set(out_tmplt, out_rec, F_SIP_MSG_TYPE, msg_type);
 
       ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
       TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
    }
+   
+   print_statistics(tree_ipv4);
 
+   b_plus_tree_destroy(tree_ipv4);
+   b_plus_tree_destroy(tree_ipv6);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_free_record(out_rec);
