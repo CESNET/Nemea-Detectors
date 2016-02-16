@@ -9,7 +9,7 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: libtrap nemea-common
+Requires: libtrap nemea-common nemea-python
 BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
 Provides: nemea-modules
 
