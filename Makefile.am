@@ -4,7 +4,8 @@ SUBDIRS=amplification_detection \
 	blacklistfilter \
 	hoststatsnemea \
 	tunnel_detection \
-	voip_fraud_detection
+	voip_fraud_detection \
+	vportscan_detector
 
 RPMDIR = RPMBUILD
 
