@@ -38,7 +38,9 @@ AC_DEFUN([AX_UNIREC_CHECK_INTERNAL_PARENT], [
     CXXFLAGS="-I$UNIRECINC $CXXFLAGS"
     AC_MSG_RESULT([yes])
   else
-    AC_MSG_RESULT([no])
+    AC_CHECK_HEADERS(unirec/unirec.h unirec/inline.h unirec/ipaddr_cpp.h unirec/ipaddr.h unirec/links.h unirec/ur_time.h unirec/ur_values.h,
+      [], [AC_MSG_RESULT([no])])
+    AC_CHECK_LIB([unirec], ur_create_template, [UNIRECLIB=" "])
   fi
 ])
 
@@ -46,10 +48,10 @@ AC_DEFUN([AX_UNIREC_CHECK], [
   # UniRec processor
   if test "$repobuild" = "true"; then
   AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
-      [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR$PATH])
+      [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR$PATH$PATH_SEPARATOR/usr/bin/nemea/])
   else
   AC_PATH_PROG(UNIRECPROC, ur_processor.sh, [],
-      [$PWD/nemea-framework/unirec$PATH_SEPARATOR$PWD/../nemea-framework/unirec$PATH_SEPARATOR$PATH$PATH_SEPARATOR/usr/bin/nemea$PATH_SEPARATOR$PWD/../unirec$PATH_SEPARATOR$srcdir/../nemea-framework/unirec$PATH_SEPARATOR$top_srcdir/nemea-framework/unirec$PATH_SEPARATOR])
+      [/usr/bin/nemea/$PATH_SEPARATOR$PATH])
   fi
 
   if test -z "$UNIRECPROC"; then
