@@ -94,6 +94,8 @@ public:
       int min_value);
    // Get status configuration value
    bool get_cfg_val(string name, string param);
+   // Get float configuration value
+   float get_cfg_val(string name, string param, float def_value);
 
    /**
     * \brief Force Configuration to reread configuration file

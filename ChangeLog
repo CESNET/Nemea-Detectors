@@ -1,41 +1,9 @@
-2014-07-29 Nemea-2.0
-	
-	* Added components:
+2016-02-16 Nemea-detectros-1.0
+
+	* Contained components:
+		amplification_detection
 		blacklistfilter
-		debug_sender
-		dns_amplification
-		email_reporter
-		heartbleed_detector
-		ipspoofingdetector
-		ipv6stats
-		logreplay
-		merger
-		nfreader
-		protocolcounters
-		python_example
-		report_handler
-		supervisor
-		traffic_repeater
-		tunnel_detection
-		python wrapper
-	* Removed components:
-		script (replaced by supervisor)
-
-2014-01-16 Nemea-1.0
-
-	* Added components:
-		anonymizer
-		astute
-		entropy_module
-		example
-		flowcounter
-		flowdirection
 		hoststatsnemea
-		logger
-		pca
-		script
-		transitfilter
-		trapdump
-		trapreplay
-		unirec
-
+		tunnel_detection
+		voip_fraud_detection
+		vportscan_detector
