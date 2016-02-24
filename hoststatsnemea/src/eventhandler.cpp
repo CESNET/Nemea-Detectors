@@ -36,7 +36,7 @@
  */
 
 #include "eventhandler.h"
-#include "hs_config.h"
+#include <nemea-common/configurator.h>
 #include "aux_func.h"
 #include "profile.h"
 

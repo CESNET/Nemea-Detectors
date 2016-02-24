@@ -1,8 +1,6 @@
 include ../../aminclude.am
 
 HOSTSTATSNEMEASRCS=aux_func.h \
-		   config.cpp \
-		   hs_config.h \
 		   detectionrules.cpp \
 		   detectionrules.h \
 		   eventhandler.cpp \

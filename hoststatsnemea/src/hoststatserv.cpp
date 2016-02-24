@@ -53,7 +53,7 @@
 #include "aux_func.h"
 #include "processdata.h"
 #include "detectionrules.h"
-#include "hs_config.h"
+#include <nemea-common/configurator.h>
 #include <unistd.h>
 #include <getopt.h>
 //TRAP
