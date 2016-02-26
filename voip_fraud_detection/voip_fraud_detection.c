@@ -653,17 +653,7 @@ int main(int argc, char **argv)
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, ur_template_in);
 
       // Handle possible errors
-      if (ret != TRAP_E_OK) {
-         if (ret == TRAP_E_TIMEOUT) {
-            continue; // timeout
-         } else if (ret == TRAP_E_TERMINATED) {
-            break; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-         } else {
-            // Some error has occured
-            PRINT_ERR("Error: trap_recv() returned ", uint_to_str(ret), " (", trap_last_error_msg, ")\n");
-            break;
-         }
-      }
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
       if (in_rec_size < ur_rec_fixlen_size(ur_template_in)) {
