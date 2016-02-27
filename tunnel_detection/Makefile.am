@@ -10,6 +10,8 @@ tunnel_detection_dns_SOURCES=tunnel_detection_dns.c \
 tunnel_detection_dns_LDADD=-ltrap -lunirec -lm -lnemea-common
 tunnel_detection_dns_CXXFLAGS=-std=c++98 -O2
 tunnel_detection_dns_CFLAGS=-std=gnu99 -O2
-pkgdocdir=${docdir}/tunnel_detection_dns
-dist_pkgdoc_DATA=README
+
+EXTRA_DIST=README.md
+pkgdocdir=${docdir}/dnstunnel_detection
+dist_pkgdoc_DATA=README.md
 
