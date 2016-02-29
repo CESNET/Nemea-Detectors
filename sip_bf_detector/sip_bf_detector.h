@@ -70,6 +70,20 @@ extern "C" {
 
 struct attacked_server_t;
 
+struct sip_dataholder_t{
+   bool ipv4;
+   int sip_from_len;
+   int tree_key_length;
+   int (*comp_func)(void *, void *);
+   char *sip_from;
+   void *tree;
+   uint16_t msg_type;
+   uint16_t status_code;
+   ur_time_t time_stamp;
+   ip_addr_t *ip_src;
+   ip_addr_t *ip_dst;
+};
+
 struct attacker_t{
    void initialize(ip_addr_t *ip_addr, ur_time_t start_time);
    void destroy();
@@ -80,8 +94,8 @@ struct attacker_t{
 };
 
 struct attacked_user_t{
-   void initialize(char *user_name, size_t user_name_length, bool ipv4, ur_time_t start);
-   int addAttack(ip_addr_t *ip_dst, uint16_t status_code, uint64_t time_stamp, attacked_server_t *server);
+   void initialize(const sip_dataholder_t *sip_data);
+   int addAttack(const sip_dataholder_t *sip_data, attacked_server_t *server);
    void destroy();
 
    char *m_user_name;

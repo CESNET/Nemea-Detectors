@@ -182,55 +182,52 @@ void attacker_t::destroy()
 
 /* ***************  attacked_user_t  *************** */
 
-void attacked_user_t::initialize(char *user_name, size_t user_name_length, bool ipv4, ur_time_t start)
+void attacked_user_t::initialize(const sip_dataholder_t *sip_data)
 {
-   int tree_key_length = ipv4 ? IP_VERSION_4_BYTES : IP_VERSION_6_BYTES;
-   int (*comp_func)(void *, void *) = ipv4 ? &compare_ipv4 : &compare_ipv6;
-
-   m_ipv4 = ipv4;
+   m_ipv4 = sip_data->ipv4;
    m_user_name = (char*)calloc(MAX_LENGTH_SIP_FROM, sizeof(char));
-   memcpy(m_user_name, user_name, user_name_length);
-   m_attackers_tree = b_plus_tree_initialize(5, comp_func, sizeof(attacker_t), tree_key_length);
+   memcpy(m_user_name, sip_data->sip_from, sip_data->sip_from_len);
+   m_attackers_tree = b_plus_tree_initialize(5, sip_data->comp_func, sizeof(attacker_t), sip_data->tree_key_length);
    m_breached = false;
    m_breacher = NULL;
-   m_first_action = m_last_action = start;
+   m_first_action = m_last_action = sip_data->time_stamp;
    m_breach_time = 0;
 }
 
-int attacked_user_t::addAttack(ip_addr_t *ip_dst, uint16_t status_code, uint64_t time_stamp, attacked_server_t *server)
+int attacked_user_t::addAttack(const sip_dataholder_t *sip_data, attacked_server_t *server)
 {
    void *tree_key;
 
    if (m_ipv4) {
-      uint32_t dst_ip = ip_get_v4_as_int(ip_dst);
+      uint32_t dst_ip = ip_get_v4_as_int(sip_data->ip_dst);
       tree_key = &dst_ip;
    } else {
-      tree_key = ip_dst;
+      tree_key = sip_data->ip_dst;
    }   
 
    attacker_t *attacker = (attacker_t*)b_plus_tree_search(m_attackers_tree, tree_key);
 
    if (!attacker) {
-      if (status_code == SIP_STATUS_OK)
+      if (sip_data->status_code == SIP_STATUS_OK)
          return 0;
 
       attacker = (attacker_t*)b_plus_tree_insert_item(m_attackers_tree, tree_key);
       if (!attacker) {
          return -3;
       } else {
-         attacker->initialize(ip_dst, time_stamp);
+         attacker->initialize(sip_data->ip_dst, sip_data->time_stamp);
       }
    }
 
-   if (status_code == SIP_STATUS_OK) {
+   if (sip_data->status_code == SIP_STATUS_OK) {
       if (m_breached)
          return 0;
 
       m_breached = true;
       m_breacher = (char*)malloc(INET6_ADDRSTRLEN + 1);
-      ip_to_str(ip_dst, m_breacher);
+      ip_to_str(sip_data->ip_dst, m_breacher);
       m_breacher[INET6_ADDRSTRLEN + 1] = '\0'; 
-      m_breach_time = time_stamp;
+      m_breach_time = sip_data->time_stamp;
       if (m_attack_total_count >= g_alert_threshold)
          generateAlert(server, this);
 
@@ -243,8 +240,8 @@ int attacked_user_t::addAttack(ip_addr_t *ip_dst, uint16_t status_code, uint64_t
       }
    }
 
-   if (m_last_action < time_stamp)
-      m_last_action = time_stamp;
+   if (m_last_action < sip_data->time_stamp)
+      m_last_action = sip_data->time_stamp;
 
    return 0;
 }
@@ -300,36 +297,36 @@ void attacked_server_t::destroy()
    free(m_ip_addr);
 }
 
-int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char *user_name, size_t user_length, uint16_t status_code, uint64_t time_stamp, bool ipv4)
+int insert_attack_attempt(const sip_dataholder_t *sip_data)
 {
    void *tree_key;
 
-   if (ipv4) {
-      uint32_t src_ip = ip_get_v4_as_int(ip_src);
+   if (sip_data->ipv4) {
+      uint32_t src_ip = ip_get_v4_as_int(sip_data->ip_src);
       tree_key = &src_ip;
    } else {
-      tree_key = ip_src;
+      tree_key = sip_data->ip_src;
    }   
    
-   attacked_server_t *server = (attacked_server_t*)b_plus_tree_search(tree, tree_key);
+   attacked_server_t *server = (attacked_server_t*)b_plus_tree_search(sip_data->tree, tree_key);
 
    if (!server) {
-      if (status_code == SIP_STATUS_OK)
+      if (sip_data->status_code == SIP_STATUS_OK)
          return 0;
 
-      server = (attacked_server_t*)b_plus_tree_insert_item(tree, tree_key);
+      server = (attacked_server_t*)b_plus_tree_insert_item(sip_data->tree, tree_key);
       if (!server) {
          return -1;
       } else {
-         server->initialize(ip_src);
+         server->initialize(sip_data->ip_src);
       }
    }
 
    char *user_name_tmp = (char*)calloc(MAX_LENGTH_SIP_FROM, sizeof(char));
-   memcpy(user_name_tmp, user_name, user_length);
+   memcpy(user_name_tmp, sip_data->sip_from, sip_data->sip_from_len);
    attacked_user_t *user = (attacked_user_t*)b_plus_tree_search(server->m_user_tree, user_name_tmp);
    if (!user) {
-      if (status_code == SIP_STATUS_OK) {
+      if (sip_data->status_code == SIP_STATUS_OK) {
          free(user_name_tmp);
          return 0;
       }
@@ -338,12 +335,12 @@ int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char
       if (!user) {
          return -2;
       } else {
-         user->initialize(user_name, user_length, ipv4, time_stamp);
+         user->initialize(sip_data);
       }
    }
 
    free(user_name_tmp);
-   user->addAttack(ip_dst, status_code, time_stamp, server);
+   user->addAttack(sip_data, server);
    return 0;
 }
 
@@ -366,7 +363,7 @@ void destroy_tree(void *tree)
 
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' or '?' + string after it
 
-int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
+int cut_sip_identifier(char **output_str, char *input_str, int *str_len)
 {
    if ((*str_len >= 4) && (strncmp(input_str, "sip:", 4) == 0)) {
 
@@ -417,21 +414,17 @@ void get_string_from_unirec(char *string_output, int *string_len, int unirec_fie
 int main(int argc, char **argv)
 {
    int ret;
-   uint16_t msg_type, status_code;
-   ip_addr_t *ip_src, *ip_dst;
+   uint16_t msg_type;
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
-   char *sip_from;
-   int sip_from_len, sip_cseq_len;
-   bool ipv4;
+   int sip_cseq_len;
    void *tree_ipv4, *tree_ipv6;
-   ur_time_t time_stamp;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    ur_template_t *in_tmplt = ur_create_input_template(0, UNIREC_INPUT_TEMPLATE, NULL);
-   if (in_tmplt == NULL){
+   if (in_tmplt == NULL) {
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
@@ -444,6 +437,7 @@ int main(int argc, char **argv)
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
+      sip_dataholder_t *sip_data;
 
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
@@ -461,27 +455,51 @@ int main(int argc, char **argv)
       if (!(sip_cseq_len > 2 && strstr(sip_cseq, "REG")))
          continue;
 
+      sip_data = (sip_dataholder_t*)malloc(sizeof(sip_dataholder_t));
+      if (!sip_data) {
+         break;
+      }
+
       msg_type = ur_get(in_tmplt, in_rec, F_SIP_MSG_TYPE);
-      status_code = ur_get(in_tmplt, in_rec, F_SIP_STATUS_CODE);
-      if (!(msg_type == SIP_MSG_TYPE_STATUS && (status_code == SIP_STATUS_FORBIDDEN || status_code == SIP_STATUS_OK)))
+      sip_data->status_code = ur_get(in_tmplt, in_rec, F_SIP_STATUS_CODE);
+      if (!(msg_type == SIP_MSG_TYPE_STATUS && (sip_data->status_code == SIP_STATUS_FORBIDDEN || sip_data->status_code == SIP_STATUS_OK))) {
+         free(sip_data);
          continue;
+      }
 
-      get_string_from_unirec(sip_from_orig, &sip_from_len, F_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM, in_rec, in_tmplt);
-      int invalid_sipfrom = cut_sip_identifier(&sip_from, sip_from_orig, &sip_from_len);
-      if (invalid_sipfrom)
+      get_string_from_unirec(sip_from_orig, &(sip_data->sip_from_len), F_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM, in_rec, in_tmplt);
+      int invalid_sipfrom = cut_sip_identifier(&(sip_data->sip_from), sip_from_orig, &(sip_data->sip_from_len));
+      if (invalid_sipfrom) {
+         free(sip_data);
          continue;
+      }
 
-      ip_src = &ur_get(in_tmplt, in_rec, F_SRC_IP);
-      ip_dst = &ur_get(in_tmplt, in_rec, F_DST_IP);
-      if (ip_is_null(ip_src) || ip_is_null(ip_dst))
+      sip_data->ip_src = &ur_get(in_tmplt, in_rec, F_SRC_IP);
+      sip_data->ip_dst = &ur_get(in_tmplt, in_rec, F_DST_IP);
+      if (ip_is_null(sip_data->ip_src) || ip_is_null(sip_data->ip_dst)) {
+         free(sip_data);
          continue;
+      }
 
-      time_stamp = ur_time_get_sec((ur_time_t*)ur_get(in_tmplt, in_rec, F_TIME_FIRST));
-      ipv4 = ip_is4(ip_src);
-      void *tree = ipv4 ? tree_ipv4 : tree_ipv6;
-      int retval = insert_attack_attempt(tree, ip_src, ip_dst, sip_from, sip_from_len, status_code, time_stamp, ipv4);
-      if (retval != 0)
+      sip_data->time_stamp = ur_time_get_sec((ur_time_t*)ur_get(in_tmplt, in_rec, F_TIME_FIRST));
+      sip_data->ipv4 = ip_is4(sip_data->ip_src);
+      if (sip_data->ipv4) {
+         sip_data->tree = tree_ipv4;
+         sip_data->tree_key_length = IP_VERSION_4_BYTES;
+         sip_data->comp_func = &compare_ipv4;
+      } else {
+         sip_data->tree = tree_ipv6;
+         sip_data->tree_key_length = IP_VERSION_6_BYTES;
+         sip_data->comp_func = &compare_ipv6;
+      }
+
+      int retval = insert_attack_attempt(sip_data);
+      if (retval != 0) {
+         free(sip_data);
          continue;
+      }
+
+      free(sip_data);
    }
    
    destroy_tree(tree_ipv4);
