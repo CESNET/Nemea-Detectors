@@ -47,6 +47,8 @@
 UR_FIELDS (
    ipaddr DST_IP,
    ipaddr SRC_IP,
+   uint64 LINK_BIT_FIELD,
+   uint8 PROTOCOL,
    time TIME_FIRST,
    uint16 SIP_MSG_TYPE,
    uint16 SIP_STATUS_CODE,
@@ -62,9 +64,290 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM)
 
 static int stop = 0;
+uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
+
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
-void print_statistics(void *tree)
+int compare_user_name(void *a, void *b)
+{
+   return strncmp((const char *)a, (const char *)b, MAX_LENGTH_SIP_FROM);
+}
+
+int compare_ipv4(void *a, void *b)
+{
+   uint32_t *h1, *h2;
+   h1 = (uint32_t*)a;
+   h2 = (uint32_t*)b;
+   if (*h1 == *h2) {
+      return EQUAL;
+   }
+   else if (*h1 < *h2) {
+      return LESS;
+   }
+
+   return MORE;
+}
+
+int compare_ipv6(void * a, void * b)
+{
+   int ret;
+   ret = memcmp(a, b, IP_VERSION_6_BYTES);
+   if (ret == 0) {
+      return EQUAL;
+   } else if (ret < 0) {
+      return LESS;
+   }
+
+   return MORE;
+}
+
+int generateAlert(const attacked_server_t *server, const attacked_user_t *user)
+{
+   char *s = NULL;
+   json_t *root = json_object();
+   json_t *attackers_arr = json_array();
+   int breached = user->m_breached ? 1 : 0;
+   const char *breacher = user->m_breacher ? user->m_breacher : "";
+   char time_first[32];
+   char time_breach[32];
+   char time_last[32];
+   const time_t tf = user->m_first_action;
+   const time_t tl = user->m_last_action;
+   const time_t tb = user->m_breached ? user->m_breach_time : 0;
+
+   strftime(time_first, 31, "%F %T", gmtime(&tf));
+   strftime(time_last, 31, "%F %T", gmtime(&tl));
+   strftime(time_breach, 31, "%F %T", gmtime(&tb));
+   time_first[31] = time_last[31] = time_breach[31] = '\0';
+
+   json_object_set_new(root, "TargetIP", json_string(server->m_ip_addr));
+   json_object_set_new(root, "SIPTo", json_string(user->m_user_name));
+   json_object_set_new(root, "AttemptCount", json_integer(user->m_attack_total_count));
+   json_object_set_new(root, "EventTime", json_string(time_first));
+   json_object_set_new(root, "CeaseTime", json_string(time_last));
+   json_object_set_new(root, "Breach", json_integer(breached));
+   json_object_set_new(root, "BreacherIP", json_string(breacher));
+   json_object_set_new(root, "BreachTime", json_string(time_breach));
+   json_object_set_new(root, "Sources", attackers_arr);
+
+   int is_there_next;
+   b_plus_tree_item *b_item;
+
+   b_item = b_plus_tree_create_list_item(user->m_attackers_tree);
+   is_there_next = b_plus_tree_get_list(user->m_attackers_tree, b_item);
+   while (is_there_next == 1) {
+      attacker_t *attacker = (attacker_t*)(b_item->value);
+      json_t *attacker_json = json_object();
+      char attack_start[32];
+      const time_t atf = attacker->m_start;
+
+      strftime(attack_start, 31, "%F %T", gmtime(&atf));
+      attack_start[31] = '\0';
+
+      json_object_set_new(attacker_json, "SourceIP", json_string(attacker->m_ip_addr));
+      json_object_set_new(attacker_json, "AttemptCount", json_integer(attacker->m_count));
+      json_object_set_new(attacker_json, "EventTime", json_string(time_first));
+
+      json_array_append(attackers_arr, attacker_json);
+      json_decref(attacker_json);
+      is_there_next = b_plus_tree_get_next_item_from_list(user->m_attackers_tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+
+
+   s = json_dumps(root, 0);
+   json_decref(root);
+  
+   int ret = trap_send(0, s, strlen(s));
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, return 0, return -1);
+   return 0;
+}
+
+/* ***************  attacker_t  *************** */
+
+void attacker_t::initialize(ip_addr_t *ip_addr, ur_time_t start_time)
+{
+   m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
+   ip_to_str(ip_addr,m_ip_addr);
+   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
+   m_count = 0;
+   m_start = start_time;
+}
+
+void attacker_t::destroy()
+{
+   free(m_ip_addr);
+}
+
+/* ***************  attacked_user_t  *************** */
+
+void attacked_user_t::initialize(char *user_name, size_t user_name_length, bool ipv4, ur_time_t start)
+{
+   int tree_key_length = ipv4 ? IP_VERSION_4_BYTES : IP_VERSION_6_BYTES;
+   int (*comp_func)(void *, void *) = ipv4 ? &compare_ipv4 : &compare_ipv6;
+
+   m_ipv4 = ipv4;
+   m_user_name = (char*)calloc(MAX_LENGTH_SIP_FROM, sizeof(char));
+   memcpy(m_user_name, user_name, user_name_length);
+   m_attackers_tree = b_plus_tree_initialize(5, comp_func, sizeof(attacker_t), tree_key_length);
+   m_breached = false;
+   m_breacher = NULL;
+   m_first_action = m_last_action = start;
+   m_breach_time = 0;
+}
+
+int attacked_user_t::addAttack(ip_addr_t *ip_dst, uint16_t status_code, uint64_t time_stamp, attacked_server_t *server)
+{
+   void *tree_key;
+
+   if (m_ipv4) {
+      uint32_t dst_ip = ip_get_v4_as_int(ip_dst);
+      tree_key = &dst_ip;
+   } else {
+      tree_key = ip_dst;
+   }   
+
+   attacker_t *attacker = (attacker_t*)b_plus_tree_search(m_attackers_tree, tree_key);
+
+   if (!attacker) {
+      if (status_code == SIP_STATUS_OK)
+         return 0;
+
+      attacker = (attacker_t*)b_plus_tree_insert_item(m_attackers_tree, tree_key);
+      if (!attacker) {
+         return -3;
+      } else {
+         attacker->initialize(ip_dst, time_stamp);
+      }
+   }
+
+   if (status_code == SIP_STATUS_OK) {
+      if (m_breached)
+         return 0;
+
+      m_breached = true;
+      m_breacher = (char*)malloc(INET6_ADDRSTRLEN + 1);
+      ip_to_str(ip_dst, m_breacher);
+      m_breacher[INET6_ADDRSTRLEN + 1] = '\0'; 
+      m_breach_time = time_stamp;
+      if (m_attack_total_count >= g_alert_threshold)
+         generateAlert(server, this);
+
+   } else {
+      attacker->m_count++;
+      m_attack_total_count++;
+      if (m_attack_total_count >= g_alert_threshold && m_reported == false) {
+         m_reported = true;
+         generateAlert(server, this);
+      }
+   }
+
+   if (m_last_action < time_stamp)
+      m_last_action = time_stamp;
+
+   return 0;
+}
+
+void attacked_user_t::destroy()
+{
+   int is_there_next;
+   b_plus_tree_item *b_item;
+
+   b_item = b_plus_tree_create_list_item(m_attackers_tree);
+   is_there_next = b_plus_tree_get_list(m_attackers_tree, b_item);
+   while (is_there_next == 1) {
+      attacker_t *attacker = (attacker_t*)(b_item->value);
+
+      attacker->destroy();
+      is_there_next = b_plus_tree_get_next_item_from_list(m_attackers_tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+   b_plus_tree_destroy(m_attackers_tree);
+   free(m_user_name);
+   free(m_breacher);
+}
+
+/* ***************  attacked_server_t  *************** */
+
+void attacked_server_t::initialize(ip_addr_t *ip_addr)
+{
+   m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
+   ip_to_str(ip_addr,m_ip_addr);
+   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
+   m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(attacked_user_t), MAX_LENGTH_SIP_FROM);
+}
+
+void attacked_server_t::destroy()
+{
+   int is_there_next;
+   b_plus_tree_item *b_item;
+
+   b_item = b_plus_tree_create_list_item(m_user_tree);
+   is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
+   while (is_there_next == 1) {
+      attacked_user_t *user = (attacked_user_t*)(b_item->value);
+      if (user->m_attack_total_count >= g_alert_threshold)
+         generateAlert(this, user);
+
+      user->destroy();
+      is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+   b_plus_tree_destroy(m_user_tree);
+   free(m_ip_addr);
+}
+
+int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char *user_name, size_t user_length, uint16_t status_code, uint64_t time_stamp, bool ipv4)
+{
+   void *tree_key;
+
+   if (ipv4) {
+      uint32_t src_ip = ip_get_v4_as_int(ip_src);
+      tree_key = &src_ip;
+   } else {
+      tree_key = ip_src;
+   }   
+   
+   attacked_server_t *server = (attacked_server_t*)b_plus_tree_search(tree, tree_key);
+
+   if (!server) {
+      if (status_code == SIP_STATUS_OK)
+         return 0;
+
+      server = (attacked_server_t*)b_plus_tree_insert_item(tree, tree_key);
+      if (!server) {
+         return -1;
+      } else {
+         server->initialize(ip_src);
+      }
+   }
+
+   char *user_name_tmp = (char*)calloc(MAX_LENGTH_SIP_FROM, sizeof(char));
+   memcpy(user_name_tmp, user_name, user_length);
+   attacked_user_t *user = (attacked_user_t*)b_plus_tree_search(server->m_user_tree, user_name_tmp);
+   if (!user) {
+      if (status_code == SIP_STATUS_OK) {
+         free(user_name_tmp);
+         return 0;
+      }
+
+      user = (attacked_user_t*)b_plus_tree_insert_item(server->m_user_tree, user_name_tmp);
+      if (!user) {
+         return -2;
+      } else {
+         user->initialize(user_name, user_length, ipv4, time_stamp);
+      }
+   }
+
+   free(user_name_tmp);
+   user->addAttack(ip_dst, status_code, time_stamp, server);
+   return 0;
+}
+
+void destroy_tree(void *tree)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
@@ -72,52 +355,15 @@ void print_statistics(void *tree)
    b_item = b_plus_tree_create_list_item(tree);
    is_there_next = b_plus_tree_get_list(tree, b_item);
    while (is_there_next == 1) {
-      AttackedServer *server = (AttackedServer*)(b_item->value);
-      printf("IP: %s, count: %"PRIu32"\n", server->m_ip_addr, server->m_count);
+      attacked_server_t *server = (attacked_server_t*)(b_item->value);
+      server->destroy();
       is_there_next = b_plus_tree_get_next_item_from_list(tree, b_item);
    }
 
    b_plus_tree_destroy_list_item(b_item);
+   b_plus_tree_destroy(tree);
 }
 
-int insert_attack_attempt(void *tree, ip_addr_t *ip_src, ip_addr_t *ip_dst, char *user, size_t user_length, uint16_t status_code)
-{
-   uint32_t src_ip = ip_get_v4_as_int(ip_src);
-/* NOT WORKING PIECE OF CODE!!
-   printf("Searching: %"PRIu32"\n", src_ip);
-   AttackedServer *server = (AttackedServer*)b_plus_tree_search(tree, &src_ip);
-   if (server == NULL) {
-      printf("Not found.\nInserting: %"PRIu32"\n", src_ip);
-      server = (AttackedServer*)b_plus_tree_insert_item(tree, &src_ip);
-      if (server == NULL) {
-         printf("FAIL.\n");
-         return 0;
-      } else {
-         server->initialize(ip_src);
-      }
-   }
-
-   server->m_count++;
-   printf("OK.\n");
-*/
-
-/* WORKING PIECE OF CODE!!
-   printf("Searching: %"PRIu32"\n", src_ip);
-   int key_exists = b_plus_tree_is_item_in_tree(tree, &src_ip);
-   printf("Result = %d\nFind or insert: %"PRIu32"\n", key_exists, src_ip);
-   AttackedServer *server = (AttackedServer*)b_plus_tree_insert_or_find_item(tree, &src_ip);
-   if (!server) {
-      printf("FAIL.");
-      return -1;
-   }
-
-   if (!key_exists)
-      server->initialize(ip_src);
-
-   server->m_count++;
-*/
-   return 0;
-}
 // Cut first 4 chars ("sip:") or 5 chars ("sips:") from input string and ignore ';' or '?' + string after it
 
 int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
@@ -158,33 +404,6 @@ int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
    return 0;
 }
 
-int compare_ipv4(void *a, void *b)
-{
-   uint32_t *h1, *h2;
-   h1 = (uint32_t*)a;
-   h2 = (uint32_t*)b;
-   printf("Comparing %"PRIu32" and %"PRIu32"\n", *h1, *h2);
-   if (*h1 == *h2) {
-      return EQUAL;
-   }
-   else if (*h1 < *h2) {
-      return LESS;
-   }
-   return MORE;
-}
-
-int compare_ipv6(void * a, void * b)
-{
-   int ret;
-   ret = memcmp(a, b, IP_VERSION_6_BYTES * 2);
-   if (ret == 0) {
-      return EQUAL;
-   } else if (ret < 0) {
-      return LESS;
-   }
-   return MORE;
-}
-
 void get_string_from_unirec(char *string_output, int *string_len, int unirec_field_id, int max_length, const void *in_rec, ur_template_t *in_tmplt)
 {
    *string_len = ur_get_var_len(in_tmplt, in_rec, unirec_field_id);
@@ -203,7 +422,9 @@ int main(int argc, char **argv)
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
    char *sip_from;
    int sip_from_len, sip_cseq_len;
+   bool ipv4;
    void *tree_ipv4, *tree_ipv6;
+   ur_time_t time_stamp;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -214,23 +435,11 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
-   ur_template_t *out_tmplt = ur_create_output_template(0, UNIREC_OUTPUT_TEMPLATE, NULL);
-   if (out_tmplt == NULL){
-      ur_free_template(in_tmplt);
-      fprintf(stderr, "Error: Output template could not be created.\n");
-      return -1;
-   }
 
-   void *out_rec = ur_create_record(out_tmplt, 0);
-   if (out_rec == NULL){
-      ur_free_template(in_tmplt);
-      ur_free_template(out_tmplt);
-      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-      return -1;
-   }
+   trap_set_data_fmt(0, TRAP_FMT_JSON, "");
 
-   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(AttackedServer), 4);
-   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(AttackedServer), 64);
+   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(attacked_server_t), IP_VERSION_4_BYTES);
+   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(attacked_server_t), IP_VERSION_6_BYTES);
 
    while (!stop) {
       const void *in_rec;
@@ -249,7 +458,7 @@ int main(int argc, char **argv)
       }
 
       get_string_from_unirec(sip_cseq, &sip_cseq_len, F_SIP_CSEQ, MAX_LENGTH_CSEQ, in_rec, in_tmplt);
-      if (!(sip_cseq_len > 2 && strncmp(sip_cseq, CSEQ_EXPECTED, 3) == 0))
+      if (!(sip_cseq_len > 2 && strstr(sip_cseq, "REG")))
          continue;
 
       msg_type = ur_get(in_tmplt, in_rec, F_SIP_MSG_TYPE);
@@ -267,27 +476,19 @@ int main(int argc, char **argv)
       if (ip_is_null(ip_src) || ip_is_null(ip_dst))
          continue;
 
-      void *tree = ip_is4(ip_src) ? tree_ipv4 : tree_ipv6;
-      int retval = insert_attack_attempt(tree, ip_src, ip_dst, sip_from, sip_from_len, status_code);
+      time_stamp = ur_time_get_sec((ur_time_t*)ur_get(in_tmplt, in_rec, F_TIME_FIRST));
+      ipv4 = ip_is4(ip_src);
+      void *tree = ipv4 ? tree_ipv4 : tree_ipv6;
+      int retval = insert_attack_attempt(tree, ip_src, ip_dst, sip_from, sip_from_len, status_code, time_stamp, ipv4);
       if (retval != 0)
          continue;
-
-      ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
-      ur_set(out_tmplt, out_rec, F_SIP_MSG_TYPE, msg_type);
-
-      ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
    }
    
-   print_statistics(tree_ipv4);
-
-   b_plus_tree_destroy(tree_ipv4);
-   b_plus_tree_destroy(tree_ipv6);
+   destroy_tree(tree_ipv4);
+   destroy_tree(tree_ipv6);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-   ur_free_record(out_rec);
    ur_free_template(in_tmplt);
-   ur_free_template(out_tmplt);
    ur_finalize();
 
    return 0;

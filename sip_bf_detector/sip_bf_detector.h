@@ -60,36 +60,49 @@ extern "C" {
 #define SIP_STATUS_FORBIDDEN     403
 #define SIP_STATUS_OK            200
 #define MAX_LENGTH_SIP_FROM      100
-#define MAX_LENGTH_SIP_TO        100
 #define MAX_LENGTH_CSEQ          100
-#define CSEQ_EXPECTED            "2 R"
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
+#define DEFAULT_ALERT_THRESHOLD  20
 
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
-/** \brief UniRec output template definition. */
-#define UNIREC_OUTPUT_TEMPLATE "SIP_MSG_TYPE"
+struct attacked_server_t;
 
-struct AttackedServer{
-   void initialize(ip_addr_t *ip_addr);
+struct attacker_t{
+   void initialize(ip_addr_t *ip_addr, ur_time_t start_time);
    void destroy();
+
    char *m_ip_addr;
-   uint32_t m_count;
+   uint64_t m_count;
+   ur_time_t m_start;
 };
 
-void AttackedServer::initialize(ip_addr_t *ip_addr)
-{
-   m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
-   ip_to_str(ip_addr,m_ip_addr);
-   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
-   m_count = 0;
-}
+struct attacked_user_t{
+   void initialize(char *user_name, size_t user_name_length, bool ipv4, ur_time_t start);
+   int addAttack(ip_addr_t *ip_dst, uint16_t status_code, uint64_t time_stamp, attacked_server_t *server);
+   void destroy();
 
-void AttackedServer::destroy()
-{
-   free(m_ip_addr);
-}
+   char *m_user_name;
+   void *m_attackers_tree;
+   char *m_breacher;
+   bool m_breached;
+   bool m_reported;
+   bool m_ipv4;
+   ur_time_t m_first_action;
+   ur_time_t m_breach_time;
+   ur_time_t m_last_action;
+   uint64_t m_attack_total_count;
+};
+
+struct attacked_server_t{
+   void initialize(ip_addr_t *ip_addr);
+   void destroy();
+
+   void *m_user_tree;
+   char *m_ip_addr;
+};
+
 
 
