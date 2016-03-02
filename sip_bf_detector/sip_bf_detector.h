@@ -63,7 +63,9 @@ extern "C" {
 #define MAX_LENGTH_CSEQ          100
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
-#define DEFAULT_ALERT_THRESHOLD  20
+#define DEFAULT_ALERT_THRESHOLD  2
+#define CHECK_MEMORY_INTERVAL    120
+#define FREE_MEMORY_INTERVAL     1200
 
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
@@ -112,6 +114,7 @@ struct attacked_user_t{
 
 struct attacked_server_t{
    void initialize(ip_addr_t *ip_addr);
+   void freeUnusedUsers();
    void destroy();
 
    void *m_user_tree;

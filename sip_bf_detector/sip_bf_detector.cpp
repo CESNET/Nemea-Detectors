@@ -65,6 +65,8 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
+uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
+uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -99,6 +101,35 @@ int compare_ipv6(void * a, void * b)
    }
 
    return MORE;
+}
+
+void freeCeasedAttacks(void *server_tree)
+{
+   time_t time_actual;
+   static time_t time_last_check = 0;
+
+   time(&time_actual);
+
+   if (difftime(time_actual, time_last_check) > g_check_mem_interval) {
+      int is_there_next;
+      b_plus_tree_item *b_item;
+
+      b_item = b_plus_tree_create_list_item(server_tree);
+      is_there_next = b_plus_tree_get_list(server_tree, b_item);
+      while (is_there_next == 1) {
+         attacked_server_t *server = (attacked_server_t*)(b_item->value);
+         server->freeUnusedUsers();
+         if (b_plus_tree_get_count_of_values(server->m_user_tree) == 0) {
+            b_plus_tree_destroy(server->m_user_tree);
+            free(server->m_ip_addr);
+            b_plus_tree_delete_item(server_tree, b_item->key);
+         }
+         
+      }
+
+      b_plus_tree_destroy_list_item(b_item);
+      time(&time_last_check);  
+   }
 }
 
 int generateAlert(const attacked_server_t *server, const attacked_user_t *user)
@@ -276,6 +307,32 @@ void attacked_server_t::initialize(ip_addr_t *ip_addr)
    m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(attacked_user_t), MAX_LENGTH_SIP_FROM);
 }
 
+void attacked_server_t::freeUnusedUsers()
+{
+   int is_there_next;
+   b_plus_tree_item *b_item;
+   time_t time_actual;
+
+   time(&time_actual);
+
+   b_item = b_plus_tree_create_list_item(m_user_tree);
+   is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
+   while (is_there_next == 1) {
+      attacked_user_t *user = (attacked_user_t*)(b_item->value);
+      if (difftime(time_actual, user->m_last_action) > g_free_mem_interval) {
+         if (user->m_attack_total_count >= g_alert_threshold)
+            generateAlert(this, user);
+
+         user->destroy();
+         b_plus_tree_delete_item(m_user_tree, b_item->key);
+      }
+
+      is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+}
+
 void attacked_server_t::destroy()
 {
    int is_there_next;
@@ -450,6 +507,9 @@ int main(int argc, char **argv)
             break;
          }
       }
+
+      freeCeasedAttacks(tree_ipv4);
+      freeCeasedAttacks(tree_ipv6);
 
       get_string_from_unirec(sip_cseq, &sip_cseq_len, F_SIP_CSEQ, MAX_LENGTH_CSEQ, in_rec, in_tmplt);
       if (!(sip_cseq_len > 2 && strstr(sip_cseq, "REG")))
