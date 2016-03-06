@@ -103,31 +103,6 @@ int compare_ipv6(void * a, void * b)
    return MORE;
 }
 
-/* ***************  items_to_remove  *************** */
-
-void items_to_remove::init(int count, int item_length)
-{
-   items_arr = (void**)malloc(count * sizeof(void*));
-   items_len = item_length;
-   size = 0;
-}
-
-void items_to_remove::destroy()
-{
-   for (int i = 0; i < size; i++) {
-      free(items_arr[i]);   
-   }
-
-   free(items_arr);
-}
-
-void items_to_remove::addItem(const void *item)
-{
-   items_arr[size] = malloc(items_len);
-   memcpy(items_arr[size], item, items_len);
-   size++;
-}
-
 void freeCeasedAttacks(void *server_tree, ur_time_t actual_time, int key_length)
 {
    time_t time_actual = (time_t)actual_time;
@@ -136,32 +111,22 @@ void freeCeasedAttacks(void *server_tree, ur_time_t actual_time, int key_length)
    if (abs(time_actual - time_last_check) > g_check_mem_interval) {
       int is_there_next;
       b_plus_tree_item *b_item;
-      items_to_remove *items;
 
-      items = (items_to_remove*)malloc(sizeof(items_to_remove));
-      items->init(b_plus_tree_get_count_of_values(server_tree), key_length);
       b_item = b_plus_tree_create_list_item(server_tree);
       is_there_next = b_plus_tree_get_list(server_tree, b_item);
       while (is_there_next == 1) {
          attacked_server_t *server = (attacked_server_t*)(b_item->value);
          server->freeUnusedUsers(time_actual);
          if (b_plus_tree_get_count_of_values(server->m_user_tree) == 0) {
-            items->addItem(b_item->key);
             b_plus_tree_destroy(server->m_user_tree);
             free(server->m_ip_addr);
+            is_there_next = b_plus_tree_delete_item_from_list(server_tree, b_item);
+         } else {
+            is_there_next = b_plus_tree_get_next_item_from_list(server_tree, b_item);
          }
-
-         is_there_next = b_plus_tree_get_next_item_from_list(server_tree, b_item);
       }
 
       b_plus_tree_destroy_list_item(b_item);
-
-      for (int i = 0; i < items->size; i++) {
-         b_plus_tree_delete_item(server_tree, items->items_arr[i]);   
-      }
-
-      items->destroy();
-      free(items);
       time_last_check = time_actual;  
    }
 }
@@ -348,10 +313,7 @@ void attacked_server_t::freeUnusedUsers(time_t time_actual)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
-   items_to_remove *items;
 
-   items = (items_to_remove*)malloc(sizeof(items_to_remove));
-   items->init(b_plus_tree_get_count_of_values(m_user_tree), MAX_LENGTH_SIP_FROM);
    b_item = b_plus_tree_create_list_item(m_user_tree);
    is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
    while (is_there_next == 1) {
@@ -360,21 +322,15 @@ void attacked_server_t::freeUnusedUsers(time_t time_actual)
          if (user->m_attack_total_count >= g_alert_threshold) {
             generateAlert(this, user);
          }
-         items->addItem(b_item->key);
-         user->destroy();
-      }
 
-      is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+         user->destroy();
+         is_there_next = b_plus_tree_delete_item_from_list(m_user_tree, b_item);
+      } else {
+         is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+      }
    }
 
    b_plus_tree_destroy_list_item(b_item);
-
-   for (int i = 0; i < items->size; i++) {
-      b_plus_tree_delete_item(m_user_tree, items->items_arr[i]);   
-   }
-
-   items->destroy();
-   free(items);
 }
 
 void attacked_server_t::destroy()

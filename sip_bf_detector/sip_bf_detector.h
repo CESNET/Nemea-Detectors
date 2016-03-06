@@ -121,12 +121,3 @@ struct attacked_server_t{
    char *m_ip_addr;
 };
 
-struct items_to_remove{
-   void init(int count, int item_length);
-   void addItem(const void *item);
-   void destroy();
-   void **items_arr;
-   int size;
-   int items_len;
-};
-
