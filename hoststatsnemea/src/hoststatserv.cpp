@@ -53,7 +53,7 @@
 #include "aux_func.h"
 #include "processdata.h"
 #include "detectionrules.h"
-#include <nemea-common/configurator.h>
+#include <configurator.h>
 #include <unistd.h>
 #include <getopt.h>
 //TRAP
@@ -68,6 +68,7 @@ using namespace std;
 int log_upto = LOG_ERR;    // Log up to level
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
+string configFilePath = "hoststats.conf";
 
 // Extern variables
 extern HostProfile *MainProfile;
@@ -125,7 +126,7 @@ int arguments(int argc, char *argv[], const char *module_getopt_string, const st
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'c':  // configuration file
-         Configuration::setConfigPath(string(optarg));
+         configFilePath = string(optarg);
          break;
       case 'F':
          offline_mode = true;
@@ -197,51 +198,47 @@ bool is_template_subset(const ur_template_t *main_tmpl, const ur_template_t
 
 /**
  * \brief Initializes detectors configuration.
- * \param [out] error Contains parameter name if an error occur.
- * \return True on success, false when invalid configuration value is found.
  */
 void init_detectors_configuration() {
 
-   Configuration *config = Configuration::getInstance();
-
    // Load general detector configuration.
-   general_conf.syn_scan_threshold = config->get_cfg_val("syn-scan-threshold", "syn-scan-threshold", 200);
-   general_conf.syn_scan_syn_to_ack_ratio = config->get_cfg_val("syn-scan-syn-to-ack-ratio", "syn-scan-syn-to-ack-ratio", 20);
-   general_conf.syn_scan_request_to_response_ratio = config->get_cfg_val("syn-scan-request-to-response-ratio", "syn-scan-request-to-response-ratio", 5);
-   general_conf.syn_scan_ips = config->get_cfg_val("syn-scan-ips", "syn-scan-ips", 200);
+   general_conf.syn_scan_threshold = confPlainGetFloat("syn-scan-threshold", 200);
+   general_conf.syn_scan_syn_to_ack_ratio = confPlainGetFloat("syn-scan-syn-to-ack-ratio", 20);
+   general_conf.syn_scan_request_to_response_ratio = confPlainGetFloat("syn-scan-request-to-response-ratio", 5);
+   general_conf.syn_scan_ips = confPlainGetFloat("syn-scan-ips", 200);
 
-   general_conf.dos_victim_connections_synflood = config->get_cfg_val("dos-victim-connections-synflood", "dos-victim-connections-synflood", 270000, 0);
-   general_conf.dos_victim_connections_others = config->get_cfg_val("dos-victim-connections-others", "dos-victim-connections-others", 1000000, 0);
-   general_conf.dos_victim_packet_ratio = config->get_cfg_val("dos-victim-packet-ratio", "dos-victim-packet-ratio", 2);
+   general_conf.dos_victim_connections_synflood = confPlainGetUint32("dos-victim-connections-synflood", 270000);
+   general_conf.dos_victim_connections_others = confPlainGetUint32("dos-victim-connections-others", 1000000);
+   general_conf.dos_victim_packet_ratio = confPlainGetFloat("dos-victim-packet-ratio", 2);
 
-   general_conf.dos_attacker_connections_synflood = config->get_cfg_val("dos-attacker-connections-synflood", "dos-attacker-connections-synflood", 270000, 0);
-   general_conf.dos_attacker_connections_others = config->get_cfg_val("dos-attacker-connections-others", "dos-attacker-connections-others", 1000000, 0);
-   general_conf.dos_attacker_packet_ratio = config->get_cfg_val("dos-attacker-packet-ratio", "dos-attacker-packet-ratio", 2);
+   general_conf.dos_attacker_connections_synflood = confPlainGetUint32("dos-attacker-connections-synflood", 270000);
+   general_conf.dos_attacker_connections_others = confPlainGetUint32("dos-attacker-connections-others", 1000000);
+   general_conf.dos_attacker_packet_ratio = confPlainGetFloat("dos-attacker-packet-ratio", 2);
 
-   general_conf.dos_req_rsp_est_ratio = config->get_cfg_val("dos-req-rsp-est-ratio", "dos-req-rsp-est-ratio", 0.8);
-   general_conf.dos_rsp_req_est_ratio = config->get_cfg_val("dos-rsp-req-est-ratio", "dos-rsp-req-est-ratio", 0.2);
+   general_conf.dos_req_rsp_est_ratio = confPlainGetFloat("dos-req-rsp-est-ratio", 0.8);
+   general_conf.dos_rsp_req_est_ratio = confPlainGetFloat("dos-rsp-req-est-ratio", 0.2);
 
-   general_conf.dos_min_rsp_ratio = config->get_cfg_val("dos-min-rsp-ratio", "dos-min-rsp-ratio", 0.02);
+   general_conf.dos_min_rsp_ratio = confPlainGetFloat("dos-min-rsp-ratio", 0.02);
 
    // Load ssh detector configuration.
-   ssh_conf.scan_threshold = config->get_cfg_val("scan-threshold", "scan-threshold", 100);
-   ssh_conf.scan_flag_ratio = config->get_cfg_val("scan-flag-ratio", "scan-flag-ratio", 5);
-   ssh_conf.scan_packet_ratio = config->get_cfg_val("scan-packet-ratio", "scan-packet-ratio", 5);
-   ssh_conf.scan_ip_ratio = config->get_cfg_val("scan-ip-ratio", "scan-ip-ratio", 0.5);
+   ssh_conf.scan_threshold = confPlainGetFloat("scan-threshold", 100);
+   ssh_conf.scan_flag_ratio = confPlainGetFloat("scan-flag-ratio", 5);
+   ssh_conf.scan_packet_ratio = confPlainGetFloat("scan-packet-ratio", 5);
+   ssh_conf.scan_ip_ratio = confPlainGetFloat("scan-ip-ratio", 0.5);
 
-   ssh_conf.bruteforce_out_threshold = config->get_cfg_val("bruteforce-out-threshold", "bruteforce-out-threshold", 10);
-   ssh_conf.bruteforce_ips = config->get_cfg_val("bruteforce-ips", "bruteforce-ips", 5);
-   ssh_conf.bruteforce_ips_ratio = config->get_cfg_val("bruteforce-ips-ratio", "bruteforce-ips-ratio", 20);
-   ssh_conf.bruteforce_req_threshold = config->get_cfg_val("bruteforce-req-threshold", "bruteforce-req-threshold", 60);
-   ssh_conf.bruteforce_req_min_packet_ratio = config->get_cfg_val("bruteforce-req-min-packet-ratio", "bruteforce-req-min-packet-ratio", 5);
-   ssh_conf.bruteforce_req_max_packet_ratio = config->get_cfg_val("bruteforce-req-max-packet-ratio", "bruteforce-req-max-packet-ratio", 20);
-   ssh_conf.bruteforce_data_threshold = config->get_cfg_val("bruteforce-data-threshold", "bruteforce-data-threshold", 30);
-   ssh_conf.bruteforce_data_min_packet_ratio = config->get_cfg_val("bruteforce-data-min-packet-ratio", "bruteforce-data-min-packet-ratio", 10);
-   ssh_conf.bruteforce_data_max_packet_ratio = config->get_cfg_val("bruteforce-data-max-packet-ratio", "bruteforce-data-max-packet-ratio", 25);
-   ssh_conf.bruteforce_server_ratio = config->get_cfg_val("bruteforce-server-ratio", "bruteforce-server-ratio", 3);
+   ssh_conf.bruteforce_out_threshold = confPlainGetFloat("bruteforce-out-threshold", 10);
+   ssh_conf.bruteforce_ips = confPlainGetFloat("bruteforce-ips", 5);
+   ssh_conf.bruteforce_ips_ratio = confPlainGetFloat("bruteforce-ips-ratio", 20);
+   ssh_conf.bruteforce_req_threshold = confPlainGetFloat("bruteforce-req-threshold", 60);
+   ssh_conf.bruteforce_req_min_packet_ratio = confPlainGetFloat("bruteforce-req-min-packet-ratio", 5);
+   ssh_conf.bruteforce_req_max_packet_ratio = confPlainGetFloat("bruteforce-req-max-packet-ratio", 20);
+   ssh_conf.bruteforce_data_threshold = confPlainGetFloat("bruteforce-data-threshold", 30);
+   ssh_conf.bruteforce_data_min_packet_ratio = confPlainGetFloat("bruteforce-data-min-packet-ratio", 10);
+   ssh_conf.bruteforce_data_max_packet_ratio = confPlainGetFloat("bruteforce-data-max-packet-ratio", 25);
+   ssh_conf.bruteforce_server_ratio = confPlainGetFloat("bruteforce-server-ratio", 3);
 
    // Load dns detector configuration.
-   dns_conf.dns_amplif_threshold = config->get_cfg_val("dns-amplif-threshold", "dns-amplif-threshold", 10000);
+   dns_conf.dns_amplif_threshold = confPlainGetFloat("dns-amplif-threshold", 10000);
 }
 
 /**
@@ -270,11 +267,65 @@ int main(int argc, char *argv[])
       return 1;
    }
 
-   /* Initialize Configuration singleton */
-   Configuration *config = Configuration::getInstance();
-   if (Configuration::getInitStatus() != INIT_OK) {
-      Configuration::freeConfiguration();
+   // Initialize configurator.
+   if (confPlainCreateContext()) {
+      fprintf(stderr, "ERROR: Configurator initialization failed.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
+      return 1;
+   }
+
+   if (confPlainAddElement("table-size", "uint32_t", "65536", 0, 0) ||
+      confPlainAddElement("det-start-time", "uint32_t", "10", 0, 0) ||
+      confPlainAddElement("timeout-active", "uint32_t", "300", 0, 0) ||
+      confPlainAddElement("timeout-inactive", "uint32_t", "30", 0, 0) ||
+      confPlainAddElement("rules-generic", "bool", "false", 0, 0) ||
+      confPlainAddElement("rules-ssh", "bool", "false", 0, 0) ||
+      confPlainAddElement("rules-dns", "bool", "false", 0, 0) ||
+      confPlainAddElement("port-flowdir", "bool", "false", 0, 0) ||
+      confPlainAddElement("input-template", "string", "", 512, 0) ||
+      confPlainAddElement("detection-log", "string", "", 512, 0) ||
+      confPlainAddElement("log-upto-level", "string", "", 32, 0) ||
+      confPlainAddElement("syn-scan-threshold", "float", "200", 0, 0) ||
+      confPlainAddElement("syn-scan-syn-to-ack-ratio", "float", "20", 0, 0) ||
+      confPlainAddElement("syn-scan-request-to-response-ratio", "float", "5", 0, 0) ||
+      confPlainAddElement("syn-scan-ips", "float", "200", 0, 0) ||
+      confPlainAddElement("dos-victim-connections-synflood", "uint32_t", "270000", 0, 0) ||
+      confPlainAddElement("dos-victim-connections-others", "uint32_t", "1000000", 0, 0) ||
+      confPlainAddElement("dos-victim-packet-ratio", "float", "2", 0, 0) ||
+      confPlainAddElement("dos-attacker-connections-synflood", "uint32_t", "270000", 0, 0) ||
+      confPlainAddElement("dos-attacker-connections-others", "uint32_t", "1000000", 0, 0) ||
+      confPlainAddElement("dos-attacker-packet-ratio", "float", "2", 0, 0) ||
+      confPlainAddElement("dos-req-rsp-est-ratio", "float", "0", 0, 0.8) ||
+      confPlainAddElement("dos-rsp-req-est-ratio", "float", "0", 0, 0.2) ||
+      confPlainAddElement("dos-min-rsp-ratio", "float", "0", 0, 0.02) ||
+      confPlainAddElement("scan-threshold", "float", "100", 0, 0) ||
+      confPlainAddElement("scan-flag-ratio", "float", "5", 0, 0) ||
+      confPlainAddElement("scan-packet-ratio", "float", "5", 0, 0) ||
+      confPlainAddElement("scan-ip-ratio", "float", "0", 0, 0.5) ||
+      confPlainAddElement("bruteforce-out-threshold", "float", "10", 0, 0) ||
+      confPlainAddElement("bruteforce-ips", "float", "5", 0, 0) ||
+      confPlainAddElement("bruteforce-ips-ratio", "float", "20", 0, 0) ||
+      confPlainAddElement("bruteforce-req-threshold", "float", "60", 0, 0) ||
+      confPlainAddElement("bruteforce-req-min-packet-ratio", "float", "5", 0, 0) ||
+      confPlainAddElement("bruteforce-req-max-packet-ratio", "float", "20", 0, 0) ||
+      confPlainAddElement("bruteforce-data-threshold", "float", "30", 0, 0) ||
+      confPlainAddElement("bruteforce-data-min-packet-ratio", "float", "10", 0, 0) ||
+      confPlainAddElement("bruteforce-data-max-packet-ratio", "float", "25", 0, 0) ||
+      confPlainAddElement("bruteforce-server-ratio", "float", "3", 0, 0) ||
+      confPlainAddElement("dns-amplif-threshold", "float", "10000", 0, 0)) {
+
+      fprintf(stderr, "ERROR: Configurator initialization failed.\n");
+      confPlainClearContext();
+      TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 1;
+   }
+
+   if (confPlainLoadConfiguration(configFilePath.c_str(), NULL)) {
       fprintf(stderr, "ERROR: Failed to load configuration.\n");
+      confPlainClearContext();
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
@@ -284,10 +335,9 @@ int main(int argc, char *argv[])
    log(LOG_INFO, "HostStatsNemea started");
 
    /* Load module configuration from the config file */
-   config->lock();
 
    /* Set logmask if used */
-   string logmask = trim(config->getValue("log-upto-level"));
+   string logmask = trim(string(confPlainGetString("log-upto-level", "")));
    if (!logmask.empty()) {
       parse_logmask(logmask);
    }
@@ -311,19 +361,17 @@ int main(int argc, char *argv[])
 
       if (tmpl_in != NULL) ur_free_template(tmpl_in);
       if (tmpl_out != NULL) ur_free_template(tmpl_out);
-      config->unlock();
       goto exitA;
    }
 
    /* Verify that 'DIRECTION_FLAGS' item is present in the input template when
     * port-flowdir is deactivated */
-   if (!config->get_cfg_val("port flowdirection", "port-flowdir") &&
+   if (!confPlainGetBool("port-flowdir", 0) &&
       !ur_is_present(tmpl_in, dir_flag_id)) {
       log(LOG_ERR, "ERROR: Unirec item '%s' is missing in the input template.\n"
          "Hint: if you are using this module without flowdirection module "
          "change value 'port-flowdir' in the configuration file.",
          ur_get_name(dir_flag_id));
-      config->unlock();
       goto exitB;
    }
 
@@ -334,7 +382,7 @@ int main(int argc, char *argv[])
       SubprofileBase *sbp_ptr = *it;
       std::string sp_name = "subprofile " + sbp_ptr->get_name();
       std::string param = "rules-" + sbp_ptr->get_name();
-      if (config->get_cfg_val(sp_name, param)) {
+      if (confPlainGetBool(param.c_str(), 0)) {
          sbp_ptr->enable();
       } else {
          sbp_ptr->disable();
@@ -354,7 +402,6 @@ int main(int argc, char *argv[])
          log(LOG_ERR, "ERROR: Creation of the subprofile '%s' UniRec "
             "template failed. Probably internal error in the subprofile "
             "template specification.", sbp_ptr->get_name().c_str());
-         config->unlock();
          goto exitC;
       }
 
@@ -370,7 +417,6 @@ int main(int argc, char *argv[])
          "required by active subprofile '%s'. The subprofile's template is '%s'.",
          missing_items.c_str(), sbp_ptr->get_name().c_str(),
          sbp_ptr->get_template().c_str());
-      config->unlock();
       goto exitC;
    }
 
@@ -379,7 +425,6 @@ int main(int argc, char *argv[])
    init_detectors_configuration();
 
    /* Configuration loaded */
-   config->unlock();
 
    /* Create class for storing flow records */
    MainProfile = new HostProfile();
@@ -452,8 +497,8 @@ exitB:
 
 exitA:
    closelog();
-   // Delete configuration
-   Configuration::freeConfiguration();
+   // Clear configuration.
+   confPlainClearContext();
    // Necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)

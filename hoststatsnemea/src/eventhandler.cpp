@@ -36,7 +36,7 @@
  */
 
 #include "eventhandler.h"
-#include <nemea-common/configurator.h>
+#include <configurator.h>
 #include "aux_func.h"
 #include "profile.h"
 
@@ -99,10 +99,7 @@ void reportEvent(const Event& event)
    line << event.note << '\n';
 
    // Write the line to a log file
-   Configuration *config = Configuration::getInstance();
-   config->lock();
-   string path = config->getValue("detection-log");
-   config->unlock();
+   string path = confPlainGetString("detection-log", "");
 
    string y = first_t.substr(0,4);
    string m = first_t.substr(4,2);

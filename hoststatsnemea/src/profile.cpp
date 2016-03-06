@@ -43,9 +43,9 @@
  */
 
 #include <limits>
+#include <configurator.h>
 #include "profile.h"
 #include "aux_func.h"
-#include <nemea-common/configurator.h>
 #include "detectionrules.h"
 extern "C" {
    #include "fields.h"
@@ -68,12 +68,9 @@ extern sp_list_ptr_v subprofile_list;
  */
 HostProfile::HostProfile()
 {
-   Configuration *conf = Configuration::getInstance();
-   conf->lock();
 
    // Load configuration data and update profile (and subprofiles) variables
-   table_size = conf->get_cfg_val("Table size", "table-size", D_TABLE_SIZE,
-      D_TABLE_SIZE);
+   table_size = confPlainGetUint32("table-size", D_TABLE_SIZE) < D_TABLE_SIZE ? D_TABLE_SIZE : confPlainGetUint32("table-size", D_TABLE_SIZE);
 
    // Check size of table
    // Find the smallest power of two that is greater or equal to a given value
@@ -93,14 +90,11 @@ HostProfile::HostProfile()
    }
 
    // Get other configs
-   det_start_time = conf->get_cfg_val("Detector start time", "det-start-time",
-      D_DET_START_PAUSE, 1);
-   active_timeout = conf->get_cfg_val("Active timeout", "timeout-active",
-      D_ACTIVE_TIMEOUT, 1);
-   inactive_timeout = conf->get_cfg_val("Inactive timeout", "timeout-inactive",
-      D_INACTIVE_TIMEOUT, 1);
-   detector_status = conf->get_cfg_val("generic rules", "rules-generic");
-   port_flowdir = conf->get_cfg_val("port flowdirection", "port-flowdir");
+   det_start_time = confPlainGetUint32("det-start-time", D_DET_START_PAUSE) < 1 ? 1 : confPlainGetUint32("det-start-time", D_DET_START_PAUSE);
+   active_timeout = confPlainGetUint32("active-timeout", D_ACTIVE_TIMEOUT) < 1 ? 1 : confPlainGetUint32("active-timeout", D_ACTIVE_TIMEOUT);
+   inactive_timeout = confPlainGetUint32("inactive-timeout", D_INACTIVE_TIMEOUT) < 1 ? 1 : confPlainGetUint32("inactive-timeout", D_INACTIVE_TIMEOUT);
+   detector_status = confPlainGetBool("rules-generic", 0);
+   detector_status = confPlainGetBool("port-flowdir", 0);
 
    // Update subprofile configuration
    for(sp_list_ptr_iter it = subprofile_list.begin();
@@ -115,7 +109,6 @@ HostProfile::HostProfile()
       sp_list.push_back(sbp_ptr);
       sbp_ptr->bloomfilters_init(2 * table_size);
    }
-   conf->unlock();
 
    // Initialization of hosts stats table
    stat_table = fht_init(table_size / FHT_TABLE_COLS, sizeof(hosts_key_t),
