@@ -63,12 +63,12 @@ extern "C" {
 #define MAX_LENGTH_CSEQ          100
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
-#define DEFAULT_ALERT_THRESHOLD  2
+#define DEFAULT_ALERT_THRESHOLD  20
 #define CHECK_MEMORY_INTERVAL    120
-#define FREE_MEMORY_INTERVAL     1200
+#define FREE_MEMORY_INTERVAL     2400
 
 /** \brief UniRec input template definition. */
-#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
+#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
 struct attacked_server_t;
 
@@ -114,12 +114,19 @@ struct attacked_user_t{
 
 struct attacked_server_t{
    void initialize(ip_addr_t *ip_addr);
-   void freeUnusedUsers();
+   void freeUnusedUsers(time_t time_actual);
    void destroy();
 
    void *m_user_tree;
    char *m_ip_addr;
 };
 
-
+struct items_to_remove{
+   void init(int count, int item_length);
+   void addItem(const void *item);
+   void destroy();
+   void **items_arr;
+   int size;
+   int items_len;
+};
 

@@ -103,32 +103,66 @@ int compare_ipv6(void * a, void * b)
    return MORE;
 }
 
-void freeCeasedAttacks(void *server_tree)
+/* ***************  items_to_remove  *************** */
+
+void items_to_remove::init(int count, int item_length)
 {
-   time_t time_actual;
+   items_arr = (void**)malloc(count * sizeof(void*));
+   items_len = item_length;
+   size = 0;
+}
+
+void items_to_remove::destroy()
+{
+   for (int i = 0; i < size; i++) {
+      free(items_arr[i]);   
+   }
+
+   free(items_arr);
+}
+
+void items_to_remove::addItem(const void *item)
+{
+   items_arr[size] = malloc(items_len);
+   memcpy(items_arr[size], item, items_len);
+   size++;
+}
+
+void freeCeasedAttacks(void *server_tree, ur_time_t actual_time, int key_length)
+{
+   time_t time_actual = (time_t)actual_time;
    static time_t time_last_check = 0;
 
-   time(&time_actual);
-
-   if (difftime(time_actual, time_last_check) > g_check_mem_interval) {
+   if (abs(time_actual - time_last_check) > g_check_mem_interval) {
       int is_there_next;
       b_plus_tree_item *b_item;
+      items_to_remove *items;
 
+      items = (items_to_remove*)malloc(sizeof(items_to_remove));
+      items->init(b_plus_tree_get_count_of_values(server_tree), key_length);
       b_item = b_plus_tree_create_list_item(server_tree);
       is_there_next = b_plus_tree_get_list(server_tree, b_item);
       while (is_there_next == 1) {
          attacked_server_t *server = (attacked_server_t*)(b_item->value);
-         server->freeUnusedUsers();
+         server->freeUnusedUsers(time_actual);
          if (b_plus_tree_get_count_of_values(server->m_user_tree) == 0) {
+            items->addItem(b_item->key);
             b_plus_tree_destroy(server->m_user_tree);
             free(server->m_ip_addr);
-            b_plus_tree_delete_item(server_tree, b_item->key);
          }
-         
+
+         is_there_next = b_plus_tree_get_next_item_from_list(server_tree, b_item);
       }
 
       b_plus_tree_destroy_list_item(b_item);
-      time(&time_last_check);  
+
+      for (int i = 0; i < items->size; i++) {
+         b_plus_tree_delete_item(server_tree, items->items_arr[i]);   
+      }
+
+      items->destroy();
+      free(items);
+      time_last_check = time_actual;  
    }
 }
 
@@ -192,6 +226,8 @@ int generateAlert(const attacked_server_t *server, const attacked_user_t *user)
   
    int ret = trap_send(0, s, strlen(s));
    TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, return 0, return -1);
+
+   free(s);
    return 0;
 }
 
@@ -201,7 +237,7 @@ void attacker_t::initialize(ip_addr_t *ip_addr, ur_time_t start_time)
 {
    m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
    ip_to_str(ip_addr,m_ip_addr);
-   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
+   m_ip_addr[INET6_ADDRSTRLEN] = '\0';
    m_count = 0;
    m_start = start_time;
 }
@@ -228,9 +264,10 @@ void attacked_user_t::initialize(const sip_dataholder_t *sip_data)
 int attacked_user_t::addAttack(const sip_dataholder_t *sip_data, attacked_server_t *server)
 {
    void *tree_key;
+   uint32_t dst_ip;
 
    if (m_ipv4) {
-      uint32_t dst_ip = ip_get_v4_as_int(sip_data->ip_dst);
+      dst_ip = ip_get_v4_as_int(sip_data->ip_dst);
       tree_key = &dst_ip;
    } else {
       tree_key = sip_data->ip_dst;
@@ -257,7 +294,7 @@ int attacked_user_t::addAttack(const sip_dataholder_t *sip_data, attacked_server
       m_breached = true;
       m_breacher = (char*)malloc(INET6_ADDRSTRLEN + 1);
       ip_to_str(sip_data->ip_dst, m_breacher);
-      m_breacher[INET6_ADDRSTRLEN + 1] = '\0'; 
+      m_breacher[INET6_ADDRSTRLEN] = '\0'; 
       m_breach_time = sip_data->time_stamp;
       if (m_attack_total_count >= g_alert_threshold)
          generateAlert(server, this);
@@ -303,34 +340,41 @@ void attacked_server_t::initialize(ip_addr_t *ip_addr)
 {
    m_ip_addr = (char*)malloc(INET6_ADDRSTRLEN + 1);
    ip_to_str(ip_addr,m_ip_addr);
-   m_ip_addr[INET6_ADDRSTRLEN + 1] = '\0';
+   m_ip_addr[INET6_ADDRSTRLEN] = '\0';
    m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(attacked_user_t), MAX_LENGTH_SIP_FROM);
 }
 
-void attacked_server_t::freeUnusedUsers()
+void attacked_server_t::freeUnusedUsers(time_t time_actual)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
-   time_t time_actual;
+   items_to_remove *items;
 
-   time(&time_actual);
-
+   items = (items_to_remove*)malloc(sizeof(items_to_remove));
+   items->init(b_plus_tree_get_count_of_values(m_user_tree), MAX_LENGTH_SIP_FROM);
    b_item = b_plus_tree_create_list_item(m_user_tree);
    is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
    while (is_there_next == 1) {
       attacked_user_t *user = (attacked_user_t*)(b_item->value);
-      if (difftime(time_actual, user->m_last_action) > g_free_mem_interval) {
-         if (user->m_attack_total_count >= g_alert_threshold)
+      if (abs(time_actual - user->m_last_action) > g_free_mem_interval) {
+         if (user->m_attack_total_count >= g_alert_threshold) {
             generateAlert(this, user);
-
+         }
+         items->addItem(b_item->key);
          user->destroy();
-         b_plus_tree_delete_item(m_user_tree, b_item->key);
       }
 
       is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
    }
 
    b_plus_tree_destroy_list_item(b_item);
+
+   for (int i = 0; i < items->size; i++) {
+      b_plus_tree_delete_item(m_user_tree, items->items_arr[i]);   
+   }
+
+   items->destroy();
+   free(items);
 }
 
 void attacked_server_t::destroy()
@@ -342,9 +386,9 @@ void attacked_server_t::destroy()
    is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
    while (is_there_next == 1) {
       attacked_user_t *user = (attacked_user_t*)(b_item->value);
-      if (user->m_attack_total_count >= g_alert_threshold)
+      if (user->m_attack_total_count >= g_alert_threshold) {
          generateAlert(this, user);
-
+      }
       user->destroy();
       is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
    }
@@ -357,16 +401,16 @@ void attacked_server_t::destroy()
 int insert_attack_attempt(const sip_dataholder_t *sip_data)
 {
    void *tree_key;
+   uint32_t src_ip;
 
    if (sip_data->ipv4) {
-      uint32_t src_ip = ip_get_v4_as_int(sip_data->ip_src);
+      src_ip = ip_get_v4_as_int(sip_data->ip_src);
       tree_key = &src_ip;
    } else {
       tree_key = sip_data->ip_src;
    }   
-   
-   attacked_server_t *server = (attacked_server_t*)b_plus_tree_search(sip_data->tree, tree_key);
 
+   attacked_server_t *server = (attacked_server_t*)b_plus_tree_search(sip_data->tree, tree_key);
    if (!server) {
       if (sip_data->status_code == SIP_STATUS_OK)
          return 0;
@@ -508,9 +552,6 @@ int main(int argc, char **argv)
          }
       }
 
-      freeCeasedAttacks(tree_ipv4);
-      freeCeasedAttacks(tree_ipv6);
-
       get_string_from_unirec(sip_cseq, &sip_cseq_len, F_SIP_CSEQ, MAX_LENGTH_CSEQ, in_rec, in_tmplt);
       if (!(sip_cseq_len > 2 && strstr(sip_cseq, "REG")))
          continue;
@@ -559,9 +600,11 @@ int main(int argc, char **argv)
          continue;
       }
 
+      freeCeasedAttacks(tree_ipv4, sip_data->time_stamp, IP_VERSION_4_BYTES);
+      freeCeasedAttacks(tree_ipv6, sip_data->time_stamp, IP_VERSION_6_BYTES);
       free(sip_data);
    }
-   
+
    destroy_tree(tree_ipv4);
    destroy_tree(tree_ipv6);
    TRAP_DEFAULT_FINALIZATION();
