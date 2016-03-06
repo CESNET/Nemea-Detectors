@@ -100,7 +100,7 @@ uint8_t fill_lookup(bl_down_config_t *config, uint64_t in)
 void get_sources_info(uint64_t sites, char **source_ar, int *stype_ar, char **regex_ar)
 {
    int index = 0;
-   for (int i = 0; i < configuratorGetArrElemCount(BLD_RECORDS.arr); i++) {
+   for (int i = 0; i < confArrElemCount(BLD_RECORDS.arr); i++) {
       if ((1ULL << BLD_RECORDS.arr[i].id) & sites) {
          // Set obtain method
          if (strcmp(BLD_RECORDS.arr[i].method, "web") == 0) {
@@ -778,17 +778,17 @@ int bl_down_init(bl_down_args_t *args)
 
    // Setup config structure
    if ((CONFIG = bl_down_setup_config(args)) == NULL) {
-      configuratorFreeUAMBS();
+      confFreeUAMBS();
       return -1; // Error occured
    }
 
    // create a second thread
    if (pthread_create(&BL_THREAD, NULL, &bl_down_process, NULL)) {
-      configuratorFreeUAMBS();
+      confFreeUAMBS();
       return -2; // Error occured
    }
 
-   configuratorFreeUAMBS();
+   confFreeUAMBS();
 
    return 1;
 }
@@ -841,11 +841,11 @@ uint64_t bld_translate_names_to_cumulative_id(char *names, int length)
    }
 
    // Cycle through all names
-   for (int i = 0; i < configuratorGetArrElemCount(names); i++) {
+   for (int i = 0; i < confArrElemCount(names); i++) {
        // Find blacklist record with this name
        found_flag = 0;
 
-       for (int j = 0; j < configuratorGetArrElemCount(BLD_RECORDS.arr); j++) {
+       for (int j = 0; j < confArrElemCount(BLD_RECORDS.arr); j++) {
           if (strcmp(names + i*length, BLD_RECORDS.arr[j].name) == 0) {
              // Found matching name, update cumulative id
              cumulative_id |= 1ULL << BLD_RECORDS.arr[j].id;
@@ -876,7 +876,7 @@ uint8_t bld_load_xml_configs(const char *patternFile, const char *userFile, int 
    }
 
    // Load sources from XML file to global structure
-   if (loadConfiguration((char*)patternFile, (char*)userFile, &BLD_RECORDS, patternType)) {
+   if (confXmlLoadConfiguration((char*)patternFile, (char*)userFile, &BLD_RECORDS, patternType)) {
       return 0;
    }
 

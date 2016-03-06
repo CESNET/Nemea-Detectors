@@ -964,7 +964,7 @@ int main (int argc, char** argv)
    }
 
    // Load configuration
-   if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
+   if (confXmlLoadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
       cerr << "Error: Could not parse XML configuration." << endl;
       ur_free_template(templ);
       ur_free_template(tmpl_det);
@@ -1138,7 +1138,7 @@ int main (int argc, char** argv)
             // Need to unlock to avoid possible deadlock
             bld_unlock_sync();
             bld_finalize();
-            configuratorFreeUAMBS();
+            confFreeUAMBS();
             update = 0;
             // No need to lock, blacklist downloader is no more
          }
@@ -1151,7 +1151,7 @@ int main (int argc, char** argv)
 
          // LOAD NEW CONFIGURATION FOR BOTH FILTER AND DOWNLOADER
          // Load configuration
-         if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
+         if (confXmlLoadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
             cerr << "Error: Could not parse XML configuration." << endl;
             return EXIT_FAILURE;
          }
@@ -1204,7 +1204,7 @@ int main (int argc, char** argv)
     // Terminate blacklist downloader thread if in dynamic mode
     if (bl_mode == BL_DYNAMIC_MODE) {
         bld_finalize();
-        configuratorFreeUAMBS();
+        confFreeUAMBS();
     }
 
    // Wait for inactive timeout flush thread
