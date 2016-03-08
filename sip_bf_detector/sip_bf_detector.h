@@ -70,6 +70,10 @@ extern "C" {
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
+#define VERBOSE(...) if (verbose >= 0) { \
+   printf(__VA_ARGS__); \
+}
+
 struct attacked_server_t;
 
 struct sip_dataholder_t{
@@ -87,7 +91,7 @@ struct sip_dataholder_t{
 };
 
 struct attacker_t{
-   void initialize(ip_addr_t *ip_addr, ur_time_t start_time);
+   bool initialize(ip_addr_t *ip_addr, ur_time_t start_time);
    void destroy();
 
    char *m_ip_addr;
@@ -96,9 +100,9 @@ struct attacker_t{
 };
 
 struct attacked_user_t{
-   void initialize(const sip_dataholder_t *sip_data);
-   int addAttack(const sip_dataholder_t *sip_data, attacked_server_t *server);
-   void destroy();
+   bool initialize(const sip_dataholder_t *sip_data);
+   int add_attack(const sip_dataholder_t *sip_data, attacked_server_t *server);
+   bool destroy();
 
    char *m_user_name;
    void *m_attackers_tree;
@@ -113,9 +117,9 @@ struct attacked_user_t{
 };
 
 struct attacked_server_t{
-   void initialize(ip_addr_t *ip_addr);
-   void freeUnusedUsers(time_t time_actual);
-   void destroy();
+   bool initialize(ip_addr_t *ip_addr);
+   bool free_unused_users(time_t time_actual);
+   bool destroy();
 
    void *m_user_tree;
    char *m_ip_addr;
