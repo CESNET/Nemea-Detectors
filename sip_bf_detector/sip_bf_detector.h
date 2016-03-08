@@ -46,6 +46,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <signal.h>
 #include <getopt.h>
