@@ -72,6 +72,7 @@ extern "C" {
 }
 #endif
 #include <unirec/unirec.h>
+#include <configurator.h>
 #include "amplification_detection.h"
 
 /**
@@ -110,6 +111,7 @@ trap_module_info_t *module_info = NULL;
   BASIC("NetFlow Amplification detection module","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
+   PARAM('c', "config", "load configuration from file", required_argument, "string") \
    PARAM('d', "log_dir", "path to log files, has to be ended by slash", required_argument, "string") \
    PARAM('p', "port", "port used for detection (53)", required_argument, "int32") \
    PARAM('n', "top", "number of top N values chosen (10)", required_argument, "int32") \
@@ -470,6 +472,62 @@ int main (int argc, char** argv)
    char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
+         case 'c':
+            {
+               // Allocate resources for configurator.
+               if (confPlainCreateContext()) {
+                  cerr << "Error: Unable to load configuration." << endl;
+                  trap_finalize();
+                  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+                  return 1;
+               }
+
+               // Add configuration items to configurator.
+               // Configuration item names corresponds module long param names.
+               if (confPlainAddElement("log_dir", "string", "", 512, 0) ||          //d
+                   confPlainAddElement("port", "int32_t", "53", 0, 0) ||            //p
+                   confPlainAddElement("top", "int32_t", "5", 0, 0) ||              //n
+                   confPlainAddElement("step", "int32_t", "2", 0, 0) ||             //q
+                   confPlainAddElement("min_ampf", "int32_t", "10", 0, 0) ||        //a
+                   confPlainAddElement("min_flow", "int32_t", "300", 0, 0) ||       //t
+                   confPlainAddElement("min_count", "float", "0.9", 0, 0) ||        //i
+                   confPlainAddElement("min_resp_pack", "int32_t", "2", 0, 0) ||    //y
+                   confPlainAddElement("min_resp_byte", "int32_t", "2000", 0, 0) || //l
+                   confPlainAddElement("max_query", "int32_t", "400", 0, 0) ||      //m
+                   confPlainAddElement("timeout", "int32_t", "900", 0, 0) ||        //w
+                   confPlainAddElement("period", "int32_t", "300", 0, 0) ||          //s
+                   confPlainAddElement("record_count", "uint32_t", "100000", 0, 0)) { //S
+                     cerr << "Error: Unable to load configuration." << endl;
+                     trap_finalize();
+                     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+                     return 1;
+                   }
+
+               // Load configuration from file.
+               if (confPlainLoadConfiguration(optarg, NULL)) {
+                  cerr << "Error: Unable to load configuration." << endl;
+                  trap_finalize();
+                  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+                  return 1;
+               }
+
+               log_path = confPlainGetString("log_dir", "");
+               config.port = confPlainGetInt32("port", 53);
+               config.n = confPlainGetInt32("top", 5);
+               config.q = confPlainGetInt32("step", 2);
+               config.min_a = confPlainGetInt32("min_ampf", 10);
+               config.min_flows = confPlainGetInt32("min_flow", 300);
+               config.min_flows_norm = confPlainGetFloat("min_count", 0.9);
+               config.min_resp_packets = confPlainGetInt32("min_resp_pack", 2);
+               config.min_resp_bytes = confPlainGetInt32("min_resp_byte", 2000);
+               config.max_quer_bytes = confPlainGetInt32("max_query", 400);
+               config.det_window = confPlainGetInt32("timeout", 900);
+               config.del_time = confPlainGetInt32("period", 300);
+               config.max_flow_items = confPlainGetUint32("record_count", 100000);
+
+               confPlainClearContext(); // Clear resources
+            }
+            break;
          case 'd':
             log_path = optarg;
             break;
