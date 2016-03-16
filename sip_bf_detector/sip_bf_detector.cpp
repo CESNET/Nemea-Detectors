@@ -68,7 +68,7 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 int verbose;
-uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
+uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD * 2;
 uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
 
@@ -759,6 +759,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
+         
+         g_alert_threshold <<= 1;
          break;
 
       case 'c':
