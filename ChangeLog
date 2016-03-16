@@ -1,3 +1,7 @@
+2016-03-16 Nemea-detectors-1.2
+        * added module: SIP Brute-Force Detector
+
+
 2016-02-28 Nemea-detectors-1.1
 	* bugfix voip_fraud_detection
 	* doc improvement
