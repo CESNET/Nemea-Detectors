@@ -64,7 +64,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
    PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack (20 by default).", required_argument, "uint64") \
    PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (120 by default).", required_argument, "uint64") \
-   PARAM('f', "free_mem_int", "Number of seconds after last action to consider attack as ceased (2400 by default).", required_argument, "uint64")
+   PARAM('f', "free_mem_int", "Number of seconds after the last action to consider attack as ceased (2400 by default).", required_argument, "uint64")
 
 static int stop = 0;
 int verbose;
@@ -89,7 +89,7 @@ int compare_user_name(void *a, void *b)
 
 /**
  * Comparing function used in b+ tree of servers and attackers. 
- * Compares two integer representation of IPv4 keys.
+ * Compares two integer representations of IPv4 keys.
  *
  * \param[in] a pointer to the first key
  * \param[in] b pointer to the second key
@@ -134,7 +134,7 @@ int compare_ipv6(void * a, void * b)
 /**
  * \brief Free allocated memory of ceased attacks.
  *
- * \param[in] actual_time time stamp of message currently processed
+ * \param[in] actual_time time stamp of currently processed message
  * \param[in] key_length length of keys used in b+ tree
  * \param[in,out] server_tree pointer to the b+ tree of attacked_server_t structures
  * \return true - memory deallocation was successful, false - error occurred
@@ -149,7 +149,7 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
       int is_there_next;
       b_plus_tree_item *b_item;
 
-      // create a list from items in the tree and iterate through it
+      // create a list of items in the tree and iterate through it
       b_item = b_plus_tree_create_list_item(server_tree);
       if (!b_item) {
          fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
@@ -160,7 +160,7 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
       while (is_there_next == 1) {
          attacked_server_t *server = (attacked_server_t *) (b_item->value);
 
-         // free user structures who are no longer under attack
+         // free structures of users who are no longer under attack
          if (!server->free_unused_users(time_actual)) {
             VERBOSE("Error: failed to remove ceased attacks.\n")
             b_plus_tree_destroy_list_item(b_item);
@@ -414,7 +414,7 @@ bool attacked_user_t::destroy(void)
    int is_there_next;
    b_plus_tree_item *b_item;
 
-   // create a list from items in the tree and iterate through it
+   // create a list of items in the tree and iterate through it
    b_item = b_plus_tree_create_list_item(m_attackers_tree);
    if (!b_item) {
       fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
@@ -466,7 +466,7 @@ bool attacked_server_t::free_unused_users(time_t time_actual)
    int is_there_next;
    b_plus_tree_item *b_item;
 
-   // create a list from items in the tree and iterate through it
+   // create a list of items in the tree and iterate through it
    b_item = b_plus_tree_create_list_item(m_user_tree);
    if (!b_item) {
       fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
@@ -511,7 +511,7 @@ bool attacked_server_t::destroy(void)
    int is_there_next;
    b_plus_tree_item *b_item;
 
-   // create a list from items in the tree and iterate through it
+   // create a list of items in the tree and iterate through it
    b_item = b_plus_tree_create_list_item(m_user_tree);
    if (!b_item) {
       fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
@@ -802,7 +802,7 @@ int main(int argc, char **argv)
          if (in_rec_size <= 1) {
             break;
          } else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n", ur_rec_fixlen_size(in_tmplt), in_rec_size);
+            fprintf(stderr, "Error: data of wrong size received (expected size: >= %hu, received size: %hu)\n", ur_rec_fixlen_size(in_tmplt), in_rec_size);
             break;
          }
       }
