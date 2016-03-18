@@ -8,7 +8,7 @@
              downloader, which will store downloaded public blacklist records
              to it in periodic intervals. -->
         <element name="file">
-            bl_records.txt
+            /data/ipblacklistfilter/bl_records.txt
         </element>
         <!-- Could be 'static' or 'dynamic' (see above for explanation). -->
         <element name="update_mode">
