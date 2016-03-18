@@ -45,12 +45,12 @@
 #ifndef _HOSTSTATS_H_
 #define _HOSTSTATS_H_
 
-#include <stdint.h>
-
 extern "C" {
-   #include <unirec/ipaddr.h>
+   #include <unirec/unirec.h>
    #include <fast_hash_table.h>
 }
+
+#include <stdint.h>
 
 #define DIR_FLAG_REQ   0x8   //Request
 #define DIR_FLAG_RSP   0x4   //Response

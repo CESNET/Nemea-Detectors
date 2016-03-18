@@ -47,6 +47,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <syslog.h>
+#define __STDC_LIMIT_MACROS
 #include <stdint.h>
 
 using namespace std;
