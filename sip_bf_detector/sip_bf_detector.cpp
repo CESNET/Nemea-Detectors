@@ -145,7 +145,7 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
    static time_t time_last_check = 0;
 
    // Check whether it is time for another memory sweep
-   if (abs(time_actual - time_last_check) > g_check_mem_interval) {
+   if (((uint64_t) abs(time_actual - time_last_check)) > g_check_mem_interval) {
       int is_there_next;
       b_plus_tree_item *b_item;
 
@@ -478,7 +478,7 @@ bool attacked_server_t::free_unused_users(time_t time_actual)
       attacked_user_t *user = (attacked_user_t *) (b_item->value);
 
       // if time from last attack message targeted against this user exceeded threshold
-      if (abs(time_actual - user->m_last_action) > g_free_mem_interval) {
+      if (((uint64_t) abs(time_actual - user->m_last_action)) > g_free_mem_interval) {
 
          // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
          if (user->m_attack_total_count >= g_alert_threshold) {
