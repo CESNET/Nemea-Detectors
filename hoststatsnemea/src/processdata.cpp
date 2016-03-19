@@ -147,7 +147,7 @@ void *data_reader_trap(void *args)
             terminated = true;
             continue;
          case TRAP_E_FORMAT_CHANGED:
-            continue;
+            break;
          default:
             log(LOG_ERR, "Error: getting new data from TRAP failed: %s",
                trap_last_error_msg);
@@ -267,6 +267,8 @@ void offline_analyzer()
          case TRAP_E_TERMINATED:
             terminated = true;
             continue;
+         case TRAP_E_FORMAT_CHANGED:
+            break;
          default:
             log(LOG_ERR, "Error: getting new data from TRAP failed: %s)\n",
                trap_last_error_msg);
