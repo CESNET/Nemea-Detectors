@@ -94,9 +94,9 @@ typedef struct config_s {
 
    int port;      /** port */
    int n;         /** number of topN chosen */
-   int min_flows;    /** minimal threshold for number of flows in TOP-N */
-   int q;         /** histogram step */
-   int min_a;     /** minimal amplification effect considered as attack */
+   uint32_t min_flows;    /** minimal threshold for number of flows in TOP-N */
+   uint32_t q;         /** histogram step */
+   uint32_t min_a;     /** minimal amplification effect considered as attack */
    float min_flows_norm;   /** minimal normalized threshold for count of flows in TOP-N */
    int min_resp_packets;   /** minimal average of response packets in TOP-N */
    int min_resp_bytes;  /** minimal threshold for average size of responses in bytes in TOP-N */
@@ -105,7 +105,7 @@ typedef struct config_s {
    int max_quer_flow_bytes;   /** maximal threshold for number of bytes in one flow for requests */
    int max_resp_flow_packets; /** maximal threshold for number of packets in one flow for responses */
    int max_resp_flow_bytes;   /** maximal threshold for number of bytes in one flow for responses */
-   int det_window;      /** length of detection window */
+   uint32_t det_window;      /** length of detection window */
    int del_time;     /** length of delete window after detection */
    uint32_t max_flow_items;     /** maximal size of vector with query/response records */
 
