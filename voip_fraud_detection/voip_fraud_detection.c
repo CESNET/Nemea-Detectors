@@ -635,7 +635,7 @@ int main(int argc, char **argv)
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1];
    char call_id[MAX_LENGTH_CALL_ID + 1];
    char user_agent[MAX_LENGTH_USER_AGENT + 1];
-   unsigned int call_id_len, user_agent_len;
+   int call_id_len, user_agent_len;
    char * sip_to, * sip_from, * sip_request_uri;
    int sip_from_len, sip_to_len, sip_request_uri_len;
 
@@ -754,11 +754,11 @@ int main(int argc, char **argv)
          uint64_t sip_stats;
          sip_stats = ur_get(ur_template_in, in_rec, F_INVEA_SIP_STATS);
 
-         uint32_t invite_stats;
-         uint16_t bye_stats;
-         uint8_t ack_stats, cancel_stats;
-         uint8_t forbidden_stats, unauthorized_stats;
-         uint8_t ok_stats, ringing_stats, proxy_auth_req_stats, trying_stats;
+         uint32_t invite_stats = 0;
+         uint16_t bye_stats = 0;
+         uint8_t ack_stats = 0, cancel_stats = 0;
+         uint8_t forbidden_stats = 0, unauthorized_stats = 0;
+         uint8_t ok_stats = 0, ringing_stats = 0, proxy_auth_req_stats = 0, trying_stats = 0;
 
          // get number of requests/responses from SIP_STATS
          switch (voip_packet_type) {
@@ -954,7 +954,7 @@ int main(int argc, char **argv)
                   int sip_via_len = ur_get_var_len(ur_template_in, in_rec, F_INVEA_SIP_VIA);
                   char *sip_via = ur_get_ptr_by_id(ur_template_in, in_rec, F_INVEA_SIP_VIA);
                   uint64_t link_bit_field = ur_get(ur_template_in, in_rec, F_LINK_BIT_FIELD);
-                  printf("%s;INVITE;IP_SRC:%s;IP_DST:%s;LINK_BIT_FIELD:%u;\n", get_actual_time_string(), ip_src_str, ip_dst_str, link_bit_field);
+                  printf("%s;INVITE;IP_SRC:%s;IP_DST:%s;LINK_BIT_FIELD:%"PRIu64";\n", get_actual_time_string(), ip_src_str, ip_dst_str, link_bit_field);
                   printf("From:\"%.*s\";\n", sip_from_len, sip_from);
                   printf("To:\"%.*s\";\n", sip_to_len, sip_to);
                   printf("Via:\"%.*s\";\n", sip_via_len, sip_via);
