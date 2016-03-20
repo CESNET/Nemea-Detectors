@@ -121,7 +121,7 @@
 #define MIN_DNS_REQUEST_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count in payload analysis for other anomaly */
 #define MIN_DNS_RESPONSE_COUNT_TUNNEL 50 /*< Minimal value of dns count in payload analysis for tunnel */
 #define MIN_DNS_RESPONSE_COUNT_OTHER_ANOMALY 10000 /*< Minimal value of dns count of packets */
-#define MIN_LENGTH_OF_TUNNEL_STRING 50 /*< Minimal length of string containing tunnel */
+#define MIN_LENGTH_OF_TUNNEL_STRING 100 /*< Minimal length of string containing tunnel */
 #define REQUEST_MAX_COUNT_OF_USED_LETTERS 25  /*< Maximum number of used leeters for domain */
 #define REQUEST_MAX_COUNT_OF_USED_LETTERS_CLOSER 60  /*< Maximum number of used leeters for domain, closer interval */
 #define RESPONSE_MAX_COUNT_OF_USED_LETTERS 30  /*< Maximum number of used leeters for domain */

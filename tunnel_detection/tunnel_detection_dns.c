@@ -81,7 +81,8 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("DNS-tunnel-detection module","Module that detects DNS tunnels on the network.",1,2)
+  BASIC("DNS-tunnel-detection module","Module that detects DNS tunnels on the network. Input interface needs DNS FLOW data. \
+There can be two output interfaces. First output interface sends alerts from the detector. Second output interface sends rules to SDMCAP to catch reel traffic.",1,-1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('i', "ifc", "Specification of interface types and their parameters", required_argument, "string") \
@@ -1074,27 +1075,31 @@ int get_length_of_string(char * str) {
 
 void send_unirec_out(unirec_tunnel_notification_t * notification)
 {
-   ur_set(notification->unirec_out, notification->detection, F_EVENT_ID, notification->event_id);
-   ur_set(notification->unirec_out, notification->detection, F_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out, notification->detection, F_TUNNEL_PER_NEW_DOMAIN, notification->tunnel_per_new_domain);
-   ur_set(notification->unirec_out, notification->detection, F_TUNNEL_PER_SUBDOMAIN, notification->tunnel_per_subdomain);
-   ur_set(notification->unirec_out, notification->detection, F_TUNNEL_TYPE, notification->tunnel_type);
-   ur_set_string(notification->unirec_out, notification->detection, F_TUNNEL_DOMAIN, notification->tunnel_domain);
-   ur_set(notification->unirec_out, notification->detection, F_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);
-   ur_set(notification->unirec_out, notification->detection, F_TIME_FIRST, ur_time_from_sec_msec(notification->time_first,0));
-   ur_set(notification->unirec_out, notification->detection, F_TIME_LAST, ur_time_from_sec_msec(notification->time_last,0));
-   trap_send(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection));
+   if (notification->unirec_out != NULL) {
+      ur_set(notification->unirec_out, notification->detection, F_EVENT_ID, notification->event_id);
+      ur_set(notification->unirec_out, notification->detection, F_SRC_IP, notification->ip);
+      ur_set(notification->unirec_out, notification->detection, F_TUNNEL_PER_NEW_DOMAIN, notification->tunnel_per_new_domain);
+      ur_set(notification->unirec_out, notification->detection, F_TUNNEL_PER_SUBDOMAIN, notification->tunnel_per_subdomain);
+      ur_set(notification->unirec_out, notification->detection, F_TUNNEL_TYPE, notification->tunnel_type);
+      ur_set_string(notification->unirec_out, notification->detection, F_TUNNEL_DOMAIN, notification->tunnel_domain);
+      ur_set(notification->unirec_out, notification->detection, F_TUNNEL_CNT_PACKET, notification->tunnel_cnt_packet);
+      ur_set(notification->unirec_out, notification->detection, F_TIME_FIRST, ur_time_from_sec_msec(notification->time_first,0));
+      ur_set(notification->unirec_out, notification->detection, F_TIME_LAST, ur_time_from_sec_msec(notification->time_last,0));
+      trap_send(0, notification->detection, ur_rec_size(notification->unirec_out, notification->detection));
+   }
 }
 
 void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
 {
-   char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
-   sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_SRC_IP, notification->ip);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_TIMEOUT, values.sdm_timeout);
-   ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, values.sdm_count_of_packets);
-   ur_set_string(notification->unirec_out_sdm, notification->detection_sdm, F_SDM_CAPTURE_FILE_ID, sdm_capture_id);
-   trap_send(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm));
+   if (notification->unirec_out_sdm != NULL) {
+      char sdm_capture_id [MAX_LENGTH_SDM_CAPTURE_FILE_ID];
+      sprintf(sdm_capture_id , "tunnel_detection_%d", notification->event_id);
+      ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_SRC_IP, notification->ip);
+      ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_TIMEOUT, values.sdm_timeout);
+      ur_set(notification->unirec_out_sdm, notification->detection_sdm, F_PACKETS, values.sdm_count_of_packets);
+      ur_set_string(notification->unirec_out_sdm, notification->detection_sdm, F_SDM_CAPTURE_FILE_ID, sdm_capture_id);
+      trap_send(1, notification->detection_sdm, ur_rec_size(notification->unirec_out_sdm, notification->detection_sdm));
+   }
 }
 
 void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
@@ -1925,7 +1930,7 @@ void load_default_values()
 
 int main(int argc, char **argv)
 {
-   int ret, i;
+   int ret, i, n_outputs;
    packet_t  packet;
    double start_time=0, packet_time=0;
    int count_of_cycle=0;
@@ -1962,6 +1967,9 @@ int main(int argc, char **argv)
    unirec_tunnel_notification_t ur_notification;
    ur_notification.unirec_out = NULL;
    ur_notification.detection = NULL;
+   ur_notification.unirec_out_sdm = NULL;
+   ur_notification.detection_sdm = NULL;
+   trap_ifc_spec_t ifc_spec;
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -2073,13 +2081,13 @@ int main(int argc, char **argv)
             break;
          case 'w':
             if (sscanf(optarg, "%d", &values.min_length_of_tunnel_string) != 1) {
-               fprintf(stderr, "Missing 'u' argument\n");
+               fprintf(stderr, "Missing 'w' argument\n");
                goto failed_trap;
             }
             break;
          case 'z':
             if (sscanf(optarg, "%d", &values.time_of_one_session) != 1) {
-               fprintf(stderr, "Missing 't' argument\n");
+               fprintf(stderr, "Missing 'z' argument\n");
                goto failed_trap;
             }
             break;
@@ -2092,36 +2100,87 @@ int main(int argc, char **argv)
       }
    }
    if (input_packet_file_name == NULL) {
-      TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+     // TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+      ret = trap_parse_params(&argc, argv, &ifc_spec);
+      if (ret != TRAP_E_OK) {
+         if (ret == TRAP_E_HELP) { // "-h" was found
+            trap_print_help(module_info);
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 0;
+         }
+         fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 1;
+      }
+      // Count number of output interfaces
+      n_outputs = strlen(ifc_spec.types) - 1;
+      module_info->num_ifc_out = n_outputs;
+      printf("Output interfaces: %d\n", n_outputs);
 
-      trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
-      trap_ifcctl(TRAPIFC_OUTPUT, 1, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+      // Number of output interfaces exceeds TRAP limit
+      if (n_outputs > 2) {
+         fprintf(stderr, "Error: More than 2 interfaces. In tunnel detection module can be maximal 2 otuput interfaces\n");
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 1;
+      }
+
+      // Initialize TRAP library (create and init all interfaces)
+      ret = trap_init(module_info, ifc_spec);
+      if (ret != TRAP_E_OK) {
+         fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+         trap_free_ifc_spec(ifc_spec);
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 1;
+      }
+
+
+
       tmplt = ur_create_input_template(0, "BYTES,DNS_NAME,DST_PORT,SRC_IP,DST_IP,DNS_QTYPE,DNS_RDATA", NULL);
-      ur_notification.unirec_out = ur_create_output_template(0, "EVENT_ID,SRC_IP,TUNNEL_PER_NEW_DOMAIN,TUNNEL_PER_SUBDOMAIN,TUNNEL_TYPE,TUNNEL_DOMAIN,TUNNEL_CNT_PACKET,TIME_FIRST,TIME_LAST", NULL);
-      ur_notification.unirec_out_sdm = ur_create_output_template(1, "SRC_IP,TIMEOUT,PACKETS,SDM_CAPTURE_FILE_ID", NULL);
-      if (tmplt == NULL || ur_notification.unirec_out == NULL || ur_notification.unirec_out_sdm == NULL) {
+      if (tmplt == NULL) {
          fprintf(stderr, "Error: Invalid UniRec specifier.\n");
          trap_finalize();
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 4;
       }
-      // prepare detection record
-      ur_notification.detection = ur_create_record(ur_notification.unirec_out, MAX_LENGTH_OF_REQUEST_DOMAIN);
-      if (ur_notification.detection == NULL) {
-         fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
-         ur_free_template(tmplt);
-         ur_free_template(ur_notification.unirec_out);
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 4;
+      if (n_outputs > 0) {
+         // prepare detection record
+         trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+         ur_notification.unirec_out = ur_create_output_template(0, "EVENT_ID,SRC_IP,TUNNEL_PER_NEW_DOMAIN,TUNNEL_PER_SUBDOMAIN,TUNNEL_TYPE,TUNNEL_DOMAIN,TUNNEL_CNT_PACKET,TIME_FIRST,TIME_LAST", NULL);
+         if (ur_notification.unirec_out == NULL) {
+            fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+            trap_finalize();
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 4;
+         }
+         ur_notification.detection = ur_create_record(ur_notification.unirec_out, MAX_LENGTH_OF_REQUEST_DOMAIN);
+         if (ur_notification.detection == NULL) {
+            fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
+            ur_free_template(tmplt);
+            ur_free_template(ur_notification.unirec_out);
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 4;
+         }
       }
-      // prepare output record for SDM
-      ur_notification.detection_sdm = ur_create_record(ur_notification.unirec_out_sdm, MAX_LENGTH_SDM_CAPTURE_FILE_ID);
-      if (ur_notification.detection_sdm == NULL) {
-         fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
-         ur_free_template(tmplt);
-         ur_free_template(ur_notification.unirec_out);
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 4;
+      if (n_outputs > 1) {
+         // prepare output record for SDM
+         trap_ifcctl(TRAPIFC_OUTPUT, 1, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+         ur_notification.unirec_out_sdm = ur_create_output_template(1, "SRC_IP,TIMEOUT,PACKETS,SDM_CAPTURE_FILE_ID", NULL);
+         if (ur_notification.unirec_out_sdm == NULL) {
+            fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+            trap_finalize();
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 4;
+         }
+         ur_notification.detection_sdm = ur_create_record(ur_notification.unirec_out_sdm, MAX_LENGTH_SDM_CAPTURE_FILE_ID);
+         if (ur_notification.detection_sdm == NULL) {
+            fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
+            ur_free_template(tmplt);
+            ur_free_template(ur_notification.unirec_out);
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 4;
+         }
       }
    }
    else if (file_or_port != READ_FROM_FILE && file_or_port != MEASURE_PARAMETERS) {
@@ -2743,6 +2802,9 @@ failed_trap:
       }
       if (ur_notification.detection != NULL) {
          ur_free_record(ur_notification.detection);
+      }
+      if (ur_notification.unirec_out_sdm != NULL) {
+         ur_free_template(ur_notification.unirec_out_sdm);
       }
       if (ur_notification.detection_sdm != NULL) {
          ur_free_record(ur_notification.detection_sdm);
