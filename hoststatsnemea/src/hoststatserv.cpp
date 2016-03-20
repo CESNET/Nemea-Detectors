@@ -294,7 +294,6 @@ int main(int argc, char *argv[])
 
    /* Some variables initialization because of goto */
    ur_field_id_t dir_flag_id = F_DIRECTION_FLAGS;
-   ur_template_t *coll_tmpl = NULL;
 
    tmpl_in = ur_create_input_template(0, DEF_REQUIRED_TMPL, NULL);
    tmpl_out = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,"
