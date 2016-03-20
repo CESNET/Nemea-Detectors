@@ -2081,13 +2081,13 @@ int main(int argc, char **argv)
             break;
          case 'w':
             if (sscanf(optarg, "%d", &values.min_length_of_tunnel_string) != 1) {
-               fprintf(stderr, "Missing 'u' argument\n");
+               fprintf(stderr, "Missing 'w' argument\n");
                goto failed_trap;
             }
             break;
          case 'z':
             if (sscanf(optarg, "%d", &values.time_of_one_session) != 1) {
-               fprintf(stderr, "Missing 't' argument\n");
+               fprintf(stderr, "Missing 'z' argument\n");
                goto failed_trap;
             }
             break;
