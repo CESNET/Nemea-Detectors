@@ -18,6 +18,6 @@ The input of algorithm are all incoming flow records, however, only the flow rec
 
 ##Diagram of the algorithm
 
-[Vportscan detector](documentation/img/algorithm-diagram.png)
+![Vportscan detector](documentation/img/algorithm-diagram.png)
 
 The threshold 1 (number of packets) is checked immediately when a flow record is received. The source and destination addresses are used as a key to find the stored list of ports. If the pair of addresses is not known, a new list of ports is allocated, the current destination port is inserted into the list and the algorithm continues with the next flow record. Otherwise, the destination port from the flow record is looked up in the found list of ports. If the port is found it is removed (it is a repeating port), otherwise, it is inserted. Reaching the threshold 2 (number of stored ports) generates an alert. Finally, the threshold 3 (age of inactivity) is used for cleaning memory once every minute.
