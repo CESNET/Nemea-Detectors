@@ -48,6 +48,8 @@
 #include <string>
 #include <csignal>
 #include <pthread.h>
+#include <fstream>
+#include <iostream>
 #include "hoststats.h"
 #include "profile.h"
 #include "aux_func.h"
@@ -63,12 +65,15 @@ extern "C" {
 }
 using namespace std;
 
+#define INI_DEFAULT_FILENAME  "hoststats.conf.default"
+#define INI_FILENAME          "hoststats.conf"
+
 ////////////////////////////
 // Global variables
 int log_upto = LOG_ERR;    // Log up to level
 ur_template_t *tmpl_in = NULL;
 ur_template_t *tmpl_out = NULL;
-string configFilePath = "hoststats.conf";
+string configFilePath = "";
 
 // Extern variables
 extern HostProfile *MainProfile;
@@ -242,6 +247,86 @@ void init_detectors_configuration() {
 }
 
 /**
+ * \brief Copy file.
+ * \param [in] from Input file.
+ * \param [int] to Output file.
+ * \return True on success, false otherwise.
+ */
+bool copy_file(const char *from, const char *to)
+{
+   ifstream src(from);
+   if (!src.good()) {
+      src.close();
+      return false;
+   }
+   ofstream dst(to);
+   if (!dst.good()) {
+      src.close();
+      dst.close();
+      return false;
+   }
+   dst << src.rdbuf();
+   if (!dst.good()) {
+      src.close();
+      dst.close();
+      return false;
+   }
+   src.close();
+   dst.close();
+   return true;
+}
+
+/**
+ * \brief Find configuration file.
+ * \return 0 on success, 1 otherwise.
+ */
+int set_configuration_filepath()
+{
+   ifstream file;
+   // Load configuration from a path defined by Nemea directory
+   configFilePath = SYSCONFDIR "/" INI_FILENAME;
+   file.open(configFilePath.c_str(), ios_base::in);
+   if (file.good()) {
+      file.close();
+      return 0;
+   }
+
+   // Load configuration from a file in the same directory as the binary file
+   configFilePath = INI_FILENAME;
+   file.open(configFilePath.c_str(), ios_base::in);
+   if (file.good()) {
+      file.close();
+      return 0;
+   }
+
+   // Config file is not in current directory nor in Nemea directory, copy default config.
+   log(LOG_NOTICE, INI_FILENAME " file not found, trying to load " INI_DEFAULT_FILENAME);
+
+   // copy INI_DEFAULT_FILENAME to INI_FILENAME
+   if (copy_file(SYSCONFDIR "/" INI_DEFAULT_FILENAME, SYSCONFDIR "/" INI_FILENAME)) {
+      log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
+      configFilePath = SYSCONFDIR "/" INI_FILENAME;
+   } else if (copy_file(INI_DEFAULT_FILENAME, INI_FILENAME)){
+      log(LOG_NOTICE, INI_DEFAULT_FILENAME " copied to " INI_FILENAME);
+      configFilePath = INI_FILENAME;
+   } else {
+      log(LOG_NOTICE, "Can't copy " INI_DEFAULT_FILENAME " to " INI_FILENAME
+         ", using default file directly.");
+      configFilePath = SYSCONFDIR "/" INI_DEFAULT_FILENAME;
+   }
+
+   file.open(configFilePath.c_str(), ios_base::in);
+   if (file.good()) {
+      file.close();
+      return 0;
+   }
+
+   cerr << "Could not load configuration" << endl;
+   log(LOG_ERR, "Could not load configuration");
+   return 1;
+}
+
+/**
  * \brief Main function
  */
 int main(int argc, char *argv[])
@@ -272,7 +357,6 @@ int main(int argc, char *argv[])
       fprintf(stderr, "ERROR: Configurator initialization failed.\n");
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-
       return 1;
    }
 
@@ -297,13 +381,13 @@ int main(int argc, char *argv[])
       confPlainAddElement("dos-attacker-connections-synflood", "uint32_t", "270000", 0, 0) ||
       confPlainAddElement("dos-attacker-connections-others", "uint32_t", "1000000", 0, 0) ||
       confPlainAddElement("dos-attacker-packet-ratio", "float", "2", 0, 0) ||
-      confPlainAddElement("dos-req-rsp-est-ratio", "float", "0", 0, 0.8) ||
-      confPlainAddElement("dos-rsp-req-est-ratio", "float", "0", 0, 0.2) ||
-      confPlainAddElement("dos-min-rsp-ratio", "float", "0", 0, 0.02) ||
+      confPlainAddElement("dos-req-rsp-est-ratio", "float", "0.8", 0, 0) ||
+      confPlainAddElement("dos-rsp-req-est-ratio", "float", "0.2", 0, 0) ||
+      confPlainAddElement("dos-min-rsp-ratio", "float", "0.02", 0, 0) ||
       confPlainAddElement("scan-threshold", "float", "100", 0, 0) ||
       confPlainAddElement("scan-flag-ratio", "float", "5", 0, 0) ||
       confPlainAddElement("scan-packet-ratio", "float", "5", 0, 0) ||
-      confPlainAddElement("scan-ip-ratio", "float", "0", 0, 0.5) ||
+      confPlainAddElement("scan-ip-ratio", "float", "0.5", 0, 0) ||
       confPlainAddElement("bruteforce-out-threshold", "float", "10", 0, 0) ||
       confPlainAddElement("bruteforce-ips", "float", "5", 0, 0) ||
       confPlainAddElement("bruteforce-ips-ratio", "float", "20", 0, 0) ||
@@ -323,18 +407,33 @@ int main(int argc, char *argv[])
       return 1;
    }
 
+   openlog(NULL, LOG_NDELAY, 0);
+   log(LOG_INFO, "HostStatsNemea started");
+
+   /* Set configuration path if user config-path was not specified. */
+   if (configFilePath == "") {
+      if (set_configuration_filepath()) {
+         fprintf(stderr, "ERROR: Failed to open configuration file \"%s\"\n", configFilePath.c_str());
+         log(LOG_ERR, "ERROR: Failed to open configuration file \"%s\"", configFilePath.c_str());
+         closelog();
+         confPlainClearContext();
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 1;
+      }
+   }
+
+   /* Load module configuration from the config file */
    if (confPlainLoadConfiguration(configFilePath.c_str(), NULL)) {
-      fprintf(stderr, "ERROR: Failed to load configuration.\n");
+      fprintf(stderr, "ERROR: Failed to open configuration file \"%s\"\n", configFilePath.c_str());
+      log(LOG_ERR, "ERROR: Failed to open configuration file \"%s\"", configFilePath.c_str());
+      closelog();
       confPlainClearContext();
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
-   openlog(NULL, LOG_NDELAY, 0);
-   log(LOG_INFO, "HostStatsNemea started");
-
-   /* Load module configuration from the config file */
 
    /* Set logmask if used */
    string logmask = trim(string(confPlainGetString("log-upto-level", "")));
@@ -419,7 +518,6 @@ int main(int argc, char *argv[])
          sbp_ptr->get_template().c_str());
       goto exitC;
    }
-
 
    /* Init detectors configuration. */
    init_detectors_configuration();

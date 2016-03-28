@@ -49,7 +49,6 @@ det-start-time    = 10
 #
 
 # general detector configuration
-
 syn-scan-threshold = 200
 syn-scan-syn-to-ack-ratio = 20
 syn-scan-request-to-response-ratio = 5
@@ -65,7 +64,7 @@ dos-attacker-packet-ratio = 2
 
 dos-req-rsp-est-ratio = 0.8
 
-# dos_rsp_req_est_ratio should be calculateed using the following formula:
+# dos_rsp_req_est_ratio should be calculated using the following formula:
 # dos_rsp_req_est_ratio = 1.0 - dos_req_rsp_est_ratio
 dos-rsp-req-est-ratio = 0.2
 
@@ -73,7 +72,6 @@ dos-min-rsp-ratio =  0.02
 
 
 # ssh detector configuration
-
 scan-threshold = 100
 scan-flag-ratio = 5
 scan-packet-ratio = 5
@@ -96,7 +94,6 @@ bruteforce-server-ratio = 3
 
 
 # dns detector configuration
-
 dns-amplif-threshold = 10000
 
 
