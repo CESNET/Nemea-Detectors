@@ -365,6 +365,7 @@ cleanup:
    ur_free_template(in_tmplt);
    ur_free_template(out_tmplt);
    ur_free_record(out_rec);
+   ur_finalize();
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
