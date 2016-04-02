@@ -313,9 +313,11 @@ int main(int argc, char **argv)
 
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
 
-            TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, continue, break);
-
+            // delete item from tree no matter how successful was trap_send()
             b_plus_tree_delete_item(b_plus_tree, &ip_to_tree);
+
+            // break on error, do nothing on timeout in order to perform tree pruning
+            TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, (void) 0, break);
          }
 
       } else {
