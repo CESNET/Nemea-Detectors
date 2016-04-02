@@ -364,6 +364,7 @@ cleanup:
    b_plus_tree_destroy(b_plus_tree);
    ur_free_template(in_tmplt);
    ur_free_template(out_tmplt);
+   ur_free_record(out_rec);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
