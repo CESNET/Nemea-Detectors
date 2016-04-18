@@ -81,6 +81,8 @@
 #define EVT_T_VOIP_PREFIX_GUESS            40         //VoIP prefix guessing
 #define EVT_T_VOIP_CALL_DIFFERENT_COUNTRY  41         //VoIP call to different country
 
+#define STATS_TIME_INTERVAL 1
+
 /** \brief Definition of modul_configuration (modul_configuration_struct). */
 modul_configuration_t modul_configuration;
 

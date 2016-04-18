@@ -71,14 +71,17 @@ UR_FIELDS (
    uint32 EVENT_ID,
    uint8 EVENT_TYPE,
    time DETECTION_TIME,
-   time TIME_FIRST
+   time TIME_FIRST,
+   uint64 INVITE_CNT
+   uint64 CALLER_CNT
+   uint64 CALLEE_CNT
 )
 
 /** \brief Struct with information about module. */
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,1)
+  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,-1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('l', "log_file", "Path to a log file.", required_argument, "string") \
@@ -367,6 +370,7 @@ void get_string_from_unirec(char * string_output, int * string_len, int unirec_f
 int main(int argc, char **argv)
 {
    int ret;
+   time_t time_last_stats = 0;
 
    // ***** TRAP initialization *****
 
@@ -644,6 +648,10 @@ int main(int argc, char **argv)
 
 
    // ***** Main processing loop of module *****
+
+   ur_template_t *sdmout_tmpl = ur_create_output_template(1, "INVITE_CNT,CALLER_CNT,CALLEE_CNT", NULL);
+
+   void *smdout_rec = ur_create_record(sdmout_tmpl, 0);
 
    while (!stop) {
 
@@ -1146,9 +1154,41 @@ int main(int argc, char **argv)
             }
 
          }
-
+      }
+      if (module_info->num_ifc_out == 2) {
+         if (time(NULL) - time_last_stats > STATS_TIME_INTERVAL) {
+            /*
+             * Retrieve and send statistics via statistics interface.
+             * This is used for visualisation in SDM demo.
+             */
+            printf("\n\nStatistics\n\n");
+            ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
+            /* TODO caller-count from tree?
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, );
+            */
+            /* TODO callee-count from tree?
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, );
+            */
+            trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
+            time(&time_last_stats);
+         }
       }
 
+   }
+   if (module_info->num_ifc_out == 2) {
+      /*
+       * Retrieve and send statistics via statistics interface.
+       * This is used for visualisation in SDM demo.
+       */
+      ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
+      /* TODO caller-count from tree?
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, );
+      */
+      /* TODO callee-count from tree?
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, );
+      */
+
+      trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
    }
 
    // print statistics of module
@@ -1210,7 +1250,9 @@ int main(int argc, char **argv)
    // destroy templates (free memory)
    ur_free_template(ur_template_in);
    ur_free_template(ur_template_out);
+   ur_free_template(sdmout_tmpl);
    ur_free_record(detection_record);
+   ur_free_record(smdout_rec);
 
    PRINT_OUT_LOG("... VoIP fraud detection module exit! (version:", MODULE_VERSION, ")\n");
    PRINT_OUT_LOG("-----------------------------------------------------\n");
