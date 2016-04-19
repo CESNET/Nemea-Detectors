@@ -1868,7 +1868,7 @@ unsigned int read_event_id_from_file(char * file_name)
          fprintf(stderr, "Warning: File with last event ID (%s) exists, but it could not be opened. Last event_id = 0.\n", file_name);
          return 0;
       } else {
-         fprintf(stdout, "Warning: File with last event ID (%s) does not exists. The file will be created, last event_id = 0.\n", file_name);
+         fprintf(stderr, "Warning: File with last event ID (%s) does not exists. The file will be created, last event_id = 0.\n", file_name);
          return 0;
       }
    }
