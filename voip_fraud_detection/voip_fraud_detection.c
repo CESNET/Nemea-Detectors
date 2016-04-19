@@ -371,7 +371,7 @@ int main(int argc, char **argv)
 {
    int ret;
    time_t time_last_stats = 0;
-
+   uint64_t callee_count = 0, caller_count = 0;
    // ***** TRAP initialization *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -906,7 +906,6 @@ int main(int argc, char **argv)
 
                // is source IP in hash table?
                if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) == NULL) {
-
                   /* IP address not found in hash table */
 
                   // if it isn't INVITE request, don't create item in hash table
@@ -914,6 +913,7 @@ int main(int argc, char **argv)
 
                   // create hash_table_item
                   hash_table_item = (ip_item_t *) malloc(sizeof (ip_item_t));
+                  caller_count++;
 
                   // check successful allocation memory
                   if (hash_table_item == NULL) {
@@ -1001,6 +1001,9 @@ int main(int argc, char **argv)
                   if (prefix_tree_node == NULL) {
                      PRINT_ERR("prefix_tree_insert: Error memory allocation\n");
                      continue;
+                  } else if (prefix_tree_node->count_of_insert == 1) {
+                     //new callee
+                     callee_count++;
                   }
                } else {
                   // search sip_to in prefix tree
@@ -1161,14 +1164,14 @@ int main(int argc, char **argv)
              * Retrieve and send statistics via statistics interface.
              * This is used for visualisation in SDM demo.
              */
+#ifdef DEBUG
             printf("\n\nStatistics\n\n");
+#endif
             ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
-            /* TODO caller-count from tree?
-            ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, );
-            */
-            /* TODO callee-count from tree?
-            ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, );
-            */
+            /* caller_count from hash table?*/
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, caller_count);
+            /* sum of callee from every suffix tree?*/
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, callee_count);
             trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
             time(&time_last_stats);
          }
@@ -1181,13 +1184,10 @@ int main(int argc, char **argv)
        * This is used for visualisation in SDM demo.
        */
       ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
-      /* TODO caller-count from tree?
-      ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, );
-      */
-      /* TODO callee-count from tree?
-      ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, );
-      */
-
+      /* caller_count from hash table?*/
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, caller_count);
+      /* sum of callee from every suffix tree?*/
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, callee_count);
       trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
    }
 
