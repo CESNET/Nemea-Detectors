@@ -80,7 +80,7 @@
 #define FILE_NAME_SUSPICION_LIST "suspision_list.txt"/*< Name of file with suspisions. */
 #define TITLE_SUSPICION_LIST "IP in SUSPICION STATE"/*< Title of suspision list. */
 #define SAVE_DIRECTORY "log" /*< Name of file with SUMMARY responses. */
-#define FILE_NAME_EVENT_ID "event_id.txt" /*< Name of file with last used event ID. */
+#define FILE_NAME_EVENT_ID "/data/dnstunnel_detection/event_id.txt" /*< Name of file with last used event ID. */
 /* /} */
 
 /*!

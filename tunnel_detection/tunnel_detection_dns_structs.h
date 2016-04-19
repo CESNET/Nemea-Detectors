@@ -329,6 +329,7 @@ typedef struct values_t{
     unsigned int event_id_counter;                  /*!< Event ID counter for anomalies */
     unsigned int sdm_timeout;   /*< Timeout, after that the rule will be discard from SDM */
     unsigned int sdm_count_of_packets;  /*< Count of packet which will be recorded by SDM */
+    char *file_name_event_id; /*< Path to file with event id*/
 }values_t;
 
 //********* values for measuring parameters *********
