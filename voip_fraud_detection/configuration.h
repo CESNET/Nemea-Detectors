@@ -51,7 +51,7 @@
 #define GEOIP_DATABASE_IPV6_PATH "/usr/share/GeoIP/GeoIPv6.dat"
 
 /** \brief Default name of event_id file. */
-#define DEFAULT_EVENT_ID_FILE "event_id"
+#define DEFAULT_EVENT_ID_FILE "/data/voip_fraud_detection/event_id.txt"
 
 /** \brief Default name of countries file (module store of countries). */
 #define DEFAULT_COUNTRIES_FILE "countries.dat"
