@@ -68,6 +68,9 @@ extern "C" {
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
 
+#define PROTOCOL_TCP   0x6
+#define PROTOCOL_UDP   0x11
+
 /** \brief Default value of unsuccessful authentication attempts to consider this behaviour as an attack. */
 #define DEFAULT_ALERT_THRESHOLD  20
 
@@ -99,6 +102,8 @@ struct sip_dataholder_t {
    void *tree;                            ///< pointer to b+ tree of servers (depends on IP version)
    uint16_t msg_type;                     ///< sip message type
    uint16_t status_code;                  ///< sip status code
+   uint8_t link_bit_field;                ///< indicator of particular monitoring probe
+   uint8_t protocol;                      ///< sip protocol used for data transfer
    ur_time_t time_stamp;                  ///< time when the message was received
    ip_addr_t *ip_src;                     ///< IP address of the server
    ip_addr_t *ip_dst;                     ///< IP address of the attacker
@@ -184,7 +189,7 @@ struct attacked_server_t {
     * \param[in] ip_addr IP address of the server
     * \return true - initialization was successful, false - error occurred
     */
-   bool initialize(const ip_addr_t *ip_addr);
+   bool initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field, uint8_t protocol);
 
    /**
     * Remove all users from b+ tree of users who are no longer under attack.
@@ -203,7 +208,9 @@ struct attacked_server_t {
     */
    bool destroy(void);
 
-   void *m_user_tree;   ///< pointer to a b+ tree containing attacked_user_t structures
-   char *m_ip_addr;     ///< IP address of the server in human readable format
+   void *m_user_tree;        ///< pointer to a b+ tree containing attacked_user_t structures
+   char *m_ip_addr;          ///< IP address of the server in human readable format
+   uint8_t m_link_bit_field; ///< indicator of particular monitoring probe
+   uint8_t m_protocol;       ///< sip protocol used for data transfer
 };
 
