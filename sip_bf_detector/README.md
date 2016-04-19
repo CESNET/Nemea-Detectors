@@ -31,6 +31,8 @@ The alert itself is in JSON format. It contains vital information about the ongo
  - AttemptCount: total count of attempts to breach user's password
  - EventTime: time of first attack message received
  - CeaseTime: time of last attack message received
+ - LinkBitField: indicator of particular monitoring probe
+ - Protocol: TCP or UDP
  - Breach: flag signalizing, whether attack was successful
  - BreacherIP: IP of the attacker, who made successful attack
  - BreachTime: time of breach occurrence

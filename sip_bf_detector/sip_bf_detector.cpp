@@ -217,10 +217,19 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
    json_object_set_new(root, "AttemptCount", json_integer(user->m_attack_total_count / 2));
    json_object_set_new(root, "EventTime", json_string(time_first));
    json_object_set_new(root, "CeaseTime", json_string(time_last));
+   json_object_set_new(root, "LinkBitField", json_integer(server->m_link_bit_field));
    json_object_set_new(root, "Breach", json_integer(breached));
    json_object_set_new(root, "BreacherIP", json_string(breacher));
    json_object_set_new(root, "BreachTime", json_string(time_breach));
    json_object_set_new(root, "Sources", attackers_arr);
+
+   if (server->m_protocol == PROTOCOL_TCP) {
+      json_object_set_new(root, "Protocol", json_string("TCP"));
+   } else if (server->m_protocol == PROTOCOL_UDP) {
+      json_object_set_new(root, "Protocol", json_string("UDP"));
+   } else {
+      json_object_set_new(root, "Protocol", json_string("unknown"));
+   }
 
    int is_there_next;
    b_plus_tree_item *b_item;
@@ -439,7 +448,7 @@ bool attacked_user_t::destroy(void)
 
 /* ***************  attacked_server_t  *************** */
 
-bool attacked_server_t::initialize(const ip_addr_t *ip_addr)
+bool attacked_server_t::initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field, uint8_t protocol)
 {
    // create a local copy of IP address in human readable format
    m_ip_addr = (char *) malloc(INET6_ADDRSTRLEN + 1);
@@ -450,6 +459,8 @@ bool attacked_server_t::initialize(const ip_addr_t *ip_addr)
 
    ip_to_str(ip_addr, m_ip_addr);
    m_ip_addr[INET6_ADDRSTRLEN] = '\0';
+   m_link_bit_field = link_bit_field;
+   m_protocol = protocol;
 
    // initialize b+ tree of users
    m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(attacked_user_t), MAX_LENGTH_SIP_FROM);
@@ -583,7 +594,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
          VERBOSE("Error: unable to insert IP: %s to b+ tree.\n", ip_str)
          return -1;
       } else {
-         if (!server->initialize(sip_data->ip_src)) {
+         if (!server->initialize(sip_data->ip_src, sip_data->link_bit_field, sip_data->protocol)) {
             VERBOSE("Error: server initialization failed.\n")
             return -1;
          }
@@ -843,7 +854,8 @@ int main(int argc, char **argv)
          VERBOSE("Warning: null value of IP.\n")
          continue;
       }
-
+      sip_data->link_bit_field = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
+      sip_data->protocol = ur_get(in_tmplt, in_rec, F_PROTOCOL);
       sip_data->time_stamp = ur_time_get_sec((ur_time_t *) ur_get(in_tmplt, in_rec, F_TIME_FIRST));
       sip_data->ipv4 = ip_is4(sip_data->ip_src);
       if (sip_data->ipv4) {
