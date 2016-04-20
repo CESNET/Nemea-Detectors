@@ -75,7 +75,7 @@
 #endif
 
 /** \brief If is define this macro, enable comparison of SIP To header and Request-URI. */
-#define CHECK_DIFFERENT_REQUEST_URI
+//#define CHECK_DIFFERENT_REQUEST_URI
 
 /** \brief Interval defined in seconds for running check_and_clear_module_memory() function. */
 #define CHECK_MEMORY_INTERVAL 60
@@ -158,9 +158,9 @@
 #define RETURN_OK 0
 
 /** \brief Enable debug mode. */
-#define DEBUG
+//#define DEBUG
 
 /** \brief Enable printing detail information about invalid SIP URI. */
-#define PRINT_DETAIL_INVALID_SIPURI
+//#define PRINT_DETAIL_INVALID_SIPURI
 
 #endif	/* VOIP_FRAUD_DETECTION_CONFIGURATION_H */
