@@ -196,8 +196,6 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
    char *s = NULL;
    json_t *root = json_object();
    json_t *attackers_arr = json_array();
-   int breached = user->m_breached ? 1 : 0;
-   const char *breacher = user->m_breacher ? user->m_breacher : "";
    char time_first[32];
    char time_breach[32];
    char time_last[32];
@@ -218,11 +216,17 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
    json_object_set_new(root, "EventTime", json_string(time_first));
    json_object_set_new(root, "CeaseTime", json_string(time_last));
    json_object_set_new(root, "LinkBitField", json_integer(server->m_link_bit_field));
-   json_object_set_new(root, "Breach", json_integer(breached));
-   json_object_set_new(root, "BreacherIP", json_string(breacher));
-   json_object_set_new(root, "BreachTime", json_string(time_breach));
-   json_object_set_new(root, "Sources", attackers_arr);
+   if (user->m_breached) {
+      json_object_set_new(root, "Breach", json_true());
+      json_object_set_new(root, "BreacherIP", json_string(user->m_breacher));
+      json_object_set_new(root, "BreachTime", json_string(time_breach));
+   } else {
+      json_object_set_new(root, "Breach", json_false());
+      json_object_set_new(root, "BreacherIP", json_null());
+      json_object_set_new(root, "BreachTime", json_null());
+   }   
 
+   json_object_set_new(root, "Sources", attackers_arr);
    if (server->m_protocol == PROTOCOL_TCP) {
       json_object_set_new(root, "Protocol", json_string("TCP"));
    } else if (server->m_protocol == PROTOCOL_UDP) {
