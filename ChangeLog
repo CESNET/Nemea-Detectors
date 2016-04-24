@@ -1,3 +1,16 @@
+2016-04-24 Nemea-detectors-1.2.3
+        * voip_fraud_detecion:
+		added IFC for SDM statistics
+		changed default path to the file with last event id
+		disabled debugging info output
+	* sip_bf_detector:
+		added protocol and link bit field to outgoing alerts
+		illogical fields in report now set to null
+		breach flag now contain true/flase rather than 0/1 value
+	* tunnel_detection:
+		path to the file with last event id can be set with parameter E
+		default path to the file is set to /data/dnstunnel_detection/event_id.txt
+
 2016-04-03 Nemea-detectors-1.2.2
         * vportscan_detector:
 		added README
