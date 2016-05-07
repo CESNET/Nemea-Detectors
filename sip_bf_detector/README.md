@@ -20,12 +20,14 @@ brute-force attacks.
 ## <a name="how-it-works">How it works</a>
 
 This module checks status codes of SIP servers and looks for
-"401 Unauthorized" and "403 Forbidden" responses to Register requests.
+"401 Unauthorized" responses to Register requests.
 Once the count of these responses for a certain user name exceeds a threshold,
 alert is generated.
 
 The alert itself is in JSON format. It contains vital information about the ongoing attack:
 
+ - EventID: number unique for this alert
+ - ObsoleteID: number of alert which is replaced by this alert
  - TargetIP: IP address of targeted server
  - SIPTo: name of targeted user
  - AttemptCount: total count of attempts to breach user's password
@@ -85,15 +87,18 @@ Additional parameters:
                   an attack (20 by default).
 
     -c <num>		Number of seconds between the checks on
-                  ceased attacks (120 by default).
+                  ceased attacks (300 by default).
 
     -f <num>		Number of seconds after the last action to
-                  consider attack as ceased (2400 by default).
+                  consider attack as ceased (1800 by default).
+
+    -s <num>		 Stop generating alerts of type #1 (-s 1) or
+                  both alerts of type #1 and #2 (-s 2) (0 by default).
 
 Example:
 
 ```
-./sip_bf_detector -i "t:7500,f:~/sip_bf_alerts:w" -a 10 -c 900 -f 7200
+./sip_bf_detector -i "t:7500,f:~/sip_bf_alerts:w" -a 20 -c 300 -f 1800 -s 2
 ```
 
 The example of use of this module above receives data in Unirec format on
@@ -102,12 +107,14 @@ generated alerts to the given file (~/sip\_bf\_alerts) in mode "w" (write).
 
 Additional parameters ensure that:
 
- - 10 unsuccessful authentication attempts are considered as an attack (-a 10)
+ - 20 unsuccessful authentication attempts are considered as an attack (-a 20)
 
- - every 900 seconds (15 minutes) all ongoing attacks are checked whether they ceased or not (-c 900)
+ - every 300 seconds (5 minutes) all ongoing attacks are checked whether they ceased or not (-c 300)
 
  - during every check, an attack is considered ceased if the last attack message was received
-   more than 7200 seconds (2 hours) from the currently processed message (-f 7200)
+   more than 1800 seconds (30 minutes) from the currently processed message (-f 1800)
+
+ - skip alerts #1 and #2, so only alerts of type #3 will be generated (-s 2)
 
 ## <a name="compilation-and-linking">Compilation and linking</a>
 

@@ -55,12 +55,15 @@
 #include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <sstream>
+#include <string>
 extern "C" {
 #include <b_plus_tree.h>
 }
 
+using namespace std;
+
 #define SIP_MSG_TYPE_STATUS      99
-#define SIP_STATUS_FORBIDDEN     403
 #define SIP_STATUS_UNAUTHORIZED  401
 #define SIP_STATUS_OK            200
 #define MAX_LENGTH_SIP_FROM      100
@@ -75,10 +78,10 @@ extern "C" {
 #define DEFAULT_ALERT_THRESHOLD  20
 
 /** \brief Default time in seconds between checks for ceased attacks. */
-#define CHECK_MEMORY_INTERVAL    120
+#define CHECK_MEMORY_INTERVAL    300
 
 /** \brief Default number of seconds since last action to consider an attack as ceased. */
-#define FREE_MEMORY_INTERVAL     2400
+#define FREE_MEMORY_INTERVAL     1800
 
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
@@ -165,6 +168,12 @@ struct attacked_user_t {
     * \return true - deallocation ended successfully, false - error occurred
     */
    bool destroy(void);
+   /**
+    * Generate event ID from timestamp of first action. Also set obsolete ID.
+    *
+    * \return true - deallocation ended successfully, false - error occurred
+    */
+   void create_event_id();
 
    char *m_user_name;               ///< user name
    void *m_attackers_tree;          ///< pointer to a b+ tree containing attacker_t structures
@@ -176,6 +185,8 @@ struct attacked_user_t {
    ur_time_t m_breach_time;         ///< time of attack message that breached user's password
    ur_time_t m_last_action;         ///< time of last attack message
    uint64_t m_attack_total_count;   ///< total count of attack messages across all attackers
+   uint64_t m_event_id;             ///< ID of current event in case of generating report
+   uint64_t m_obsolete_id;          ///< event ID in last generated report of this attack
 };
 
 /**

@@ -63,14 +63,18 @@ trap_module_info_t *module_info = NULL;
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack (20 by default).", required_argument, "uint64") \
-   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (120 by default).", required_argument, "uint64") \
-   PARAM('f', "free_mem_int", "Number of seconds after the last action to consider attack as ceased (2400 by default).", required_argument, "uint64")
+   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (300 by default).", required_argument, "uint64") \
+   PARAM('f', "free_mem_delay", "Number of seconds after the last action to consider attack as ceased (1800 by default).", required_argument, "uint64") \
+   PARAM('s', "skip_alert", "Stop generating alerts of type #1 (-s 1) or both alerts of type #1 and #2 (-s 2) (0 by default).", required_argument, "uint8")
 
 static int stop = 0;
 int verbose;
-uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD * 2;
+uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
 uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
+uint8_t g_skip_alerts = 0;
+uint16_t g_min_sec = 0;
+uint16_t g_event_row = 0;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -199,10 +203,11 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
    char time_first[32];
    char time_breach[32];
    char time_last[32];
+   ostringstream ss;
    const time_t tf = user->m_first_action;
    const time_t tl = user->m_last_action;
    const time_t tb = user->m_breached ? user->m_breach_time : 0;
-
+   ss << user->m_event_id;
    // generate time in human readable format
    strftime(time_first, 31, "%F %T", gmtime(&tf));
    strftime(time_last, 31, "%F %T", gmtime(&tl));
@@ -210,9 +215,18 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
    time_first[31] = time_last[31] = time_breach[31] = '\0';
 
    // Create JSON objects
+   json_object_set_new(root, "EventID", json_string(ss.str().c_str()));
+   if (user->m_obsolete_id == 0) {
+      json_object_set_new(root, "ObsoleteID", json_null());
+   } else {
+      ss.str(string());
+      ss.clear();
+      ss << user->m_obsolete_id;
+      json_object_set_new(root, "ObsoleteID", json_string(ss.str().c_str()));
+   }
    json_object_set_new(root, "TargetIP", json_string(server->m_ip_addr));
    json_object_set_new(root, "SIPTo", json_string(user->m_user_name));
-   json_object_set_new(root, "AttemptCount", json_integer(user->m_attack_total_count / 2));
+   json_object_set_new(root, "AttemptCount", json_integer(user->m_attack_total_count));
    json_object_set_new(root, "EventTime", json_string(time_first));
    json_object_set_new(root, "CeaseTime", json_string(time_last));
    json_object_set_new(root, "LinkBitField", json_integer(server->m_link_bit_field));
@@ -255,7 +269,7 @@ bool generate_alert(const attacked_server_t *server, const attacked_user_t *user
       attack_start[31] = '\0';
 
       json_object_set_new(attacker_json, "SourceIP", json_string(attacker->m_ip_addr));
-      json_object_set_new(attacker_json, "AttemptCount", json_integer(attacker->m_count / 2));
+      json_object_set_new(attacker_json, "AttemptCount", json_integer(attacker->m_count));
       json_object_set_new(attacker_json, "EventTime", json_string(attack_start));
 
       json_array_append(attackers_arr, attacker_json);
@@ -324,7 +338,45 @@ bool attacked_user_t::initialize(const sip_dataholder_t *sip_data)
    m_breacher = NULL;
    m_first_action = m_last_action = sip_data->time_stamp;
    m_breach_time = 0;
+   m_event_id = 0;
    return true;
+}
+
+void attacked_user_t::create_event_id()
+{
+   if (m_event_id == 0) {
+      char time_str[32];
+      const time_t time = m_first_action;
+      uint16_t min_sec = 0;
+      strftime(time_str, 31, "%F %T", gmtime(&time));
+      time_str[4] = time_str[7] = time_str[10] = time_str[13] = time_str[16] = time_str[19] = '\0';
+      m_event_id = (uint64_t) atoi(time_str);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 5);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 8);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 11);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 14);
+      m_event_id *= 100;
+      min_sec = ((uint16_t) (atoi(time_str + 14) * 100));
+      m_event_id += (uint64_t) atoi(time_str + 17);
+      m_event_id *= 10000;
+      min_sec += (uint16_t) atoi(time_str + 17);
+      if (min_sec == g_min_sec) {
+         g_event_row++;
+         m_event_id += g_event_row;
+      } else {
+         g_event_row = 0;
+         g_min_sec = min_sec;
+      }
+
+      m_event_id *= 10;
+      m_event_id++;
+   } else {
+      m_obsolete_id = m_event_id++;
+   }
 }
 
 int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked_server_t *server)
@@ -394,7 +446,9 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
       m_breach_time = sip_data->time_stamp;
 
       // generate alert of type #2 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
-      if (m_attack_total_count >= g_alert_threshold) {
+      if (m_attack_total_count >= g_alert_threshold && g_skip_alerts < 2) {
+         m_reported = true;
+         create_event_id();
          if (!generate_alert(server, this)) {
             VERBOSE("Error: generate_alert failed.\n")
             return -1;
@@ -406,8 +460,9 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
       m_attack_total_count++;
 
       // generate alert of type #1 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
-      if (m_attack_total_count >= g_alert_threshold && m_reported == false) {
+      if (m_attack_total_count >= g_alert_threshold && m_reported == false && g_skip_alerts == 0) {
          m_reported = true;
+         create_event_id();
          if (!generate_alert(server, this)) {
             VERBOSE("Error: generate_alert failed.\n")
             return -1;
@@ -497,6 +552,7 @@ bool attacked_server_t::free_unused_users(time_t time_actual)
 
          // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
          if (user->m_attack_total_count >= g_alert_threshold) {
+            user->create_event_id();
             if (!generate_alert(this, user)) {
                VERBOSE("Error: generate_alert failed.\n")
                b_plus_tree_destroy_list_item(b_item);
@@ -539,6 +595,7 @@ bool attacked_server_t::destroy(void)
 
       // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
       if (user->m_attack_total_count >= g_alert_threshold) {
+         user->create_event_id();
          if (!generate_alert(this, user)) {
             VERBOSE("Error: generate_alert failed.\n")
             b_plus_tree_destroy_list_item(b_item);
@@ -774,8 +831,6 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
-         
-         g_alert_threshold <<= 1;
          break;
 
       case 'c':
@@ -790,6 +845,14 @@ int main(int argc, char **argv)
          sscanf(optarg,"%"SCNu64"", &g_free_mem_interval);
          if (g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory deallocation after last attack action.\n");
+            goto cleanup;
+         }
+         break;
+
+      case 's':
+         sscanf(optarg,"%"SCNu8"", &g_skip_alerts);
+         if (g_skip_alerts > 2) {
+            fprintf(stderr, "Error: wrong value of parameter s. Must be 0, 1, or 2.\n");
             goto cleanup;
          }
          break;
@@ -837,7 +900,7 @@ int main(int argc, char **argv)
 
       msg_type = ur_get(in_tmplt, in_rec, F_SIP_MSG_TYPE);
       sip_data->status_code = ur_get(in_tmplt, in_rec, F_SIP_STATUS_CODE);
-      if (!(msg_type == SIP_MSG_TYPE_STATUS && (sip_data->status_code == SIP_STATUS_FORBIDDEN || sip_data->status_code == SIP_STATUS_OK || sip_data->status_code == SIP_STATUS_UNAUTHORIZED))) {
+      if (!(msg_type == SIP_MSG_TYPE_STATUS && (sip_data->status_code == SIP_STATUS_OK || sip_data->status_code == SIP_STATUS_UNAUTHORIZED))) {
          free(sip_data);
          continue;
       }
