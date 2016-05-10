@@ -121,4 +121,4 @@ Additional parameters ensure that:
 No special compilation parameters are needed. For linking add -ltrap -lunirec -lnemea-common
 (the module must be compiled as a part of [NEMEA](https://github.com/CESNET/Nemea) repository or using installed libtrap-devel and unirec packages).
 
-Doxygen documentation can be generated with `make doxygen` command.
+Doxygen documentation can be generated with `make doc` command.
