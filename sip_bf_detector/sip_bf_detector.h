@@ -90,13 +90,13 @@ using namespace std;
    printf(__VA_ARGS__); \
 }
 
-struct attacked_server_t;
+struct AttackedServer;
 
 /**
  * Structure designed to hold all important information
  * about currently processed message.
  */
-struct sip_dataholder_t {
+struct SipDataholder {
    bool ipv4;                             ///< flag signalizing whether used protocol is IPv4 or IPv6
    int sip_from_len;                      ///< length of user name
    int tree_key_length;                   ///< length of key used in b+ trees (depends on IP version)
@@ -116,7 +116,7 @@ struct sip_dataholder_t {
  * Structure representing an attacker trying to
  * brute-force password of a certain user.
  */
-struct attacker_t {
+struct Attacker {
    /**
     * Initialize data in the structure to default values.
     *
@@ -140,28 +140,35 @@ struct attacker_t {
  * Structure representing a user that is under
  * ongoing brute-force attack.
  */
-struct attacked_user_t {
+struct AttackedUser {
    /**
     * Initialize data in the structure to default values.
     *
-    * \param[in] sip_data pointer to sip_dataholder_t structure 
+    * \param[in] sip_data pointer to SipDataholder structure 
                           with information about currently processed message
     * \return true - initialization was successful, false - error occurred
     */
-   bool initialize(const sip_dataholder_t *sip_data);
+   bool initialize(const SipDataholder *sip_data);
 
    /**
     * Insert attack attempt to the b+ tree of attackers.
     * Generate alert if security was breached or the count of attack messages
     * exceeded the threshold.
     *
-    * \param[in] sip_data pointer to sip_dataholder_t structure
+    * \param[in] sip_data pointer to SipDataholder structure
                           with information about currently processed message
     * \param[in] server pointer to a server on which current user can be found
     * \return 0 - attack was added successfully, 1 - error occurred
     */
-   int add_attack(const sip_dataholder_t *sip_data, const attacked_server_t *server);
+   int add_attack(const SipDataholder *sip_data, const AttackedServer *server);
 
+   /**
+    * \brief Generate alert string in JSON format and send it to the output interface.
+    *
+    * \param[in] server pointer to the server structure where the user exists
+    * \return true - alert generated successfully, false - error occurred
+    */
+   bool generate_alert(const AttackedServer *server);
    /**
     * Free allocated memory.
     *
@@ -176,7 +183,7 @@ struct attacked_user_t {
    void create_event_id();
 
    char *m_user_name;               ///< user name
-   void *m_attackers_tree;          ///< pointer to a b+ tree containing attacker_t structures
+   void *m_attackers_tree;          ///< pointer to a b+ tree containing Attacker structures
    char *m_breacher;                ///< IP address of breacher
    bool m_breached;                 ///< flag signalizing whether password is breached
    bool m_reported;                 ///< flag signalizing whether this attack has already been reported
@@ -193,7 +200,7 @@ struct attacked_user_t {
  * Structure representing a server with users which are under
  * ongoing brute-force attack.
  */
-struct attacked_server_t {
+struct AttackedServer {
    /**
     * Initialize data in the structure to default values.
     *
@@ -219,7 +226,7 @@ struct attacked_server_t {
     */
    bool destroy(void);
 
-   void *m_user_tree;        ///< pointer to a b+ tree containing attacked_user_t structures
+   void *m_user_tree;        ///< pointer to a b+ tree containing AttackedUser structures
    char *m_ip_addr;          ///< IP address of the server in human readable format
    uint8_t m_link_bit_field; ///< indicator of particular monitoring probe
    uint8_t m_protocol;       ///< sip protocol used for data transfer
