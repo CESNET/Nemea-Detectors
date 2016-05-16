@@ -71,7 +71,7 @@ UR_FIELDS (
    uint16 DST_PORT,
    uint8 TUNNEL_TYPE,
    string DNS_NAME,
-   bytes DNS_RDATA,
+   string DNS_RDATA,
    string SDM_CAPTURE_FILE_ID,
    string TUNNEL_DOMAIN
 )
