@@ -51,6 +51,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
+#include <unistd.h>
 #include "tunnel_detection_dns.h"
 #include "parser_pcap_dns.h"
 #include "fields.h"
@@ -105,7 +106,8 @@ There can be two output interfaces. First output interface sends alerts from the
   PARAM('q', "searching", "Max and Min percent of searching just ones [MAX, MIN].", required_argument, "string") \
   PARAM('t', "max_round", "MAX round in SUSPICION MODE and ATTACK MODE [SUSPICION, ATTACK]", required_argument, "string") \
   PARAM('w', "tunnel_length", "MIN length of string to be tunnel [MIN].", required_argument, "int32") \
-  PARAM('z', "collect_length", "Length of collecting packets before analysis in sec [time in sec]", required_argument, "int32")
+  PARAM('z', "collect_length", "Length of collecting packets before analysis in sec [time in sec]", required_argument, "int32") \
+  PARAM('E', "file_event_id", "Path to file with last used event id (Id of an alert). Default path is /data/dnstunnel_tunnel/event_id.txt", required_argument, "string")
 
 static int stop = 0;
 static int stats = 0;
@@ -1861,11 +1863,17 @@ unsigned int read_event_id_from_file(char * file_name)
 
    if (fp == NULL)
    {
-      fprintf(stderr, "Error while opening the file with last event ID.\nThe file will be created, last event_id = 0.\n");
-      return 0;
+      if( access(file_name, F_OK) != -1 ) {
+         // file exists
+         fprintf(stderr, "Warning: File with last event ID (%s) exists, but it could not be opened. Last event_id = 0.\n", file_name);
+         return 0;
+      } else {
+         fprintf(stderr, "Warning: File with last event ID (%s) does not exists. The file will be created, last event_id = 0.\n", file_name);
+         return 0;
+      }
    }
    if (fscanf(fp, "%u", &id) == EOF) {
-      fprintf(stderr, "Error while reading the file with last event ID.\nThe file will be rewritten, last event_id = 0.\n");
+      fprintf(stderr, "Warning: File with last event ID (%s) has incorect format. The file will be rewritten, last event_id = 0.\n", file_name);
       fclose(fp);
       return 0;
    }
@@ -1880,7 +1888,7 @@ int write_event_id_to_file(char * file_name, unsigned int event_id)
 
    if (fp == NULL)
    {
-      fprintf(stderr, "Error while creating the file with last event ID.\n Last ID: %u, will not be saved", event_id);
+      fprintf(stderr, "Waring: File with last event ID (%s) could not be written. Last ID: %u, will not be saved. \n P",file_name, event_id);
       return 0;
    }
    fprintf(fp, "%u\n",event_id);
@@ -1926,6 +1934,7 @@ void load_default_values()
    values.max_percent_of_unique_domains_closer = MAX_PERCENT_OF_UNIQUE_DOMAINS_CLOSER;
    values.sdm_timeout = SDM_TIMEOUT;
    values.sdm_count_of_packets = SDM_COUNT_OF_PACKETS;
+   values.file_name_event_id = NULL;
 }
 
 int main(int argc, char **argv)
@@ -2091,6 +2100,9 @@ int main(int argc, char **argv)
                goto failed_trap;
             }
             break;
+          case 'E':
+            values.file_name_event_id = optarg;
+            break;
          case 'i':
             file_or_port |= READ_FROM_UNIREC;
             break;
@@ -2114,7 +2126,7 @@ int main(int argc, char **argv)
       }
       // Count number of output interfaces
       n_outputs = strlen(ifc_spec.types) - 1;
-      module_info->num_ifc_out = n_outputs;
+
       printf("Output interfaces: %d\n", n_outputs);
 
       // Number of output interfaces exceeds TRAP limit
@@ -2188,7 +2200,7 @@ int main(int argc, char **argv)
       //trap_finalize();
       //return 4;
    }
-   values.event_id_counter = read_event_id_from_file(FILE_NAME_EVENT_ID);
+   values.event_id_counter = read_event_id_from_file(values.file_name_event_id == NULL ? FILE_NAME_EVENT_ID : values.file_name_event_id);
    //add domain exceptions to prefix tree, if the file is specified
    if (exception_file_domain != NULL) {
       int sign;
@@ -2756,7 +2768,7 @@ int main(int argc, char **argv)
       write_summary_result(record_folder_name, histogram_dns_requests, histogram_dns_response);
       write_detail_result(record_folder_name, btree, 2);
    }
-   write_event_id_to_file(FILE_NAME_EVENT_ID, values.event_id_counter);
+   write_event_id_to_file(values.file_name_event_id == NULL ? FILE_NAME_EVENT_ID : values.file_name_event_id, values.event_id_counter);
    // ***** Cleanup *****
    //clean values in b plus tree
    if (result_file != NULL) {

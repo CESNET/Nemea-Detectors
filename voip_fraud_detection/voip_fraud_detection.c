@@ -71,14 +71,17 @@ UR_FIELDS (
    uint32 EVENT_ID,
    uint8 EVENT_TYPE,
    time DETECTION_TIME,
-   time TIME_FIRST
+   time TIME_FIRST,
+   uint64 INVITE_CNT
+   uint64 CALLER_CNT
+   uint64 CALLEE_CNT
 )
 
 /** \brief Struct with information about module. */
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,1)
+  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,-1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('l', "log_file", "Path to a log file.", required_argument, "string") \
@@ -367,7 +370,8 @@ void get_string_from_unirec(char * string_output, int * string_len, int unirec_f
 int main(int argc, char **argv)
 {
    int ret;
-
+   time_t time_last_stats = 0;
+   uint64_t callee_count = 0, caller_count = 0;
    // ***** TRAP initialization *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -645,6 +649,10 @@ int main(int argc, char **argv)
 
    // ***** Main processing loop of module *****
 
+   ur_template_t *sdmout_tmpl = ur_create_output_template(1, "INVITE_CNT,CALLER_CNT,CALLEE_CNT", NULL);
+
+   void *smdout_rec = ur_create_record(sdmout_tmpl, 0);
+
    while (!stop) {
 
       uint16_t in_rec_size;
@@ -898,7 +906,6 @@ int main(int argc, char **argv)
 
                // is source IP in hash table?
                if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) == NULL) {
-
                   /* IP address not found in hash table */
 
                   // if it isn't INVITE request, don't create item in hash table
@@ -906,6 +913,7 @@ int main(int argc, char **argv)
 
                   // create hash_table_item
                   hash_table_item = (ip_item_t *) malloc(sizeof (ip_item_t));
+                  caller_count++;
 
                   // check successful allocation memory
                   if (hash_table_item == NULL) {
@@ -993,6 +1001,9 @@ int main(int argc, char **argv)
                   if (prefix_tree_node == NULL) {
                      PRINT_ERR("prefix_tree_insert: Error memory allocation\n");
                      continue;
+                  } else if (prefix_tree_node->count_of_insert == 1) {
+                     //new callee
+                     callee_count++;
                   }
                } else {
                   // search sip_to in prefix tree
@@ -1146,9 +1157,38 @@ int main(int argc, char **argv)
             }
 
          }
-
+      }
+      if (module_info->num_ifc_out == 2) {
+         if (time(NULL) - time_last_stats > STATS_TIME_INTERVAL) {
+            /*
+             * Retrieve and send statistics via statistics interface.
+             * This is used for visualisation in SDM demo.
+             */
+#ifdef DEBUG
+            printf("\n\nStatistics\n\n");
+#endif
+            ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
+            /* caller_count from hash table?*/
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, caller_count);
+            /* sum of callee from every suffix tree?*/
+            ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, callee_count);
+            trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
+            time(&time_last_stats);
+         }
       }
 
+   }
+   if (module_info->num_ifc_out == 2) {
+      /*
+       * Retrieve and send statistics via statistics interface.
+       * This is used for visualisation in SDM demo.
+       */
+      ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
+      /* caller_count from hash table?*/
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, caller_count);
+      /* sum of callee from every suffix tree?*/
+      ur_set(sdmout_tmpl, smdout_rec, F_CALLEE_CNT, callee_count);
+      trap_send(1, smdout_rec, ur_rec_size(sdmout_tmpl, smdout_rec));
    }
 
    // print statistics of module
@@ -1210,7 +1250,9 @@ int main(int argc, char **argv)
    // destroy templates (free memory)
    ur_free_template(ur_template_in);
    ur_free_template(ur_template_out);
+   ur_free_template(sdmout_tmpl);
    ur_free_record(detection_record);
+   ur_free_record(smdout_rec);
 
    PRINT_OUT_LOG("... VoIP fraud detection module exit! (version:", MODULE_VERSION, ")\n");
    PRINT_OUT_LOG("-----------------------------------------------------\n");

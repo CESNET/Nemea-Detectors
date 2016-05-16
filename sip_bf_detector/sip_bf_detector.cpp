@@ -63,14 +63,18 @@ trap_module_info_t *module_info = NULL;
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack (20 by default).", required_argument, "uint64") \
-   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (120 by default).", required_argument, "uint64") \
-   PARAM('f', "free_mem_int", "Number of seconds after the last action to consider attack as ceased (2400 by default).", required_argument, "uint64")
+   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (300 by default).", required_argument, "uint64") \
+   PARAM('f', "free_mem_delay", "Number of seconds after the last action to consider attack as ceased (1800 by default).", required_argument, "uint64") \
+   PARAM('s', "skip_alert", "Stop generating alerts of type #1 (-s 1) or both alerts of type #1 and #2 (-s 2) (0 by default).", required_argument, "uint8")
 
 static int stop = 0;
 int verbose;
-uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD * 2;
+uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
 uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
+uint8_t g_skip_alerts = 0;
+uint16_t g_min_sec = 0;
+uint16_t g_event_row = 0;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -136,7 +140,7 @@ int compare_ipv6(void * a, void * b)
  *
  * \param[in] actual_time time stamp of currently processed message
  * \param[in] key_length length of keys used in b+ tree
- * \param[in,out] server_tree pointer to the b+ tree of attacked_server_t structures
+ * \param[in,out] server_tree pointer to the b+ tree of AttackedServer structures
  * \return true - memory deallocation was successful, false - error occurred
  */
 bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tree)
@@ -158,7 +162,7 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
 
       is_there_next = b_plus_tree_get_list(server_tree, b_item);
       while (is_there_next == 1) {
-         attacked_server_t *server = (attacked_server_t *) (b_item->value);
+         AttackedServer *server = (AttackedServer *) (b_item->value);
 
          // free structures of users who are no longer under attack
          if (!server->free_unused_users(time_actual)) {
@@ -184,87 +188,8 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
    return true;
 }
 
-/**
- * \brief Generate alert string in JSON format and send it to the output interface.
- *
- * \param[in] server pointer to the server structure where the user exists
- * \param[in] user pointer to the user structure
- * \return true - alert generated successfully, false - error occurred
- */
-bool generate_alert(const attacked_server_t *server, const attacked_user_t *user)
-{
-   char *s = NULL;
-   json_t *root = json_object();
-   json_t *attackers_arr = json_array();
-   int breached = user->m_breached ? 1 : 0;
-   const char *breacher = user->m_breacher ? user->m_breacher : "";
-   char time_first[32];
-   char time_breach[32];
-   char time_last[32];
-   const time_t tf = user->m_first_action;
-   const time_t tl = user->m_last_action;
-   const time_t tb = user->m_breached ? user->m_breach_time : 0;
-
-   // generate time in human readable format
-   strftime(time_first, 31, "%F %T", gmtime(&tf));
-   strftime(time_last, 31, "%F %T", gmtime(&tl));
-   strftime(time_breach, 31, "%F %T", gmtime(&tb));
-   time_first[31] = time_last[31] = time_breach[31] = '\0';
-
-   // Create JSON objects
-   json_object_set_new(root, "TargetIP", json_string(server->m_ip_addr));
-   json_object_set_new(root, "SIPTo", json_string(user->m_user_name));
-   json_object_set_new(root, "AttemptCount", json_integer(user->m_attack_total_count / 2));
-   json_object_set_new(root, "EventTime", json_string(time_first));
-   json_object_set_new(root, "CeaseTime", json_string(time_last));
-   json_object_set_new(root, "Breach", json_integer(breached));
-   json_object_set_new(root, "BreacherIP", json_string(breacher));
-   json_object_set_new(root, "BreachTime", json_string(time_breach));
-   json_object_set_new(root, "Sources", attackers_arr);
-
-   int is_there_next;
-   b_plus_tree_item *b_item;
-
-   b_item = b_plus_tree_create_list_item(user->m_attackers_tree);
-   if (!b_item) {
-      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
-      return false;
-   }
-
-   is_there_next = b_plus_tree_get_list(user->m_attackers_tree, b_item);
-   while (is_there_next == 1) {
-      attacker_t *attacker = (attacker_t *) (b_item->value);
-      json_t *attacker_json = json_object();
-      char attack_start[32];
-      const time_t atf = attacker->m_start;
-
-      strftime(attack_start, 31, "%F %T", gmtime(&atf));
-      attack_start[31] = '\0';
-
-      json_object_set_new(attacker_json, "SourceIP", json_string(attacker->m_ip_addr));
-      json_object_set_new(attacker_json, "AttemptCount", json_integer(attacker->m_count / 2));
-      json_object_set_new(attacker_json, "EventTime", json_string(attack_start));
-
-      json_array_append(attackers_arr, attacker_json);
-      json_decref(attacker_json);
-      is_there_next = b_plus_tree_get_next_item_from_list(user->m_attackers_tree, b_item);
-   }
-
-   b_plus_tree_destroy_list_item(b_item);
-
-   // generate alert string
-   s = json_dumps(root, 0);
-   json_decref(root);
-
-   // send alert to the output interface
-   int ret = trap_send(0, s, strlen(s));
-   free(s);
-   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, return true, return false);
-   return true;
-}
-
-/* ***************  attacker_t  *************** */
-bool attacker_t::initialize(const ip_addr_t *ip_addr, ur_time_t start_time)
+/* ***************  Attacker  *************** */
+bool Attacker::initialize(const ip_addr_t *ip_addr, ur_time_t start_time)
 {
    // create a local copy of IP address in human readable format
    m_ip_addr = (char *) malloc(INET6_ADDRSTRLEN + 1);
@@ -280,14 +205,14 @@ bool attacker_t::initialize(const ip_addr_t *ip_addr, ur_time_t start_time)
    return true;
 }
 
-void attacker_t::destroy(void)
+void Attacker::destroy(void)
 {
    free(m_ip_addr);
 }
 
-/* ***************  attacked_user_t  *************** */
+/* ***************  AttackedUser  *************** */
 
-bool attacked_user_t::initialize(const sip_dataholder_t *sip_data)
+bool AttackedUser::initialize(const SipDataholder *sip_data)
 {
    m_ipv4 = sip_data->ipv4;
 
@@ -301,7 +226,7 @@ bool attacked_user_t::initialize(const sip_dataholder_t *sip_data)
    memcpy(m_user_name, sip_data->sip_from, sip_data->sip_from_len);
 
    // initialize b+ tree of attackers
-   m_attackers_tree = b_plus_tree_initialize(5, sip_data->comp_func, sizeof(attacker_t), sip_data->tree_key_length);
+   m_attackers_tree = b_plus_tree_initialize(5, sip_data->comp_func, sizeof(Attacker), sip_data->tree_key_length);
    if (!m_attackers_tree) {
       fprintf(stderr, "Error: b_plus_tree_initialize returned NULL.\n");
       return false;
@@ -311,10 +236,143 @@ bool attacked_user_t::initialize(const sip_dataholder_t *sip_data)
    m_breacher = NULL;
    m_first_action = m_last_action = sip_data->time_stamp;
    m_breach_time = 0;
+   m_event_id = 0;
    return true;
 }
 
-int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked_server_t *server)
+void AttackedUser::create_event_id()
+{
+   if (m_event_id == 0) {
+      char time_str[32];
+      const time_t time = m_first_action;
+      uint16_t min_sec = 0;
+      strftime(time_str, 31, "%F %T", gmtime(&time));
+      time_str[4] = time_str[7] = time_str[10] = time_str[13] = time_str[16] = time_str[19] = '\0';
+      m_event_id = (uint64_t) atoi(time_str);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 5);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 8);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 11);
+      m_event_id *= 100;
+      m_event_id += (uint64_t) atoi(time_str + 14);
+      m_event_id *= 100;
+      min_sec = ((uint16_t) (atoi(time_str + 14) * 100));
+      m_event_id += (uint64_t) atoi(time_str + 17);
+      m_event_id *= 10000;
+      min_sec += (uint16_t) atoi(time_str + 17);
+      if (min_sec == g_min_sec) {
+         g_event_row++;
+         m_event_id += g_event_row;
+      } else {
+         g_event_row = 0;
+         g_min_sec = min_sec;
+      }
+
+      m_event_id *= 10;
+      m_event_id++;
+   } else {
+      m_obsolete_id = m_event_id++;
+   }
+}
+
+bool AttackedUser::generate_alert(const AttackedServer *server)
+{
+   char *s = NULL;
+   json_t *root = json_object();
+   json_t *attackers_arr = json_array();
+   char time_first[32];
+   char time_breach[32];
+   char time_last[32];
+   ostringstream ss;
+   const time_t tf = m_first_action;
+   const time_t tl = m_last_action;
+   const time_t tb = m_breached ? m_breach_time : 0;
+   ss << m_event_id;
+   // generate time in human readable format
+   strftime(time_first, 31, "%F %T", gmtime(&tf));
+   strftime(time_last, 31, "%F %T", gmtime(&tl));
+   strftime(time_breach, 31, "%F %T", gmtime(&tb));
+   time_first[31] = time_last[31] = time_breach[31] = '\0';
+
+   // Create JSON objects
+   json_object_set_new(root, "EventID", json_string(ss.str().c_str()));
+   if (m_obsolete_id == 0) {
+      json_object_set_new(root, "ObsoleteID", json_null());
+   } else {
+      ss.str(string());
+      ss.clear();
+      ss << m_obsolete_id;
+      json_object_set_new(root, "ObsoleteID", json_string(ss.str().c_str()));
+   }
+   json_object_set_new(root, "TargetIP", json_string(server->m_ip_addr));
+   json_object_set_new(root, "SIPTo", json_string(m_user_name));
+   json_object_set_new(root, "AttemptCount", json_integer(m_attack_total_count));
+   json_object_set_new(root, "EventTime", json_string(time_first));
+   json_object_set_new(root, "CeaseTime", json_string(time_last));
+   json_object_set_new(root, "LinkBitField", json_integer(server->m_link_bit_field));
+   if (m_breached) {
+      json_object_set_new(root, "Breach", json_true());
+      json_object_set_new(root, "BreacherIP", json_string(m_breacher));
+      json_object_set_new(root, "BreachTime", json_string(time_breach));
+   } else {
+      json_object_set_new(root, "Breach", json_false());
+      json_object_set_new(root, "BreacherIP", json_null());
+      json_object_set_new(root, "BreachTime", json_null());
+   }   
+
+   json_object_set_new(root, "Sources", attackers_arr);
+   if (server->m_protocol == PROTOCOL_TCP) {
+      json_object_set_new(root, "Protocol", json_string("TCP"));
+   } else if (server->m_protocol == PROTOCOL_UDP) {
+      json_object_set_new(root, "Protocol", json_string("UDP"));
+   } else {
+      json_object_set_new(root, "Protocol", json_string("unknown"));
+   }
+
+   int is_there_next;
+   b_plus_tree_item *b_item;
+
+   b_item = b_plus_tree_create_list_item(m_attackers_tree);
+   if (!b_item) {
+      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+      return false;
+   }
+
+   is_there_next = b_plus_tree_get_list(m_attackers_tree, b_item);
+   while (is_there_next == 1) {
+      Attacker *attacker = (Attacker *) (b_item->value);
+      json_t *attacker_json = json_object();
+      char attack_start[32];
+      const time_t atf = attacker->m_start;
+
+      strftime(attack_start, 31, "%F %T", gmtime(&atf));
+      attack_start[31] = '\0';
+
+      json_object_set_new(attacker_json, "SourceIP", json_string(attacker->m_ip_addr));
+      json_object_set_new(attacker_json, "AttemptCount", json_integer(attacker->m_count));
+      json_object_set_new(attacker_json, "EventTime", json_string(attack_start));
+
+      json_array_append(attackers_arr, attacker_json);
+      json_decref(attacker_json);
+      is_there_next = b_plus_tree_get_next_item_from_list(m_attackers_tree, b_item);
+   }
+
+   b_plus_tree_destroy_list_item(b_item);
+
+   // generate alert string
+   s = json_dumps(root, 0);
+   json_decref(root);
+
+   // send alert to the output interface
+   int ret = trap_send(0, s, strlen(s));
+   free(s);
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, return true, return false);
+   return true;
+}
+
+int AttackedUser::add_attack(const SipDataholder *sip_data, const AttackedServer *server)
 {
    void *tree_key;
    uint32_t dst_ip;
@@ -328,7 +386,7 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
    }
 
    // check whether key already exists in the tree
-   attacker_t *attacker = (attacker_t *) b_plus_tree_search(m_attackers_tree, tree_key);
+   Attacker *attacker = (Attacker *) b_plus_tree_search(m_attackers_tree, tree_key);
    if (!attacker) {
       // if the key does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -336,7 +394,7 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
       }
 
       // create a node representing new attacker and initialize it
-      attacker = (attacker_t *) b_plus_tree_insert_item(m_attackers_tree, tree_key);
+      attacker = (Attacker *) b_plus_tree_insert_item(m_attackers_tree, tree_key);
       if (!attacker) {
          char ip_str[INET6_ADDRSTRLEN + 1];
          ip_to_str(sip_data->ip_dst, ip_str);
@@ -381,8 +439,10 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
       m_breach_time = sip_data->time_stamp;
 
       // generate alert of type #2 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
-      if (m_attack_total_count >= g_alert_threshold) {
-         if (!generate_alert(server, this)) {
+      if (m_attack_total_count >= g_alert_threshold && g_skip_alerts < 2) {
+         m_reported = true;
+         create_event_id();
+         if (!generate_alert(server)) {
             VERBOSE("Error: generate_alert failed.\n")
             return -1;
          }
@@ -393,9 +453,10 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
       m_attack_total_count++;
 
       // generate alert of type #1 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
-      if (m_attack_total_count >= g_alert_threshold && m_reported == false) {
+      if (m_attack_total_count >= g_alert_threshold && m_reported == false && g_skip_alerts == 0) {
          m_reported = true;
-         if (!generate_alert(server, this)) {
+         create_event_id();
+         if (!generate_alert(server)) {
             VERBOSE("Error: generate_alert failed.\n")
             return -1;
          }
@@ -409,7 +470,7 @@ int attacked_user_t::add_attack(const sip_dataholder_t *sip_data, const attacked
    return 0;
 }
 
-bool attacked_user_t::destroy(void)
+bool AttackedUser::destroy(void)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
@@ -423,7 +484,7 @@ bool attacked_user_t::destroy(void)
 
    is_there_next = b_plus_tree_get_list(m_attackers_tree, b_item);
    while (is_there_next == 1) {
-      attacker_t *attacker = (attacker_t *) (b_item->value);
+      Attacker *attacker = (Attacker *) (b_item->value);
 
       // free allocated memory associated with attacker
       attacker->destroy();
@@ -437,9 +498,9 @@ bool attacked_user_t::destroy(void)
    return true;
 }
 
-/* ***************  attacked_server_t  *************** */
+/* ***************  AttackedServer  *************** */
 
-bool attacked_server_t::initialize(const ip_addr_t *ip_addr)
+bool AttackedServer::initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field, uint8_t protocol)
 {
    // create a local copy of IP address in human readable format
    m_ip_addr = (char *) malloc(INET6_ADDRSTRLEN + 1);
@@ -450,9 +511,11 @@ bool attacked_server_t::initialize(const ip_addr_t *ip_addr)
 
    ip_to_str(ip_addr, m_ip_addr);
    m_ip_addr[INET6_ADDRSTRLEN] = '\0';
+   m_link_bit_field = link_bit_field;
+   m_protocol = protocol;
 
    // initialize b+ tree of users
-   m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(attacked_user_t), MAX_LENGTH_SIP_FROM);
+   m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(AttackedUser), MAX_LENGTH_SIP_FROM);
    if (!m_user_tree) {
       fprintf(stderr, "Error: b_plus_tree_initialize returned NULL.\n");
       return false;
@@ -461,7 +524,7 @@ bool attacked_server_t::initialize(const ip_addr_t *ip_addr)
    return true;
 }
 
-bool attacked_server_t::free_unused_users(time_t time_actual)
+bool AttackedServer::free_unused_users(time_t time_actual)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
@@ -475,14 +538,15 @@ bool attacked_server_t::free_unused_users(time_t time_actual)
 
    is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
    while (is_there_next == 1) {
-      attacked_user_t *user = (attacked_user_t *) (b_item->value);
+      AttackedUser *user = (AttackedUser *) (b_item->value);
 
       // if time from last attack message targeted against this user exceeded threshold
       if (((uint64_t) abs(time_actual - user->m_last_action)) > g_free_mem_interval) {
 
          // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
          if (user->m_attack_total_count >= g_alert_threshold) {
-            if (!generate_alert(this, user)) {
+            user->create_event_id();
+            if (!user->generate_alert(this)) {
                VERBOSE("Error: generate_alert failed.\n")
                b_plus_tree_destroy_list_item(b_item);
                return false;
@@ -506,7 +570,7 @@ bool attacked_server_t::free_unused_users(time_t time_actual)
    return true;
 }
 
-bool attacked_server_t::destroy(void)
+bool AttackedServer::destroy(void)
 {
    int is_there_next;
    b_plus_tree_item *b_item;
@@ -520,11 +584,12 @@ bool attacked_server_t::destroy(void)
 
    is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
    while (is_there_next == 1) {
-      attacked_user_t *user = (attacked_user_t *) (b_item->value);
+      AttackedUser *user = (AttackedUser *) (b_item->value);
 
       // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
       if (user->m_attack_total_count >= g_alert_threshold) {
-         if (!generate_alert(this, user)) {
+         user->create_event_id();
+         if (!user->generate_alert(this)) {
             VERBOSE("Error: generate_alert failed.\n")
             b_plus_tree_destroy_list_item(b_item);
             return false;
@@ -550,10 +615,10 @@ bool attacked_server_t::destroy(void)
 /**
  * \brief Insert attack attempt to b+ trees.
  *
- * \param[in] sip_data pointer to sip_dataholder_t structure
+ * \param[in] sip_data pointer to SipDataholder structure
  * \return 0 if attack attempt was inserted successfully, -1 otherwise
  */
-int insert_attack_attempt(const sip_dataholder_t *sip_data)
+int insert_attack_attempt(const SipDataholder *sip_data)
 {
    void *tree_key;
    uint32_t src_ip;
@@ -567,7 +632,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
    }
 
    // check whether key already exists in the tree
-   attacked_server_t *server = (attacked_server_t *) b_plus_tree_search(sip_data->tree, tree_key);
+   AttackedServer *server = (AttackedServer *) b_plus_tree_search(sip_data->tree, tree_key);
    if (!server) {
       // if the key does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -575,7 +640,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
       }
 
       // create a node representing new server and initialize it
-      server = (attacked_server_t *) b_plus_tree_insert_item(sip_data->tree, tree_key);
+      server = (AttackedServer *) b_plus_tree_insert_item(sip_data->tree, tree_key);
       if (!server) {
          char ip_str[INET6_ADDRSTRLEN + 1];
          ip_to_str(sip_data->ip_src, ip_str);
@@ -583,7 +648,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
          VERBOSE("Error: unable to insert IP: %s to b+ tree.\n", ip_str)
          return -1;
       } else {
-         if (!server->initialize(sip_data->ip_src)) {
+         if (!server->initialize(sip_data->ip_src, sip_data->link_bit_field, sip_data->protocol)) {
             VERBOSE("Error: server initialization failed.\n")
             return -1;
          }
@@ -600,7 +665,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
    memcpy(user_name_tmp, sip_data->sip_from, sip_data->sip_from_len);
 
    // check whether user already exists on this server
-   attacked_user_t *user = (attacked_user_t *) b_plus_tree_search(server->m_user_tree, user_name_tmp);
+   AttackedUser *user = (AttackedUser *) b_plus_tree_search(server->m_user_tree, user_name_tmp);
    if (!user) {
       // if the user does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -609,7 +674,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
       }
 
       // create a node representing new user and initialize it
-      user = (attacked_user_t *) b_plus_tree_insert_item(server->m_user_tree, user_name_tmp);
+      user = (AttackedUser *) b_plus_tree_insert_item(server->m_user_tree, user_name_tmp);
       if (!user) {
          VERBOSE("Warning: unable to insert user: %s to b+ tree.\n", user_name_tmp)
          free(user_name_tmp);
@@ -634,7 +699,7 @@ int insert_attack_attempt(const sip_dataholder_t *sip_data)
 }
 
 /**
- * \brief Destroy all attacked_server_t structures in the tree and the tree itself.
+ * \brief Destroy all AttackedServer structures in the tree and the tree itself.
  *
  * \param[in] tree pointer to the b+ tree
  */
@@ -647,9 +712,9 @@ void destroy_tree(void *tree)
    b_item = b_plus_tree_create_list_item(tree);
    is_there_next = b_plus_tree_get_list(tree, b_item);
    while (is_there_next == 1) {
-      attacked_server_t *server = (attacked_server_t *) (b_item->value);
+      AttackedServer *server = (AttackedServer *) (b_item->value);
 
-      // destroy attacked_server_t
+      // destroy AttackedServer
       server->destroy();
       is_there_next = b_plus_tree_get_next_item_from_list(tree, b_item);
    }
@@ -759,8 +824,6 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
-         
-         g_alert_threshold <<= 1;
          break;
 
       case 'c':
@@ -779,6 +842,14 @@ int main(int argc, char **argv)
          }
          break;
 
+      case 's':
+         sscanf(optarg,"%"SCNu8"", &g_skip_alerts);
+         if (g_skip_alerts > 2) {
+            fprintf(stderr, "Error: wrong value of parameter s. Must be 0, 1, or 2.\n");
+            goto cleanup;
+         }
+         break;
+
       default:
          fprintf(stderr, "Error: unsupported parameter.\n");
          goto cleanup;
@@ -786,14 +857,14 @@ int main(int argc, char **argv)
    }
 
    // initialize IPv4 and IPv6 b+ trees
-   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(attacked_server_t), IP_VERSION_4_BYTES);
-   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(attacked_server_t), IP_VERSION_6_BYTES);
+   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(AttackedServer), IP_VERSION_4_BYTES);
+   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(AttackedServer), IP_VERSION_6_BYTES);
 
    // receive and process data until SIGINT is received or error occurs
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
-      sip_dataholder_t *sip_data;
+      SipDataholder *sip_data;
 
       // receive data
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
@@ -814,7 +885,7 @@ int main(int argc, char **argv)
       }
 
       
-      sip_data = (sip_dataholder_t *) malloc(sizeof(sip_dataholder_t));
+      sip_data = (SipDataholder *) malloc(sizeof(SipDataholder));
       if (!sip_data) {
          fprintf(stderr, "Error: malloc failed.\n");
          break;
@@ -822,12 +893,12 @@ int main(int argc, char **argv)
 
       msg_type = ur_get(in_tmplt, in_rec, F_SIP_MSG_TYPE);
       sip_data->status_code = ur_get(in_tmplt, in_rec, F_SIP_STATUS_CODE);
-      if (!(msg_type == SIP_MSG_TYPE_STATUS && (sip_data->status_code == SIP_STATUS_FORBIDDEN || sip_data->status_code == SIP_STATUS_OK || sip_data->status_code == SIP_STATUS_UNAUTHORIZED))) {
+      if (!(msg_type == SIP_MSG_TYPE_STATUS && (sip_data->status_code == SIP_STATUS_OK || sip_data->status_code == SIP_STATUS_UNAUTHORIZED))) {
          free(sip_data);
          continue;
       }
 
-      // receive and store all vital information about this message to sip_dataholder_t structure
+      // receive and store all vital information about this message to SipDataholder structure
       get_string_from_unirec(F_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM, in_rec, in_tmplt, sip_from_orig, &(sip_data->sip_from_len));
       int invalid_sipfrom = cut_sip_identifier(sip_from_orig, &(sip_data->sip_from_len), &(sip_data->sip_from));
       if (invalid_sipfrom) {
@@ -843,7 +914,8 @@ int main(int argc, char **argv)
          VERBOSE("Warning: null value of IP.\n")
          continue;
       }
-
+      sip_data->link_bit_field = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
+      sip_data->protocol = ur_get(in_tmplt, in_rec, F_PROTOCOL);
       sip_data->time_stamp = ur_time_get_sec((ur_time_t *) ur_get(in_tmplt, in_rec, F_TIME_FIRST));
       sip_data->ipv4 = ip_is4(sip_data->ip_src);
       if (sip_data->ipv4) {

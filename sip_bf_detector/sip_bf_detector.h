@@ -55,12 +55,15 @@
 #include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <sstream>
+#include <string>
 extern "C" {
 #include <b_plus_tree.h>
 }
 
+using namespace std;
+
 #define SIP_MSG_TYPE_STATUS      99
-#define SIP_STATUS_FORBIDDEN     403
 #define SIP_STATUS_UNAUTHORIZED  401
 #define SIP_STATUS_OK            200
 #define MAX_LENGTH_SIP_FROM      100
@@ -68,14 +71,17 @@ extern "C" {
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
 
+#define PROTOCOL_TCP   0x6
+#define PROTOCOL_UDP   0x11
+
 /** \brief Default value of unsuccessful authentication attempts to consider this behaviour as an attack. */
 #define DEFAULT_ALERT_THRESHOLD  20
 
 /** \brief Default time in seconds between checks for ceased attacks. */
-#define CHECK_MEMORY_INTERVAL    120
+#define CHECK_MEMORY_INTERVAL    300
 
 /** \brief Default number of seconds since last action to consider an attack as ceased. */
-#define FREE_MEMORY_INTERVAL     2400
+#define FREE_MEMORY_INTERVAL     1800
 
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
@@ -84,13 +90,13 @@ extern "C" {
    printf(__VA_ARGS__); \
 }
 
-struct attacked_server_t;
+struct AttackedServer;
 
 /**
  * Structure designed to hold all important information
  * about currently processed message.
  */
-struct sip_dataholder_t {
+struct SipDataholder {
    bool ipv4;                             ///< flag signalizing whether used protocol is IPv4 or IPv6
    int sip_from_len;                      ///< length of user name
    int tree_key_length;                   ///< length of key used in b+ trees (depends on IP version)
@@ -99,6 +105,8 @@ struct sip_dataholder_t {
    void *tree;                            ///< pointer to b+ tree of servers (depends on IP version)
    uint16_t msg_type;                     ///< sip message type
    uint16_t status_code;                  ///< sip status code
+   uint8_t link_bit_field;                ///< indicator of particular monitoring probe
+   uint8_t protocol;                      ///< sip protocol used for data transfer
    ur_time_t time_stamp;                  ///< time when the message was received
    ip_addr_t *ip_src;                     ///< IP address of the server
    ip_addr_t *ip_dst;                     ///< IP address of the attacker
@@ -108,7 +116,7 @@ struct sip_dataholder_t {
  * Structure representing an attacker trying to
  * brute-force password of a certain user.
  */
-struct attacker_t {
+struct Attacker {
    /**
     * Initialize data in the structure to default values.
     *
@@ -132,37 +140,50 @@ struct attacker_t {
  * Structure representing a user that is under
  * ongoing brute-force attack.
  */
-struct attacked_user_t {
+struct AttackedUser {
    /**
     * Initialize data in the structure to default values.
     *
-    * \param[in] sip_data pointer to sip_dataholder_t structure 
+    * \param[in] sip_data pointer to SipDataholder structure 
                           with information about currently processed message
     * \return true - initialization was successful, false - error occurred
     */
-   bool initialize(const sip_dataholder_t *sip_data);
+   bool initialize(const SipDataholder *sip_data);
 
    /**
     * Insert attack attempt to the b+ tree of attackers.
     * Generate alert if security was breached or the count of attack messages
     * exceeded the threshold.
     *
-    * \param[in] sip_data pointer to sip_dataholder_t structure
+    * \param[in] sip_data pointer to SipDataholder structure
                           with information about currently processed message
     * \param[in] server pointer to a server on which current user can be found
     * \return 0 - attack was added successfully, 1 - error occurred
     */
-   int add_attack(const sip_dataholder_t *sip_data, const attacked_server_t *server);
+   int add_attack(const SipDataholder *sip_data, const AttackedServer *server);
 
+   /**
+    * \brief Generate alert string in JSON format and send it to the output interface.
+    *
+    * \param[in] server pointer to the server structure where the user exists
+    * \return true - alert generated successfully, false - error occurred
+    */
+   bool generate_alert(const AttackedServer *server);
    /**
     * Free allocated memory.
     *
     * \return true - deallocation ended successfully, false - error occurred
     */
    bool destroy(void);
+   /**
+    * Generate event ID from timestamp of first action. Also set obsolete ID.
+    *
+    * \return true - deallocation ended successfully, false - error occurred
+    */
+   void create_event_id();
 
    char *m_user_name;               ///< user name
-   void *m_attackers_tree;          ///< pointer to a b+ tree containing attacker_t structures
+   void *m_attackers_tree;          ///< pointer to a b+ tree containing Attacker structures
    char *m_breacher;                ///< IP address of breacher
    bool m_breached;                 ///< flag signalizing whether password is breached
    bool m_reported;                 ///< flag signalizing whether this attack has already been reported
@@ -171,20 +192,22 @@ struct attacked_user_t {
    ur_time_t m_breach_time;         ///< time of attack message that breached user's password
    ur_time_t m_last_action;         ///< time of last attack message
    uint64_t m_attack_total_count;   ///< total count of attack messages across all attackers
+   uint64_t m_event_id;             ///< ID of current event in case of generating report
+   uint64_t m_obsolete_id;          ///< event ID in last generated report of this attack
 };
 
 /**
  * Structure representing a server with users which are under
  * ongoing brute-force attack.
  */
-struct attacked_server_t {
+struct AttackedServer {
    /**
     * Initialize data in the structure to default values.
     *
     * \param[in] ip_addr IP address of the server
     * \return true - initialization was successful, false - error occurred
     */
-   bool initialize(const ip_addr_t *ip_addr);
+   bool initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field, uint8_t protocol);
 
    /**
     * Remove all users from b+ tree of users who are no longer under attack.
@@ -203,7 +226,9 @@ struct attacked_server_t {
     */
    bool destroy(void);
 
-   void *m_user_tree;   ///< pointer to a b+ tree containing attacked_user_t structures
-   char *m_ip_addr;     ///< IP address of the server in human readable format
+   void *m_user_tree;        ///< pointer to a b+ tree containing AttackedUser structures
+   char *m_ip_addr;          ///< IP address of the server in human readable format
+   uint8_t m_link_bit_field; ///< indicator of particular monitoring probe
+   uint8_t m_protocol;       ///< sip protocol used for data transfer
 };
 
