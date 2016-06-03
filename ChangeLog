@@ -1,3 +1,10 @@
+2016-06-03 Nemea-detectors-1.2.4
+	* tunnel_detection & DNSblacklistfilter:
+		fixed data type of DNS_RDATA (bytes->string)
+	* sip_bf_detecotr:
+		updated default values
+		added Doxyfile
+
 2016-04-24 Nemea-detectors-1.2.3
         * voip_fraud_detecion:
 		added IFC for SDM statistics
