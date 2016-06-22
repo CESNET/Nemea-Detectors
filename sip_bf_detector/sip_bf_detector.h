@@ -102,7 +102,7 @@ struct SipDataholder {
    int tree_key_length;                   ///< length of key used in b+ trees (depends on IP version)
    int (*comp_func)(void *, void *);      ///< pointer to comparing function used in b+ trees (depends on IP version)
    char *sip_from;                        ///< pointer to user name
-   void *tree;                            ///< pointer to b+ tree of servers (depends on IP version)
+   bpt_t *tree;                            ///< pointer to b+ tree of servers (depends on IP version)
    uint16_t msg_type;                     ///< sip message type
    uint16_t status_code;                  ///< sip status code
    uint8_t link_bit_field;                ///< indicator of particular monitoring probe
@@ -183,7 +183,7 @@ struct AttackedUser {
    void create_event_id();
 
    char *m_user_name;               ///< user name
-   void *m_attackers_tree;          ///< pointer to a b+ tree containing Attacker structures
+   bpt_t *m_attackers_tree;          ///< pointer to a b+ tree containing Attacker structures
    char *m_breacher;                ///< IP address of breacher
    bool m_breached;                 ///< flag signalizing whether password is breached
    bool m_reported;                 ///< flag signalizing whether this attack has already been reported
@@ -226,7 +226,7 @@ struct AttackedServer {
     */
    bool destroy(void);
 
-   void *m_user_tree;        ///< pointer to a b+ tree containing AttackedUser structures
+   bpt_t *m_user_tree;        ///< pointer to a b+ tree containing AttackedUser structures
    char *m_ip_addr;          ///< IP address of the server in human readable format
    uint8_t m_link_bit_field; ///< indicator of particular monitoring probe
    uint8_t m_protocol;       ///< sip protocol used for data transfer

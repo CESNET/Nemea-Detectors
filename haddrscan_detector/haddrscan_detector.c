@@ -198,7 +198,7 @@ int main(int argc, char **argv)
    uint32_t int_dst_ip = 0;
    ur_time_t ts_first, ts_last;
 
-   void *b_plus_tree = b_plus_tree_initialize(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_32b, sizeof(item_t), sizeof(uint32_t));
+   bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_32b, sizeof(item_t), sizeof(uint32_t));
    if (b_plus_tree == NULL) {
       fprintf(stderr, "ERROR: Could not initialize B_PLUS_TREE\n");
       fflush(stderr);
@@ -275,7 +275,7 @@ int main(int argc, char **argv)
       int_dst_ip = ip_get_v4_as_int(dst_ip);
 
       if (packets == MAX_PACKETS && (protocol == TCP_PROTOCOL && (tcp_flags == TCP_FLAGS_SYN))) {
-         new_item = b_plus_tree_insert_or_find_item(b_plus_tree, &int_src_ip);
+         new_item = bpt_search_or_insert(b_plus_tree, &int_src_ip);
          if (new_item == NULL) {
             fprintf(stderr, "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
             fflush(stderr);
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
                free(np->dynamic_addrs);
             }
             // delete item from tree no matter how successful was trap_send()
-            b_plus_tree_delete_item(b_plus_tree, &int_src_ip);
+            bpt_item_del(b_plus_tree, &int_src_ip);
             // break on error, do nothing on timeout in order to perform tree pruning
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, (void) 0, break);
          }
@@ -325,20 +325,20 @@ int main(int argc, char **argv)
       time(&ts_cur_time);
       if ((ts_cur_time - ts_last_pruning) > TIME_BEFORE_PRUNING) {
          item_t *value_pt = NULL;
-         b_plus_tree_item *b_item = NULL;
+         bpt_list_item_t *b_item = NULL;
          int has_next = 0;
 
          // Create a structure for iterating throw the leaves
-         b_item = b_plus_tree_create_list_item(b_plus_tree);
+         b_item = bpt_list_init(b_plus_tree);
          if (b_item == NULL) {
             fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
             goto cleanup;
          }
 
-         printf("==== PRUNING THE TREE ====\noriginal number of values:  %lu\n", b_plus_tree_get_count_of_values(b_plus_tree));
+         printf("==== PRUNING THE TREE ====\noriginal number of values:  %lu\n", bpt_item_cnt(b_plus_tree));
 
          // Get first value from the list. Function returns 1 if there are more values, 0 if there is no value
-         has_next = b_plus_tree_get_list(b_plus_tree, b_item);
+         has_next = bpt_list_start(b_plus_tree, b_item);
          while (has_next == TRUE) {
             // Get the value from B+ item structure
             value_pt = b_item->value;
@@ -354,19 +354,19 @@ int main(int argc, char **argv)
                if (value_pt->dynamic_addrs != NULL) {
                   free(value_pt->dynamic_addrs);
                }
-               has_next = b_plus_tree_delete_item_from_list(b_plus_tree, b_item);
+               has_next = bpt_list_item_del(b_plus_tree, b_item);
             } else { // Get next item from the list
-               has_next = b_plus_tree_get_next_item_from_list(b_plus_tree, b_item);
+               has_next = bpt_list_item_next(b_plus_tree, b_item);
             }
          }
-         printf("\nnumber of values after pruning:  %lu\n", b_plus_tree_get_count_of_values(b_plus_tree));
+         printf("\nnumber of values after pruning:  %lu\n", bpt_item_cnt(b_plus_tree));
          time(&ts_last_pruning);
       }
    }
 
    // ***** Cleanup *****
 cleanup:
-   b_plus_tree_destroy(b_plus_tree);
+   bpt_clean(b_plus_tree);
    ur_free_template(in_tmplt);
    ur_free_template(out_tmplt);
    ur_free_record(out_rec);

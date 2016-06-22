@@ -198,7 +198,7 @@ int filter_trafic_to_save_in_prefix_tree_tunnel_suspicion(character_statistic_t 
    return 0;
 }
 
-void collection_of_information_and_basic_payload_detection(void * tree, void * ip_in_packet, packet_t * packet)
+void collection_of_information_and_basic_payload_detection(bpt_t * tree, void * ip_in_packet, packet_t * packet)
 {
    ip_address_t * found;
    float size2;
@@ -206,7 +206,7 @@ void collection_of_information_and_basic_payload_detection(void * tree, void * i
    character_statistic_t char_stat;
    size2=packet->size*packet->size;
    //found or create in b plus tree
-   found = (ip_address_t*)b_plus_tree_insert_or_find_item(tree,ip_in_packet);
+   found = (ip_address_t*)bpt_search_or_insert(tree,ip_in_packet);
    if (found == NULL) {
       return;
    }
@@ -1104,16 +1104,16 @@ void send_unirec_out_sdm(unirec_tunnel_notification_t * notification)
    }
 }
 
-void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
+void calculate_statistic_and_choose_anomaly(bpt_t * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification)
 {
    ip_address_t * item;
    ip_addr_t ip_address;
    char ip_address_str [100];
-   b_plus_tree_item * b_item;
+   bpt_list_item_t * b_item;
    int is_there_next = 0, print_time = 1;
    calulated_result_t result;
-   b_item = b_plus_tree_create_list_item(b_plus_tree);
-   is_there_next = b_plus_tree_get_list(b_plus_tree, b_item);
+   b_item = bpt_list_init(b_plus_tree);
+   is_there_next = bpt_list_start(b_plus_tree, b_item);
 
    while (is_there_next == 1) {
       item = (ip_address_t*)b_item->value;
@@ -1167,17 +1167,17 @@ void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unir
       }
       //check if it can be deleted
       if (item->state_request_other == STATE_NEW && item->state_request_tunnel == STATE_NEW && item->state_response_other == STATE_NEW && item->state_response_tunnel == STATE_NEW) {
-         is_there_next = b_plus_tree_delete_item_from_list(b_plus_tree, b_item);
+         is_there_next = bpt_list_item_del(b_plus_tree, b_item);
       #ifdef TIME
          delete_from_blus++;
       #endif /*TIME*/
       }
       else {
          //with anomaly, in can not be deleted
-         is_there_next = b_plus_tree_get_next_item_from_list(b_plus_tree, b_item);
+         is_there_next = bpt_list_item_next(b_plus_tree, b_item);
       }
    }
-   b_plus_tree_destroy_list_item(b_item);
+   bpt_list_clean(b_item);
 }
 
 void send_unirec_alert_to_sdm(ip_addr_t * ip_address, ip_address_t *item, unirec_tunnel_notification_t * unirec_out)
@@ -1680,7 +1680,7 @@ void print_histogram_values (char *ip_address, ip_address_t *ip_item, FILE *file
    fprintf(file_responses, "%lu\n", ip_item->counter_response.histogram_dns_response[HISTOGRAM_SIZE_RESPONSE - 1]);
 }
 
-void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree)
+void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int count_of_btree)
 {
    FILE *file_requests,
         *file_responses,
@@ -1691,7 +1691,7 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
    char file_path [255];
    int i;
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
    ip_address_t *ip_item;
 //requests
    //open file
@@ -1768,8 +1768,8 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
 //print histogram of each IP
    //for each item in list
    for (i =0; i < count_of_btree; i++) {
-      b_item = b_plus_tree_create_list_item(b_plus_tree[i]);
-      is_there_next = b_plus_tree_get_list(b_plus_tree[i], b_item);
+      b_item = bpt_list_init(b_plus_tree[i]);
+      is_there_next = bpt_list_start(b_plus_tree[i], b_item);
       while (is_there_next == 1) {
          //value from bplus item structure
          ip_item = (ip_address_t*)b_item->value;
@@ -1782,9 +1782,9 @@ void write_detail_result(char * record_folder_name, void ** b_plus_tree, int cou
          //print suspision
          print_suspision_ip(ip_buff, ip_item, file_suspision);
          //next item
-         is_there_next = b_plus_tree_get_next_item_from_list(b_plus_tree[i], b_item);
+         is_there_next = bpt_list_item_next(b_plus_tree[i], b_item);
       }
-      b_plus_tree_destroy_list_item(b_item);
+      bpt_list_clean(b_item);
    }
    fclose(file_requests);
    fclose(file_requests_count_letters);
@@ -1947,10 +1947,10 @@ int main(int argc, char **argv)
    FILE * result_file = NULL,
         * exception_file_domain = NULL,
         * exception_file_ip = NULL;
-   void * btree_ver4, *btree_ver6, *btree[2];
+   bpt_t * btree_ver4, *btree_ver6, *btree[2];
    prefix_tree_t * exception_domain_prefix_tree = NULL;
-   void * exception_ip_v4_b_plus_tree = NULL;
-   void * exception_ip_v6_b_plus_tree = NULL;
+   bpt_t * exception_ip_v4_b_plus_tree = NULL;
+   bpt_t * exception_ip_v6_b_plus_tree = NULL;
    unsigned long cnt_flows = 0;
    unsigned long cnt_packets = 0;
    unsigned long histogram_dns_requests [HISTOGRAM_SIZE_REQUESTS];
@@ -2270,20 +2270,20 @@ int main(int argc, char **argv)
                if (ip_is4(&addr)) {
                   //is IPv4
                   if (exception_ip_v4_b_plus_tree == NULL) {
-                     exception_ip_v4_b_plus_tree = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, 0, sizeof(uint32_t));
+                     exception_ip_v4_b_plus_tree = bpt_init(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, 0, sizeof(uint32_t));
                   }
                   if (exception_ip_v4_b_plus_tree != NULL) {
                      uint32_t ip_to_tree = ip_get_v4_as_int(&addr);
-                     b_plus_tree_insert_item(exception_ip_v4_b_plus_tree, &ip_to_tree);
+                     bpt_insert(exception_ip_v4_b_plus_tree, &ip_to_tree);
                   }
                }
                else {
                   //is IPv6
                   if (exception_ip_v6_b_plus_tree == NULL) {
-                     exception_ip_v6_b_plus_tree = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, 0, sizeof(uint64_t)*2);
+                     exception_ip_v6_b_plus_tree = bpt_init(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, 0, sizeof(uint64_t)*2);
                   }
                   if (exception_ip_v6_b_plus_tree != NULL) {
-                     b_plus_tree_insert_item(exception_ip_v6_b_plus_tree, &addr);
+                     bpt_insert(exception_ip_v6_b_plus_tree, &addr);
                   }
                }
             }
@@ -2297,9 +2297,9 @@ int main(int argc, char **argv)
       fclose(exception_file_ip);
    }
    //initialize b+ tree ipv4
-   btree_ver4 = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));
+   btree_ver4 = bpt_init(COUNT_OF_ITEM_IN_LEAF, &compare_ipv4, sizeof(ip_address_t), sizeof(uint32_t));
    //initialize b+ tree ipv6
-   btree_ver6 = b_plus_tree_initialize(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
+   btree_ver6 = bpt_init(COUNT_OF_ITEM_IN_LEAF, &compare_ipv6, sizeof(ip_address_t), sizeof(uint64_t)*2);
    //add trees to array, you can work with it in cycle
    btree[0] = btree_ver4;
    btree[1] = btree_ver6;
@@ -2421,14 +2421,14 @@ int main(int argc, char **argv)
                   (  //ip
                      (packet.ip_version == IP_VERSION_4 &&
                         (exception_ip_v4_b_plus_tree == NULL ||
-                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
-                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0
+                         (bpt_search(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == NULL &&
+                          bpt_search(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == NULL
                          ))
                      )||
                      (packet.ip_version == IP_VERSION_6 &&
                         (exception_ip_v6_b_plus_tree == NULL ||
-                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
-                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                        (bpt_search(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == NULL &&
+                         bpt_search(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == NULL))
                      )
                   )
             ) {
@@ -2467,10 +2467,10 @@ int main(int argc, char **argv)
          }
          //restart timer
          printf("cycle %d\n", ++count_of_cycle);
-         printf("\tcount of ip's before_erase %lu\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
+         printf("\tcount of ip's before_erase %lu\n", bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6));
          calculate_statistic_and_choose_anomaly(btree_ver4, result_file, &ur_notification);
          calculate_statistic_and_choose_anomaly(btree_ver6, result_file, &ur_notification);
-         printf("\tcount of ip's after_erase %lu\n\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
+         printf("\tcount of ip's after_erase %lu\n\n", bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6));
          //stop=1;
       }
    }
@@ -2523,14 +2523,14 @@ int main(int argc, char **argv)
                   (  //ip
                      (packet.ip_version == IP_VERSION_4 &&
                         (exception_ip_v4_b_plus_tree == NULL ||
-                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
-                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0
+                         (bpt_search(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == NULL &&
+                          bpt_search(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == NULL
                          ))
                      )||
                      (packet.ip_version == IP_VERSION_6 &&
                         (exception_ip_v6_b_plus_tree == NULL ||
-                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
-                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                        (bpt_search(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == NULL &&
+                         bpt_search(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == NULL))
                      )
                   )
             ) {
@@ -2573,9 +2573,9 @@ int main(int argc, char **argv)
          start_time=0;
          packet_time=0;
          printf("cycle %d\n", ++count_of_cycle);
-         printf("\tcount of ip's before_erase %lu\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
+         printf("\tcount of ip's before_erase %lu\n", bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6));
          #ifdef TIME
-               ip_address_before_erase += b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6);
+               ip_address_before_erase += bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6);
                start_t = clock();
          #endif /*TIME*/
          calculate_statistic_and_choose_anomaly(btree_ver4, result_file, &ur_notification);
@@ -2583,9 +2583,9 @@ int main(int argc, char **argv)
           #ifdef TIME
               end_t = clock();;
           #endif /*TIME*/
-          printf("\tcount of ip's after_erase %lu\n\n", b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6));
+          printf("\tcount of ip's after_erase %lu\n\n", bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6));
          #ifdef TIME
-                  ip_address_after_erase += b_plus_tree_get_count_of_values(btree_ver4) + b_plus_tree_get_count_of_values(btree_ver6);
+                  ip_address_after_erase += bpt_item_cnt(btree_ver4) + bpt_item_cnt(btree_ver6);
                   delay += (double)(end_t - start_t) / CLOCKS_PER_SEC;
                printf("time all: %f\t delta time: %f\n", delay, delay - last_delay);
                printf("add to b plus: %d,\t search in b plus: %d,\t delete ip from blus: %d,\t add to prefix: %d \n", add_to_bplus, search_in_bplus, delete_from_blus, add_to_prefix );
@@ -2646,14 +2646,14 @@ int main(int argc, char **argv)
                   (  //ip
                      (packet.ip_version == IP_VERSION_4 &&
                         (exception_ip_v4_b_plus_tree == NULL ||
-                         (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == 0 &&
-                          b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == 0
+                         (bpt_search(exception_ip_v4_b_plus_tree, &packet.src_ip_v4) == NULL &&
+                          bpt_search(exception_ip_v4_b_plus_tree, &packet.dst_ip_v4) == NULL
                          ))
                      )||
                      (packet.ip_version == IP_VERSION_6 &&
                         (exception_ip_v6_b_plus_tree == NULL ||
-                        (b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == 0 &&
-                         b_plus_tree_is_item_in_tree(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == 0))
+                        (bpt_search(exception_ip_v4_b_plus_tree, packet.src_ip_v6) == NULL &&
+                         bpt_search(exception_ip_v4_b_plus_tree, packet.dst_ip_v6) == NULL))
                      )
                   )
             ) {
@@ -2776,16 +2776,16 @@ int main(int argc, char **argv)
    }
 
    //clean btree ver4 and ver6
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
    for (i = 0; i<2; i++) {
-      b_item = b_plus_tree_create_list_item(btree[i]);
-      int is_there_next = b_plus_tree_get_list(btree[i], b_item);
+      b_item = bpt_list_init(btree[i]);
+      int is_there_next = bpt_list_start(btree[i], b_item);
       while (is_there_next == 1) {
          check_and_delete_suspision((ip_address_t*)b_item->value, REQUEST_AND_RESPONSE_PART);
-         is_there_next = b_plus_tree_get_next_item_from_list(btree[i], b_item);
+         is_there_next = bpt_list_item_next(btree[i], b_item);
       }
-      b_plus_tree_destroy_list_item(b_item);
-      b_plus_tree_destroy(btree[i]);
+      bpt_list_clean(b_item);
+      bpt_clean(btree[i]);
    }
    //clean exception prefix tree
    if (exception_domain_prefix_tree != NULL) {
@@ -2793,11 +2793,11 @@ int main(int argc, char **argv)
    }
    //clean exception b plus tree for IPv4
    if (exception_ip_v4_b_plus_tree != NULL) {
-      b_plus_tree_destroy(exception_ip_v4_b_plus_tree);
+      bpt_clean(exception_ip_v4_b_plus_tree);
    }
    //clean exception b plus tree for IPv6
    if (exception_ip_v6_b_plus_tree != NULL) {
-      b_plus_tree_destroy(exception_ip_v6_b_plus_tree);
+      bpt_clean(exception_ip_v6_b_plus_tree);
    }
    // Do all necessary cleanup before exiting
 failed_trap:

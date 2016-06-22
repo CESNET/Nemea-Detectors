@@ -208,7 +208,7 @@ void write_summary_result(char * record_folder, unsigned long * histogram_dns_re
  * \param[in] b_plus_tree pointer to array of b_plus_tree structures, where the IP address are stored.
  * \param[in] count_of_btree count of trees in the array.
  */
-void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree);
+void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int count_of_btree);
 
 /*!
  * \brief Send alerts of detected tunnel to SDM
@@ -243,7 +243,7 @@ int filter_trafic_to_save_in_prefix_tree_tunnel_suspicion(character_statistic_t 
  * \param[in] ip_in_packet ip address from packet.
  * \param[in] packet recieved packet.
  */
-void collection_of_information_and_basic_payload_detection(void * tree, void * ip_in_packet, packet_t * packet);
+void collection_of_information_and_basic_payload_detection(bpt_t * tree, void * ip_in_packet, packet_t * packet);
 
 
 /*!
@@ -345,7 +345,7 @@ int is_payload_on_ip_ok_response_tunnel(ip_address_t * item);
  * \param[in] file pointer to file with results
  * \param[in] ur_notification structure with unirec output datas
  */
-void calculate_statistic_and_choose_anomaly(void * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification);
+void calculate_statistic_and_choose_anomaly(bpt_t * b_plus_tree, FILE *file, unirec_tunnel_notification_t * ur_notification);
 
 /*!
  * \brief Print annomaly during detection
@@ -406,7 +406,7 @@ void print_histogram_values (char *ip_address, ip_address_t *ip_item, FILE *file
  * \param[in] b_plus_tree pointer to B+ tree structures
  * \param[in] count_of_btree count of tree structures (for ipv4, ipv6 ...)
  */
-void write_detail_result(char * record_folder_name, void ** b_plus_tree, int count_of_btree);
+void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int count_of_btree);
 
 
 /*!

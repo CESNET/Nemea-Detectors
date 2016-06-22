@@ -143,7 +143,7 @@ int compare_ipv6(void * a, void * b)
  * \param[in,out] server_tree pointer to the b+ tree of AttackedServer structures
  * \return true - memory deallocation was successful, false - error occurred
  */
-bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tree)
+bool free_ceased_attacks(ur_time_t actual_time, int key_length, bpt_t *server_tree)
 {
    time_t time_actual = (time_t) actual_time;
    static time_t time_last_check = 0;
@@ -151,37 +151,37 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, void *server_tre
    // Check whether it is time for another memory sweep
    if (((uint64_t) abs(time_actual - time_last_check)) > g_check_mem_interval) {
       int is_there_next;
-      b_plus_tree_item *b_item;
+      bpt_list_item_t *b_item;
 
       // create a list of items in the tree and iterate through it
-      b_item = b_plus_tree_create_list_item(server_tree);
+      b_item = bpt_list_init(server_tree);
       if (!b_item) {
-         fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+         fprintf(stderr, "Error: bpt_list_init returned NULL.\n");
          return false;
       }
 
-      is_there_next = b_plus_tree_get_list(server_tree, b_item);
+      is_there_next = bpt_list_start(server_tree, b_item);
       while (is_there_next == 1) {
          AttackedServer *server = (AttackedServer *) (b_item->value);
 
          // free structures of users who are no longer under attack
          if (!server->free_unused_users(time_actual)) {
             VERBOSE("Error: failed to remove ceased attacks.\n")
-            b_plus_tree_destroy_list_item(b_item);
+            bpt_list_clean(b_item);
             return false;
          }
 
          // remove this server from the tree if it has no users under attack
-         if (b_plus_tree_get_count_of_values(server->m_user_tree) == 0) {
-            b_plus_tree_destroy(server->m_user_tree);
+         if (bpt_item_cnt(server->m_user_tree) == 0) {
+            bpt_clean(server->m_user_tree);
             free(server->m_ip_addr);
-            is_there_next = b_plus_tree_delete_item_from_list(server_tree, b_item);
+            is_there_next = bpt_list_item_del(server_tree, b_item);
          } else {
-            is_there_next = b_plus_tree_get_next_item_from_list(server_tree, b_item);
+            is_there_next = bpt_list_item_next(server_tree, b_item);
          }
       }
 
-      b_plus_tree_destroy_list_item(b_item);
+      bpt_list_clean(b_item);
       time_last_check = time_actual;
    }
 
@@ -226,9 +226,9 @@ bool AttackedUser::initialize(const SipDataholder *sip_data)
    memcpy(m_user_name, sip_data->sip_from, sip_data->sip_from_len);
 
    // initialize b+ tree of attackers
-   m_attackers_tree = b_plus_tree_initialize(5, sip_data->comp_func, sizeof(Attacker), sip_data->tree_key_length);
+   m_attackers_tree = bpt_init(5, sip_data->comp_func, sizeof(Attacker), sip_data->tree_key_length);
    if (!m_attackers_tree) {
-      fprintf(stderr, "Error: b_plus_tree_initialize returned NULL.\n");
+      fprintf(stderr, "Error: bpt_init returned NULL.\n");
       return false;
    }
 
@@ -332,15 +332,15 @@ bool AttackedUser::generate_alert(const AttackedServer *server)
    }
 
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
 
-   b_item = b_plus_tree_create_list_item(m_attackers_tree);
+   b_item = bpt_list_init(m_attackers_tree);
    if (!b_item) {
-      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+      fprintf(stderr, "Error: bpt_list_init returned NULL.\n");
       return false;
    }
 
-   is_there_next = b_plus_tree_get_list(m_attackers_tree, b_item);
+   is_there_next = bpt_list_start(m_attackers_tree, b_item);
    while (is_there_next == 1) {
       Attacker *attacker = (Attacker *) (b_item->value);
       json_t *attacker_json = json_object();
@@ -356,10 +356,10 @@ bool AttackedUser::generate_alert(const AttackedServer *server)
 
       json_array_append(attackers_arr, attacker_json);
       json_decref(attacker_json);
-      is_there_next = b_plus_tree_get_next_item_from_list(m_attackers_tree, b_item);
+      is_there_next = bpt_list_item_next(m_attackers_tree, b_item);
    }
 
-   b_plus_tree_destroy_list_item(b_item);
+   bpt_list_clean(b_item);
 
    // generate alert string
    s = json_dumps(root, 0);
@@ -386,7 +386,7 @@ int AttackedUser::add_attack(const SipDataholder *sip_data, const AttackedServer
    }
 
    // check whether key already exists in the tree
-   Attacker *attacker = (Attacker *) b_plus_tree_search(m_attackers_tree, tree_key);
+   Attacker *attacker = (Attacker *) bpt_search(m_attackers_tree, tree_key);
    if (!attacker) {
       // if the key does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -394,7 +394,7 @@ int AttackedUser::add_attack(const SipDataholder *sip_data, const AttackedServer
       }
 
       // create a node representing new attacker and initialize it
-      attacker = (Attacker *) b_plus_tree_insert_item(m_attackers_tree, tree_key);
+      attacker = (Attacker *) bpt_insert(m_attackers_tree, tree_key);
       if (!attacker) {
          char ip_str[INET6_ADDRSTRLEN + 1];
          ip_to_str(sip_data->ip_dst, ip_str);
@@ -419,7 +419,7 @@ int AttackedUser::add_attack(const SipDataholder *sip_data, const AttackedServer
             return -1;
          }
 
-         b_plus_tree_delete_item(server->m_user_tree, tmp);
+         bpt_item_del(server->m_user_tree, tmp);
          return 0;
       }
 
@@ -473,26 +473,26 @@ int AttackedUser::add_attack(const SipDataholder *sip_data, const AttackedServer
 bool AttackedUser::destroy(void)
 {
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
 
    // create a list of items in the tree and iterate through it
-   b_item = b_plus_tree_create_list_item(m_attackers_tree);
+   b_item = bpt_list_init(m_attackers_tree);
    if (!b_item) {
-      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+      fprintf(stderr, "Error: bpt_list_init returned NULL.\n");
       return false;
    }
 
-   is_there_next = b_plus_tree_get_list(m_attackers_tree, b_item);
+   is_there_next = bpt_list_start(m_attackers_tree, b_item);
    while (is_there_next == 1) {
       Attacker *attacker = (Attacker *) (b_item->value);
 
       // free allocated memory associated with attacker
       attacker->destroy();
-      is_there_next = b_plus_tree_get_next_item_from_list(m_attackers_tree, b_item);
+      is_there_next = bpt_list_item_next(m_attackers_tree, b_item);
    }
 
-   b_plus_tree_destroy_list_item(b_item);
-   b_plus_tree_destroy(m_attackers_tree);
+   bpt_list_clean(b_item);
+   bpt_clean(m_attackers_tree);
    free(m_user_name);
    free(m_breacher);
    return true;
@@ -515,9 +515,9 @@ bool AttackedServer::initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field
    m_protocol = protocol;
 
    // initialize b+ tree of users
-   m_user_tree = b_plus_tree_initialize(5, &compare_user_name, sizeof(AttackedUser), MAX_LENGTH_SIP_FROM);
+   m_user_tree = bpt_init(5, &compare_user_name, sizeof(AttackedUser), MAX_LENGTH_SIP_FROM);
    if (!m_user_tree) {
-      fprintf(stderr, "Error: b_plus_tree_initialize returned NULL.\n");
+      fprintf(stderr, "Error: bpt_init returned NULL.\n");
       return false;
    }
 
@@ -527,16 +527,16 @@ bool AttackedServer::initialize(const ip_addr_t *ip_addr, uint8_t link_bit_field
 bool AttackedServer::free_unused_users(time_t time_actual)
 {
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
 
    // create a list of items in the tree and iterate through it
-   b_item = b_plus_tree_create_list_item(m_user_tree);
+   b_item = bpt_list_init(m_user_tree);
    if (!b_item) {
-      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+      fprintf(stderr, "Error: bpt_list_init returned NULL.\n");
       return false;
    }
 
-   is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
+   is_there_next = bpt_list_start(m_user_tree, b_item);
    while (is_there_next == 1) {
       AttackedUser *user = (AttackedUser *) (b_item->value);
 
@@ -548,7 +548,7 @@ bool AttackedServer::free_unused_users(time_t time_actual)
             user->create_event_id();
             if (!user->generate_alert(this)) {
                VERBOSE("Error: generate_alert failed.\n")
-               b_plus_tree_destroy_list_item(b_item);
+               bpt_list_clean(b_item);
                return false;
             }
          }
@@ -556,33 +556,33 @@ bool AttackedServer::free_unused_users(time_t time_actual)
          // free allocated memory associated with user
          if (!user->destroy()) {
             VERBOSE("Error: failed to remove user from b+ tree.\n")
-            b_plus_tree_destroy_list_item(b_item);
+            bpt_list_clean(b_item);
             return false;
          }
 
-         is_there_next = b_plus_tree_delete_item_from_list(m_user_tree, b_item);
+         is_there_next = bpt_list_item_del(m_user_tree, b_item);
       } else {
-         is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+         is_there_next = bpt_list_item_next(m_user_tree, b_item);
       }
    }
 
-   b_plus_tree_destroy_list_item(b_item);
+   bpt_list_clean(b_item);
    return true;
 }
 
 bool AttackedServer::destroy(void)
 {
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
 
    // create a list of items in the tree and iterate through it
-   b_item = b_plus_tree_create_list_item(m_user_tree);
+   b_item = bpt_list_init(m_user_tree);
    if (!b_item) {
-      fprintf(stderr, "Error: b_plus_tree_create_list_item returned NULL.\n");
+      fprintf(stderr, "Error: bpt_list_init returned NULL.\n");
       return false;
    }
 
-   is_there_next = b_plus_tree_get_list(m_user_tree, b_item);
+   is_there_next = bpt_list_start(m_user_tree, b_item);
    while (is_there_next == 1) {
       AttackedUser *user = (AttackedUser *) (b_item->value);
 
@@ -591,7 +591,7 @@ bool AttackedServer::destroy(void)
          user->create_event_id();
          if (!user->generate_alert(this)) {
             VERBOSE("Error: generate_alert failed.\n")
-            b_plus_tree_destroy_list_item(b_item);
+            bpt_list_clean(b_item);
             return false;
          }
       }
@@ -599,15 +599,15 @@ bool AttackedServer::destroy(void)
       // free allocated memory associated with user
       if (!user->destroy()) {
          VERBOSE("Error: failed to remove user from b+ tree.\n")
-         b_plus_tree_destroy_list_item(b_item);
+         bpt_list_clean(b_item);
          return false;
       }
 
-      is_there_next = b_plus_tree_get_next_item_from_list(m_user_tree, b_item);
+      is_there_next = bpt_list_item_next(m_user_tree, b_item);
    }
 
-   b_plus_tree_destroy_list_item(b_item);
-   b_plus_tree_destroy(m_user_tree);
+   bpt_list_clean(b_item);
+   bpt_clean(m_user_tree);
    free(m_ip_addr);
    return true;
 }
@@ -632,7 +632,7 @@ int insert_attack_attempt(const SipDataholder *sip_data)
    }
 
    // check whether key already exists in the tree
-   AttackedServer *server = (AttackedServer *) b_plus_tree_search(sip_data->tree, tree_key);
+   AttackedServer *server = (AttackedServer *) bpt_search(sip_data->tree, tree_key);
    if (!server) {
       // if the key does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -640,7 +640,7 @@ int insert_attack_attempt(const SipDataholder *sip_data)
       }
 
       // create a node representing new server and initialize it
-      server = (AttackedServer *) b_plus_tree_insert_item(sip_data->tree, tree_key);
+      server = (AttackedServer *) bpt_insert(sip_data->tree, tree_key);
       if (!server) {
          char ip_str[INET6_ADDRSTRLEN + 1];
          ip_to_str(sip_data->ip_src, ip_str);
@@ -665,7 +665,7 @@ int insert_attack_attempt(const SipDataholder *sip_data)
    memcpy(user_name_tmp, sip_data->sip_from, sip_data->sip_from_len);
 
    // check whether user already exists on this server
-   AttackedUser *user = (AttackedUser *) b_plus_tree_search(server->m_user_tree, user_name_tmp);
+   AttackedUser *user = (AttackedUser *) bpt_search(server->m_user_tree, user_name_tmp);
    if (!user) {
       // if the user does not exist and status code is 200 OK, then it is not an attack attempt
       if (sip_data->status_code == SIP_STATUS_OK) {
@@ -674,7 +674,7 @@ int insert_attack_attempt(const SipDataholder *sip_data)
       }
 
       // create a node representing new user and initialize it
-      user = (AttackedUser *) b_plus_tree_insert_item(server->m_user_tree, user_name_tmp);
+      user = (AttackedUser *) bpt_insert(server->m_user_tree, user_name_tmp);
       if (!user) {
          VERBOSE("Warning: unable to insert user: %s to b+ tree.\n", user_name_tmp)
          free(user_name_tmp);
@@ -703,24 +703,24 @@ int insert_attack_attempt(const SipDataholder *sip_data)
  *
  * \param[in] tree pointer to the b+ tree
  */
-void destroy_tree(void *tree)
+void destroy_tree(bpt_t *tree)
 {
    int is_there_next;
-   b_plus_tree_item *b_item;
+   bpt_list_item_t *b_item;
 
    // create list of items in the tree and iterate through it
-   b_item = b_plus_tree_create_list_item(tree);
-   is_there_next = b_plus_tree_get_list(tree, b_item);
+   b_item = bpt_list_init(tree);
+   is_there_next = bpt_list_start(tree, b_item);
    while (is_there_next == 1) {
       AttackedServer *server = (AttackedServer *) (b_item->value);
 
       // destroy AttackedServer
       server->destroy();
-      is_there_next = b_plus_tree_get_next_item_from_list(tree, b_item);
+      is_there_next = bpt_list_item_next(tree, b_item);
    }
 
-   b_plus_tree_destroy_list_item(b_item);
-   b_plus_tree_destroy(tree);
+   bpt_list_clean(b_item);
+   bpt_clean(tree);
 }
 
 /**
@@ -797,7 +797,7 @@ int main(int argc, char **argv)
    uint16_t msg_type;
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
    int sip_cseq_len;
-   void *tree_ipv4, *tree_ipv6;
+   bpt_t *tree_ipv4, *tree_ipv6;
 
    // initialize libtrap
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -857,8 +857,8 @@ int main(int argc, char **argv)
    }
 
    // initialize IPv4 and IPv6 b+ trees
-   tree_ipv4 = b_plus_tree_initialize(5, &compare_ipv4, sizeof(AttackedServer), IP_VERSION_4_BYTES);
-   tree_ipv6 = b_plus_tree_initialize(5, &compare_ipv6, sizeof(AttackedServer), IP_VERSION_6_BYTES);
+   tree_ipv4 = bpt_init(5, &compare_ipv4, sizeof(AttackedServer), IP_VERSION_4_BYTES);
+   tree_ipv6 = bpt_init(5, &compare_ipv6, sizeof(AttackedServer), IP_VERSION_6_BYTES);
 
    // receive and process data until SIGINT is received or error occurs
    while (!stop) {
