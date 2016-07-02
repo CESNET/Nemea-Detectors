@@ -4,6 +4,7 @@
 # It receives alerts and aggregates them into time window.
 # As a result, it decreases number of alerts about the same scanners.
 #
+# Author: Marek Svepes <svepemar@fit.cvut.cz>
 # Author: Tomas Cejka <cejkat@cesnet.cz>
 #
 # Copyright (C) 2016 CESNET
@@ -45,10 +46,7 @@ from time import sleep
 from threading import Timer
 from threading import Lock
 import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-frame-work", "python"))
-import trap
-import unirec
+import pytrap
 
 # how many minutes to wait?
 minutes = 5
@@ -58,19 +56,10 @@ eventList = []
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=False)
+parser.add_option("-i", "--ifcspec", dest="ifcspec",
+      help="TRAP IFC specifier", metavar="IFCSPEC")
 parser.add_option("-t", "--time", dest="time",
       help="wait MINUTES before sending aggregated alerts", metavar="MINUTES", default=5)
-
-import pdb
-
-
-module_info = trap.CreateModuleInfo(
-   "Horizontal address scan aggregator", # Module name
-   "Receives UniRec messages containing alerts and aggregates them. The resulting alerts are sent every 5 minutes.", # Description
-   1, # Number of input interfaces
-   1,  # Number of output interfaces
-   parser
-)
 
 lock = Lock()
 
@@ -101,33 +90,27 @@ class RepeatedTimer(object):
         self._timer.cancel()
         self.is_running = False
 
-# Initialize module
-ifc_spec = trap.parseParams(sys.argv, module_info)
-
-trap.init(module_info, ifc_spec)
-
-trap.registerDefaultSignalHandler() # This is needed to allow module termination using s SIGINT or SIGTERM signal
-
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
+
+# Initialize module
+trap = pytrap.TrapCtx()
+trap.init(sys.argv, 1, 1)
 
 # Specifier of UniRec records will be received during libtrap negotiation
 alertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
                 "time TIME_LAST,uint8 EVENT_TYPE,uint8 PROTOCOL"
 
-UR_Input = unirec.CreateTemplate("UR_Input", alertURFormat)
+UR_Input = pytrap.UnirecTemplate(alertURFormat)
 
 # this module accepts all UniRec fieds -> set required format:
-trap.set_required_fmt(0, trap.TRAP_FMT_UNIREC, alertURFormat)
-trap.set_data_fmt(0, trap.TRAP_FMT_UNIREC, alertURFormat)
+trap.setRequiredFmt(0, pytrap.FMT_UNIREC, alertURFormat)
 
-trap.ifcctl(trap.IFC_OUTPUT, 0, trap.CTL_BUFFERSWITCH, 0)
+trap.ifcctl(0,  False, pytrap.CTL_BUFFERSWITCH, 0)
+trap.setDataFmt(0, pytrap.FMT_UNIREC, alertURFormat)
 
-UR_Output = None
-#UR_Output = unirec.CreateTemplate("UR_Output", alertURFormat)
-#
-#trap.set_data_fmt(0, trap.TRAP_FMT_UNIREC, alertURFormat)
-
+UR_Output = pytrap.UnirecTemplate(alertURFormat)
+URtmp = UR_Input.copy()
 
 # Send aggregated alerts by RepeatedTimer
 def sendEvents():
@@ -137,58 +120,66 @@ def sendEvents():
     # Send data to output interface
     for event in eventList:
         try:
-            trap.send(0, event.serialize())
-        except trap.ETerminated:
+            trap.send(event)
+        except pytrap.Terminated:
+            print("Terminated TRAP.")
             break
-
     eventList = []
 
-print "starting timer for sending..."
+print("starting timer for sending...")
 rt = RepeatedTimer(int(options.time) * 60, sendEvents)
 
-while not trap.stop:
+while True:
    # Read data from input interface
    try:
-      data = trap.recv(0)
-   except trap.EFMTMismatch:
+      data = trap.recv()
+   except pytrap.FormatMismatch:
       print("Error: output and input interfaces data format or data specifier mismatch")
       break
-   except trap.EFMTChanged as e:
-      # Get data format from negotiation
+   except pytrap.FormatChanged as e:
+      # Get data format from negotiation and set it for output IFC
       (fmttype, fmtspec) = trap.get_data_fmt(trap.IFC_INPUT, 0)
-      UR_Input = unirec.CreateTemplate("UR_Input", fmtspec)
-      print("mismatch", fmttype, fmtspec)
-      
-      trap.set_data_fmt(0, fmttype, fmtspec)
+      trap.setDataFmt(0, fmttype, fmtspec)
+
+      # Update UniRec template
+      UR_Input = pytrap.UnirecTemplate(fmtspec)
+      URtmp = UR_Input.copy()
+
+      # Store data from the exception
       data = e.data
-   except trap.ETerminated:
+   except pytrap.Terminated:
+      print("Terminated TRAP.")
+      break
+   except pytrap.TrapError:
       break
 
    # Check for "end-of-stream" record
    if len(data) <= 1:
       break
 
-   # Convert data to UniRec
-   rec = UR_Input(data)
    lock.acquire()
+   # Set data for access using attributes
+   UR_Input.setData(data)
    # update list of events
    added = False
-   for i in eventList:
-       if rec.EVENT_TYPE == i.EVENT_TYPE and rec.SRC_IP == i.SRC_IP:
-           if i.TIME_FIRST > rec.TIME_FIRST:
-               i.TIME_FIRST = rec.TIME_FIRST
-           if i.TIME_LAST < rec.TIME_LAST:
-               i.TIME_LAST = rec.TIME_LAST
-           i.ADDR_CNT += rec.ADDR_CNT
-           added = True
-           break
+   for e in eventList:
+      URtmp.setData(e)
+      if UR_Input.EVENT_TYPE == URtmp.EVENT_TYPE and UR_Input.SRC_IP == URtmp.SRC_IP:
+         if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
+            URtmp.TIME_FIRST = UR_Input.TIME_FIRST
+         if URtmp.TIME_LAST < UR_Input.TIME_LAST:
+            URtmp.TIME_LAST = UR_Input.TIME_LAST
+         URtmp.PORT_CNT += UR_Input.PORT_CNT
+         added = True
+         break
 
    if not added:
-       eventList.append(rec)
+      eventList.append(data)
 
    lock.release()
 
 rt.stop()
 sendEvents()
 
+trap.sendFlush()
 
