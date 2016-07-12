@@ -5,10 +5,11 @@
  * \author Erik Sabik, <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
  * \date 2014
+ * \date 2016
  */
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013,2014,2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -44,6 +45,7 @@
  *
  */
 
+#include <vector>
 #include <algorithm>
 #include <cctype>
 #include <iostream>
@@ -55,82 +57,148 @@
 #include <dirent.h>
 #include <idna.h>
 #include <unistd.h>
+#include <getopt.h>
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <nemea-common.h>
 #include <libtrap/trap.h>
+#include <unirec/unirec.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
 #include "fields.h"
 #ifdef __cplusplus
 }
 #endif
 
+#include "patternstrings.h"
 #include "urlblacklistfilter.h"
 
+
+
+#define DEBUG
+
+#ifdef DEBUG
+#define DEBUG_PRINT(...) do{ fprintf( stderr, "DEBUG: "  __VA_ARGS__ ); } while( false )
+#else
+#define DEBUG_PRINT(...) do{ } while ( false )
+#endif
+
+
+/**
+ * Register allocated unirec template.
+ */
+#define REGISTER_UR_TEMPLATE(tmpl_name) do { ALLOCATED_UR_TEMPLATES.push_back(&tmpl_name); } while(0)
+
+/**
+ * Free all allocatd unirec templates.
+ */
+#define FREE_UR_TEMPLATES() \
+{ \
+    for (unsigned int i = 0; i < ALLOCATED_UR_TEMPLATES.size(); ++i) { \
+        ur_free_template(*ALLOCATED_UR_TEMPLATES[i]); \
+    } \
+    ALLOCATED_UR_TEMPLATES.clear(); \
+}
+
+/**
+ * Used for handling errors when creating unirec templates.
+ */
+#define DEFAULT_UR_CREATE_ERROR_HANDLING(tmpl_name, err_str, commands) \
+{ \
+    if (tmpl_name == NULL) { \
+        fprintf(stderr, "Error: Invalid UniRec specifier.\n"); \
+        if (err_str != NULL){ \
+            fprintf(stderr, "%s\n", err_str); \
+            free(err_str); \
+        } \
+        commands; \
+        return EXIT_FAILURE; \
+    } \
+    REGISTER_UR_TEMPLATE(tmpl_name); \
+} \
+
+
+/**
+ * Used to clean terminate module.
+ */
+#define FINALIZE_MODULE() \
+do  {\
+    ; \
+    FREE_UR_TEMPLATES(); \
+    trap_finalize(); \
+    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS) \
+    } while (0)
+
+
 UR_FIELDS(
-  //BASIC_FLOW
-  ipaddr SRC_IP,      //Source address of a flow
-  ipaddr DST_IP,      //Destination address of a flow
-  uint16 SRC_PORT,    //Source transport-layer port
-  uint16 DST_PORT,    //Destination transport-layer port
-  uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
-  uint32 PACKETS,     //Number of packets in a flow or in an interval
-  uint64 BYTES,       //Number of bytes in a flow or in an interval
+  ipaddr SRC_IP,
+  ipaddr DST_IP,
   time TIME_FIRST,    //Timestamp of the first packet of a flow
   time TIME_LAST,     //Timestamp of the last packet of a flow
-  uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
-  //COLLECTOR_FLOW
-  uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
-  uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
-  uint8 TOS,              //IP type of service
-  uint8 TTL,              //IP time to live
-  //HTTP
-  string HTTP_REQUEST_HOST,          //HTTP request host
-  string HTTP_REQUEST_URL,           //HTTP request url
-  //other
-  uint8 URL_BLACKLIST,               //ID of blacklist which contains recieved URL
+  // HTTP
+  string HTTP_SDM_REQUEST_HOST,
+  string HTTP_SDM_REQUEST_REFERER,
+  string HTTP_SDM_REQUEST_URL,
+  string HTTP_REQUEST_HOST,
+  string HTTP_REQUEST_REFERER,
+  string HTTP_REQUEST_URL,
+  // detection
+  uint64 DST_BLACKLIST,               //ID of blacklist which contains recieved URL
 )
 
-//#define DEBUG 1
+
+
 
 using namespace std;
 
-trap_module_info_t module_info = {
-    (char *)"URL blacklist detection module", // Module name
-    // Module description
-    (char *)"Module recieves the UniRec record and checks if the URL in record isn't\n"
-    "present in any blacklist that are available. If so the module creates\n"
-    "a detection report (UniRec) with blacklist where the URL was found.\n"
-    "The report is the send to further processing.\n"
-    "Usage:\n"
-    "\t./ipblacklistfilter -i <trap_interface> -f <file> [-D blacklists] [-n]\n"
-    "Module specific parameters:\n"
-    "   -f file         Specify file with blacklisted IP URLs.\n"
-    "   -D list         Switch to dynamic mode and specify which blacklists to use.\n"
-    "   -n              Do not send terminating Unirec when exiting program.\n"
-    "Interfaces:\n"
-    "   Inputs: 1 (UniRec record)\n"
-    "   Outputs: 1 (UniRec record)\n",
-    1, // Number of input interfaces
-    1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("URLBlacklistFilter", "Module receives the UniRec record and checks if the HTTP Host field" \
+    "is present in any blacklist that are available. " \
+    "If HTTP Host field is present in any blacklist the record is changed by adding " \
+    "a identification number of the list which blacklisted the HTTP Host field and " \
+    "a number specifying intensity of the communication between those addresses. Unirec records " \
+    "are aggregated by source,destination address and protocol for a given time. After this time " \
+    "aggregated UniRec is sent by output interface. " \
+    "This module uses configurator tool. To specify file with blacklist URL addresses or public " \
+    "blacklists, use XML configuration file for IPBlacklistFilter (userConfigurationFile.xml). " \
+    "To show, edit, add or remove public blacklist information, use XML configuration file for " \
+    "blacklist downloader (bld_userConfigurationFile.xml).", 1, 1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('u', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/urlblacklistfilter/userConfigurationFile.xml]", required_argument, "string") \
+  PARAM('U', "", "Specify user configuration file for blacklist downloader. [Default: " SYSCONFDIR "/urlblacklistfilter/bld_userConfigurationFile.xml]", required_argument, "string") \
+  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
+  PARAM('S', "", "Switch to SDM version of HTTP fields.", no_argument, "none")
+
+/* AGGREGATION IS NOT YET IMPLEMENTED
+  PARAM('A', "", "Specify active timeout in seconds. [Default: 300]", required_argument, "uint32") \
+  PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
+  PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32") \
+*/
+
 
 static int stop = 0; // global variable for stopping the program
 static int update = 0; // global variable for updating blacklists
 
+static bool sdm_fields_flag = false;
+
+
+vector<ur_template_t**> ALLOCATED_UR_TEMPLATES;
+
+
 /**
  * Procedure for handling signals SIGTERM and SIGINT (Ctrl-C)
  */
-void signal_handler(int signal)
-{
-    if (signal == SIGTERM || signal == SIGINT) {
-        stop = 1;
-        trap_terminate();
-    }
-}
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
+
 
 /**
  *
@@ -257,20 +325,33 @@ int load_update(black_list_t &add_update, black_list_t &rm_update, string &file)
  */
 int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t *out, const void *record, void *detect)
 {
-   uint64_t host_id, host_url_id, bl_id;
+    uint64_t host_id, host_url_id, bl_id;
+    string host, host_url;
 
     // Skip flows with empty HTTP host
-    if (ur_get_var_len(in, record, F_HTTP_REQUEST_HOST) == 0) {
-       return URL_CLEAR;
+    if (sdm_fields_flag) {
+       if (ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST) == 0) {
+          return URL_CLEAR;
+       }
+    } else {
+       if (ur_get_var_len(in, record, F_HTTP_REQUEST_HOST) == 0) {
+          return URL_CLEAR;
+       }
     }
 
-    string host = string(ur_get_ptr(in, record, F_HTTP_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_REQUEST_HOST));
-    string host_url = host.append(string(ur_get_ptr(in, record, F_HTTP_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_REQUEST_URL)));
-
+    if (sdm_fields_flag) {
+        host = string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST));
+        host_url = host + string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_URL));
+    } else {
+        host = string(ur_get_ptr(in, record, F_HTTP_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_REQUEST_HOST));
+        host_url = host + string(ur_get_ptr(in, record, F_HTTP_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_REQUEST_URL));
+    }
+ 
     // Strip / (slash) from URL if it is last character
     if (host_url[host_url.length() - 1] == '/') {
         host_url.resize(host_url.length() - 1);
     }
+
 
     // Find URL in map
     blacklist_map_t::iterator host_check = blacklist.find(host);
@@ -283,12 +364,11 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
 
     if (bl_id != 0) {
         // we found this URL in blacklist -- fill the detection record
-        ur_set(out, detect, F_URL_BLACKLIST, bl_id);
-//#ifdef DEBUG
-        //cout << "URL \"" << host_url << "\" has been found in blacklist." << endl;
-//#endif
+        DEBUG_PRINT("Detectec blacklisted URL: '%s'\n", host_url.c_str());
+        ur_set(out, detect, F_DST_BLACKLIST, bl_id);
         return BLACKLISTED;
     }
+
     // URL was not found
     return URL_CLEAR;
 }
@@ -303,7 +383,7 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
  */
 static void update_remove(blacklist_map_t &blacklist, black_list_t &rm)
 {
-   for (int i = 0; i < rm.size(); i++) {
+   for (unsigned int i = 0; i < rm.size(); i++) {
       blacklist.erase(rm[i].url);
     }
 }
@@ -318,35 +398,81 @@ static void update_remove(blacklist_map_t &blacklist, black_list_t &rm)
  */
 static int  update_add(blacklist_map_t &blacklist, black_list_t &add)
 {
-   for (int i = 0; i < add.size(); i++) {
-      blacklist.insert(pair<string, uint64_t>(add[i].url, add[i].bl));
+    for (unsigned int i = 0; i < add.size(); i++) {
+        blacklist.insert(pair<string, uint64_t>(add[i].url, add[i].bl));
     }
+    return 1;
 }
 
-static void setup_downloader(bl_down_args_t *args, const char *file, const char *b_str)
+
+
+
+/**
+ * \brief Setup arguments structure for Blacklist Downloader.
+ * \param args Pointer to arguments structure.
+ * \param down_config Configuration structure parsed from XML file.
+ */
+void setup_downloader(bl_down_args_t *args, downloader_config_struct_t *down_config)
 {
-   uint64_t sites;
-   uint8_t num = bl_translate_to_id((char*)b_str, &sites);
+   // Convert blacklist names to IDs and merge them together (binary OR)
+   args->sites = bld_translate_names_to_cumulative_id(
+                    down_config->blacklist_arr,
+                    BL_NAME_MAX_LENGTH);
 
-   args->use_regex = (uint8_t*)malloc(sizeof(uint8_t) * num);
-   args->reg_pattern = (char**)malloc(sizeof(char *) * num);
-   args->comment_ar = (char*)malloc(sizeof(char) * num);
+   // Set other arguments for downloader
+   args->file       = down_config->file;
+   args->delay      = down_config->delay;
+   args->update_mode     = DEFAULT_UPDATE_MODE;//down_config.update_mode;
+   args->line_max_length = down_config->line_max_len;
+   args->el_max_length   = down_config->element_max_len;
+   args->el_max_count    = down_config->element_max_cnt;
+}
 
-   for (int i = 0; i < num; i++) {
-      args->comment_ar[i] = '#';
-      args->use_regex[i] = 1;
-      args->reg_pattern[i] = strdup(URL_REGEX);
+
+/**
+ * \brief Read configuration file and initialize both configurator
+ *        and blacklist downloader.
+ * \param patternFile
+ * \param userFile
+ * \param down_config
+ * \param patternType
+ * \return True on success, false otherwise.
+ */
+bool initialize_downloader(const char *patternFile, const char *userFile, downloader_config_struct_t *down_config, int patternType)
+{
+   bl_down_args_t bl_args;
+
+   // Load configuration for BLD
+   if (!bld_load_xml_configs(patternFile, userFile, patternType)) {
+      cerr << "Error: Could not load XML configuration for blacklist downloader." << endl;
+      return false;
+   }
+   // Start Blacklist Downloader
+   setup_downloader(&bl_args, down_config);
+   if (bl_args.sites == 0) {
+      fprintf(stderr, "Error: No blacklists were specified!\n");
+      return false;
    }
 
-   args->sites      = sites;
-   args->file       = (char*)file;
-   args->num        = num;
-   args->delay      = 3600;
-   args->update_mode     = DIFF_UPDATE_MODE;
-   args->line_max_length = 1024;
-   args->el_max_length   = 256;
-   args->el_max_count    = 50000;
+   int ret = bl_down_init(&bl_args);
+   if (ret < 0) {
+      fprintf(stderr, "Error: Could not initialize downloader!\n");
+      return false;
+   } else {
+      // Wait for initial update
+      while (!update) {
+         sleep(1);
+         if (stop) {
+            return false;
+         }
+         check_update();
+      }
+      update = 0;
+   }
+
+   return true;
 }
+
 
 
 
@@ -355,136 +481,126 @@ static void setup_downloader(bl_down_args_t *args, const char *file, const char 
  */
 int main (int argc, char** argv)
 {
-    // set signal handling for termination
-    signal(SIGTERM, signal_handler);
-    signal(SIGINT, signal_handler);
-    signal(SIGUSR1, signal_handler);
-
-    bl_down_args_t bl_args;
-    int retval = 0; // return value
+    int retval = 0;
     int send_terminating_unirec = 1;
-
-    //cc_hash_table_t blacklist;
+    //int hash_table_size = 100000;
     blacklist_map_t blacklist;
-
-    // Update lists
     black_list_t add_update;
     black_list_t rm_update;
 
-    // Unirec templates
-    char *errstr = NULL;
-    ur_template_t* templ = ur_create_input_template(0,"SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,HTTP_REQUEST_HOST,HTTP_REQUEST_URL,HTTP_REQUEST_REFERER", &errstr);
-    if (templ == NULL) {
-      cerr << "Error: Invalid UniRec specifier." << endl;
-      if(errstr != NULL){
-        fprintf(stderr, "%s\n", errstr);
-        free(errstr);
-      }
-      trap_finalize();
-      return EXIT_FAILURE;
-    }
-    ur_template_t* det = ur_create_output_template(0,"SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,URL_BLACKLIST,HTTP_REQUEST_URL,HTTP_REQUEST_HOST", &errstr); // + BLACKLIST_TYPE
-    if (det == NULL) {
-      cerr << "Error: Invalid UniRec specifier." << endl;
-      if(errstr != NULL){
-        fprintf(stderr, "%s\n", errstr);
-        free(errstr);
-      }
-      ur_free_template(templ);
-      trap_finalize();
-      return EXIT_FAILURE;
-    }
-    void *detection = ur_create_record(det, 2048);
+    // Set defaukt files names
+    char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
+    char *bld_userFile = (char*) SYSCONFDIR "/ipblacklistfilter/bld_userConfigFile.xml";
 
-    // initialize TRAP interface (nothing special is needed so we can use the macro)
-    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
     // set locale so we can use URL normalization library
     setlocale(LC_ALL, "");
 
-    int opt;
-    string file, bl_str;
-    int bl_mode = BL_STATIC_MODE; // default mode
+
+    // ***** Initialize TRAP *****
+    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+
 
     // ********** Parse arguments **********
-    while ((opt = getopt(argc, argv, "nD:f:")) != -1) {
+    int opt;
+    string file, bl_str;
+    int bl_mode = BL_STATIC_MODE; // default mode 
+    while ((opt = getopt(argc, argv, "Snau:U:")) != -1) {
         switch (opt) {
-            case 'D': // Dynamic mode
-                      bl_mode = BL_DYNAMIC_MODE;
-                      bl_str = string(optarg);
-                      break;
-            case 'f': // Specify file with blacklisted IPs
-                      file = string(optarg);
-                      break;
+            case 'u': // user configuration file for IPBlacklistFilter
+                userFile = optarg;
+                break;
+            case 'U': // user configuration file for blacklist downlooader
+                bld_userFile = optarg;
+                break;
             case 'n': // Do not send terminating Unirec
-                      send_terminating_unirec = 0;
-                      break;
+                send_terminating_unirec = 0;
+                break;
+            /*case 'A': // Active timeout
+                TIMEOUT_ACTIVE = atoi(optarg);
+                break;
+            case 'I': // Inactive timeout
+                TIMEOUT_INACTIVE = atoi(optarg);
+                break;
+            case 's': // FHT table size
+                hash_table_size = atoi(optarg);
+                break;*/
+            case 'S': // Switch to SDM version of HTTP fields
+                sdm_fields_flag = true;
+                break;
+            case '?':
+                if (optopt == 'I' || optopt == 'A' || optopt == 's') {
+                    fprintf (stderr, "ERROR: Option -%c requires an argumet.\n", optopt);
+                } else {
+                    fprintf (stderr, "ERROR: Unknown option -%c.\n", optopt);
+                }
+                FINALIZE_MODULE();
+                return EXIT_FAILURE;
         }
     }
 
-    // ***** Check module arguments *****
-    if (file.length() == 0) {
-        fprintf(stderr, "Error: Parameter -f is mandatory.\nUsage: %s -i <trap_interface> -f <file> [-D]\n", argv[0]);
-        ur_free_template(templ);
-        ur_free_template(det);
-        trap_terminate();
-        trap_finalize();
-        return EXIT_FAILURE;
+
+    // ***** Create Unirec templates ******
+    char *errstr = NULL;
+    ur_template_t* templ;
+    ur_template_t* det;
+    if (sdm_fields_flag) {
+        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_SDM_REQUEST_HOST,HTTP_SDM_REQUEST_REFERER,HTTP_SDM_REQUEST_URL", &errstr);
+        DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
+        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_SDM_REQUEST_HOST,HTTP_SDM_REQUEST_REFERER,HTTP_SDM_REQUEST_URL,DST_BLACKLIST", &errstr);
+        DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
+    } else {
+        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", &errstr);
+        DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
+        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,DST_BLACKLIST", &errstr);
+        DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
     }
-    if (bl_mode == BL_DYNAMIC_MODE && bl_str.length() == 0) {
-        fprintf(stderr, "Error: Parameter -D needs argument.\nUsage: %s -i <trap_interface> -f <file> [-D <blacklists>]\n", argv[0]);
-        ur_free_template(templ);
-        ur_free_template(det);
-        trap_terminate();
-        trap_finalize();
-        return EXIT_FAILURE;
-    }
+    void *detection = ur_create_record(det, 2048);
 
 
-    // Initialize blacklist downloader
-    if (bl_mode == BL_DYNAMIC_MODE) {
-       setup_downloader(&bl_args, file.c_str(), bl_str.c_str());
-       if (bl_args.sites == 0) {
-           fprintf(stderr, "Error: No blacklists were specified!\n");
-           ur_free_template(templ);
-           ur_free_template(det);
-           trap_terminate();
-           trap_finalize();
-           return EXIT_FAILURE;
-        }
-       int ret = bl_down_init(&bl_args);
-       if (ret < 0) {
-           fprintf(stderr, "Error: Could not initialize downloader!\n");
-           return 1;
-       } else {
-           while (!update) {
-               sleep(1);
-               if (stop) {
-                  ur_free_template(templ);
-                  ur_free_template(det);
-                  trap_finalize();
-                  fprintf(stderr, "Quiting before first update\n");
-                  bld_finalize();
-                  return EXIT_FAILURE;
-               }
-               cout << "Checking signal value\n";
-               check_update();
-           }
-           update = 0;
-       }
-    }
+   // Allocate memory for configuration
+   downloader_config_struct_t *down_config = (downloader_config_struct_t *) malloc(sizeof(downloader_config_struct_t));
+   if (down_config == NULL) {
+      cerr << "Error: Could not allocate memory for configuration structure." << endl;
+      FINALIZE_MODULE();
+      return EXIT_FAILURE;
+   }
+
+   // Load configuration
+   if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
+      cerr << "Error: Could not parse XML configuration." << endl;
+      FINALIZE_MODULE();
+      return EXIT_FAILURE;
+   }
+
+
+
+   // Set additional variables from userConfiguration
+   if (strcmp(down_config->update_mode, "dynamic") == 0) {
+      bl_mode = BL_DYNAMIC_MODE;
+   }
+
+
+   // ***** Initialize Blacklist Downloader *****
+   if (bl_mode == BL_DYNAMIC_MODE) {
+      // Load configuration for BLD
+      if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
+         //fht_destroy(AGGR_TABLE);
+         FINALIZE_MODULE();
+         return EXIT_FAILURE;
+      }
+   }
+
 
     // Load URLs from file
-    retval = load_update(add_update, rm_update, file);
-
-    if (retval == BLIST_LOAD_ERROR) {
-        trap_terminate();
-        trap_finalize();
-        ur_free_template(templ);
-        ur_free_template(det);
+    file = down_config->file;
+    if (load_update(add_update, rm_update, file) == BLIST_LOAD_ERROR) {
         if (bl_mode == BL_DYNAMIC_MODE) {
            bld_finalize();
         }
+        FINALIZE_MODULE();
         return EXIT_FAILURE;
     }
 
@@ -495,26 +611,22 @@ int main (int argc, char** argv)
           if (bl_mode == BL_DYNAMIC_MODE) {
               bld_finalize();
           }
+            FINALIZE_MODULE();
           return EXIT_FAILURE;
        }
     } else {
         cerr << "No addresses were loaded. Continuing makes no sense." << endl;
-        trap_terminate();
-        trap_finalize();
-        ur_free_template(templ);
-        ur_free_template(det);
         if (bl_mode == BL_DYNAMIC_MODE) {
            bld_finalize();
         }
+        FINALIZE_MODULE();
         return EXIT_FAILURE;
-
-
-
     }
     add_update.clear();
     rm_update.clear();
 
-    // Create thread for Inactive timeout checking
+
+    // ***** Create thread for Inactive timeout checking *****
     /*pthread_t inactive_timeout_thread_id;
     if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
        fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
@@ -528,18 +640,14 @@ int main (int argc, char** argv)
     }*/
 
 
-    const void *data;
-    uint16_t data_size;
-
     // ***** Main processing loop *****
     while (!stop) {
+         const void *data;
+         uint16_t data_size;
 
         // retrieve data from server
         retval = TRAP_RECEIVE(0, data, data_size, templ);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
-#ifdef DEBUG
-        int dyn_size = ur_rec_varlen_size(templ, data);
-#endif
 
         // check the data size -- we can only check static part since URL is dynamic
         if ((data_size - ur_rec_varlen_size(templ,data)) != ur_rec_fixlen_size(templ)) {
@@ -553,19 +661,12 @@ int main (int argc, char** argv)
             }
         }
 
-#ifdef DEBUG
-        ++recieved;
-#endif
 
         // check for blacklist match
         retval = check_blacklist(blacklist, templ, det, data, detection);
 
         // is blacklisted? send report
-
         if (retval == BLACKLISTED) {
-#ifdef DEBUG
-            ++marked;
-#endif
             ur_copy_fields(det, detection, templ, data);
             trap_send(0, detection, ur_rec_size(det, detection));
         }
@@ -585,21 +686,12 @@ int main (int argc, char** argv)
                 continue;
             }
 
-#ifdef DEBUG
-            cout << "Updating blacklist filter (" << add_update.size() << " additions / " << rm_update.size() << " removals)." << endl;
-#endif
-
             if (!rm_update.empty()) {
                 update_remove(blacklist, rm_update);
             }
             if (!add_update.empty()) {
                 update_add(blacklist, add_update);
             }
-
-#ifdef DEBUG
-            // for debug only -- show content of the new blacklist
-            show_blacklist(blacklist);
-#endif
 
             rm_update.clear();
             add_update.clear();
@@ -615,19 +707,15 @@ int main (int argc, char** argv)
     }
 
     // send terminate message
-    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-    trap_send(0, data, 1);
+    if (send_terminating_unirec) {
+        trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+        trap_send(0, {0}, 1);
+    }
 
     // clean up before termination
-    ur_free_template(templ);
-    ur_free_template(det);
     ur_free_record(detection);
-    trap_finalize();
+    FINALIZE_MODULE();
 
-
-#ifdef DEBUG
-    cout << marked << "/" << recieved << " were marked by blacklist." << endl;
-#endif
 
     return EXIT_SUCCESS;
 }

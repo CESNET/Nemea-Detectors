@@ -2,12 +2,14 @@
  * \file urlblacklistfilter.h
  * \brief URL blacklist detector for Nemea -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \date 2013
  * \date 2014
+ * \date 2016
  */
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013,2014,2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -94,6 +96,11 @@ extern "C" {
 #define URL_CLEAR 0
 
 
+#define BL_NAME_MAX_LENGTH 100
+unsigned int TIMEOUT_ACTIVE = 300;
+unsigned int TIMEOUT_INACTIVE = 30;
+
+
 const char *URL_REGEX =
    // Protocol
    //"((https?)://)?"
@@ -164,9 +171,24 @@ typedef std::map<std::string, uint64_t> blacklist_map_t;
 typedef struct {
     /*@{*/
     std::string url; /**< URL to update */
-    uint8_t bl; /**< Source blacklist of the URL */
+    uint64_t bl; /**< Source blacklist of the URL */
     /*@}*/
 } url_blist_t;
+
+
+/**
+ * Structure containing information used for configurating
+ * blacklist downloader.
+ */
+typedef struct __attribute__ ((__packed__)) {
+    char file[256];
+    uint32_t delay;
+    char update_mode[16];
+    uint32_t line_max_len;
+    uint32_t element_max_len;
+    uint32_t element_max_cnt;
+    char *blacklist_arr;
+} downloader_config_struct_t;
 
 
 typedef std::vector<url_blist_t> black_list_t;
