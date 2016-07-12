@@ -1,0 +1,155 @@
+********************************* Miner detector README ********************************
+
+Contents
+========
+
+   1. General information about module
+   2. How it works
+   3. Score formula
+   4. Stratum protocol check
+   5. Aggregation
+   6. Module usage
+   7. Output
+   8. Documentations
+   9. Compilation
+  10. List of files
+
+
+1. General information about module
+===================================
+
+   Miner detector module was implemented to detect hosts in network that participate
+in bitcoin mining. Miners can work in one of two modes:
+
+    1) Solo mining - Miners mine each for itself and communicate between each other to
+                     remain in synchronization.
+    2) Pool mining - Miners mine in a pool of miners with a pool server. Miners
+                     communicate with this server using characteristic protocol (Stratum).
+
+Detection method is based on detecting communication between miners and pool server, so
+only detecting miners, that are working in second mode.
+
+
+2. How it works
+===============
+
+   Module works in two threads. One thread reads input flows and second periodically
+checks for miners in special table to store data - Suspect table.
+There are three tables each with special functionality:
+
+    1) Suspect table - First thread stores suspicious flows into this table and second
+                       thread it periodically checks for possible miners.
+    2) Blacklist table - If second thread detects a miner, it will store the pool server
+                         IP, the miner was communicating with, in this table. First thread
+                         checks input flows against this table to determine if this flow
+                         belongs to previosly detected pool server IP.
+    3) Whitelist table - This table contains IP addresses of servers which are not pool
+                         servers. Usage of this table is crucial if we do not want to
+                         check same servers for stratum protocol (detailed explanation
+                         in section 4).
+
+So the flow of the module is as follows:
+
+    1) First thread reads flow data from input interface, checks both IP addresses in
+       this flow data against Suspect, Blacklist and Whitelist tables. Four outcomes can
+       happen now:
+
+            a) If dst. IP is in the Whitelist table, then flow is ignored.
+            b) If dst. IP is in the Blacklist table, then new record with information about
+               this flow is inserted into the Suspect table.
+            c) If <src. IP, dst. IP, dst. port> is in the Suspect table, then information
+               in the Suspect table is updated with data from this flow.
+            d) If flow is TCP and TCP flags are ACK or ACK+PUSH, then information about this
+               flow is inserted into the Suspect table.
+
+    2) Second thread checks every suspect in the Suspect table against both Whitelist
+       table and Blacklist table. Three outcoms can happen now:
+
+            a) If found in the Whitelist table, suspect is removed from Suspect table.
+            b) If found in the Blacklist table, report suspect as miner.
+            c) If not found in any, compute score of the suspect. Score is computed from
+               aggregated information about suspect (Suspect table). If score is higher
+               than treshold, suspect (server) is checked for stratum protocol.
+
+
+3. Score formula
+================
+
+   To determine if suspect is miner/pool server, a score is computed from aggregated
+information about suspect as follows:
+
+    1) score = 0
+    2) If ACK+PUSH flows is more than 80%, score + 2
+    3) If bytes per packet is between 50 and 130, score + 2
+    4) If packets per flow is NOT between 10 and 20, score + 1
+    5) If packets per minute is between 8 and 30, score + 2
+    6) If active time of suspect is more than 300 seconds, score + 3
+
+Score of 7 (by default) and more is needed to pass.
+
+
+4. Stratum protocol check
+=========================
+
+   If suspect's score is high enough, it is checked if it support stratum protocol.
+This check is done using tcp socket. Module connects to suspicious server and sends it typical
+request for stratum protocol. Module then waits for response. If response arrives and contain
+typical answer for given request, then this server is considered as mining pool and added to
+Blacklist table.
+
+
+5. Aggregation
+==============
+
+   Aggregated data consist of data from the Suspect table. Every time second thread checks
+suspect from Suspect table it also checks if this record timeouted. There are two timeouts:
+
+    1) Inactive timeout - Record is removed from the Suspect table if no similar records was
+                          seen (no aggregation was done) for small period of time.
+    2) Active timeout - Record is removed from the Suspect table even if similar records was
+                        seen (continual aggregation). This timeout is much larger than inactive
+                        timeout.
+
+
+6. Module usage
+===============
+
+   Module contains help. To show this help, run module like this:
+   ./miner_detector -h
+
+
+7. Output
+=========
+
+   Module outputs detected miners information by trap output interface. Template of this
+unirec record is (by default) "TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,DST_PORT,EVENT_SCALE,NOTE"
+
+
+8. Documentation
+================
+
+   Source code files was commented using doxygen style comments. To generate
+documentation for implemented functions, structures and variables use
+doxygen.
+
+
+9. Compilation of module
+========================
+
+   Module can be compiled using Makefile like this:
+      make
+
+
+10. List of files
+================
+
+    README   ....................... This file.
+    Makefile.am   .................. Used for generating Makefile using autotools.
+    default_blacklisted_ip.txt   ... Default blacklisted IP addresses of mining pools.
+    main.cpp   ..................... Main file, responsible for parsing parameters and
+                                     reading data from input.
+    miner_detector.cpp   ........... Detection functions are implemented in this file.
+    miner_detector.h   ............. Header file with defines and declarations.
+    utils.cpp   .................... Utilities implementation.
+    utils.h   ...................... Header file with defines and declarations.
+
