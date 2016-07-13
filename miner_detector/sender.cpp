@@ -43,21 +43,11 @@
  */
 
 #include "sender.h"
-/*
-UR_FIELDS(
-    time TIME_FIRST,        // Timestamp of the first seen flow of detected event
-    time TIME_LAST,         // Timestamp of the last seen flow of detected event
-    ipaddr SRC_IP,          // Source address
-    ipaddr DST_IP,          // Destination address
-    uint16 DST_PORT,        // Destination transport-layer port
-    uint32 EVENT_SCALE,     // Attack intensity
-    string NOTE,            // Generic string note
-)
-*/
+
 
 Sender::Sender(bool *success)
 {
-    std::string unirecSpecifier = "TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,DST_PORT,EVENT_SCALE,NOTE";
+    std::string unirecSpecifier = "TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,DST_PORT,EVENT_SCALE";
 
     outTemplate = ur_create_output_template(0, unirecSpecifier.c_str(), NULL);
     if (outTemplate == NULL) {
@@ -77,10 +67,7 @@ Sender::~Sender()
 
 int Sender::send(ip_addr_t &src, ip_addr_t &dst, uint16_t dst_port, uint32_t first_seen, uint32_t last_seen, uint64_t scale)
 {
-    string note;
-
-
-    void *rec = ur_create_record(outTemplate, note.size());
+    void *rec = ur_create_record(outTemplate, 0);
 
     ur_time_t first_ts = ur_time_from_sec_msec(first_seen, 0);
     ur_time_t last_ts = ur_time_from_sec_msec(last_seen, 0);
@@ -92,10 +79,7 @@ int Sender::send(ip_addr_t &src, ip_addr_t &dst, uint16_t dst_port, uint32_t fir
     ur_set(outTemplate, rec, F_DST_PORT, dst_port);
     ur_set(outTemplate, rec, F_EVENT_SCALE, (uint32_t)scale);
 
-    //set dynamic field
-    ur_set_string(outTemplate, rec, F_NOTE, note.c_str());
-
-    //send
+    // send
     int sendState = trap_send(0, rec, ur_rec_size(outTemplate, rec));
 
     ur_free_record(rec);

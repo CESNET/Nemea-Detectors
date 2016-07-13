@@ -42,7 +42,6 @@ UR_FIELDS(
     time TIME_FIRST,
     time TIME_LAST,
     uint32 EVENT_SCALE,
-    string NOTE,
 )
 // Struct with information about module
 trap_module_info_t *module_info = NULL;

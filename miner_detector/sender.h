@@ -51,15 +51,7 @@
 #include <iostream>
 #include <vector>
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
 #include "fields.h"
-
-//#ifdef __cplusplus
-//}
-//#endif
 
 #include "config.h"
 
