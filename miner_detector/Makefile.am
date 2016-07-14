@@ -5,4 +5,5 @@ miner_detector_SOURCES=main.cpp miner_detector.cpp miner_detector.h sender.cpp s
 miner_detector_LDADD=-lunirec -ltrap -lnemea-common
 miner_detector_CXXFLAGS=-std=c++11
 EXTRA_DIST=default_blacklisted_ip.txt
-
+miner_detectorsysconfdir=${sysconfdir}/miner_detector
+dist_miner_detectorsysconf_DATA=userConfigFile.xml
