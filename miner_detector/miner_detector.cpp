@@ -142,7 +142,7 @@ void create_db_from_file(fht_table_t *db, string fname)
         } else {
             // IP:port
             ip = line.substr(0, delim_pos);
-            port = stoi(line.substr(delim_pos + 1));
+            port = strtol(line.substr(delim_pos + 1).c_str(), NULL, 10);
         }
 
         // Trim whitespaces from IP string and check its length
