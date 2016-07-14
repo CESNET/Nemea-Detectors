@@ -4,6 +4,7 @@ SUBDIRS=amplification_detection \
 	blacklistfilter \
 	hoststatsnemea \
 	haddrscan_detector \
+	miner_detector \
 	sip_bf_detector \
 	tunnel_detection \
 	voip_fraud_detection \

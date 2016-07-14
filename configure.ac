@@ -120,6 +120,7 @@ AC_CONFIG_FILES([Makefile
                  hoststatsnemea/Makefile
                  hoststatsnemea/src/Makefile
                  haddrscan_detector/Makefile
+                 miner_detector/Makefile
                  sip_bf_detector/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
