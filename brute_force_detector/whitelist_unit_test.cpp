@@ -61,13 +61,17 @@ using namespace std;
 //parser->setVerbose();
 
 //print test number
-#define TEST(x) { WL(); cout<<"Test "<<x<<":"<<endl; }
+#define TEST(x) { WL(); } // cout << "Test " << x << ":" << endl; }
 
 uint16_t getRandomPort(){return rand() % 65536;}
 
 int failCounter = 0;
 
-void subTestRes(int testNum, string state) {cout<<"Subtest "<<testNum<<": "<<state<<endl; if(state == "fail") failCounter++;}
+void subTestRes(int testNum, string state)
+{
+    //cout <<"Subtest "<< testNum <<": "<< state << endl;
+    if (state == "fail") failCounter++;
+}
 
 
 int main()
@@ -426,10 +430,12 @@ int main()
     else
         subTestRes(3, "fail");
 
+    /*
     if(failCounter == 0)
         cout << "=====================" << "OK" << "=====================" << endl;
     else
         cout << "====================" << "FAIL" << "====================" << endl;
+    */
 
-    return 0;
+    return failCounter;
 }
