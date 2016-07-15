@@ -1,6 +1,6 @@
 # NEMEA Detectors
 
-Detection modules of the [Nemea system](https://github.com/CESNET/Nemea) provide mechanisms for automatic detection of malicious network traffic.
+Detection modules of the [NEMEA system](https://github.com/CESNET/Nemea) provide mechanisms for automatic detection of malicious network traffic.
 This repository contains modules with the following detection capabilities:
 
 * [amplification_detection](amplification_detection): universal detector of DNS/NTP/... amplification attacks
