@@ -19,7 +19,7 @@ Provides: nemea-detectors
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules --disable-repobuild;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules --disable-repobuild --docdir=%{_docdir}/nemea-detectors;
 make -j5
 
 %install
