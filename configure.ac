@@ -110,12 +110,11 @@ RPM_RELEASE=1
 AC_SUBST(RPM_RELEASE)
 AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
-#DX_INIT_DOXYGEN([nemea-cpd], [Doxyfile], [doc])
-
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/ipdetect/Makefile
+                 brute_force_detector/Makefile
                  amplification_detection/Makefile
                  hoststatsnemea/Makefile
                  hoststatsnemea/src/Makefile
