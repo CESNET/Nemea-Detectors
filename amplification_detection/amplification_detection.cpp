@@ -113,14 +113,14 @@ trap_module_info_t *module_info = NULL;
    PARAM('d', "log_dir", "path to log files, has to be ended by slash", required_argument, "string") \
    PARAM('p', "port", "port used for detection (53)", required_argument, "int32") \
    PARAM('n', "top", "number of top N values chosen (10)", required_argument, "int32") \
-   PARAM('q', "step", "step of histogram (10)", required_argument, "uint32") \
-   PARAM('a', "min_ampf", "minimal amplification effect considered an attack (5)", required_argument, "uint32") \
-   PARAM('t', "min_flow", "minimal threshold for number of flows in TOP-N (1000)", required_argument, "uint32") \
+   PARAM('q', "step", "step of histogram (10)", required_argument, "int32") \
+   PARAM('a', "min_ampf", "minimal amplification effect considered an attack (5)", required_argument, "int32") \
+   PARAM('t', "min_flow", "minimal threshold for number of flows in TOP-N (1000)", required_argument, "int32") \
    PARAM('i', "min_count", "minimal normalized threshold for count of flows in TOP-N (0.4)", required_argument, "float") \
    PARAM('y', "min_resp_pack", "minimal threshold for average size of responses in packets in TOP-N (0)", required_argument, "int32") \
    PARAM('l', "min_resp_byte", "minimal threshold for average size of responses in bytes in TOP-N (1000)", required_argument, "int32") \
    PARAM('m', "max_query", "maximal threshold for average size of queries in bytes in TOP-N (300)", required_argument, "int32") \
-   PARAM('w', "timeout", "time window of detection / timeout of inactive flow (3600)", required_argument, "uint32") \
+   PARAM('w', "timeout", "time window of detection / timeout of inactive flow (3600)", required_argument, "int32") \
    PARAM('s', "period", "time window of deletion / period of inactive flows checking(300)", required_argument, "int32") \
    PARAM('S', "record_count", "count of records to store for query / response direction (max size of vector).", required_argument, "uint32")
 
@@ -131,7 +131,7 @@ static config_t config;
 /* created history model of flows */
 static history_t model;
 /* current flow timestamp (seconds) */
-static uint32_t actual_timestamp;
+static unsigned long actual_timestamp;
 
 bool delete_inactive_flag = false;
 
@@ -206,9 +206,9 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
    }
 
    // divide by Q according to histogram step
-   uint32_t max = config.q;
+   int max = config.q;
 
-   for (uint32_t i = 0; i < BYTES_MAX; i+=config.q) {
+   for (int i = 0; i < BYTES_MAX; i+=config.q) {
       for (histogram_iter it = histogram.begin(); it != histogram.end(); ++it) {
          if ((it->first >= i) && (it->first < max)) {
             histogram_q[max] = it->second;
@@ -278,7 +278,7 @@ histogram_t topnHistogram(histogram_t h) {
    sort(values.rbegin(), values.rend());
 
    // take only first n items in correct order now
-   uint32_t i = 0;
+   int i = 0;
    for (int j = 0; j < config.n; j++) {
       if (i < values.size()) {
          topn[values[i].second] = values[i].first;
@@ -312,7 +312,7 @@ histogram_norm_t topnNormHistogram(histogram_norm_t h) {
    sort(values.rbegin(), values.rend());
 
    // take first n pairs in correct order
-   uint32_t i = 0;
+   int i = 0;
    for (int j = 0; j < config.n; j++) {
       if (i < values.size()) {
          topn[values[i].second] = values[i].first;
@@ -348,6 +348,8 @@ unsigned int sum (histogram_t h, int type) {
 
    return s;
 }
+
+
 
 
 /**
@@ -480,13 +482,13 @@ int main (int argc, char** argv)
             config.n = atoi(optarg);
             break;
          case 't':
-            config.min_flows = (uint32_t) atoi(optarg);
+            config.min_flows = atoi(optarg);
             break;
          case 'q':
-            config.q =(uint32_t) atoi(optarg);
+            config.q = atoi(optarg);
             break;
          case 'a':
-            config.min_a = (uint32_t) atoi(optarg);
+            config.min_a = atoi(optarg);
             break;
          case 'I':
             config.min_flows_norm = atof(optarg);
@@ -501,25 +503,25 @@ int main (int argc, char** argv)
             config.max_quer_bytes = atoi(optarg);
             break;
          case 'w':
-            config.det_window = (uint32_t) atoi(optarg);
+            config.det_window = atoi (optarg);
             break;
          case 's':
-            config.del_time = atoi(optarg);
+            config.del_time = atoi (optarg);
             break;
          case 'D':
-            config.max_quer_flow_packets = atoi(optarg);
+            config.max_quer_flow_packets = atoi (optarg);
             break;
          case 'E':
-            config.max_quer_flow_bytes = atoi(optarg);
+            config.max_quer_flow_bytes = atoi (optarg);
             break;
          case 'F':
-            config.max_resp_flow_packets = atoi(optarg);
+            config.max_resp_flow_packets = atoi (optarg);
             break;
          case 'G':
-            config.max_resp_flow_bytes = atoi(optarg);
+            config.max_resp_flow_bytes = atoi (optarg);
             break;
          case 'S':
-            config.max_flow_items = atoi(optarg);
+            config.max_flow_items = atoi (optarg);
             break;
          default:
             cerr <<  "Error: Invalid arguments." << endl;
@@ -645,8 +647,8 @@ int main (int argc, char** argv)
 
       if ((it = model.find(actual_key)) != model.end()) {
          // record exists - update information and add flow
-         if (it->second.last_t < (ur_time_t) ur_get(unirec_in, data, F_TIME_LAST)){
-            it->second.last_t = (ur_time_t) ur_get(unirec_in, data, F_TIME_LAST);
+         if (it->second.last_t < ur_get(unirec_in, data, F_TIME_LAST)){
+            it->second.last_t = ur_get(unirec_in, data, F_TIME_LAST);
          }
 
          // create new flow information structure
@@ -721,7 +723,7 @@ int main (int argc, char** argv)
                   if (max_packets(it->second.q) > config.max_quer_flow_packets || max_bytes(it->second.r) > config.max_resp_flow_bytes) {
                      //if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
                      if (it->second.r.size() > 0 && it->second.q.size() > 0)
-                     if ((max_bytes(it->second.r) / max_bytes(it->second.q)) > (int) config.min_a) {
+                     if ((max_bytes(it->second.r) / max_bytes(it->second.q)) > config.min_a) {
                         report_this = REPORT_BIG;
                         //report_this = COND1;
                      }
@@ -729,7 +731,7 @@ int main (int argc, char** argv)
                } else if ( (sumN(topnNormHistogram(normalizeHistogram(hvrb))) > config.min_flows_norm) && (sum(topnHistogram(hvrb), VALUE) > config.min_flows) ) {
                   if ( (sum_average(topnHistogram(hvrp)) > config.min_resp_packets) && (sum_average(topnHistogram(hvrb)) > config.min_resp_bytes) && (sum_average(topnHistogram(hvqb)) < config.max_quer_bytes) ) {
                      if (sum(topnHistogram(hvqb), BYTES) > 0) {
-                        if ( (sum(topnHistogram(hvrb), KEY) / sum(topnHistogram(hvqb), KEY)) > config.min_a ) {
+                        if ( ((sum(topnHistogram(hvrb), KEY) / topnHistogram(hvrb).size()) / (sum(topnHistogram(hvqb), KEY) / topnHistogram(hvqb).size())) > config.min_a ) {
                            report_this = REPORT_COMPLEX;
                            //report_this = COND2;
                         } //if (det. - cond4)
