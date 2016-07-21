@@ -210,13 +210,17 @@ void init_detectors_configuration() {
    general_conf.syn_scan_request_to_response_ratio = config->get_cfg_val("syn-scan-request-to-response-ratio", "syn-scan-request-to-response-ratio", 5);
    general_conf.syn_scan_ips = config->get_cfg_val("syn-scan-ips", "syn-scan-ips", 200);
 
+   general_conf.dos_detection_type = config->get_cfg_val("dos-detection-type", "dos-detection-type", 0);
    general_conf.dos_victim_connections_synflood = config->get_cfg_val("dos-victim-connections-synflood", "dos-victim-connections-synflood", 270000, 0);
    general_conf.dos_victim_connections_others = config->get_cfg_val("dos-victim-connections-others", "dos-victim-connections-others", 1000000, 0);
    general_conf.dos_victim_packet_ratio = config->get_cfg_val("dos-victim-packet-ratio", "dos-victim-packet-ratio", 2);
+   general_conf.dos_victim_bytes_packets_ratio = config->get_cfg_val("dos-victim-bytes-packets-ratio", "dos-victim-bytes-packets-ratio", 100);
+   general_conf.dos_victim_responsibility = config->get_cfg_val("dos-victim-responsibility", "dos-victim-responsibility", 0.8);
 
    general_conf.dos_attacker_connections_synflood = config->get_cfg_val("dos-attacker-connections-synflood", "dos-attacker-connections-synflood", 270000, 0);
    general_conf.dos_attacker_connections_others = config->get_cfg_val("dos-attacker-connections-others", "dos-attacker-connections-others", 1000000, 0);
    general_conf.dos_attacker_packet_ratio = config->get_cfg_val("dos-attacker-packet-ratio", "dos-attacker-packet-ratio", 2);
+   general_conf.dos_attacker_bytes_packets_ratio = config->get_cfg_val("dos-attacker-bytes-packets-ratio", "dos-attacker-bytes-packets-ratio", 100);
 
    general_conf.dos_req_rsp_est_ratio = config->get_cfg_val("dos-req-rsp-est-ratio", "dos-req-rsp-est-ratio", 0.8);
    general_conf.dos_rsp_req_est_ratio = config->get_cfg_val("dos-rsp-req-est-ratio", "dos-rsp-req-est-ratio", 0.2);
