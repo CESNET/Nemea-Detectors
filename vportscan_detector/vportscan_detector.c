@@ -135,7 +135,6 @@ int compare_64b(void *a, void *b)
  */
 int insert_port(void *p, int port)
 {
-   time_t cur_time = 0;
    int x = 0;
    item_t *info = NULL;
 
@@ -144,12 +143,6 @@ int insert_port(void *p, int port)
    }
 
    info = (item_t *) p;
-   time(&cur_time);
-
-   // If the ports table was not modified longer than MAX_AGE_OF_PORTS_TABLE_IN_SEC, reset the table (zero values)
-   if ((cur_time - info->ts_modified) > MAX_AGE_OF_UNMODIFIED_PORTS_TABLE) {
-      memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
-   }
 
    for (x = 0; x < info->ports_cnts; x++) {
       if (info->ports[x] == port) { // The port was found in the table, delete it (only once scanned ports are important)
