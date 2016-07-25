@@ -152,7 +152,7 @@ int insert_addr(void *p, uint32_t int_dst_ip)
             return 0;
          }
       } else {
-         if (info->dynamic_addrs[x] == int_dst_ip) {
+         if (info->dynamic_addrs[x - STATIC_ADDR_ARR_SIZE] == int_dst_ip) {
             time(&info->ts_modified); // Update the time of table modification
             return 0;
          }
