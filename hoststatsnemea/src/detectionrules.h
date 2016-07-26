@@ -61,13 +61,17 @@ struct general_detector_config {
    float syn_scan_request_to_response_ratio;
    float syn_scan_ips;
 
+   uint8_t dos_detection_type;
    uint32_t dos_victim_connections_synflood;
    uint32_t dos_victim_connections_others;
    float dos_victim_packet_ratio;
+   uint32_t dos_victim_bytes_packets_ratio;
+   float dos_victim_responsibility;
 
    uint32_t dos_attacker_connections_synflood;
    uint32_t dos_attacker_connections_others;
    float dos_attacker_packet_ratio;
+   uint32_t dos_attacker_bytes_packets_ratio;
 
    float dos_req_rsp_est_ratio;
    float dos_rsp_req_est_ratio;
@@ -80,13 +84,17 @@ struct general_detector_config {
       syn_scan_request_to_response_ratio = 5;
       syn_scan_ips = 200;
 
+      dos_detection_type = 0;
       dos_victim_connections_synflood = 270000;
       dos_victim_connections_others = 1000000;
       dos_victim_packet_ratio = 2;
+      dos_victim_bytes_packets_ratio = 100;
+      dos_victim_responsibility = 0.8;
 
       dos_attacker_connections_synflood = 270000;
       dos_attacker_connections_others = 1000000;
       dos_attacker_packet_ratio = 2;
+      dos_attacker_bytes_packets_ratio = 100;
 
       dos_req_rsp_est_ratio = 4.0 / 5.0;
       dos_rsp_req_est_ratio = 1.0 - dos_req_rsp_est_ratio;

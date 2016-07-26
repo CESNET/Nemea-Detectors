@@ -56,16 +56,17 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
            - (rec.out_req_syn_cnt + rec.out_rsp_syn_cnt)) * general_conf.dos_req_rsp_est_ratio;
    uint64_t est_out_req_ack_cnt = rec.out_req_ack_cnt + (rec.out_all_ack_cnt
            - (rec.out_req_ack_cnt + rec.out_rsp_ack_cnt)) * general_conf.dos_req_rsp_est_ratio;
-   uint64_t est_in_rsp_ack_cnt = rec.in_rsp_ack_cnt + (rec.in_all_ack_cnt
-           - (rec.in_req_ack_cnt + rec.in_rsp_ack_cnt)) * general_conf.dos_rsp_req_est_ratio;
+   uint64_t est_in_rsp_syn_cnt = rec.in_rsp_syn_cnt + (rec.in_all_syn_cnt
+           - (rec.in_req_syn_cnt + rec.in_rsp_syn_cnt)) * general_conf.dos_rsp_req_est_ratio;
 
    if (est_out_req_syn_cnt > general_conf.syn_scan_threshold &&
        est_out_req_syn_cnt > general_conf.syn_scan_syn_to_ack_ratio * est_out_req_ack_cnt && // most of outgoing flows are SYN-only (no ACKs)
-       est_out_req_syn_cnt > general_conf.syn_scan_request_to_response_ratio * est_in_rsp_ack_cnt && // most targets don't answer with ACK
+       est_out_req_syn_cnt > general_conf.syn_scan_request_to_response_ratio * est_in_rsp_syn_cnt && // most targets don't answer with SYN
        rec.out_req_uniqueips >= general_conf.syn_scan_ips && // a lot of different destinations
-       rec.out_req_syn_cnt > rec.out_all_flows / 2 && // it is more than half of total outgoing traffic of this address
-       rec.out_req_syn_cnt > 10 * rec.in_all_syn_cnt) // there is not much incoming connections
-                                                    //  - this was added to filter out p2p communication
+       rec.out_req_syn_cnt > rec.out_all_flows / 3) // it is more than third of total outgoing traffic of this address
+       //rec.out_req_syn_cnt > 10 * rec.in_all_syn_cnt) // there is not much incoming connections
+                                                        //  - this was added to filter out p2p communication
+                                                        // DUPLICATE third rule
    {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_PORTSCAN_H);
       evt.addProto(TCP).addSrcAddr(addr);
@@ -75,23 +76,54 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
    }
 
    // DoS/DDoS (victim)
+   bool dos_victim_tcp_check = false;
+   bool dos_victim_udp_check = false;
    uint64_t est_out_rsp_flows = rec.out_rsp_flows + (rec.out_all_flows
            - (rec.out_req_flows + rec.out_rsp_flows)) * general_conf.dos_rsp_req_est_ratio;
    uint64_t est_in_req_flows = rec.in_req_flows + (rec.in_all_flows
            - (rec.in_req_flows + rec.in_rsp_flows)) * general_conf.dos_req_rsp_est_ratio;
    uint64_t est_in_req_packets = rec.in_req_packets + (rec.in_all_packets
            - (rec.in_req_packets + rec.in_rsp_packets)) * general_conf.dos_req_rsp_est_ratio;
+   uint64_t est_in_req_bytes = rec.in_req_bytes + (rec.in_all_bytes
+           - (rec.in_req_bytes + rec.in_rsp_bytes)) * general_conf.dos_req_rsp_est_ratio;
+   
+
+   if (!general_conf.dos_detection_type) {
+      // Detect based on flows
+      // TCP
+      if (rec.in_all_syn_cnt > general_conf.dos_victim_connections_synflood &&
+          rec.in_all_packets < general_conf.dos_victim_packet_ratio * rec.in_all_flows) {
+         dos_victim_tcp_check = true;
+      }
+      // UDP
+      if (est_in_req_flows > general_conf.dos_victim_connections_others && // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
+          est_in_req_packets < general_conf.dos_victim_packet_ratio * est_in_req_flows) { // packets per flow < 2
+         dos_victim_udp_check = true;
+      }
+   } else {
+      // Detect based on packets
+      // TCP
+      if (rec.in_all_syn_packets > general_conf.dos_victim_connections_synflood) {
+         dos_victim_tcp_check = true;
+      }
+      // UDP
+      if (rec.in_req_packets > general_conf.dos_victim_connections_others) { // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
+         dos_victim_udp_check = true;
+      }
+
+   }
 
    bool ddos_tcp_victim = false;
    if (( //TCP (syn flood)
-      rec.in_all_syn_cnt > general_conf.dos_victim_connections_synflood &&
+      dos_victim_tcp_check &&
       rec.in_all_syn_cnt > 2 * rec.in_all_ack_cnt &&
-      rec.in_all_packets < general_conf.dos_victim_packet_ratio * rec.in_all_flows &&
+      est_out_rsp_flows < est_in_req_flows * general_conf.dos_victim_responsibility && // only 80% of requests are replied
+      est_in_req_bytes / est_in_req_packets < general_conf.dos_victim_bytes_packets_ratio &&
       (ddos_tcp_victim = true)
    ) || ( // UDP & others...
-      est_in_req_flows > general_conf.dos_victim_connections_others && // number of connection requests (if it's less than 128k (plus some margin) it may be vertical scan)
-      est_in_req_packets < general_conf.dos_victim_packet_ratio * est_in_req_flows && // packets per flow < 2
-      est_out_rsp_flows < est_in_req_flows / 2) // less than half of requests are replied
+      dos_victim_udp_check &&
+      est_out_rsp_flows < est_in_req_flows * general_conf.dos_victim_responsibility && // only 80% of requests are replied
+      est_in_req_bytes / est_in_req_packets < general_conf.dos_victim_bytes_packets_ratio)
        // && est_out_rsp_flows > est_in_req_flows * general_conf.dos_min_rsp_ratio) // more then 2% of requests are replied
    ) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DOS);
@@ -115,23 +147,54 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
    }
 
    // DoS/DDoS (attacker)
+   bool dos_attacker_tcp_check = false;
+   bool dos_attacker_udp_check = false;
    uint64_t est_out_req_flows = rec.out_req_flows + (rec.out_all_flows
            - (rec.out_req_flows + rec.out_rsp_flows)) * general_conf.dos_req_rsp_est_ratio;
    uint64_t est_out_req_packets = rec.out_req_packets + (rec.out_all_packets
            - (rec.out_req_packets + rec.out_rsp_packets)) * general_conf.dos_req_rsp_est_ratio;
    uint64_t est_in_rsp_flows = rec.in_rsp_flows + (rec.in_all_flows
            - (rec.in_req_flows + rec.in_rsp_flows)) * general_conf.dos_rsp_req_est_ratio;
+   uint64_t est_out_req_bytes = rec.out_req_bytes + (rec.out_all_bytes
+           - (rec.out_req_bytes + rec.out_rsp_bytes)) * general_conf.dos_req_rsp_est_ratio;
+
+
+
+   if (!general_conf.dos_detection_type) {
+      // Detection based on flows
+      // TCP
+      if (rec.out_all_flows / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_synflood &&
+          rec.out_all_packets < general_conf.dos_attacker_packet_ratio * rec.out_all_flows) {  // check ppp , comment to disable
+         dos_attacker_tcp_check = true;
+      }
+      // UDP
+      if (est_out_req_flows / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_others && // number of connection requests per target
+          est_out_req_packets < general_conf.dos_attacker_packet_ratio * est_out_req_flows) { // packets per flow < 2
+         dos_attacker_udp_check = true;
+      }
+   } else {
+      // Detection based on packets
+      // TCP
+      if (rec.out_all_packets / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_synflood) {
+         dos_attacker_tcp_check = true;
+      }
+      // UDP
+      if (rec.out_req_packets / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_others) { // number of connection requests per target
+         dos_attacker_udp_check = true;
+      }
+   }
 
    bool ddos_tcp_attacker = false;
    if (( // TCP (syn flood)
-      rec.out_all_flows / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_synflood &&
-      rec.out_all_packets < general_conf.dos_attacker_packet_ratio * rec.out_all_flows &&
+      dos_attacker_tcp_check &&
       rec.out_all_syn_cnt > 2 * rec.out_all_ack_cnt &&
+      est_in_rsp_flows < est_out_req_flows * general_conf.dos_victim_responsibility && // less than 80% of requests are replied
+      est_out_req_bytes / est_out_req_packets < general_conf.dos_attacker_bytes_packets_ratio &&
       (ddos_tcp_attacker = true)
    ) || ( // UDP & others...
-      est_out_req_flows / MAX(rec.out_all_uniqueips, 1U) >= general_conf.dos_attacker_connections_others && // number of connection requests per target
-      est_out_req_packets < general_conf.dos_attacker_packet_ratio * est_out_req_flows && // packets per flow < 2
-      est_in_rsp_flows < est_out_req_flows / 2) // less than half of requests are replied
+      dos_attacker_udp_check &&
+      est_in_rsp_flows < est_out_req_flows * general_conf.dos_victim_responsibility && // less than 80% of requests are replied
+      est_out_req_bytes / est_out_req_packets < general_conf.dos_attacker_bytes_packets_ratio)
       // && est_in_rsp_flows > est_out_req_flows * general_conf.dos_min_rsp_ratio) // more then 2% of requests are replied
    ) {
       Event evt(rec.first_rec_ts, rec.last_rec_ts, EVT_T_DOS);
