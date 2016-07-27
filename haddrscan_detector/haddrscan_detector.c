@@ -52,6 +52,7 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 #include <b_plus_tree.h>
+#include <time.h>
 
 #define MAX_PACKETS 1 // Maximum number of packets in suspicious flow
 #define MAX_ADDRS 50 // After reaching this maximum of scanned ports for one IP address, alert is sent
