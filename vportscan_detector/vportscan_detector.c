@@ -303,7 +303,7 @@ int main(int argc, char **argv)
             goto cleanup;
          }
          ts_first = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
-         ts_last = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
+         ts_last = ur_get(in_tmplt, recv_data, F_TIME_LAST);
          np = (item_t *) new_item;
          if (np->ports_cnts == 0) {
             np->ts_first = ts_first;
