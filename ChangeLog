@@ -1,3 +1,23 @@
+2016-07-28 Nemea-detectors-1.3.0
+	* vportscan_detector:
+		bugfix bad timestamp field used
+		optimization
+		replace python wrapper with pytrap in aggregator
+	* UrlBlacklistFilter:
+		update to new framework version
+	* miner_detector:
+		added new detector of BitCoin miners
+	* hoststats:
+		updated detection of scans and dos
+	* haddrscan_detector:
+		added new detector of horizontal scans
+	* all detectors:
+		adapted to changed API of B+ tree in nemea-common
+	* bruteforcedetector:
+		published from internal repository
+	* amplification_detector:
+		code maintenance
+
 2016-06-03 Nemea-detectors-1.2.4
 	* tunnel_detection & DNSblacklistfilter:
 		fixed data type of DNS_RDATA (bytes->string)
