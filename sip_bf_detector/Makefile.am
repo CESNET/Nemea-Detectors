@@ -8,4 +8,5 @@ pkgdocdir=${docdir}/sip_bf_detector
 doc:
 	doxygen
 
-
+clean-local:
+	rm -rf doc
