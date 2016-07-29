@@ -149,7 +149,7 @@ bool free_ceased_attacks(ur_time_t actual_time, int key_length, bpt_t *server_tr
    static time_t time_last_check = 0;
 
    // Check whether it is time for another memory sweep
-   if (((uint64_t) abs(time_actual - time_last_check)) > g_check_mem_interval) {
+   if (((uint64_t) abs((int) time_actual - (int) time_last_check)) > g_check_mem_interval) {
       int is_there_next;
       bpt_list_item_t *b_item;
 
@@ -541,7 +541,7 @@ bool AttackedServer::free_unused_users(time_t time_actual)
       AttackedUser *user = (AttackedUser *) (b_item->value);
 
       // if time from last attack message targeted against this user exceeded threshold
-      if (((uint64_t) abs(time_actual - user->m_last_action)) > g_free_mem_interval) {
+      if (((uint64_t) abs((int) time_actual - (int) user->m_last_action)) > g_free_mem_interval) {
 
          // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
          if (user->m_attack_total_count >= g_alert_threshold) {
@@ -819,7 +819,7 @@ int main(int argc, char **argv)
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'a':
-         sscanf(optarg,"%"SCNu64"", &g_alert_threshold);
+         sscanf(optarg,"%" SCNu64"", &g_alert_threshold);
          if (g_alert_threshold < 1) {
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
@@ -827,7 +827,7 @@ int main(int argc, char **argv)
          break;
 
       case 'c':
-         sscanf(optarg,"%"SCNu64"", &g_check_mem_interval);
+         sscanf(optarg,"%" SCNu64"", &g_check_mem_interval);
          if (g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory check intervals.\n");
             goto cleanup;
@@ -835,7 +835,7 @@ int main(int argc, char **argv)
          break;
 
       case 'f':
-         sscanf(optarg,"%"SCNu64"", &g_free_mem_interval);
+         sscanf(optarg,"%" SCNu64"", &g_free_mem_interval);
          if (g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory deallocation after last attack action.\n");
             goto cleanup;
@@ -843,7 +843,7 @@ int main(int argc, char **argv)
          break;
 
       case 's':
-         sscanf(optarg,"%"SCNu8"", &g_skip_alerts);
+         sscanf(optarg,"%" SCNu8"", &g_skip_alerts);
          if (g_skip_alerts > 2) {
             fprintf(stderr, "Error: wrong value of parameter s. Must be 0, 1, or 2.\n");
             goto cleanup;
