@@ -541,7 +541,7 @@ bool AttackedServer::free_unused_users(time_t time_actual)
       AttackedUser *user = (AttackedUser *) (b_item->value);
 
       // if time from last attack message targeted against this user exceeded threshold
-      if (time_actual >= (int64_t) user->m_last_action && (uint64_t) (time_actual - user->m_last_action) > g_free_mem_interval) {
+      if ((uint64_t) time_actual >= user->m_last_action && (uint64_t) (time_actual - user->m_last_action) > g_free_mem_interval) {
 
          // generate alert of type #3 (view README.md) if count of all attack messages targeted against this user exceeded a threshold
          if (user->m_attack_total_count >= g_alert_threshold) {
