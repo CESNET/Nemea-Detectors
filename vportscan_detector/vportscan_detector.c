@@ -54,24 +54,20 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 #include <b_plus_tree.h>
+#include <time.h>
 
 #define MAX_PACKETS 4 // Maximum number of packets in suspicious flow
 #define MAX_PORTS 50 // After reaching this maximum of scanned ports for one IP address, alert is sent
 #define MAX_AGE_OF_UNMODIFIED_PORTS_TABLE 5*60 // This determines maximum age of the unchanged ports table for one IP address
 
-#define  TIME_BEFORE_PRUNING 1*60
+#define TIME_BEFORE_PRUNING 1*60
 
 #define TCP_PROTOCOL 0x6
-#define UDP_PROTOCOL 0x11
 #define TCP_FLAGS_SYN 0x2
 
 #define NUM_OF_ITEMS_IN_TREE_LEAF 5
-#define TRUE 1
-#define FALSE 0
-
-#define NUM_OF_PORTS_IN_ALERT 25
-
-#define NUM_OF_PROTOCOLS 2
+#define STATIC_PORT_ARR_SIZE  10
+#define DYNAMIC_PORT_ARR_SIZE  (MAX_PORTS - STATIC_PORT_ARR_SIZE)
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -106,7 +102,8 @@ typedef struct item_s item_t;
 
 struct item_s {
    time_t ts_modified;
-   uint16_t ports[MAX_PORTS];
+   uint16_t static_ports[STATIC_PORT_ARR_SIZE];
+   uint16_t *dynamic_ports;
    uint8_t ports_cnts;
    ur_time_t ts_first;
    ur_time_t ts_last;
@@ -135,7 +132,6 @@ int compare_64b(void *a, void *b)
  */
 int insert_port(void *p, int port)
 {
-   time_t cur_time = 0;
    int x = 0;
    item_t *info = NULL;
 
@@ -144,31 +140,50 @@ int insert_port(void *p, int port)
    }
 
    info = (item_t *) p;
-   time(&cur_time);
-
-   // If the ports table was not modified longer than MAX_AGE_OF_PORTS_TABLE_IN_SEC, reset the table (zero values)
-   if ((cur_time - info->ts_modified) > MAX_AGE_OF_UNMODIFIED_PORTS_TABLE) {
-      memset((void *) (info->ports), 0, MAX_PORTS * sizeof(uint16_t));
-   }
 
    for (x = 0; x < info->ports_cnts; x++) {
-      if (info->ports[x] == port) { // The port was found in the table, delete it (only once scanned ports are important)
-         if (info->ports_cnts > 1) {
-            info->ports[x] = info->ports[info->ports_cnts - 1];
-            info->ports[info->ports_cnts - 1] = 0;
-         } else {
-            info->ports[x] = 0;
+      if (x < STATIC_PORT_ARR_SIZE) {
+         if (info->static_ports[x] == port) {
+            if (info->ports_cnts > STATIC_PORT_ARR_SIZE) {
+               info->static_ports[x] = info->dynamic_ports[info->ports_cnts - STATIC_PORT_ARR_SIZE - 1];
+               info->dynamic_ports[info->ports_cnts - STATIC_PORT_ARR_SIZE - 1] = 0;
+            } else if (info->ports_cnts > 1) {
+               info->static_ports[x] = info->static_ports[info->ports_cnts - 1];
+               info->static_ports[info->ports_cnts - 1] = 0;
+            } else {
+               info->static_ports[x] = 0;
+            }
+            info->ports_cnts--;
+            time(&info->ts_modified); // Update the time of table modification
+            return 0;
          }
-         info->ports_cnts--;
-         time(&info->ts_modified); // Update the time of table modification
-         return 0;
+      } else {
+         if (info->dynamic_ports[x - STATIC_PORT_ARR_SIZE] == port) {
+            if (x < (info->ports_cnts - 1)) {
+               info->dynamic_ports[x - STATIC_PORT_ARR_SIZE] = info->dynamic_ports[info->ports_cnts - 1 - STATIC_PORT_ARR_SIZE];
+               info->dynamic_ports[info->ports_cnts - 1 - STATIC_PORT_ARR_SIZE] = 0;
+            } else {
+               info->dynamic_ports[x - STATIC_PORT_ARR_SIZE] = 0;
+            }
+            info->ports_cnts--;
+            time(&info->ts_modified); // Update the time of table modification
+            return 0;
+         }
       }
    }
 
-   info->ports[info->ports_cnts] = port; // Insert the new port into first free index
+   if (info->ports_cnts < STATIC_PORT_ARR_SIZE) {
+      info->static_ports[info->ports_cnts] = port; // Insert the new port into first free index
+   } else {
+      if (info->dynamic_ports == NULL) {
+         // Inserting first port to dynamic array - allocate the array
+         info->dynamic_ports = (uint16_t *) calloc(DYNAMIC_PORT_ARR_SIZE, sizeof(uint16_t));
+      }
+      info->dynamic_ports[info->ports_cnts - STATIC_PORT_ARR_SIZE] = port;
+   }
+
    info->ports_cnts++;
    time(&info->ts_modified); // Update the time of table modification
-
 
    if (info->ports_cnts >= MAX_PORTS) {
       return 1; // Signalize alert after reaching MAX_PORTS scanned ports
@@ -288,7 +303,7 @@ int main(int argc, char **argv)
             goto cleanup;
          }
          ts_first = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
-         ts_last = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
+         ts_last = ur_get(in_tmplt, recv_data, F_TIME_LAST);
          np = (item_t *) new_item;
          if (np->ports_cnts == 0) {
             np->ts_first = ts_first;
@@ -312,6 +327,11 @@ int main(int argc, char **argv)
             ur_set(out_tmplt, out_rec, F_TIME_LAST, np->ts_last);
 
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
+
+            // free dynamic array of ports
+            if (np->dynamic_ports != NULL) {
+               free(np->dynamic_ports);
+            }
 
             // delete item from tree no matter how successful was trap_send()
             bpt_item_del(b_plus_tree, &ip_to_tree);
@@ -351,6 +371,10 @@ int main(int argc, char **argv)
 
             // Delete the item if it wasn't modified longer than MAX_AGE_OF_IP_IN_SEC(1)
             if ((ts_cur_time - value_pt->ts_modified) > MAX_AGE_OF_UNMODIFIED_PORTS_TABLE) {
+               // free dynamic array of ports
+               if (value_pt->dynamic_ports != NULL) {
+                  free(value_pt->dynamic_ports);
+               }
                has_next = bpt_list_item_del(b_plus_tree, b_item);
             } else { // Get next item from the list
                has_next = bpt_list_item_next(b_plus_tree, b_item);

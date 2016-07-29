@@ -52,6 +52,7 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 #include <b_plus_tree.h>
+#include <time.h>
 
 #define MAX_PACKETS 1 // Maximum number of packets in suspicious flow
 #define MAX_ADDRS 50 // After reaching this maximum of scanned ports for one IP address, alert is sent
@@ -152,7 +153,7 @@ int insert_addr(void *p, uint32_t int_dst_ip)
             return 0;
          }
       } else {
-         if (info->dynamic_addrs[x] == int_dst_ip) {
+         if (info->dynamic_addrs[x - STATIC_ADDR_ARR_SIZE] == int_dst_ip) {
             time(&info->ts_modified); // Update the time of table modification
             return 0;
          }
@@ -282,7 +283,7 @@ int main(int argc, char **argv)
             goto cleanup;
          }
          ts_first = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
-         ts_last = ur_get(in_tmplt, recv_data, F_TIME_FIRST);
+         ts_last = ur_get(in_tmplt, recv_data, F_TIME_LAST);
          np = (item_t *) new_item;
          if (np->addr_cnt == 0) {
             np->ts_first = ts_first;

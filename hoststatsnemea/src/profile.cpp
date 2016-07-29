@@ -273,6 +273,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (tcp_flags & TCP_ACK) INC(src_host_rec.out_req_ack_cnt);
    } else if (dir_flags & DIR_FLAG_RSP) {
       // response flows
+      ADD(src_host_rec.out_rsp_bytes, ur_get(tmpl_in, record, F_BYTES));
       ADD(src_host_rec.out_rsp_packets, ur_get(tmpl_in, record, F_PACKETS));
       INC(src_host_rec.out_rsp_flows);
 
@@ -316,6 +317,7 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
    // all flows
    ADD(dst_host_rec.in_all_bytes, ur_get(tmpl_in, record, F_BYTES));
    ADD(dst_host_rec.in_all_packets, ur_get(tmpl_in, record, F_PACKETS));
+   if (tcp_flags & TCP_SYN) ADD(dst_host_rec.in_all_syn_packets, ur_get(tmpl_in, record, F_PACKETS));
    if (!dst_present) INC(dst_host_rec.in_all_uniqueips);
    INC(dst_host_rec.in_all_flows);
 
@@ -343,12 +345,15 @@ void HostProfile::update(const void *record, const ur_template_t *tmpl_in,
       if (tcp_flags & TCP_RST) INC(dst_host_rec.in_req_rst_cnt);
       if (tcp_flags & TCP_PSH) INC(dst_host_rec.in_req_psh_cnt);
       if (tcp_flags & TCP_ACK) INC(dst_host_rec.in_req_ack_cnt);
+      if (tcp_flags & TCP_SYN) INC(dst_host_rec.in_req_syn_cnt);
    } else if (dir_flags & DIR_FLAG_RSP) {
       // response flows
+      ADD(dst_host_rec.in_rsp_bytes, ur_get(tmpl_in, record, F_BYTES));
       ADD(dst_host_rec.in_rsp_packets, ur_get(tmpl_in, record, F_PACKETS));
       INC(dst_host_rec.in_rsp_flows);
 
       if (tcp_flags & TCP_ACK) INC(dst_host_rec.in_rsp_ack_cnt);
+      if (tcp_flags & TCP_SYN) INC(dst_host_rec.in_rsp_syn_cnt);
    }
 
    if (subprofiles) {
