@@ -3,31 +3,37 @@
 <configuration>
     <struct name="main struct">
         <!-- Blacklisted IP will be read from this file if it is specified (anything other than '-') -->
-        <element name="blacklist_file">default_blacklisted_ip.txt</element>
+        <element name="blacklist_file">-</element>
 
         <!-- Whitelisted IP will be read from this file if it is specified (anything other than '-') -->
         <element name="whitelist_file">-</element>
 
         <!-- Blacklisted IP will be stored into this file when module terminate if it is specified (anything other than '-') -->
-        <element name="store_blacklist_file">saved_blacklists.txt</element>
+        <element name="store_blacklist_file">-</element>
 
         <!-- Whitelisted IP will be stored into this file when module terminate if it is specified (anything other than '-') -->
-        <element name="store_whitelist_file">saved_whitelist.txt</element>
+        <element name="store_whitelist_file">-</element>
+
+        <!-- Time [seconds] for how long to wait before connection to server will timeout (used when checking for stratum protocol) -->
+        <element name="conn_timeout">10</element>
+
+        <!-- Time [seconds] for how long to wait for server reply (used when checking for stratum protocol) -->
+        <element name="read_timeout">10</element>
 
         <!-- Time [seconds] for how long will information about a suspect be held if suspect will be active (communicating with mine pool server) -->
-        <element name="timeout_active">300</element>
+        <element name="timeout_active">3600</element>
 
         <!-- Time [seconds] for how long will information about a suspect be held if suspect will NOT be active (no communication with mine pool server) -->
         <element name="timeout_inactive">60</element>
 
         <!-- How much time [seconds] to wait until next suspect-check iteration begins -->
-        <element name="check_period">20</element>
+        <element name="check_period">60</element>
 
         <!-- If true, every suspect which gain sufficient score will be checked for stratum protocol -->
         <element name="stratum_check">true</element>
 
         <!-- Minimum score needed to check suspected server for stratum protocol, used only when stratum-check is active -->
-        <element name="score_treshold">7</element>
+        <element name="score_treshold">9</element>
 
         <!-- Number of maximum possible suspects stored in suspect database -->
         <element name="suspect_db_size">1048576</element>
@@ -36,7 +42,7 @@
         <element name="suspect_db_stash_size">4</element>
         
         <!-- Number of maximum possible IP addresses stored in blacklist database -->
-        <element name="blacklist_db_size">1048576</element>
+        <element name="blacklist_db_size">131072</element>
 
         <!-- Size of stash for blacklist databse -->
         <element name="blacklist_db_stash_size">4</element>

@@ -67,6 +67,12 @@
 
 /**
  * Used to compute score for suspect.
+ * Percent of flows for which is source port number larger than destination port number.
+ */
+#define SUSPECT_REQ_FLOWS_TRESHOLD 0.9
+
+/**
+ * Used to compute score for suspect.
  * Minimum active timeout of the suspect.
  */
 #define SUSPECT_MIN_ACTIVE_TIME 300
@@ -79,9 +85,11 @@
 #define SUSPECT_SCORE_BPP 2
 #define SUSPECT_SCORE_PPF 1
 #define SUSPECT_SCORE_PPM 2
+#define SUSPECT_SCORE_REQ_FLOWS 3
 #define SUSPECT_SCORE_ACTIVE_TIME 3
 
 
+#define STRATUM_NOT_USED 0xdeadbeaf
 
 
 /**
@@ -102,6 +110,7 @@ typedef struct suspect_item {
     uint64_t ack_flows;
     uint64_t ackpush_flows;
     uint64_t other_flows;
+    uint64_t req_flows;
     uint64_t packets;
     uint64_t bytes;
     uint32_t first_seen;
@@ -127,7 +136,9 @@ typedef struct __attribute__ ((__packed__)) {
     char whitelist_file[256];
     char store_blacklist_file[256];
     char store_whitelist_file[256];
-    
+
+    uint32_t conn_timeout;
+    uint32_t read_timeout;    
     uint32_t timeout_active;
     uint32_t timeout_inactive;
     uint32_t check_period;

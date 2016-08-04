@@ -77,7 +77,6 @@ int main(int argc, char **argv)
     // Set defaukt file name
     char *userFile = (char*) SYSCONFDIR "/miner_detector/userConfigFile.xml";
 
-
     // ***** TRAP initialization *****
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -135,7 +134,6 @@ int main(int argc, char **argv)
 
 
     // ***** Initialize miner detector *****
-    
     if (!miner_detector_initialization(config)) {
         fprintf(stderr, "Miner detector initialization failed!\n");
         delete SENDER;
@@ -206,7 +204,7 @@ int main(int argc, char **argv)
     }
 
     // Wait for miner detector to finish
-    printf("DEBUG_MAIN: Waiting for miner detector to finish...\n");
+    //printf("DEBUG_MAIN: Waiting for miner detector to finish...\n");
     STOP = 1;
     pthread_join(MINER_DETECTOR_CHECK_THREAD_ID, NULL);
 

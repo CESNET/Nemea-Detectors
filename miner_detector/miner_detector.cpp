@@ -228,6 +228,7 @@ uint32_t compute_suspect_score(suspect_item_t &s)
     // 50 < BPP < 130           MEDIUM    2
     // PPF < 10 || PPF > 20     LOW       1
     // 8 < PPM < 30             MEDIUM    2
+    // req_flows >= 90%         HIGH      3
     // ActiveTimeSec > 1800     HIGH      3
 
     uint32_t ackpush_flows = s.ack_flows + s.ackpush_flows;
@@ -253,6 +254,10 @@ uint32_t compute_suspect_score(suspect_item_t &s)
 
     if (ppm != -1 && ppm >= SUSPECT_LOW_PPM_TRESHOLD && ppm <= SUSPECT_HIGH_PPM_TRESHOLD) {
         score += SUSPECT_SCORE_PPM;
+    }
+
+    if (s.req_flows / flows > SUSPECT_REQ_FLOWS_TRESHOLD) {
+        score += SUSPECT_SCORE_REQ_FLOWS;
     }
 
     if (active_time >= SUSPECT_MIN_ACTIVE_TIME) {
@@ -317,6 +322,7 @@ void insert_suspect_to_db(suspect_item_key_t &key, suspect_item_t &suspect)
     ofstream myfile;
     if (!fname) {
         // Store file was not set, do not store databases
+        DEBUG_PRINT("No store file specified!\n");
         return;
     }
 
@@ -381,10 +387,11 @@ void export_suspects(void)
     ip_addr_t *miner_ip, *pool_ip;
     uint16_t port;
     char buff[128];
+    fht_iter_t *iter = fht_init_iter(SUSPECT_DB);
 
     // Cycle through suspect database and check for suspects with high score
     while(!STOP) {
-        fht_iter_t *iter = fht_init_iter(SUSPECT_DB);
+        fht_reinit_iter(iter);
 
         while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
             bool blacklisted_flag = false;
@@ -416,37 +423,42 @@ void export_suspects(void)
                 if (score >= SUSPECT_SCORE_THRESHOLD) {
                      //DEBUG_PRINT("Suspect '%s' (-> %s) scored '%u', checking for stratum protocol!\n",
                      //           convert_unirec_ip_to_string(*miner_ip).c_str(), convert_unirec_ip_to_string(*pool_ip).c_str(), score);
+                     // DEBUG
+                     //char buf_src[32], buf_dst[32];
+		             //ip_to_str(miner_ip, buf_src);
+		             //ip_to_str(pool_ip, buf_dst);
+                     //printf("Suspect '%s' (-> %s:%d) scored '%u', checking for stratum protocol!\n", buf_src, buf_dst, port, score);
                     int ret;
                     uint16_t value = 1;
                     if (CHECK_STRATUM_FLAG) {
                         // Check pool IP if it support stratum protocol
                         ip_to_str(pool_ip, buff);
-                        string ip_str = string(buff);
-                        if (check_for_stratum_protocol(ip_str, port)) {
+                        if ((ret = stratum_check_server(buff, port)) == STRATUM_MATCH) {
                             // Add pool IP to blacklist
                             DEBUG_PRINT("Stratum detected, blacklisting!\n");
-                            //BLACKLIST_DB.insert(pair<string,uint16_t>(convert_unirec_ip_to_string(*pool_ip),port));
                             ret = fht_insert(BLACKLIST_DB, &key, &value, NULL, NULL);
                             blacklisted_flag = true;
                         } else {
                             // Add pool IP to whitelist
-                            DEBUG_PRINT("Stratum not detected, whitelisting!\n");
-                            //WHITELIST_DB.insert(pair<string,uint16_t>(convert_unirec_ip_to_string(*pool_ip),port));
+                            DEBUG_PRINT("Stratum not detected(%s), whitelisting!\n", stratum_error_string(ret));
                             ret = fht_insert(WHITELIST_DB, &key, &value, NULL, NULL);
                             fht_remove_iter(iter);
                         }
                     } else {
                         // Not checking for stratum, rely only on score
-                        ret = FHT_INSERT_OK;//ret = fht_insert(BLACKLIST_DB, &key, &value, NULL, NULL);
+                        ret = STRATUM_NOT_USED; //FHT_INSERT_OK;//ret = fht_insert(BLACKLIST_DB, &key, &value, NULL, NULL);
                     }
                     // Check insert to DB
                     switch (ret) {
+                        case STRATUM_NOT_USED:  // Not using stratum checker
+                                                break;
                         case FHT_INSERT_OK:     // Insert was successfull
                                                 break;
                         case FHT_INSERT_LOST:   // Insert kicked out item
                                                 DEBUG_PRINT("Some item was kicked out from W/BList DB due to inserting new one.\n");
                                                 break;
                         case FHT_INSERT_FAILED: // Item with same key is already in the table, this can not happen or can?
+                                                DEBUG_PRINT("Inserting failed!\n");
                                                 break;
                     }
                 }
@@ -490,10 +502,13 @@ void export_suspects(void)
                 ((suspect_item_t*)iter->data_ptr)->ackpush_flows = 0;
             }
         }
-        fht_destroy_iter(iter);
+
 
         sleep(CHECK_THREAD_SLEEP_PERIOD);
     }
+
+    // Free iterator
+    fht_destroy_iter(iter);
 
     // We are terminating, export every blacklisted suspect
     export_suspects();
@@ -524,7 +539,6 @@ void export_suspects(void)
 bool miner_detector_initialization(config_struct_t* config)
 {
     DEBUG_PRINT("Initializing miner detector...\n");
-
 
     TIMEOUT_INACTIVE = config->timeout_inactive;
     TIMEOUT_EXPORT = config->timeout_active;
@@ -565,18 +579,19 @@ bool miner_detector_initialization(config_struct_t* config)
         WL_STORE_FILE = config->store_whitelist_file;
     }
 
-    if (config->stratum_check != NULL && strcmp(config->stratum_check, "true")) {
+    if (config->stratum_check != NULL && strcmp(config->stratum_check, "true") == 0) {
         CHECK_STRATUM_FLAG = true;
     } else  {
         CHECK_STRATUM_FLAG = false;
     }
 
-
+    // Set stratum checker timeouts
+    stratum_set_timeout(STRATUM_CONN_TIMEOUT, config->conn_timeout);
+    stratum_set_timeout(STRATUM_READ_TIMEOUT, config->read_timeout);
 
 
     // Create checking thread
     pthread_create(&MINER_DETECTOR_CHECK_THREAD_ID, NULL, check_thread, NULL);
-
 
     return true;
 }
@@ -654,6 +669,7 @@ void miner_detector_process_data(ur_template_t *tmplt, const void *data)
         suspect->ack_flows += (int) only_ack_flow_flag;
         suspect->ackpush_flows += (int) only_ackpush_flow_flag;
         suspect->other_flows += (int) (!only_ack_flow_flag && !only_ackpush_flow_flag);
+        suspect->req_flows += (int) (ur_get(tmplt, data, F_SRC_PORT) > ur_get(tmplt, data, F_DST_PORT));
         suspect->packets += ur_get(tmplt, data, F_PACKETS);
         suspect->bytes += ur_get(tmplt, data, F_BYTES);
         suspect->last_seen = ur_time_get_sec(ur_get(tmplt, data, F_TIME_LAST));
@@ -684,6 +700,7 @@ void miner_detector_process_data(ur_template_t *tmplt, const void *data)
             suspect.ack_flows += (int) only_ack_flow_flag;
             suspect.ackpush_flows += (int) only_ackpush_flow_flag;
             suspect.other_flows += (int) (!only_ack_flow_flag && !only_ackpush_flow_flag);
+            suspect.req_flows = (int) (ur_get(tmplt, data, F_SRC_PORT) > ur_get(tmplt, data, F_DST_PORT));
             suspect.packets += ur_get(tmplt, data, F_PACKETS);
             suspect.bytes += ur_get(tmplt, data, F_BYTES);
             suspect.first_seen = ur_time_get_sec(ur_get(tmplt, data, F_TIME_FIRST));
