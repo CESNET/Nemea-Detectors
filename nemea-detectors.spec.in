@@ -9,7 +9,7 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: libtrap nemea-common nemea-python wget
+Requires: libtrap nemea-common python-nemea-pytrap wget
 BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
 Provides: nemea-detectors
 
@@ -28,7 +28,18 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %post
 
 %files
-%{_bindir}/nemea/*
+%{_bindir}/nemea/amplification_detection
+%{_bindir}/nemea/dnstunnel_detection
+%{_bindir}/nemea/haddrscan_detector
+%{_bindir}/nemea/ipblacklistfilter
+%{_bindir}/nemea/sip_bf_detector
+%{_bindir}/nemea/vportscan_aggregator.py
+%{_bindir}/nemea/brute_force_detector
+%{_bindir}/nemea/haddrscan_aggregator.py
+%{_bindir}/nemea/hoststatsnemea
+%{_bindir}/nemea/miner_detector
+%{_bindir}/nemea/voip_fraud_detection
+%{_bindir}/nemea/vportscan_detector
 %{_docdir}/nemea-detectors/*/README*
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf
 %config(noreplace) %{_sysconfdir}/nemea/miner_detector/userConfigFile.xml
