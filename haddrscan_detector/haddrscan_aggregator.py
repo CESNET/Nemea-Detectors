@@ -169,7 +169,7 @@ while True:
             URtmp.TIME_FIRST = UR_Input.TIME_FIRST
          if URtmp.TIME_LAST < UR_Input.TIME_LAST:
             URtmp.TIME_LAST = UR_Input.TIME_LAST
-         URtmp.PORT_CNT += UR_Input.PORT_CNT
+         URtmp.ADDR_CNT += UR_Input.ADDR_CNT
          added = True
          break
 
