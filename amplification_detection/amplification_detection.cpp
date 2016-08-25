@@ -469,7 +469,7 @@ int main (int argc, char** argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    // parse parameters
-   char opt;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'd':

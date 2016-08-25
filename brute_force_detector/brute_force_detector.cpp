@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 #endif
 
     // ***** Parsing non TRAP arguments *****
-    char opt;
+    signed char opt;
     char *configFilePath = NULL;
     char *whitelistFilePath = NULL;
     bool whitelistParserVerbose = false;

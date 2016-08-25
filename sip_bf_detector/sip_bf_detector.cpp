@@ -793,7 +793,7 @@ void get_string_from_unirec(int unirec_field_id, int max_length, const void *in_
 int main(int argc, char **argv)
 {
    int ret;
-   char opt;
+   signed char opt;
    uint16_t msg_type;
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
    int sip_cseq_len;

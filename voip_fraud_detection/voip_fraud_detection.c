@@ -406,7 +406,7 @@ int main(int argc, char **argv)
 
    // ***** Parse remaining parameters and get configuration *****
 
-   char opt;
+   signed char opt;
 
    while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
