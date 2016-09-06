@@ -58,9 +58,9 @@ int hash_table_item_initialize(ip_item_t * hash_table_item)
    }
 
    // prefix examination attack
-   hash_table_item->first_invite_request = (time_t) 0;
-   hash_table_item->time_last_check_prefix_examination = (time_t) 0;
-   time(&(hash_table_item->time_last_communication)); // set for memory management of module
+   hash_table_item->first_invite_request = (ur_time_t) 0;
+   hash_table_item->time_last_check_prefix_examination = (ur_time_t) 0;
+   hash_table_item->time_last_communication = (ur_time_t) 0; // set for memory management of module
    hash_table_item->time_attack_detected_prefix_examination = 0;
    hash_table_item->prefix_examination_detection_event_count = 0;
    hash_table_item->prefix_examination_attack_detected_count = 0;
@@ -117,16 +117,7 @@ int node_data_check_initialize(prefix_tree_domain_t * prefix_tree_node)
 
       // initialize values of node_data
       ((node_data_t *) (prefix_tree_node->parent->value))->invite_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->cancel_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->ack_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->bye_count = 0;
       ((node_data_t *) (prefix_tree_node->parent->value))->ok_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->trying_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->ringing_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->forbidden_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->unauthorized_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->proxy_auth_req_count = 0;
-      ((node_data_t *) (prefix_tree_node->parent->value))->rtp_data = 0;
       ((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash = 0;
       ((node_data_t *) (prefix_tree_node->parent->value))->call_id_full = 0;
       ((node_data_t *) (prefix_tree_node->parent->value))->call_id_insert_position = 0;
@@ -144,19 +135,6 @@ void statistics_initialize()
    global_module_statistic.prefix_examination_attack_detected_count = 0;
    global_module_statistic.prefix_examination_detection_event_count = 0;
    global_module_statistic.received_invite_flow_count = 0;
-#ifdef DEBUG
-   global_sip_statistic.ack_count = 0;
-   global_sip_statistic.bye_count = 0;
-   global_sip_statistic.cancel_count = 0;
-   global_sip_statistic.invite_count = 0;
-   global_sip_statistic.ok_count = 0;
-   global_sip_statistic.trying_count = 0;
-   global_sip_statistic.ringing_count = 0;
-   global_sip_statistic.forbidden_count = 0;
-   global_sip_statistic.proxy_auth_req_count = 0;
-   global_sip_statistic.unauthorized_count = 0;
-   global_sip_statistic.unique_user_agent_count = 0;
-#endif
 }
 
 // Reset detection statistics used during detection of prefix examination attack
@@ -164,21 +142,12 @@ void statistics_initialize()
 void detection_statistics_reset()
 {
    detection_prefix_examination.invite = 0;
-   detection_prefix_examination.ack = 0;
-   detection_prefix_examination.cancel = 0;
-   detection_prefix_examination.bye = 0;
    detection_prefix_examination.ok = 0;
    detection_prefix_examination.successful_call = 0;
-   detection_prefix_examination.trying = 0;
-   detection_prefix_examination.ringing = 0;
-   detection_prefix_examination.rtcp_data = 0;
-   detection_prefix_examination.forbidden = 0;
-   detection_prefix_examination.unauthorized = 0;
-   detection_prefix_examination.proxy_auth_req = 0;
    detection_prefix_examination.report_node = NULL;
    detection_prefix_examination.report_prefix_length = 0;
    detection_prefix_examination.sip_user_agent_hash = 0;
    strcpy(detection_prefix_examination.sip_to, "");
    detection_prefix_examination.prefix_examination_count = 0;
-   time(&(detection_prefix_examination.time)); // set actual time
+   detection_prefix_examination.time = current_time; // set actual time
 }

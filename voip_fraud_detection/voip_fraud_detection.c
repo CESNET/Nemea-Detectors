@@ -45,17 +45,18 @@
 #include "fields.h"
 
 UR_FIELDS (
-   string INVEA_SIP_CALLING_PARTY,
-   string INVEA_SIP_CALLED_PARTY,
-   string INVEA_SIP_CALL_ID,
-   string INVEA_SIP_USER_AGENT,
-   uint8 INVEA_VOIP_PACKET_TYPE,
+   uint16 SIP_MSG_TYPE,
+   uint16 SIP_STATUS_CODE,
+   string SIP_REQUEST_URI,
+   string SIP_CALLING_PARTY,
+   string SIP_CALLED_PARTY,
+   string SIP_CALL_ID,
+   string SIP_USER_AGENT,
+   string SIP_CSEQ,
    ipaddr SRC_IP,
    ipaddr DST_IP,
+   time TIME_FIRST,
    uint64 LINK_BIT_FIELD,
-   uint16 SRC_PORT,
-   uint16 DST_PORT,
-   string INVEA_SIP_REQUEST_URI,
    string VOIP_FRAUD_USER_AGENT,
    uint16 VOIP_FRAUD_PREFIX_LENGTH,
    uint32 VOIP_FRAUD_SUCCESSFUL_CALL_COUNT,
@@ -64,14 +65,9 @@ UR_FIELDS (
    string VOIP_FRAUD_SIP_TO,
    string VOIP_FRAUD_SIP_FROM,
    string VOIP_FRAUD_COUNTRY_CODE,
-   uint64 INVEA_SIP_STATS,
-   uint64 INVEA_RTCP_PACKETS,
-   uint64 INVEA_RTCP_OCTETS,
-   string INVEA_SIP_VIA,
    uint32 EVENT_ID,
    uint8 EVENT_TYPE,
    time DETECTION_TIME,
-   time TIME_FIRST,
    uint64 INVITE_CNT
    uint64 CALLER_CNT
    uint64 CALLEE_CNT
@@ -102,22 +98,49 @@ trap_module_info_t *module_info = NULL;
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-// Check and free memory, that wasn't used for long time or exceeds limit of items (memory management of module)
+/** \brief Definition of modul_configuration (modul_configuration_struct). */
+modul_configuration_t modul_configuration;
 
+/** \brief Definition of detection_statistic (detection_prefix_examination_struct). */
+detection_prefix_examination_t detection_prefix_examination;
+
+/** \brief Definition of global_module_statistic (global_module_statistic_struct). */
+global_module_statistic_t global_module_statistic;
+
+#ifdef DEBUG
+/** \brief Definition of global_sip_statistic (global_sip_statistic_struct). */
+global_sip_statistic_t global_sip_statistic;
+#endif
+
+/** \brief Last used Event ID of attack detection. */
+uint32_t last_event_id;
+
+/** \brief UniRec input template. */
+ur_template_t *ur_template_in;
+
+/** \brief UniRec output template. */
+ur_template_t *ur_template_out;
+
+/** \brief Pointer to received data from trap_recv(). */
+const void *in_rec;
+
+/** \brief Detection record for sending detection events to output interface. */
+void *detection_record;
+
+/** \brief Indication of stopping of module. */
+int stop = 0;
+
+// Check and free memory, that wasn't used for long time or exceeds limit of items (memory management of module)
 void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
 {
-   static time_t time_actual;
-   static time_t time_last_check;
+   static ur_time_t time_last_check = 0;
 
    int i;
    ip_item_t * hash_table_item;
 
-   // get actual time
-   time(&time_actual);
-
    // check if check memory interval was expired
-   if (difftime(time_actual, time_last_check) > CHECK_MEMORY_INTERVAL) {
-
+   if ((current_time - time_last_check) > CHECK_MEMORY_INTERVAL) {
+      // printf("Checking memory: %"PRIu64", %"PRIu64", %"PRIu64"\n", current_time, time_last_check, current_time - time_last_check);
       // iterate over items in hash table
       for (i = 0; i < hash_table->table_size; i++) {
 
@@ -128,12 +151,7 @@ void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
             hash_table_item = *(ip_item_t **) hash_table->data[hash_table->ind[i].index];
 
             // check for no SIP communication for defined time
-            if (difftime(time_actual, hash_table_item->time_last_communication) > modul_configuration.clear_data_no_communication_after) {
-
-#ifdef DEBUG
-               PRINT_OUT("check_and_free_module_memory():remove TIME_LAST_COMMUNICATION\n");
-#endif
-
+            if ((current_time - hash_table_item->time_last_communication) > modul_configuration.clear_data_no_communication_after) {
                // free additional memory
                hash_table_item_free_inner_memory(hash_table_item);
 
@@ -146,11 +164,6 @@ void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
 
             // check if prefix_tree has more than max_item_prefix_tree items
             if ((hash_table_item->tree->root->count_of_string > modul_configuration.max_item_prefix_tree)) {
-
-#ifdef DEBUG
-               PRINT_OUT("check_and_free_module_memory():remove MAX_ITEM_PREFIX_TREE (", uint_to_str(hash_table_item->tree->root->count_of_string), ")\n");
-#endif
-
                // destroy prefix_tree
                prefix_tree_destroy(hash_table_item->tree);
 
@@ -163,7 +176,7 @@ void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
                }
 
                // reset first_invite_request
-               hash_table_item->first_invite_request = (time_t) 0;
+               hash_table_item->first_invite_request = (ur_time_t) 0;
 
             }
 
@@ -171,7 +184,7 @@ void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
       }
 
       // save time of last check of module memory
-      time(&time_last_check);
+      time_last_check = current_time;
    }
 }
 
@@ -296,10 +309,6 @@ int cut_sip_identifier(char ** output_str, char * input_str, int * str_len)
          *str_len -= 5;
 
       } else {
-
-         // not valid sip identifier, add one to statistic
-         global_module_statistic.invalid_sip_identifier_count++;
-
          return -1;
       }
 
@@ -627,35 +636,29 @@ int main(int argc, char **argv)
    }
 #endif
 
-   // save start time module
-   time_t time_start_module;
-   time(&time_start_module);
-
    // definition of required variables
    char ip_src_str[INET6_ADDRSTRLEN + 1], ip_dst_str[INET6_ADDRSTRLEN + 1];
-   ip_addr_t * ip_src, * ip_dst;
-   char sip_request_uri_orig[MAX_LENGTH_SIP_TO + 1];
-   char sip_to_orig[MAX_LENGTH_SIP_TO + 1];
+   ip_addr_t *ip_src, *ip_dst;
+   char sip_target_orig[MAX_LENGTH_SIP_TO + 1];
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1];
    char call_id[MAX_LENGTH_CALL_ID + 1];
    char user_agent[MAX_LENGTH_USER_AGENT + 1];
+   char sip_cseq[MAX_LENGTH_SIP_CSEQ + 1];
    int call_id_len, user_agent_len;
-   char * sip_to, * sip_from, * sip_request_uri;
-   int sip_from_len, sip_to_len, sip_request_uri_len;
+   char *sip_target, *sip_from;
+   int sip_from_len, sip_target_len, sip_cseq_len;
 
    // load Event ID from file
    event_id_load(modul_configuration.event_id_file);
 
-
-   // ***** Main processing loop of module *****
-
    ur_template_t *sdmout_tmpl = ur_create_output_template(1, "INVITE_CNT,CALLER_CNT,CALLEE_CNT", NULL);
-
    void *smdout_rec = ur_create_record(sdmout_tmpl, 0);
 
+   // ***** Main processing loop of module *****
    while (!stop) {
-
       uint16_t in_rec_size;
+      prefix_tree_domain_t *prefix_tree_node;
+      ip_item_t *hash_table_item;
 
       // Receive data from input interface 0.
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, ur_template_in);
@@ -679,494 +682,180 @@ int main(int argc, char **argv)
       check_and_free_module_memory(&hash_table_ip);
 
       // get type of packet
-      uint8_t voip_packet_type;
-      voip_packet_type = ur_get(ur_template_in, in_rec, F_INVEA_VOIP_PACKET_TYPE);
+      uint16_t sip_msg_type;
+      uint16_t status_code;
+      sip_msg_type = ur_get(ur_template_in, in_rec, F_SIP_MSG_TYPE);
+      status_code = ur_get(ur_template_in, in_rec, F_SIP_STATUS_CODE);
+      current_time = ur_time_get_sec((ur_time_t *) ur_get(ur_template_in, in_rec, F_TIME_FIRST));
+      get_string_from_unirec(sip_cseq, &sip_cseq_len, F_SIP_CSEQ, MAX_LENGTH_SIP_CSEQ);
 
-      // if voip_packet_type is monitored
-      if (voip_packet_type == VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED \
-           || voip_packet_type == VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED \
-           || voip_packet_type == VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED) {
+      if (sip_msg_type == SIP_MSG_TYPE_INVITE) {
+         get_string_from_unirec(sip_target_orig, &sip_target_len, F_SIP_REQUEST_URI, MAX_LENGTH_SIP_TO);
+         int valid = cut_sip_identifier(&sip_target, sip_target_orig, &sip_target_len);
+         if (valid == -1) {
+            get_string_from_unirec(sip_target_orig, &sip_target_len, F_SIP_CALLED_PARTY, MAX_LENGTH_SIP_TO);
+            valid = cut_sip_identifier(&sip_target, sip_target_orig, &sip_target_len);
+            if (valid == -1) {
+               global_module_statistic.invalid_sip_identifier_count++;
+               continue;
+            }
+         }
 
-         prefix_tree_domain_t * prefix_tree_node;
-         ip_item_t * hash_table_item;
+         get_string_from_unirec(sip_from_orig, &sip_from_len, F_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM);
+         valid = cut_sip_identifier(&sip_from, sip_from_orig, &sip_from_len);
+         if (valid == -1) {
+            sip_from = NULL;
+         }
 
-         // get actual time
-         time_t time_actual;
-         time(&time_actual);
-
-         // get source IP (unirec)
+         global_module_statistic.received_invite_flow_count++;
+         get_string_from_unirec(call_id, &call_id_len, F_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
+         get_string_from_unirec(user_agent, &user_agent_len, F_SIP_USER_AGENT, MAX_LENGTH_USER_AGENT);
          ip_src = &ur_get(ur_template_in, in_rec, F_SRC_IP);
          ip_to_str(ip_src, ip_src_str);
-
-         // get destination IP (unirec)
          ip_dst = &ur_get(ur_template_in, in_rec, F_DST_IP);
          ip_to_str(ip_dst, ip_dst_str);
 
-         // get SIP_REQUEST_URI from UniRec
-         get_string_from_unirec(sip_request_uri_orig, &sip_request_uri_len, F_INVEA_SIP_REQUEST_URI, MAX_LENGTH_SIP_TO);
+         // is source IP in hash table?
+         if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) == NULL) {
+            /* IP address not found in hash table */
+            // create hash_table_item
+            hash_table_item = (ip_item_t *) malloc(sizeof (ip_item_t));
+            caller_count++;
 
-         // get SIP_FROM from UniRec
-         get_string_from_unirec(sip_from_orig, &sip_from_len, F_INVEA_SIP_CALLING_PARTY, MAX_LENGTH_SIP_FROM);
-
-         // get SIP_TO from UniRec
-         get_string_from_unirec(sip_to_orig, &sip_to_len, F_INVEA_SIP_CALLED_PARTY, MAX_LENGTH_SIP_TO);
-
-         // get Call-ID from UniRec
-         get_string_from_unirec(call_id, &call_id_len, F_INVEA_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
-
-         // get User-Agent from UniRec
-         get_string_from_unirec(user_agent, &user_agent_len, F_INVEA_SIP_USER_AGENT, MAX_LENGTH_USER_AGENT);
-
-         // cut "sip:" or "sips:" from sip_request_uri, sip_to and sip_from
-         int invalid_request_uri = cut_sip_identifier(&sip_request_uri, sip_request_uri_orig, &sip_request_uri_len);
-         int invalid_sipto = cut_sip_identifier(&sip_to, sip_to_orig, &sip_to_len);
-         int invalid_sipfrom = cut_sip_identifier(&sip_from, sip_from_orig, &sip_from_len);
-
-#ifdef PRINT_DETAIL_INVALID_SIPURI
-         if (invalid_sipto == -1 || invalid_sipfrom == -1 || \
-             (invalid_request_uri == -1 && voip_packet_type == VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED)) {
-
-            if (invalid_sipto == -1) {
-               PRINT_OUT("SIP_To header is invalid:\"", sip_to_orig, "\"; ");
+            // check successful allocation memory
+            if (hash_table_item == NULL) {
+               PRINT_ERR("hash_table_item: Error memory allocation\n");
+               continue;
             }
 
-            if (invalid_sipfrom == -1) {
-               PRINT_OUT("SIP_From header is invalid:\"", sip_from_orig, "\"; ");
+            //  initialize hash_table_item, if error occurs continue
+            if (hash_table_item_initialize(hash_table_item) == -1) continue;
+
+            // set time correct time to hash_table_item
+            hash_table_item->first_invite_request = current_time;
+            hash_table_item->time_last_check_prefix_examination = current_time;
+            hash_table_item->time_last_communication = current_time;
+
+            // insert into hash table
+            ip_item_t * kicked_hash_table_item;
+            if ((kicked_hash_table_item = (ip_item_t *) ht_insert_v2(&hash_table_ip, (char *) ip_src->bytes, (void *) &hash_table_item)) != NULL) {
+               // free memory of kicked item from hash table
+               hash_table_item_free_inner_memory(*(ip_item_t **) kicked_hash_table_item);
+               free(*(ip_item_t **) kicked_hash_table_item);
+               kicked_hash_table_item = NULL;
             }
 
-            if (invalid_request_uri == -1 && voip_packet_type == VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED) {
-               PRINT_OUT("SIP_RequestURI header is invalid:\"", sip_request_uri_orig, "\"; ");
+         } else {
+            // IP is in hash_table
+
+             hash_table_item = *(ip_item_t **) hash_table_item;
+
+            // save time of first INVITE request for the IP address
+            if ((int) hash_table_item->first_invite_request == 0) {
+               hash_table_item->first_invite_request = current_time;
             }
-
-            // get id of monitoring probes
-            uint64_t link_bit_field;
-            link_bit_field = ur_get(ur_template_in, in_rec, F_LINK_BIT_FIELD);
-
-            PRINT_OUT_NOTDATETIME(" LINK_BIT_FIELD: ", uint_to_str(link_bit_field), "; ");
-            PRINT_OUT_NOTDATETIME("SRC_IP: ", ip_src_str, "; DST_IP: ", ip_dst_str, "; voip_packet_type: ", uint_to_str(voip_packet_type), "; ");
-
-            uint16_t src_port, dst_port;
-            src_port = ur_get(ur_template_in, in_rec, F_SRC_PORT);
-            dst_port = ur_get(ur_template_in, in_rec, F_DST_PORT);
-
-            PRINT_OUT_NOTDATETIME("SRC_PORT: ", uint_to_str(src_port), "; ");
-            PRINT_OUT_NOTDATETIME("DST_PORT: ", uint_to_str(dst_port), "\n");
-         }
-#endif
-
-         // if not valid sip_to, not process it
-         if (invalid_sipto == -1) continue;
-
-
-         // get SIP_STATS from UniRec
-         uint64_t sip_stats;
-         sip_stats = ur_get(ur_template_in, in_rec, F_INVEA_SIP_STATS);
-
-         uint32_t invite_stats = 0;
-         uint16_t bye_stats = 0;
-         uint8_t ack_stats = 0, cancel_stats = 0;
-         uint8_t forbidden_stats = 0, unauthorized_stats = 0;
-         uint8_t ok_stats = 0, ringing_stats = 0, proxy_auth_req_stats = 0, trying_stats = 0;
-
-         // get number of requests/responses from SIP_STATS
-         switch (voip_packet_type) {
-
-            case VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED:
-            {
-               // get number of INVITE requests in the flow record
-               // same as: invite_stats = (uint32_t) (sip_stats & 0x00000000ffffffff);
-               invite_stats = (uint32_t) sip_stats;
-
-               // get number of CANCEL, ACK and BYE requests in the flow record (other_stats = sip_stats>>32;)
-               cancel_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
-               ack_stats = (uint8_t) ((sip_stats & 0x00ff000000000000) >> 48);
-               bye_stats = (uint16_t) ((sip_stats & 0x0000ffff00000000) >> 32);
-
-               break;
-            }
-
-            case VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED:
-            {
-               // get number of forbidden, unauthorized responses in the flow record
-               forbidden_stats = (uint8_t) ((sip_stats & 0x0000ff0000000000) >> 40);
-               unauthorized_stats = (uint8_t) ((sip_stats & 0x000000000000ff00) >> 8);
-
-               break;
-            }
-
-            case VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED:
-            {
-               // get number of OK, RINGING, TRYING and PROXY AUTH REQUEST responses in the flow record
-               ok_stats = (uint8_t) ((sip_stats & 0xff00000000000000) >> 56);
-               ringing_stats = (uint8_t) ((sip_stats & 0x0000ff0000000000) >> 40);
-               proxy_auth_req_stats = (uint8_t) ((sip_stats & 0x000000000000ff00) >> 8);
-               trying_stats = (uint8_t) (sip_stats & 0x00000000000000ff);
-
-               break;
-            }
-
          }
 
-         // check if sip_to is numeric with allowed special char ('+','*','#') or this text part before '@' + check of minimum numeric length
-         if (!is_numeric_participant(sip_to, sip_to_len)) {
+         // DETECTION of prefix examination
+         prefix_examination_detection(&hash_table_user_agent, hash_table_item, ip_src);
 
-#ifdef ENABLE_GEOIP
-            if (voip_packet_type == VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED) {
+         /* >>>>>>>>>> SAVE RECEIVED DATA >>>>>>>>>> */
 
-               if (ok_stats > 0 && modul_configuration.countries_detection_mode != COUNTRIES_DETECTION_MODE_OFF) {
+         // add sip_to to prefix tree
+         prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_target, sip_target_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_target_len);
+         // check successful prefix_tree_insert
+         if (prefix_tree_node == NULL) {
+            PRINT_ERR("prefix_tree_insert: Error memory allocation\n");
+            continue;
+         } else if (prefix_tree_node->count_of_insert == 1) {
+            //new callee
+            callee_count++;
+         }
 
-                  // check calling to diferrent country for non-numeric calling party
+         // check of successful initialization of node data
+         if (node_data_check_initialize(prefix_tree_node) == -1) continue;
+         // save Call-ID to node_data
+         call_id_node_data_save(prefix_tree_node, call_id, call_id_len);
 
-                  // is destination IP in hash table?
-                  if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_dst->bytes))) != NULL) {
+         // compute hash of User-Agent
+         ((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash = SuperFastHash(user_agent, sizeof (char) * user_agent_len);
 
-                     hash_table_item = *(ip_item_t **) hash_table_item;
+         // check if hash of User-Agent exists in hash table
+         if (ht_get_v2(&hash_table_user_agent, (char *) &(((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash)) == NULL) {
 
-                  } else {
+            // save User-Agent to hash table
+            char *user_agent_item = (char *) malloc(sizeof (char) * (user_agent_len + 1));
 
-                     // create hash_table_item
-                     hash_table_item = (ip_item_t *) malloc(sizeof (ip_item_t));
-
-                     // check successful allocation memory
-                     if (hash_table_item == NULL) {
-                        PRINT_ERR("hash_table_item: Error memory allocation\n");
-                        continue;
-                     }
-
-                     //  initialize hash_table_item, if error occurs continue
-                     if (hash_table_item_initialize(hash_table_item) == -1) continue;
-
-                     // set time correct time to hash_table_item
-                     time(&(hash_table_item->first_invite_request));
-                     hash_table_item->time_last_check_prefix_examination = time_start_module;
-                     hash_table_item->time_last_communication = time_start_module;
-
-                     // insert into hash table
-                     ip_item_t * kicked_hash_table_item;
-                     if ((kicked_hash_table_item = (ip_item_t *) ht_insert_v2(&hash_table_ip, (char *) ip_dst->bytes, (void *) &hash_table_item)) != NULL) {
-                        // free memory of kicked item from hash table
-                        hash_table_item_free_inner_memory(*(ip_item_t **) kicked_hash_table_item);
-                        free(*(ip_item_t **) kicked_hash_table_item);
-                        kicked_hash_table_item = NULL;
-#ifdef DEBUG
-                        PRINT_OUT("Hash table for IP addresses reaches size limit\n");
-#endif
-                     }
-
-                  }
-
-                  // DETECTION of calling to different country
-                  // Actual SIP message is response! Exchanged source and destination IP!
-                  country_different_call_detection(&hash_table_ip, hash_table_item, sip_to, sip_to_len, sip_from, user_agent, ip_dst, ip_src);
-
-               }
-
+            // check successful allocation memory
+            if (user_agent_item == NULL) {
+               PRINT_ERR("user_agent_item: Error memory allocation\n");
+               continue;
             }
-#endif
+
+            strncpy(user_agent_item, user_agent, user_agent_len + 1);
+
+            char * kicked_hash_table_item;
+            if ((kicked_hash_table_item = (char *) ht_insert_v2(&hash_table_user_agent, (char *) &(((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash), (void *) &user_agent_item)) != NULL) {
+               free(*(char **) kicked_hash_table_item);
+               kicked_hash_table_item = NULL;
+            }
+         }
+
+         ((node_data_t *) (prefix_tree_node->parent->value))->invite_count++;
+
+         // save last communication time
+         hash_table_item->time_last_communication = current_time;
+
+      } else if (sip_msg_type == SIP_MSG_TYPE_STATUS && status_code == SIP_STATUS_OK && sip_cseq_len > 2 && strstr(sip_cseq, "INV")) {
+         get_string_from_unirec(sip_target_orig, &sip_target_len, F_SIP_CALLED_PARTY, MAX_LENGTH_SIP_TO);
+         int valid = cut_sip_identifier(&sip_target, sip_target_orig, &sip_target_len);
+         if (valid == -1) {
             continue;
          }
 
-         // RTP data
-         if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) != NULL) {
+         cut_sip_identifier(&sip_from, sip_from_orig, &sip_from_len);
+         get_string_from_unirec(call_id, &call_id_len, F_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
+         get_string_from_unirec(call_id, &call_id_len, F_SIP_CALL_ID, MAX_LENGTH_CALL_ID);
+         ip_src = &ur_get(ur_template_in, in_rec, F_SRC_IP);
+         ip_to_str(ip_src, ip_src_str);
+         ip_dst = &ur_get(ur_template_in, in_rec, F_DST_IP);
+         ip_to_str(ip_dst, ip_dst_str);
 
+         // is destination IP in hash table?
+         if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_dst->bytes))) != NULL) {
             hash_table_item = *(ip_item_t **) hash_table_item;
 
             // search sip_to in prefix tree
-            prefix_tree_node = prefix_tree_search(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
+            prefix_tree_node = prefix_tree_search(hash_table_item->tree, sip_target, sip_target_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_target_len);
 
-            // check if node exists
-            if (prefix_tree_node != NULL) {
+            // if node isn't found, ignore it
+            if (prefix_tree_node == NULL) continue;
 
-               // check of successful initialization of node data
-               if (node_data_check_initialize(prefix_tree_node) == -1) continue;
+            // check of successful initialization of node data
+            if (node_data_check_initialize(prefix_tree_node) == -1) continue;
 
-               if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 1) {
-                  // set rtp_data=1, if some packets are in the flow record
-                  if (ur_get(ur_template_in, in_rec, F_INVEA_RTCP_PACKETS) > 0 && ur_get(ur_template_in, in_rec, F_INVEA_RTCP_OCTETS) > 0) {
-                     ((node_data_t *) (prefix_tree_node->parent->value))->rtp_data = 1;
-                  }
-               }
-            }
-         }
-
-         // do action according to voip_packet_type
-         switch (voip_packet_type) {
-
-            case VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED:
-            {
-               /* --------------------------------
-                * request type: call oriented
-                * -------------------------------- */
-
-               // if at least one INVITE requests is in flow record
-               if (invite_stats > 0) {
-                  // add one to statistics of number invite flow
-                  global_module_statistic.received_invite_flow_count++;
-               }
-
-               // is source IP in hash table?
-               if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_src->bytes))) == NULL) {
-                  /* IP address not found in hash table */
-
-                  // if it isn't INVITE request, don't create item in hash table
-                  if (invite_stats == 0) continue;
-
-                  // create hash_table_item
-                  hash_table_item = (ip_item_t *) malloc(sizeof (ip_item_t));
-                  caller_count++;
-
-                  // check successful allocation memory
-                  if (hash_table_item == NULL) {
-                     PRINT_ERR("hash_table_item: Error memory allocation\n");
-                     continue;
-                  }
-
-                  //  initialize hash_table_item, if error occurs continue
-                  if (hash_table_item_initialize(hash_table_item) == -1) continue;
-
-                  // set time correct time to hash_table_item
-                  time(&(hash_table_item->first_invite_request));
-                  hash_table_item->time_last_check_prefix_examination = time_start_module;
-                  hash_table_item->time_last_communication = time_start_module;
-
-                  // insert into hash table
-                  ip_item_t * kicked_hash_table_item;
-                  if ((kicked_hash_table_item = (ip_item_t *) ht_insert_v2(&hash_table_ip, (char *) ip_src->bytes, (void *) &hash_table_item)) != NULL) {
-                     // free memory of kicked item from hash table
-                     hash_table_item_free_inner_memory(*(ip_item_t **) kicked_hash_table_item);
-                     free(*(ip_item_t **) kicked_hash_table_item);
-                     kicked_hash_table_item = NULL;
-#ifdef DEBUG
-                     PRINT_OUT("Hash table for IP addresses reaches size limit\n");
-#endif
-                  }
-
-               } else {
-                  // IP is in hash_table
-
-                  hash_table_item = *(ip_item_t **) hash_table_item;
-
-                  // save time of first INVITE request for the IP address
-                  if ((int) hash_table_item->first_invite_request == 0) {
-                     time(&(hash_table_item->first_invite_request));
-                  }
-               }
-
-               // DETECTION of prefix examination
-               prefix_examination_detection(&hash_table_user_agent, hash_table_item, ip_src);
-
-#ifdef DEBUG
-               // if at least one INVITE requests is in flow record
-               if (invite_stats > 0) {
-                  // print debug information about INVITE request
-                  int sip_via_len = ur_get_var_len(ur_template_in, in_rec, F_INVEA_SIP_VIA);
-                  char *sip_via = ur_get_ptr_by_id(ur_template_in, in_rec, F_INVEA_SIP_VIA);
-                  uint64_t link_bit_field = ur_get(ur_template_in, in_rec, F_LINK_BIT_FIELD);
-                  printf("%s;INVITE;IP_SRC:%s;IP_DST:%s;LINK_BIT_FIELD:%"PRIu64";\n", get_actual_time_string(), ip_src_str, ip_dst_str, link_bit_field);
-                  printf("From:\"%.*s\";\n", sip_from_len, sip_from);
-                  printf("To:\"%.*s\";\n", sip_to_len, sip_to);
-                  printf("Via:\"%.*s\";\n", sip_via_len, sip_via);
-                  printf("UserAgent:\"%.*s\";\n", user_agent_len, user_agent);
-                  printf("RequestURI:\"%.*s\";\n", sip_request_uri_len, sip_request_uri);
-               }
-#endif
-
-#ifdef CHECK_DIFFERENT_REQUEST_URI
-               // if at least one INVITE requests is in flow record
-               if (invite_stats > 0) {
-
-                  // check if To header and Request-URI isn't identical
-                  if (strncmp(sip_to, sip_request_uri, MAX_LENGTH_SIP_TO) != 0) {
-
-                     char * at_position_request_uri = strpbrk(sip_request_uri, "@");
-                     char * at_position_sip_to = strpbrk(sip_to, "@");
-
-                     // check if To header and Reuqest-URI has the same number before '@'
-                     if (at_position_request_uri == NULL || at_position_sip_to == NULL \
-                             || ((at_position_request_uri - sip_request_uri) != (at_position_sip_to - sip_to)) \
-                             || (strncmp(sip_to, sip_request_uri, at_position_sip_to - sip_to) != 0)) {
-                        PRINT_OUT("OtherRequestURI:\"", sip_request_uri, "\";", "ToHeader:\"", sip_to, "\";\n");
-                     }
-                  }
-               }
-#endif
-
-               /* >>>>>>>>>> SAVE RECEIVED DATA >>>>>>>>>> */
-
-               if (invite_stats > 0) {
-                  // add sip_to to prefix tree
-                  prefix_tree_node = prefix_tree_insert(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
-
-                  // check successful prefix_tree_insert
-                  if (prefix_tree_node == NULL) {
-                     PRINT_ERR("prefix_tree_insert: Error memory allocation\n");
-                     continue;
-                  } else if (prefix_tree_node->count_of_insert == 1) {
-                     //new callee
-                     callee_count++;
-                  }
-               } else {
-                  // search sip_to in prefix tree
-                  prefix_tree_node = prefix_tree_search(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
-
-                  // if node isn't found, ignore it
-                  if (prefix_tree_node == NULL) continue;
-               }
-
-               // check of successful initialization of node data
-               if (node_data_check_initialize(prefix_tree_node) == -1) continue;
-
-
-               if (invite_stats > 0) {
-                  // save Call-ID to node_data
-                  call_id_node_data_save(prefix_tree_node, call_id, call_id_len);
-
-                  // compute hash of User-Agent
-                  ((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash = SuperFastHash(user_agent, sizeof (char) * user_agent_len);
-
-                  // check if hash of User-Agent exists in hash table
-                  if (ht_get_v2(&hash_table_user_agent, (char *) &(((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash)) == NULL) {
-
-                     // save User-Agent to hash table
-
-                     char *user_agent_item = (char *) malloc(sizeof (char) * (user_agent_len + 1));
-
-                     // check successful allocation memory
-                     if (user_agent_item == NULL) {
-                        PRINT_ERR("user_agent_item: Error memory allocation\n");
-                        continue;
-                     }
-
-                     strncpy(user_agent_item, user_agent, user_agent_len + 1);
-
-                     char * kicked_hash_table_item;
-                     if ((kicked_hash_table_item = (char *) ht_insert_v2(&hash_table_user_agent, (char *) &(((node_data_t *) (prefix_tree_node->parent->value))->user_agent_hash), (void *) &user_agent_item)) != NULL) {
-                        free(*(char **) kicked_hash_table_item);
-                        kicked_hash_table_item = NULL;
-#ifdef DEBUG
-                        PRINT_OUT("Hash table for User-Agent reaches size limit\n");
-#endif
-                     }
-#ifdef DEBUG
-                     global_sip_statistic.unique_user_agent_count++;
-#endif
-                  }
-
-                  // sum stats
-                  ((node_data_t *) (prefix_tree_node->parent->value))->invite_count += invite_stats;
-                  ((node_data_t *) (prefix_tree_node->parent->value))->cancel_count += cancel_stats;
-                  ((node_data_t *) (prefix_tree_node->parent->value))->ack_count += ack_stats;
-                  ((node_data_t *) (prefix_tree_node->parent->value))->bye_count += bye_stats;
-               } else {
-                  if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 1) {
-                     // sum stats
-                     ((node_data_t *) (prefix_tree_node->parent->value))->cancel_count += cancel_stats;
-                     ((node_data_t *) (prefix_tree_node->parent->value))->ack_count += ack_stats;
-                     ((node_data_t *) (prefix_tree_node->parent->value))->bye_count += bye_stats;
-                  }
-               }
-
-#ifdef DEBUG
-               global_sip_statistic.invite_count += invite_stats;
-               global_sip_statistic.ack_count += ack_stats;
-               global_sip_statistic.bye_count += bye_stats;
-               global_sip_statistic.cancel_count += cancel_stats;
-#endif
-
-               // save last communication time
-               time(&(hash_table_item->time_last_communication));
-
-               /* <<<<<<<<<< SAVE RECEIVED DATA <<<<<<<<<< */
-
-               break;
-            }
-
-
-            case VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED:
-            case VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED:
-            {
-
-               // is destination IP in hash table?
-               if ((hash_table_item = (ip_item_t *) ht_get_v2(&hash_table_ip, (char *) (ip_dst->bytes))) != NULL) {
-
-                  hash_table_item = *(ip_item_t **) hash_table_item;
-
-                  // search sip_to in prefix tree
-                  prefix_tree_node = prefix_tree_search(hash_table_item->tree, sip_to, sip_to_len > MAX_STRING_PREFIX_TREE_NODE ? MAX_STRING_PREFIX_TREE_NODE : sip_to_len);
-
-                  // if node isn't found, ignore it
-                  if (prefix_tree_node == NULL) continue;
-
-                  // check of successful initialization of node data
-                  if (node_data_check_initialize(prefix_tree_node) == -1) continue;
-
-                  // check if Call-ID is saved in node_data
-                  if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 1) {
-
-                     if (voip_packet_type == VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED) {
-
-                        /* --------------------------------
-                         * response type: service oriented
-                         * -------------------------------- */
-
-                        // sum stats
-                        ((node_data_t *) (prefix_tree_node->parent->value))->forbidden_count += forbidden_stats;
-                        ((node_data_t *) (prefix_tree_node->parent->value))->unauthorized_count += unauthorized_stats;
-
-#ifdef DEBUG
-                        global_sip_statistic.forbidden_count += forbidden_stats;
-                        global_sip_statistic.unauthorized_count += unauthorized_stats;
-#endif
-                     } else {
-
-                        /* --------------------------------
-                         * response type: call oriented
-                         * -------------------------------- */
-
-                        // sum stats
-                        ((node_data_t *) (prefix_tree_node->parent->value))->ok_count += ok_stats;
-                        ((node_data_t *) (prefix_tree_node->parent->value))->ringing_count += ringing_stats;
-                        ((node_data_t *) (prefix_tree_node->parent->value))->proxy_auth_req_count += proxy_auth_req_stats;
-                        ((node_data_t *) (prefix_tree_node->parent->value))->trying_count += trying_stats;
-
-#ifdef DEBUG
-                        global_sip_statistic.ok_count += ok_stats;
-                        global_sip_statistic.ringing_count += ringing_stats;
-                        global_sip_statistic.proxy_auth_req_count += proxy_auth_req_stats;
-                        global_sip_statistic.trying_count += trying_stats;
-#endif
-
+            // check if Call-ID is saved in node_data
+            if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 1) {
+               ((node_data_t *) (prefix_tree_node->parent->value))->ok_count++;
 #ifdef ENABLE_GEOIP
-                        if (ok_stats > 0 && modul_configuration.countries_detection_mode != COUNTRIES_DETECTION_MODE_OFF) {
-
-                           // DETECTION of calling to different country
-                           // Actual SIP message is response! Exchanged source and destination IP!
-                           country_different_call_detection(&hash_table_ip, hash_table_item, sip_to, sip_to_len, sip_from, user_agent, ip_dst, ip_src);
-
-                        }
+               if (modul_configuration.countries_detection_mode != COUNTRIES_DETECTION_MODE_OFF) {
+                  // DETECTION of calling to different country
+                  // Actual SIP message is response! Exchanged source and destination IP!
+                  country_different_call_detection(&hash_table_ip, hash_table_item, sip_target, sip_target_len, sip_from, user_agent, ip_dst, ip_src);
+                }
 #endif
-                     }
-
-                  }
-
-                  // save last communication time
-                  time(&(hash_table_item->time_last_communication));
-               }
-
-               break;
             }
-
+            // save last communication time
+            hash_table_item->time_last_communication = current_time;
          }
       }
+
       if (module_info->num_ifc_out == 2) {
          if (time(NULL) - time_last_stats > STATS_TIME_INTERVAL) {
             /*
              * Retrieve and send statistics via statistics interface.
              * This is used for visualisation in SDM demo.
              */
-#ifdef DEBUG
-            printf("\n\nStatistics\n\n");
-#endif
             ur_set(sdmout_tmpl, smdout_rec, F_INVITE_CNT, global_module_statistic.received_invite_flow_count);
             /* caller_count from hash table?*/
             ur_set(sdmout_tmpl, smdout_rec, F_CALLER_CNT, caller_count);
@@ -1206,22 +895,6 @@ int main(int argc, char **argv)
    PRINT_OUT_LOG(" # Other statistics:\n");
    PRINT_OUT_LOG("   - received_invite_flow=", uint_to_str(global_module_statistic.received_invite_flow_count), "\n");
    PRINT_OUT_LOG("   - invalid_sip_identifier=", uint_to_str(global_module_statistic.invalid_sip_identifier_count), "\n");
-
-#ifdef DEBUG
-   // print total SIP statistics
-   PRINT_OUT_LOG("Total SIP statistics:\n");
-   PRINT_OUT_LOG("   - ok_count=", uint_to_str(global_sip_statistic.ok_count), "\n");
-   PRINT_OUT_LOG("   - invite_count=", uint_to_str(global_sip_statistic.invite_count), "\n");
-   PRINT_OUT_LOG("   - ack_count=", uint_to_str(global_sip_statistic.ack_count), "\n");
-   PRINT_OUT_LOG("   - bye_count=", uint_to_str(global_sip_statistic.bye_count), "\n");
-   PRINT_OUT_LOG("   - cancel_count=", uint_to_str(global_sip_statistic.cancel_count), "\n");
-   PRINT_OUT_LOG("   - trying_count=", uint_to_str(global_sip_statistic.trying_count), "\n");
-   PRINT_OUT_LOG("   - ringing_count=", uint_to_str(global_sip_statistic.ringing_count), "\n");
-   PRINT_OUT_LOG("   - forbidden_count=", uint_to_str(global_sip_statistic.forbidden_count), "\n");
-   PRINT_OUT_LOG("   - unauthorized_count=", uint_to_str(global_sip_statistic.unauthorized_count), "\n");
-   PRINT_OUT_LOG("   - proxy_auth_req_count=", uint_to_str(global_sip_statistic.proxy_auth_req_count), "\n");
-   PRINT_OUT_LOG("   - unique_user_agent_count=", uint_to_str(global_sip_statistic.unique_user_agent_count), "\n");
-#endif
 
 #ifdef ENABLE_GEOIP
    countries_save_all_to_file(modul_configuration.countries_file, &hash_table_ip);

@@ -119,14 +119,10 @@ void country_ip_save(ip_item_t * ip, const char * country, cc_hash_table_v2_t * 
       }
    }
 
-   // get actual time
-   time_t time_actual;
-   time(&time_actual);
-
    // check if countries file saving interval was expired
-   if (COUNTRIES_FILE_SAVING_INTERVAL != 0 && difftime(time_actual, time_last_countries_file_saved) >= COUNTRIES_FILE_SAVING_INTERVAL) {
+   if (COUNTRIES_FILE_SAVING_INTERVAL != 0 && (current_time - time_last_countries_file_saved) >= COUNTRIES_FILE_SAVING_INTERVAL) {
       countries_save_all_to_file(modul_configuration.countries_file, hash_table_ip);
-      time(&time_last_countries_file_saved);
+      time_last_countries_file_saved = current_time;
    }
 
 }
@@ -522,11 +518,6 @@ int country_different_call_detection(cc_hash_table_v2_t * hash_table, ip_item_t 
 
                // check if country isn't in datastore of IP address
                if (country_ip_exists(hash_table_item, GeoIP_code_by_id(geoip_id)) == 0) {
-
-                  // get actual time
-                  static time_t time_detected;
-                  time(&time_detected);
-
                   /* CALLING TO DIFFERENT COUNTRY ATTACK DETECTED */
 
                   uint32_t event_id;
@@ -537,7 +528,7 @@ int country_different_call_detection(cc_hash_table_v2_t * hash_table, ip_item_t 
                              && strncmp(hash_table_item->call_different_country_attack_country, GeoIP_code_by_id(geoip_id), 2) == 0) {
 
                      // check if detection_pause_after_attack was expired
-                     if (difftime(time_detected, hash_table_item->time_attack_detected_call_different_country) >= modul_configuration.detection_pause_after_attack) {
+                     if ((current_time - hash_table_item->time_attack_detected_call_different_country) >= modul_configuration.detection_pause_after_attack) {
 
                         // last attack continues
                         event_id = hash_table_item->call_different_country_attack_event_id;

@@ -64,15 +64,9 @@
 #include "prefix_examination.h"
 #include "country.h"
 
-
-/** \brief VOIP_PACKET_TYPE in the flow record used to request type: call oriented (defined by VoIP plugin). */
-#define VOIP_PACKET_TYPE_REQUEST_CALL_ORIENTED 3
-
-/** \brief VOIP_PACKET_TYPE in the flow record used to response type: service oriented (defined by VoIP plugin). */
-#define VOIP_PACKET_TYPE_RESPONSE_SERVICE_ORIENTED 2
-
-/** \brief VOIP_PACKET_TYPE in the flow record used to response type: call oriented (defined by VoIP plugin). */
-#define VOIP_PACKET_TYPE_RESPONSE_CALL_ORIENTED 4
+#define SIP_MSG_TYPE_INVITE      1
+#define SIP_MSG_TYPE_STATUS      99
+#define SIP_STATUS_OK            200
 
 /** \brief Length of country code (ISO 3166, 2 chars). */
 #define LENGTH_COUNTRY_CODE 2
@@ -83,37 +77,9 @@
 
 #define STATS_TIME_INTERVAL 1
 
-/** \brief Definition of modul_configuration (modul_configuration_struct). */
-modul_configuration_t modul_configuration;
-
-/** \brief Definition of detection_statistic (detection_prefix_examination_struct). */
-detection_prefix_examination_t detection_prefix_examination;
-
-/** \brief Definition of global_module_statistic (global_module_statistic_struct). */
-global_module_statistic_t global_module_statistic;
-
-#ifdef DEBUG
-/** \brief Definition of global_sip_statistic (global_sip_statistic_struct). */
-global_sip_statistic_t global_sip_statistic;
-#endif
-
-/** \brief Last used Event ID of attack detection. */
-uint32_t last_event_id;
-
-/** \brief UniRec input template. */
-ur_template_t *ur_template_in;
-
-/** \brief UniRec output template. */
-ur_template_t *ur_template_out;
-
-/** \brief Pointer to received data from trap_recv(). */
-const void *in_rec;
-
-/** \brief Detection record for sending detection events to output interface. */
-void * detection_record;
-
-/** \brief Indication of stopping of module. */
-static int stop = 0;
+extern int stop;
+extern void *detection_record;
+extern ur_template_t *ur_template_out;
 
 /** \brief Check and free memory, that wasn't used for long time or exceeds limit of items (memory management of module).
  * \param[in] hash_table Pointer to hash table of IP address.

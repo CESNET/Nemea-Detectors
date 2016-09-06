@@ -239,16 +239,7 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
 
          if (prefix_statistic != 1) {
             detection_prefix_examination.invite += ((node_data_t *) (node->value))->invite_count;
-            detection_prefix_examination.cancel += ((node_data_t *) (node->value))->cancel_count;
-            detection_prefix_examination.ack += ((node_data_t *) (node->value))->ack_count;
-            detection_prefix_examination.bye += ((node_data_t *) (node->value))->bye_count;
             detection_prefix_examination.ok += ((node_data_t *) (node->value))->ok_count;
-            detection_prefix_examination.trying += ((node_data_t *) (node->value))->trying_count;
-            detection_prefix_examination.ringing += ((node_data_t *) (node->value))->ringing_count;
-            detection_prefix_examination.forbidden += ((node_data_t *) (node->value))->forbidden_count;
-            detection_prefix_examination.unauthorized += ((node_data_t *) (node->value))->unauthorized_count;
-            detection_prefix_examination.proxy_auth_req += ((node_data_t *) (node->value))->proxy_auth_req_count;
-            detection_prefix_examination.rtcp_data += ((node_data_t *) (node->value))->rtp_data;
          }
       }
 
@@ -274,15 +265,11 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
 
 int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_item_t * hash_table_item, ip_addr_t * ip_src)
 {
-   // get actual time
-   time_t time_actual;
-   time(&time_actual);
-
    // check if detection interval was expired
-   if (difftime(time_actual, hash_table_item->time_last_check_prefix_examination) >= modul_configuration.detection_interval) {
-
+   if ((current_time - hash_table_item->time_last_check_prefix_examination) >= modul_configuration.detection_interval) {
+      printf("Checking memory: %"PRIu64", %"PRIu64", %"PRIu64"\n", current_time, hash_table_item->time_last_check_prefix_examination, current_time - hash_table_item->time_last_check_prefix_examination);
       // check if detection_pause_after_attack was expired
-      if (difftime(time_actual, hash_table_item->time_attack_detected_prefix_examination) >= modul_configuration.detection_pause_after_attack) {
+      if ((current_time - hash_table_item->time_attack_detected_prefix_examination) >= modul_configuration.detection_pause_after_attack) {
 
          // clear cache_node_no_attack
          cache_node_no_attack_clear();
@@ -359,33 +346,6 @@ int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_
             if (detection_prefix_examination.ok > 0) {
                PRINT_OUT_LOG_NOTDATETIME("count_detection_value_ok=", uint_to_str(detection_prefix_examination.ok), "; ");
             }
-            if (detection_prefix_examination.trying > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_trying=", uint_to_str(detection_prefix_examination.trying), "; ");
-            }
-            if (detection_prefix_examination.ringing > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_detection_value_ringing=", uint_to_str(detection_prefix_examination.ringing), "; ");
-            }
-            if (detection_prefix_examination.ack > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_ack=", uint_to_str(detection_prefix_examination.ack), "; ");
-            }
-            if (detection_prefix_examination.rtcp_data > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_rtcp_data=", uint_to_str(detection_prefix_examination.rtcp_data), "; ");
-            }
-            if (detection_prefix_examination.cancel > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_cancel=", uint_to_str(detection_prefix_examination.cancel), "; ");
-            }
-            if (detection_prefix_examination.bye > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_bye=", uint_to_str(detection_prefix_examination.bye), "; ");
-            }
-            if (detection_prefix_examination.forbidden > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_detection_value_forbidden=", uint_to_str(detection_prefix_examination.forbidden), "; ");
-            }
-            if (detection_prefix_examination.unauthorized > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_detection_value_unauthorized=", uint_to_str(detection_prefix_examination.unauthorized), "; ");
-            }
-            if (detection_prefix_examination.proxy_auth_req > 0) {
-               PRINT_OUT_LOG_NOTDATETIME("count_detection_value_proxy_auth_req=", uint_to_str(detection_prefix_examination.proxy_auth_req), "; ");
-            }
 
             PRINT_OUT_LOG_NOTDATETIME("\n");
 
@@ -432,12 +392,12 @@ int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_
             event_id_save(modul_configuration.event_id_file);
 
             // update time of last attack
-            time(&(hash_table_item->time_attack_detected_prefix_examination));
+            hash_table_item->time_attack_detected_prefix_examination = current_time;
 
          }
 
          // save last detection time
-         time(&(hash_table_item->time_last_check_prefix_examination));
+         hash_table_item->time_last_check_prefix_examination = current_time;
 
          return status_detection;
 

@@ -43,30 +43,23 @@
 
 #include "output.h"
 
-
+ur_time_t current_time;
 // Return actual date and time in system default format
 
-char * get_actual_time_string()
+char *get_actual_time_string()
 {
-   time_t actual_time;
-
-   // get actual local time
-   time(&actual_time);
-
-   return time_t_to_str(actual_time);
+   return time_t_to_str(current_time);
 }
 
 // Convert time_to to char array (string) in system default format
 
-char * time_t_to_str(time_t time)
+char *time_t_to_str(ur_time_t t)
 {
    static char time_str[FORMAT_DATETIME_LENGTH];
-   struct tm *local_time;
-
-   local_time = localtime(&time);
+   const time_t time = t;
 
    // convert local_time to string in defined format
-   if (strftime(time_str, FORMAT_DATETIME_LENGTH, FORMAT_DATETIME, local_time) == 0) {
+   if (strftime(time_str, FORMAT_DATETIME_LENGTH, FORMAT_DATETIME, gmtime(&time)) == 0) {
       // set empty string in case of error strftime
       time_str[0] = '\0';
    }
