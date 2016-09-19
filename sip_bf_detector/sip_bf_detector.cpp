@@ -53,7 +53,19 @@ UR_FIELDS (
    uint16 SIP_MSG_TYPE,          // type of SIP message
    uint16 SIP_STATUS_CODE,       // status code of SIP response
    string SIP_CSEQ,              // CSEQ field in SIP message
-   string SIP_CALLING_PARTY      // targeted user name
+   string SIP_CALLING_PARTY,     // targeted user name
+   ipaddr SBFD_TARGET,
+   ipaddr SBFD_SOURCE,
+   uint64 SBFD_LINK_BIT_FIELD,
+   uint8 SBFD_PROTOCOL,
+   time SBFD_EVENT_TIME,
+   time SBFD_CEASE_TIME,
+   time SBFD_BREACH_TIME,,
+   uint8 SBFD_EVENT_TYPE,
+   uint64 SBFD_EVENT_ID,
+   uint32 SBFD_ATTEMPTS,
+   uint32 SBFD_AVG_ATTEMPTS,
+   string SBFD_USER
 )
 
 trap_module_info_t *module_info = NULL;
@@ -73,6 +85,8 @@ uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
 uint16_t g_min_sec = 0;
 uint16_t g_event_row = 0;
+ur_template_t *alert_tmplt;
+void *alert_rec;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -274,7 +288,7 @@ dbf_t* User::getDBF() const
 int User::evaluateFlows(ur_time_t current_time, Server *srv)
 {
    if (m_dbf && (current_time > m_dbf->m_time_last) && ((current_time - m_dbf->m_time_last) > g_free_mem_interval)) {
-      srv->reportDBF(this);
+      srv->reportAlert(NULL, this, NULL, DBF);
       for (int i = 0; i < m_index; i++) {
          m_sources[i]->m_source->removeUser(this);
          delete m_sources[i];
@@ -293,7 +307,7 @@ int User::evaluateFlows(ur_time_t current_time, Server *srv)
          removeBF(bf);
       } else if ((current_time > bf->m_time_last) && ((current_time - bf->m_time_last) > g_free_mem_interval)) {
          if (bf->m_attempts >= g_alert_threshold) {
-            srv->reportBF(bf, this);   
+            srv->reportAlert(bf, this, NULL, BF);   
          }
          
          bf->m_source->removeUser(this);
@@ -332,7 +346,7 @@ bool User::extendSources()
 void User::destroy(Server *srv)
 {
    if (m_dbf) {
-      srv->reportDBF(this);
+      srv->reportAlert(NULL, this, NULL, DBF);
       for (int i = 0; i < m_index; i++) {
          delete m_sources[i];
       }
@@ -341,7 +355,7 @@ void User::destroy(Server *srv)
       for (int i = 0; i < m_index; i++) {
          bf_t *bf = m_sources[i];
          if (bf->isReportable()) {
-            srv->reportBF(bf, this);
+            srv->reportAlert(bf, this, NULL, BF);
          }
 
          delete bf;
@@ -402,7 +416,7 @@ bool Client::init(ip_addr_t *ip)
    m_index = 0;
    m_size = DEFAULT_SCAN_START_SIZE;
    m_names = (User **) malloc(m_size * sizeof(User *));
-   m_ip = (char *) malloc(INET6_ADDRSTRLEN + 1);
+   m_ip = (ip_addr_t *) malloc(sizeof(ip_addr_t));
    if (!m_names || !m_ip) {
       fprintf(stderr, "ERROR: Client::init - malloc failed.\n");
       if (m_names) {
@@ -416,8 +430,7 @@ bool Client::init(ip_addr_t *ip)
       return false;
    }
    
-   ip_to_str(ip, m_ip);
-   m_ip[INET6_ADDRSTRLEN] = '\0';
+   memcpy(m_ip, ip, sizeof(ip_addr_t));
    return true;
 }
 
@@ -541,12 +554,13 @@ bool Server::init(const data_t *flow)
    uint8_t ip_bytes;
    size_t length;
    m_users = m_clients = NULL;
-   m_name_suffix = m_ip = NULL;
+   m_name_suffix = NULL;
+   m_ip = NULL;
 
    length = strlen(flow->name_suffix);
    m_ipv4 = flow->ipv4;
    m_name_suffix = (char *) malloc(length + 1);
-   m_ip = (char *) malloc(INET6_ADDRSTRLEN + 1);
+   m_ip = (ip_addr_t *) malloc(sizeof(ip_addr_t));
    if (!m_name_suffix || !m_ip) {
       fprintf(stderr, "ERROR: Server::init - malloc failed.\n");
       goto cleanup;
@@ -554,8 +568,7 @@ bool Server::init(const data_t *flow)
 
    strncpy(m_name_suffix, flow->name_suffix, length);
    m_name_suffix[length] = '\0';
-   ip_to_str(flow->ip_src, m_ip);
-   m_ip[INET6_ADDRSTRLEN] = '\0';
+   memcpy(m_ip, flow->ip_src, sizeof(ip_addr_t));
 
    if (m_ipv4) {
       comp_func = &compare_ipv4;
@@ -631,196 +644,101 @@ uint64_t Server::createId(ur_time_t time_first)
    return event_id;
 }
 
-void Server::reportBF(bf_t *bf, User *usr)
+void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
 {
-   char *s = NULL;
-   json_t *root = json_object();
-   char time_first[32];
-   char time_breach[32];
-   char time_last[32];
    ostringstream ss;
-   const time_t tf = bf->m_time_first;
-   const time_t tl = bf->m_time_last;
-   const time_t tb = bf->m_time_breach;
-   ss << createId(bf->m_time_first);
-   // generate time in human readable format
-   strftime(time_first, 31, "%F %T", gmtime(&tf));
-   strftime(time_last, 31, "%F %T", gmtime(&tl));
-   strftime(time_breach, 31, "%F %T", gmtime(&tb));
-   time_first[31] = time_last[31] = time_breach[31] = '\0';
+   ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TYPE, event);
+   ur_set(alert_tmplt, alert_rec, F_SBFD_TARGET, *m_ip);
 
-   // Create JSON objects
-   json_object_set_new(root, "EventID", json_string(ss.str().c_str()));
-   ss.str("");
-   ss.clear();
-   ss << usr->m_name << '@' << m_name_suffix;
-   json_object_set_new(root, "TargetIP", json_string(m_ip));
-   json_object_set_new(root, "User", json_string(ss.str().c_str()));
-   json_object_set_new(root, "AttemptCount", json_integer(bf->m_attempts));
-   json_object_set_new(root, "EventTime", json_string(time_first));
-   json_object_set_new(root, "CeaseTime", json_string(time_last));
-   json_object_set_new(root, "LinkBitField", json_integer(bf->m_link_bit_field));
-   if (bf->m_time_breach != 0) {
-      json_object_set_new(root, "Breach", json_true());
-      json_object_set_new(root, "BreachTime", json_string(time_breach));
+   if (event == BF) {
+      if (!bf || !usr) {
+         fprintf(stderr, "ERROR: Server::reportAlert - method received NULL pointer when reporting BF.\n");
+         return;
+      }
+
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, bf->m_time_first);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, bf->m_time_breach);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, bf->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, bf->m_attempts);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, bf->m_attempts);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(bf->m_source->m_ip));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, bf->m_protocol);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, bf->m_link_bit_field);
+      ss << usr->m_name << '@' << m_name_suffix;
+      ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, ss.str().c_str(), ss.str().length());
+   } else if (event == DBF) {
+      if (!usr) {
+         fprintf(stderr, "ERROR: Server::reportAlert - method received NULL pointer when reporting DBF.\n");
+         return;
+      }
+
+      stats_t *stats = new stats_t();
+      if (!stats) {
+         fprintf(stderr, "ERROR: Server::reportAlert - new failed when reporting DBF.\n");
+         return;
+      }
+
+      usr->getDBFStats(stats);
+      dbf_t *dbf = usr->getDBF();
+
+      if (!dbf->m_breacher) {
+         ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(stats->m_clt->m_ip));
+         ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
+      } else {
+         ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(dbf->m_breacher));
+         ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, dbf->m_time_breach);
+      }
+
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, stats->m_time_first);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, dbf->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
+      
+      ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, stats->m_protocol);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, stats->m_link_bit_field);      
+      ss << usr->m_name << '@' << m_name_suffix;
+      ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, ss.str().c_str(), ss.str().length());
+
+      delete stats;
+   } else if (event == SCAN) {
+      if (!clt) {
+         fprintf(stderr, "ERROR: Server::reportAlert - method received NULL pointer when reporting SCAN.\n");
+         return;
+      }
+
+      stats_t *stats = new stats_t();
+      if (!stats) {
+         fprintf(stderr, "ERROR: Server::reportAlert - new failed when reporting SCAN.\n");
+         return;
+      }
+
+      clt->getScanStats(stats);
+      scan_t *scan = clt->getScan();
+
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(stats->m_time_first));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, stats->m_time_first);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, scan->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(clt->m_ip));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, stats->m_protocol);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, stats->m_link_bit_field);      
+      ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, "", 0);
+      
+      delete stats;
    } else {
-      json_object_set_new(root, "Breach", json_false());
-      json_object_set_new(root, "BreachTime", json_null());
-   }   
-
-   json_object_set_new(root, "SourceIP", json_string(bf->m_source->m_ip));
-   if (bf->m_protocol == PROTOCOL_TCP) {
-      json_object_set_new(root, "Protocol", json_string("TCP"));
-   } else if (bf->m_protocol == PROTOCOL_UDP) {
-      json_object_set_new(root, "Protocol", json_string("UDP"));
-   } else {
-      json_object_set_new(root, "Protocol", json_string("unknown"));
-   }
-
-   // generate alert string
-   s = json_dumps(root, 0);
-   json_decref(root);
-
-   // send alert to the output interface
-   int ret = trap_send(0, s, strlen(s));
-
-   if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR: Server::reportBF - trap_send returned error value.\n");
-   }
-
-   free(s);
-}
-
-void Server::reportScan(Client *clt)
-{
-   char *s = NULL;
-   json_t *root = json_object();
-   char time_first[32];
-   char time_last[32];
-   ostringstream ss;
-
-   stats_t *stats = new stats_t();
-   if (!stats) {
-      fprintf(stderr, "ERROR: Server::reportScan - new returned NULL.\n");
-      json_decref(root);
       return;
    }
 
-   clt->getScanStats(stats);
-   scan_t *scan = clt->getScan();
-
-   const time_t tf = stats->m_time_first;
-   const time_t tl = scan->m_time_last;
-   ss << createId(stats->m_time_first);
-   // generate time in human readable format
-   strftime(time_first, 31, "%F %T", gmtime(&tf));
-   strftime(time_last, 31, "%F %T", gmtime(&tl));
-   time_first[31] = time_last[31] = '\0';
-
-   json_object_set_new(root, "EventID", json_string(ss.str().c_str()));
-   json_object_set_new(root, "TargetIP", json_string(m_ip));
-   json_object_set_new(root, "SourceIP", json_string(clt->m_ip));
-   json_object_set_new(root, "AttemptCount", json_integer(stats->m_total_count));
-   json_object_set_new(root, "AvgCount", json_integer(stats->m_avg_count));
-   json_object_set_new(root, "EventTime", json_string(time_first));
-   json_object_set_new(root, "CeaseTime", json_string(time_last));
-   json_object_set_new(root, "LinkBitField", json_integer(stats->m_link_bit_field));
-
-   if (stats->m_protocol == PROTOCOL_TCP) {
-      json_object_set_new(root, "Protocol", json_string("TCP"));
-   } else if (stats->m_protocol == PROTOCOL_UDP) {
-      json_object_set_new(root, "Protocol", json_string("UDP"));
-   } else {
-      json_object_set_new(root, "Protocol", json_string("unknown"));
-   }
-
-   // generate alert string
-   s = json_dumps(root, 0);
-   json_decref(root);
-
-   // send alert to the output interface
-   int ret = trap_send(0, s, strlen(s));
+   int ret = trap_send(0, alert_rec, ur_rec_size(alert_tmplt, alert_rec));
 
    if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR: Server::reportDBF - trap_send returned error value.\n");
-   } 
-
-   free(s);
-   delete stats;
-}
-
-void Server::reportDBF(User *usr)
-{
-   char *s = NULL;
-   json_t *root = json_object();
-   char time_first[32];
-   char time_breach[32];
-   char time_last[32];
-   char breacher[INET6_ADDRSTRLEN + 1];
-   ostringstream ss;
-
-   stats_t *stats = new stats_t();
-   if (!stats) {
-      fprintf(stderr, "ERROR: Server::reportDBF - new returned NULL.\n");
-      json_decref(root);
-      return;
+      fprintf(stderr, "ERROR: Server::reportAlert - trap_send returned error value.\n");
    }
-
-   usr->getDBFStats(stats);
-   dbf_t *dbf = usr->getDBF();
-
-   const time_t tf = stats->m_time_first;
-   const time_t tb = dbf->m_time_breach;
-   const time_t tl = dbf->m_time_last;
-   ss << createId(stats->m_time_first);
-   // generate time in human readable format
-   strftime(time_first, 31, "%F %T", gmtime(&tf));
-   strftime(time_breach, 31, "%F %T", gmtime(&tb));
-   strftime(time_last, 31, "%F %T", gmtime(&tl));
-   time_first[31] = time_breach[31] = time_last[31]= '\0';
-
-   json_object_set_new(root, "EventID", json_string(ss.str().c_str()));
-   json_object_set_new(root, "TargetIP", json_string(m_ip));
-   json_object_set_new(root, "SourceIP", json_string(stats->m_clt->m_ip));
-   json_object_set_new(root, "AttemptCount", json_integer(stats->m_total_count));
-   json_object_set_new(root, "AvgCount", json_integer(stats->m_avg_count));
-   json_object_set_new(root, "EventTime", json_string(time_first));
-   json_object_set_new(root, "CeaseTime", json_string(time_last));
-   json_object_set_new(root, "LinkBitField", json_integer(stats->m_link_bit_field));
-
-   if (stats->m_protocol == PROTOCOL_TCP) {
-      json_object_set_new(root, "Protocol", json_string("TCP"));
-   } else if (stats->m_protocol == PROTOCOL_UDP) {
-      json_object_set_new(root, "Protocol", json_string("UDP"));
-   } else {
-      json_object_set_new(root, "Protocol", json_string("unknown"));
-   }
-
-   if (dbf->m_time_breach != 0) {
-      ip_to_str(dbf->m_breacher, breacher);
-      breacher[INET6_ADDRSTRLEN] = '\0';
-      json_object_set_new(root, "Breach", json_true());
-      json_object_set_new(root, "BreachTime", json_string(time_breach));
-      json_object_set_new(root, "BreacherIP", json_string(breacher));
-   } else {
-      json_object_set_new(root, "Breach", json_false());
-      json_object_set_new(root, "BreachTime", json_null());
-      json_object_set_new(root, "BreacherIP", json_null());
-   }  
-   // generate alert string
-   s = json_dumps(root, 0);
-   json_decref(root);
-
-   // send alert to the output interface
-   int ret = trap_send(0, s, strlen(s));
-
-   if (ret != TRAP_E_OK) {
-      printf("%s\n", s);
-      fprintf(stderr, "ERROR: Server::reportScan - trap_send returned error value.\n");
-   } 
-
-   free(s);
-   delete stats;
 }
 
 bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
@@ -1020,7 +938,7 @@ bool Server::evaluateFlows(const ur_time_t current_time)
       scan_t *scan = (scan_t *) clt->getScan();
 
       if (scan && (current_time > scan->m_time_last) && ((current_time - scan->m_time_last) > g_free_mem_interval)) {
-         reportScan(clt);
+         reportAlert(NULL, NULL, clt, SCAN);
          scan->m_destroy = true;
       }
 
@@ -1089,7 +1007,7 @@ void Server::cleanStructures()
    while (is_there_next == 1) {
       Client *clt = (Client *) (b_item->value);
       if (clt->getScan()) {
-         reportScan(clt);
+         reportAlert(NULL, NULL, clt, SCAN);
       }
 
       is_there_next = bpt_list_item_next(m_clients, b_item);
@@ -1160,7 +1078,7 @@ bool Detector::init()
 bool Detector::insertFlow(const data_t *flow)
 {
    if (!flow) {
-      fprintf(stderr, "ERROR: Server::init - received NULL pointer.\n");
+      fprintf(stderr, "ERROR: Detector::insertFlow - received NULL pointer.\n");
       return false;
    }
 
@@ -1396,11 +1314,27 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = ur_create_input_template(0, UNIREC_INPUT_TEMPLATE, NULL);
    if (in_tmplt == NULL) {
       fprintf(stderr, "Error: input template could not be created.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return -1;
    }
 
-   // define output interface data format as JSON
-   trap_set_data_fmt(0, TRAP_FMT_JSON, "");
+   alert_tmplt = ur_create_output_template(0, UNIREC_ALERT_TEMPLATE, NULL);
+   if (alert_tmplt == NULL){
+      ur_free_template(in_tmplt);
+      fprintf(stderr, "Error: Output template could not be created.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return -1;
+   }
+
+   // Allocate memory for output record
+   alert_rec = ur_create_record(alert_tmplt, MAX_LENGTH_SIP_FROM);
+   if (alert_rec == NULL){
+      ur_free_template(in_tmplt);
+      ur_free_template(alert_tmplt);
+      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return -1;
+   }
 
    // parse additional parameters
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -1530,6 +1464,8 @@ cleanup:
    delete det;
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   ur_free_record(alert_rec);
+   ur_free_template(alert_tmplt);
    ur_free_template(in_tmplt);
    ur_finalize();
 

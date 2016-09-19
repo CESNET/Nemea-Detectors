@@ -91,6 +91,9 @@ using namespace std;
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
+/** \brief UniRec input template definition. */
+#define UNIREC_ALERT_TEMPLATE "SBFD_TARGET,SBFD_SOURCE,SBFD_LINK_BIT_FIELD,SBFD_PROTOCOL,SBFD_EVENT_TIME,SBFD_CEASE_TIME,SBFD_BREACH_TIME,SBFD_EVENT_TYPE,SBFD_EVENT_ID,SBFD_ATTEMPTS,SBFD_AVG_ATTEMPTS,SBFD_USER"
+
 #define VERBOSE(...) if (verbose >= 0) { \
    printf(__VA_ARGS__); \
 }
@@ -98,6 +101,12 @@ using namespace std;
 class Client;
 class User;
 class Server;
+
+enum event_type_t {
+   BF,
+   DBF,
+   SCAN
+};
 
 struct stats_t {
    ur_time_t m_time_first;
@@ -180,7 +189,7 @@ public:
    void getScanStats(stats_t *stats) const;
    int getSize() const;
 
-   char *m_ip;
+   ip_addr_t *m_ip;
 private:
    bool extendUsers();
    int m_index;
@@ -197,11 +206,9 @@ public:
    bool insertFlow(const data_t *flow);
    bool isEmpty() const;
    bool evaluateFlows(const ur_time_t current_time);
-   void reportBF(bf_t *bf, User *usr);
-   void reportScan(Client *clt);
-   void reportDBF(User *usr);
+   void reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event);
 
-   char *m_ip;
+   ip_addr_t *m_ip;
 private:
    Client* createClientNode(void *tree_key, ip_addr_t *ip);
    User* createUserNode(char *name);
