@@ -657,9 +657,9 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       }
 
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
-      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, bf->m_time_first);
-      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, bf->m_time_breach);
-      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, bf->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(bf->m_time_first, 0));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, ur_time_from_sec_msec(bf->m_time_breach, 0));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(bf->m_time_last, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, bf->m_attempts);
       ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, bf->m_attempts);
       ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(bf->m_source->m_ip));
@@ -687,13 +687,12 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
          ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
       } else {
          ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(dbf->m_breacher));
-         ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, dbf->m_time_breach);
+         ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, ur_time_from_sec_msec(dbf->m_time_breach, 0));
       }
 
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
-      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, stats->m_time_first);
-      ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
-      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, dbf->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(stats->m_time_first, 0));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(dbf->m_time_last, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
       
@@ -719,9 +718,9 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       scan_t *scan = clt->getScan();
 
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(stats->m_time_first));
-      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, stats->m_time_first);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(stats->m_time_first, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, 0);
-      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, scan->m_time_last);
+      ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(scan->m_time_last, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(clt->m_ip));
