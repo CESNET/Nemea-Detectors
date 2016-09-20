@@ -71,7 +71,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("SIP Brute-Force Detector","Module for detecting brute-force attacks on Session Initiation Protocol.",1,1)
+  BASIC("SIP Brute-Force Detector","Module for detecting brute-force attacks on Session Initiation Protocol.",1,2)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack (20 by default).", required_argument, "uint64") \
@@ -85,8 +85,10 @@ uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
 uint16_t g_min_sec = 0;
 uint16_t g_event_row = 0;
-ur_template_t *alert_tmplt;
-void *alert_rec;
+ur_template_t *alert_tmplt = NULL;
+ur_template_t *tm_tmplt = NULL;
+void *alert_rec = NULL;
+void *tm_rec = NULL;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -644,6 +646,16 @@ uint64_t Server::createId(ur_time_t time_first)
    return event_id;
 }
 
+void Server::alertTimeMachine()
+{
+   ur_set(tm_tmplt, tm_rec, F_SRC_IP, *m_ip);
+   int ret = trap_send(1, tm_rec, ur_rec_size(tm_tmplt, tm_rec));
+
+   if (ret != TRAP_E_OK) {
+      fprintf(stderr, "ERROR: Server::alertTimeMachine - trap_send returned error value.\n");
+   }   
+}
+
 void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
 {
    ostringstream ss;
@@ -755,6 +767,7 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
          bf->m_attempts++;
          bf->m_time_breach = flow->time_stamp;
          bf->m_time_last = flow->time_stamp;
+         alertTimeMachine();
       } else {
          usr->removeBF(bf);
          clt->removeUser(usr);
@@ -841,6 +854,7 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
    if (flow->status_code == SIP_STATUS_OK && !dbf->m_breacher) {
       dbf->addBreacher(flow->ip_dst);
       dbf->m_time_breach = flow->time_stamp;
+      alertTimeMachine();
    }
 
    if (!clt) {
@@ -867,8 +881,9 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
    } else {
       bf_t *bf = usr->findClient(clt);
       if (bf) {
-         if (flow->status_code == SIP_STATUS_OK) {
+         if (flow->status_code == SIP_STATUS_OK && bf->m_time_breach == 0) {
             bf->m_time_breach = flow->time_stamp;
+            alertTimeMachine();
          }
 
          bf->m_time_last = flow->time_stamp;
@@ -1297,10 +1312,12 @@ void get_string_from_unirec(int unirec_field_id, int max_length, const void *in_
 int main(int argc, char **argv)
 {
    int ret;
+   int sip_cseq_len;
+   int exit_value = 0;
    signed char opt;
    uint16_t msg_type;
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
-   int sip_cseq_len;
+   
    Detector *det = NULL;
 
    // initialize libtrap
@@ -1313,26 +1330,37 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = ur_create_input_template(0, UNIREC_INPUT_TEMPLATE, NULL);
    if (in_tmplt == NULL) {
       fprintf(stderr, "Error: input template could not be created.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return -1;
+      exit_value = -1;
+      goto cleanup;
    }
 
    alert_tmplt = ur_create_output_template(0, UNIREC_ALERT_TEMPLATE, NULL);
    if (alert_tmplt == NULL){
-      ur_free_template(in_tmplt);
-      fprintf(stderr, "Error: Output template could not be created.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return -1;
+      fprintf(stderr, "Error: Output alert template could not be created.\n");
+      exit_value = -1;
+      goto cleanup;
+   }
+
+   tm_tmplt = ur_create_output_template(1, UNIREC_TM_TEMPLATE, NULL);
+   if (tm_tmplt == NULL){
+      fprintf(stderr, "Error: Output tm template could not be created.\n");
+      exit_value = -1;
+      goto cleanup;
    }
 
    // Allocate memory for output record
    alert_rec = ur_create_record(alert_tmplt, MAX_LENGTH_SIP_FROM);
    if (alert_rec == NULL){
-      ur_free_template(in_tmplt);
-      ur_free_template(alert_tmplt);
-      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return -1;
+      fprintf(stderr, "Error: Memory allocation problem (output alert record).\n");
+      exit_value = -1;
+      goto cleanup;
+   }
+   // Allocate memory for output record
+   tm_rec = ur_create_record(tm_tmplt, 0);
+   if (tm_rec == NULL){
+      fprintf(stderr, "Error: Memory allocation problem (output tm record).\n");
+      exit_value = -1;
+      goto cleanup;
    }
 
    // parse additional parameters
@@ -1372,10 +1400,12 @@ int main(int argc, char **argv)
    det = new Detector();
    if (!det) {
       fprintf(stderr, "ERROR: main - new failed when creating Detector object.\n");
+      exit_value = -1;
       goto cleanup;
    }
    
    if (!det->init()) {
+      exit_value = -1;
       goto cleanup;
    }
 
@@ -1406,6 +1436,7 @@ int main(int argc, char **argv)
       sip_data = (data_t *) malloc(sizeof(data_t));
       if (!sip_data) {
          fprintf(stderr, "Error: malloc failed.\n");
+         exit_value = -1;
          break;
       }
 
@@ -1443,11 +1474,13 @@ int main(int argc, char **argv)
       if (!retval) {
          free(sip_data);
          VERBOSE("Error: unable to insert possible attack attempt.\n")
+         exit_value = -1;
          break;
       }
 
       if (!det->evaluateFlows((time_t) sip_data->time_stamp)) {
          free(sip_data);
+         exit_value = -1;
          break;      
       }
 
@@ -1463,10 +1496,28 @@ cleanup:
    delete det;
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-   ur_free_record(alert_rec);
-   ur_free_template(alert_tmplt);
-   ur_free_template(in_tmplt);
+
+   if (alert_rec) {
+      ur_free_record(alert_rec);   
+   }
+
+   if (tm_rec) {
+      ur_free_record(tm_rec);   
+   }
+   
+   if (tm_tmplt) {
+      ur_free_template(tm_tmplt);
+   }
+
+   if (alert_tmplt) {
+      ur_free_template(alert_tmplt);   
+   }
+   
+   if (in_tmplt) {
+      ur_free_template(in_tmplt);   
+   }
+   
    ur_finalize();
 
-   return 0;
+   return exit_value;
 }

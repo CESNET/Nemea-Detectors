@@ -91,8 +91,12 @@ using namespace std;
 /** \brief UniRec input template definition. */
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
-/** \brief UniRec input template definition. */
+/** \brief UniRec alert template definition. */
 #define UNIREC_ALERT_TEMPLATE "SBFD_TARGET,SBFD_SOURCE,SBFD_LINK_BIT_FIELD,SBFD_PROTOCOL,SBFD_EVENT_TIME,SBFD_CEASE_TIME,SBFD_BREACH_TIME,SBFD_EVENT_TYPE,SBFD_EVENT_ID,SBFD_ATTEMPTS,SBFD_AVG_ATTEMPTS,SBFD_USER"
+
+/** \brief UniRec time machine template definition. */
+#define UNIREC_TM_TEMPLATE "SRC_IP"
+
 
 #define VERBOSE(...) if (verbose >= 0) { \
    printf(__VA_ARGS__); \
@@ -207,6 +211,7 @@ public:
    bool isEmpty() const;
    bool evaluateFlows(const ur_time_t current_time);
    void reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event);
+   void alertTimeMachine();
 
    ip_addr_t *m_ip;
 private:
