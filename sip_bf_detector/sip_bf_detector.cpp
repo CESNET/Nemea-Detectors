@@ -305,8 +305,10 @@ int User::evaluateFlows(ur_time_t current_time, Server *srv)
    for (int i = 0; i < m_index; i++) {
       bf_t *bf = m_sources[i];
       scan_t *scan = bf->m_source->getScan();
-      if (scan && scan->m_destroy) {
-         removeBF(bf);
+      if (scan) {
+         if (scan->m_destroy) {
+            removeBF(bf);
+         }
       } else if ((current_time > bf->m_time_last) && ((current_time - bf->m_time_last) > g_free_mem_interval)) {
          if (bf->m_attempts >= g_alert_threshold) {
             srv->reportAlert(bf, this, NULL, BF);   
@@ -883,7 +885,6 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
       if (bf) {
          if (flow->status_code == SIP_STATUS_OK && bf->m_time_breach == 0) {
             bf->m_time_breach = flow->time_stamp;
-            alertTimeMachine();
          }
 
          bf->m_time_last = flow->time_stamp;
