@@ -1368,24 +1368,21 @@ int main(int argc, char **argv)
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'a':
-         sscanf(optarg,"%" SCNu64"", &g_alert_threshold);
-         if (g_alert_threshold < 1) {
+         if (sscanf(optarg,"%" SCNu64"", &g_alert_threshold) != 1 || g_alert_threshold < 1) {
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
          break;
 
       case 'c':
-         sscanf(optarg,"%" SCNu64"", &g_check_mem_interval);
-         if (g_check_mem_interval < 1) {
+         if (sscanf(optarg,"%" SCNu64"", &g_check_mem_interval) != 1 || g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory check intervals.\n");
             goto cleanup;
          }
          break;
 
       case 'f':
-         sscanf(optarg,"%" SCNu64"", &g_free_mem_interval);
-         if (g_free_mem_interval < 1) {
+         if (sscanf(optarg,"%" SCNu64"", &g_free_mem_interval) != 1 || g_free_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory deallocation after last attack action.\n");
             goto cleanup;
          }
