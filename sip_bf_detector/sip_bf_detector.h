@@ -75,6 +75,7 @@ using namespace std;
 #define DEFAULT_DBF_LIMIT        3
 #define DEFAULT_SCAN_START_SIZE  5
 #define DEFAULT_DBF_START_SIZE   1
+#define DEFAULT_OK_COUNT_LIMIT   5
 
 #define PROTOCOL_TCP   0x6
 #define PROTOCOL_UDP   0x11
@@ -136,6 +137,7 @@ struct data_t {
 struct scan_t {
    scan_t(const data_t *flow);
    uint32_t m_other_attempts;
+   uint8_t m_ok_count;
    ur_time_t m_time_last;
    bool m_destroy;
 };
@@ -148,6 +150,8 @@ struct dbf_t {
    ur_time_t m_time_breach;
    ur_time_t m_time_last;
    uint32_t m_other_attempts;
+   uint8_t m_ok_count;
+   bool m_destroy;
 };
 
 struct bf_t {
@@ -160,6 +164,7 @@ struct bf_t {
    ur_time_t m_time_breach;
    uint8_t m_protocol;
    uint8_t m_link_bit_field;
+   uint8_t m_ok_count;
 };
 
 class User {

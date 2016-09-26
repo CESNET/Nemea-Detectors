@@ -157,6 +157,8 @@ dbf_t::dbf_t(const data_t *flow)
    m_time_breach = 0;
    m_time_last = flow->time_stamp;
    m_other_attempts = 0;
+   m_ok_count = 0;
+   m_destroy = false;
 }
 
 dbf_t::~dbf_t()
@@ -183,13 +185,14 @@ bf_t::bf_t(const data_t *flow, Client *clt)
    m_time_first = flow->time_stamp;
    m_time_last = flow->time_stamp;
    m_time_breach = 0;
+   m_ok_count = 0;
    m_protocol = flow->protocol;
    m_link_bit_field = flow->link_bit_field;
 }
 
 bool bf_t::isReportable() const
 {
-   if (m_attempts >= g_alert_threshold && m_source->getScan() == NULL) {
+   if (m_attempts >= g_alert_threshold && m_source->getScan() == NULL && m_ok_count <= DEFAULT_OK_COUNT_LIMIT) {
       return true;
    }
 
@@ -201,6 +204,7 @@ scan_t::scan_t(const data_t *flow)
    m_other_attempts = 0;
    m_time_last = flow->time_stamp;
    m_destroy = false;
+   m_ok_count = 0;
 }
 
 bool User::init(char *name) 
@@ -289,6 +293,18 @@ dbf_t* User::getDBF() const
 
 int User::evaluateFlows(ur_time_t current_time, Server *srv)
 {
+      if (m_dbf && m_dbf->m_destroy) {
+      for (int i = 0; i < m_index; i++) {
+         m_sources[i]->m_source->removeUser(this);
+         delete m_sources[i];
+      }
+
+      delete m_dbf;
+      free(m_sources);
+      free(m_name);
+      return 1;
+   }
+
    if (m_dbf && (current_time > m_dbf->m_time_last) && ((current_time - m_dbf->m_time_last) > g_free_mem_interval)) {
       srv->reportAlert(NULL, this, NULL, DBF);
       for (int i = 0; i < m_index; i++) {
@@ -309,6 +325,9 @@ int User::evaluateFlows(ur_time_t current_time, Server *srv)
          if (scan->m_destroy) {
             removeBF(bf);
          }
+      } else if (bf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+         bf->m_source->removeUser(this);
+         removeBF(bf);
       } else if ((current_time > bf->m_time_last) && ((current_time - bf->m_time_last) > g_free_mem_interval)) {
          if (bf->m_attempts >= g_alert_threshold) {
             srv->reportAlert(bf, this, NULL, BF);   
@@ -350,7 +369,10 @@ bool User::extendSources()
 void User::destroy(Server *srv)
 {
    if (m_dbf) {
-      srv->reportAlert(NULL, this, NULL, DBF);
+      if (!m_dbf->m_destroy) {
+         srv->reportAlert(NULL, this, NULL, DBF);   
+      }
+      
       for (int i = 0; i < m_index; i++) {
          delete m_sources[i];
       }
@@ -763,12 +785,17 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
       }
       
       if (bf->m_time_breach != 0) {
+         bf->m_ok_count++;
          bf->m_time_last = flow->time_stamp;
-         bf->m_attempts++;
+         if (bf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+            usr->removeBF(bf);
+            clt->removeUser(usr);
+         }
       } else if (bf->m_attempts >= g_alert_threshold) {
          bf->m_attempts++;
          bf->m_time_breach = flow->time_stamp;
          bf->m_time_last = flow->time_stamp;
+         bf->m_ok_count++;
          alertTimeMachine();
       } else {
          usr->removeBF(bf);
@@ -853,10 +880,19 @@ bool Server::insertFlow(const data_t *flow)
 void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
 {
    dbf_t *dbf = usr->getDBF();
-   if (flow->status_code == SIP_STATUS_OK && !dbf->m_breacher) {
-      dbf->addBreacher(flow->ip_dst);
+   if (dbf->m_destroy) {
+      return;
+   }
+
+   if (flow->status_code == SIP_STATUS_OK) {
       dbf->m_time_breach = flow->time_stamp;
-      alertTimeMachine();
+      dbf->m_ok_count++;
+      if (!dbf->m_breacher) {
+         dbf->addBreacher(flow->ip_dst);
+         alertTimeMachine();
+      } else if(dbf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+         dbf->m_destroy = true;
+      }
    }
 
    if (!clt) {
@@ -877,6 +913,16 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
 void Server::updateScan(const data_t *flow, Client *clt, User *usr)
 {
    scan_t *scan = clt->getScan();
+   if (scan->m_destroy) {
+      return;
+   }
+
+   if (flow->status_code == SIP_STATUS_OK) {
+      scan->m_ok_count++;
+      if (scan->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+         scan->m_destroy = true;
+      }
+   }
 
    if (!usr) {
       scan->m_other_attempts++;
@@ -952,7 +998,7 @@ bool Server::evaluateFlows(const ur_time_t current_time)
       Client *clt = (Client *) (b_item->value);
       scan_t *scan = (scan_t *) clt->getScan();
 
-      if (scan && (current_time > scan->m_time_last) && ((current_time - scan->m_time_last) > g_free_mem_interval)) {
+      if (scan && !scan->m_destroy && (current_time > scan->m_time_last) && ((current_time - scan->m_time_last) > g_free_mem_interval)) {
          reportAlert(NULL, NULL, clt, SCAN);
          scan->m_destroy = true;
       }
@@ -1014,14 +1060,14 @@ void Server::cleanStructures()
 
    b_item = bpt_list_init(m_clients);
    if (!b_item) {
-      fprintf(stderr, "ERROR: Server::destroy - bpt_list_init returned NULL.\n");
+      fprintf(stderr, "ERROR: Server::cleanStructures - bpt_list_init returned NULL.\n");
       return;
    }
 
    is_there_next = bpt_list_start(m_clients, b_item);
    while (is_there_next == 1) {
       Client *clt = (Client *) (b_item->value);
-      if (clt->getScan()) {
+      if (clt->getScan() && !clt->getScan()->m_destroy) {
          reportAlert(NULL, NULL, clt, SCAN);
       }
 
@@ -1033,7 +1079,7 @@ void Server::cleanStructures()
    // create a list of items in the tree and iterate through it
    b_item = bpt_list_init(m_users);
    if (!b_item) {
-      fprintf(stderr, "ERROR: Server::destroy - bpt_list_init returned NULL.\n");
+      fprintf(stderr, "ERROR: Server::cleanStructures - bpt_list_init returned NULL.\n");
       return;
    }
 
@@ -1048,7 +1094,7 @@ void Server::cleanStructures()
 
    b_item = bpt_list_init(m_clients);
    if (!b_item) {
-      fprintf(stderr, "ERROR: Server::destroy - bpt_list_init returned NULL.\n");
+      fprintf(stderr, "ERROR: Server::cleanStructures - bpt_list_init returned NULL.\n");
       return;
    }
 
