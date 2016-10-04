@@ -1,8 +1,21 @@
+2016-10-04 Nemea-detectors-1.3.2
+        * sip_bf_detector:
+                improved detection algorithm
+		output format now in UniRec
+		added second output interface for alerting the Time Machine
+        * voip_fraud_detection: 
+                changed required unirec fields
+	* vportscan_detector:
+		aggregator: uses a dictionary instead of a list for events
+	* haddrscan_detector: 
+		aggregator: uses a dictionary instead of a list for events
+
 2016-08-05 Nemea-detectors-1.3.1
 	* sip_bf_detector:
 		compatibility with c++11
 	* miner_detector:
 		bugfixes
+
 2016-07-28 Nemea-detectors-1.3.0
 	* vportscan_detector:
 		bugfix bad timestamp field used
