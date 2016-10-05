@@ -90,9 +90,12 @@ ur_template_t *tm_tmplt = NULL;
 void *alert_rec = NULL;
 void *tm_rec = NULL;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
-
 /* *********************** */
+
+void signal_handler(int signal)
+{
+   stop = 1;
+}
 
 /**
  * Comparing function used in b+ tree of users. 
@@ -1364,13 +1367,20 @@ int main(int argc, char **argv)
    signed char opt;
    uint16_t msg_type;
    char sip_from_orig[MAX_LENGTH_SIP_FROM + 1], sip_cseq[MAX_LENGTH_CSEQ + 1];
-   
+ 
+   struct sigaction sig_action;
+   sig_action.sa_handler = signal_handler;
+   sig_action.sa_flags = 0;
+   sigemptyset(&sig_action.sa_mask);
+   sigaction(SIGINT,&sig_action,NULL);
+   sigaction(SIGQUIT,&sig_action,NULL);
+   sigaction(SIGTERM,&sig_action,NULL);
+
    Detector *det = NULL;
 
    // initialize libtrap
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    verbose = trap_get_verbose_level();
 
    // create Unirec input template
