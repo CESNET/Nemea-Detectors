@@ -81,7 +81,7 @@ using namespace std;
 #define PROTOCOL_UDP   0x11
 
 /** \brief Default value of unsuccessful authentication attempts to consider this behaviour as an attack. */
-#define DEFAULT_ALERT_THRESHOLD  20
+#define DEFAULT_ALERT_THRESHOLD  50
 
 /** \brief Default time in seconds between checks for ceased attacks. */
 #define CHECK_MEMORY_INTERVAL    300
