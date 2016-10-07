@@ -216,7 +216,7 @@ public:
    bool isEmpty() const;
    bool evaluateFlows(const ur_time_t current_time);
    void reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event);
-   void alertTimeMachine();
+   void alertTimeMachine(const ip_addr_t *source);
 
    ip_addr_t *m_ip;
 private:

@@ -673,9 +673,9 @@ uint64_t Server::createId(ur_time_t time_first)
    return event_id;
 }
 
-void Server::alertTimeMachine()
+void Server::alertTimeMachine(const ip_addr_t *source)
 {
-   ur_set(tm_tmplt, tm_rec, F_SRC_IP, *m_ip);
+   ur_set(tm_tmplt, tm_rec, F_SRC_IP, *source);
    int ret = trap_send(1, tm_rec, ur_rec_size(tm_tmplt, tm_rec));
 
    if (ret != TRAP_E_OK) {
@@ -799,7 +799,7 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
          bf->m_time_breach = flow->time_stamp;
          bf->m_time_last = flow->time_stamp;
          bf->m_ok_count++;
-         alertTimeMachine();
+         alertTimeMachine(flow->ip_dst);
       } else {
          usr->removeBF(bf);
          clt->removeUser(usr);
@@ -892,7 +892,7 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
       dbf->m_ok_count++;
       if (!dbf->m_breacher) {
          dbf->addBreacher(flow->ip_dst);
-         alertTimeMachine();
+         alertTimeMachine(flow->ip_dst);
       } else if(dbf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
          dbf->m_destroy = true;
       }
