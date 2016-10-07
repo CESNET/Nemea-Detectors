@@ -166,7 +166,7 @@ while True:
    UR_Input.setData(data)
 
    # Update the list of events
-   key = UR_Input.SRC_IP + ',' + UR_Input.DST_IP
+   key = str(UR_Input.SRC_IP) + ',' + str(UR_Input.DST_IP)
    if key in eventList:
       # Updating the value
       URtmp.setData(eventList[key])

@@ -164,9 +164,10 @@ while True:
    UR_Input.setData(data)
 
    # Update the list of events
-   if UR_Input.SRC_IP in eventList:
+   key = str(UR_Input.SRC_IP)
+   if key in eventList:
       # Updating the value
-      URtmp.setData(eventList[UR_Input.SRC_IP])
+      URtmp.setData(eventList[key])
       if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
          URtmp.TIME_FIRST = UR_Input.TIME_FIRST
       if URtmp.TIME_LAST < UR_Input.TIME_LAST:
@@ -174,7 +175,7 @@ while True:
       URtmp.ADDR_CNT += UR_Input.ADDR_CNT
    else:
       # Inserting new key
-      eventList[UR_Input.SRC_IP] = data
+      eventList[key] = data
 
    lock.release()
 
