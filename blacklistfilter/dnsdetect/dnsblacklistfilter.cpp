@@ -91,7 +91,7 @@ UR_FIELDS(
     string DNS_NAME,
     uint16 DNS_QTYPE,
     uint16 DNS_RLENGTH,
-    string DNS_RDATA,
+    bytes DNS_RDATA,
     uint8 DNS_DO,       //DNSSEC OK bit
     //Blacklist items
     uint8 DNS_BLACKLIST,    //ID of blacklist which contains suspicious domain name
