@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 
-# In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
 import argparse
 from report2idea import *
 
 
-# Moudle name, description and required input data format
+# Module name, description and required input data format
 MODULE_NAME = "booterfilter2idea"
 MODULE_DESC = "Converts output of booterfilter module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 HTTP_REQUEST_AGENT_ID,uint32 HTTP_REQUEST_METHOD_ID,uint32 HTTP_RESPONSE_STATUS_CODE,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,string HTTP_REQUEST_AGENT,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL,string HTTP_RESPONSE_CONTENT_TYPE"
-
-
-# Blacklist ID to name lookup table
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
