@@ -114,6 +114,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/ipdetect/Makefile
+                 booterfilter/Makefile
                  brute_force_detector/Makefile
                  amplification_detection/Makefile
                  hoststatsnemea/Makefile
