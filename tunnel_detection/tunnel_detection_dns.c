@@ -72,7 +72,7 @@ UR_FIELDS (
    uint16 DST_PORT,
    uint8 TUNNEL_TYPE,
    string DNS_NAME,
-   string DNS_RDATA,
+   bytes DNS_RDATA,
    string SDM_CAPTURE_FILE_ID,
    string TUNNEL_DOMAIN
 )
@@ -1969,7 +1969,7 @@ int main(int argc, char **argv)
    signal(SIGUSR1, signal_handler);
 
    // ***** Create UniRec template *****
-   char opt;
+   signed char opt;
    char *record_folder_name = NULL;
    char *input_packet_file_name = NULL;
    ur_template_t *tmplt = NULL;

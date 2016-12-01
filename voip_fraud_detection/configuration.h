@@ -60,7 +60,7 @@
 #define COUNTRY_STORAGE_SIZE 20
 
 /** \brief UniRec input template definition. */
-#define UNIREC_INPUT_TEMPLATE "INVEA_SIP_REQUEST_URI,INVEA_SIP_CALLING_PARTY,INVEA_SIP_CALLED_PARTY,INVEA_SIP_CALL_ID,INVEA_SIP_USER_AGENT,INVEA_VOIP_PACKET_TYPE,SRC_IP,DST_IP,LINK_BIT_FIELD,SRC_PORT,DST_PORT,INVEA_SIP_STATS,INVEA_RTCP_PACKETS,INVEA_RTCP_OCTETS,INVEA_SIP_VIA"
+#define UNIREC_INPUT_TEMPLATE "SIP_REQUEST_URI,SIP_CALLING_PARTY,SIP_CALLED_PARTY,SIP_CALL_ID,SIP_USER_AGENT,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SRC_IP,DST_IP,LINK_BIT_FIELD,TIME_FIRST"
 
 /** \brief UniRec output template definition. */
 #define UNIREC_OUTPUT_TEMPLATE "EVENT_ID,EVENT_TYPE,SRC_IP,DST_IP,DETECTION_TIME,TIME_FIRST,VOIP_FRAUD_SIP_TO,VOIP_FRAUD_SIP_FROM,VOIP_FRAUD_PREFIX_LENGTH,VOIP_FRAUD_PREFIX_EXAMINATION_COUNT,VOIP_FRAUD_SUCCESSFUL_CALL_COUNT,VOIP_FRAUD_USER_AGENT,VOIP_FRAUD_INVITE_COUNT,VOIP_FRAUD_COUNTRY_CODE"
@@ -89,7 +89,7 @@
 
 /** \brief Default value of min_length_called_number.
  * If parameter min_length_called_number is not set at startup of module then this default value is used. */
-#define DEFAULT_MIN_LENGTH_CALLED_NUMBER 0
+#define DEFAULT_MIN_LENGTH_CALLED_NUMBER 9
 
 /** \brief Default value of prefix_examination_detection_threshold.
  * If parameter prefix_examination_detection_threshold is not set at startup of module then this default value is used. */
@@ -129,6 +129,9 @@
 
 /** \brief Maximum length of Call-ID. */
 #define MAX_LENGTH_CALL_ID 80
+
+/** \brief Maximum length of CSeq. */
+#define MAX_LENGTH_SIP_CSEQ 80
 
 /** \brief Maximum length of User-Agent. */
 #define MAX_LENGTH_USER_AGENT 80

@@ -61,7 +61,7 @@ GeoIP *geo_ipv4, *geo_ipv6;
 GeoIPLookup geoip_lookup;
 
 /** \brief Time of the last saving countries from memory to the defined countries file. */
-time_t time_last_countries_file_saved;
+ur_time_t time_last_countries_file_saved;
 
 /** \brief Last used Event ID of attack detection (extern). */
 extern uint32_t last_event_id;

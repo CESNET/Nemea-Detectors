@@ -49,9 +49,11 @@
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unirec/unirec.h>
 #include "configuration.h"
 #include "data_structure.h"
 
+extern ur_time_t current_time;
 
 /** \brief Prefix string of error message. */
 #define ERROR_MESSAGE_PREFIX "ERR_voip_fraud_detection:"
@@ -111,9 +113,9 @@ write_to_log(ERROR_MESSAGE_PREFIX, __VA_ARGS__, NULL)
  */
 char * get_actual_time_string();
 
-/** \brief Convert time_to to char array (string) in system default format.
+/** \brief Convert ur_time_to to char array (string) in system default format.
  */
-char * time_t_to_str(time_t time);
+char * time_t_to_str(ur_time_t time);
 
 /** \brief Convert signed integer to char array (string).
  */

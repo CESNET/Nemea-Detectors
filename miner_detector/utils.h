@@ -15,9 +15,32 @@
 #ifndef _H_MINER_UTILS
 #define _H_MINER_UTILS
 
-#define STRATUM_RECV_TIMEOUT 5
+
+enum stratum_timeout_types {
+    STRATUM_CONN_TIMEOUT,
+    STRATUM_READ_TIMEOUT
+};
+
+enum stratum_check_ret_codes {
+    ERR_SOCKET_CREATE,
+    ERR_SOCKET_FGET,
+    ERR_SOCKET_FSET,
+    ERR_CONNECT,
+    ERR_SELECT,
+    ERR_CONNECT_TIMEOUT,
+    ERR_WRITE,
+    ERR_READ,
+    ERR_READ_TIMEOUT,
+    ERR_MEMORY,
+    ERR_REGEX,
+    DATA_OK,
+    STRATUM_MATCH,
+    STRATUM_NO_MATCH
+};
+
 
 suspect_item_key_t create_suspect_key(ip_addr_t& suspect, ip_addr_t& pool, uint16_t port);
-bool check_for_stratum_protocol(std::string ip, uint16_t port);
-
+int stratum_check_server(char *ip, uint16_t port);
+void stratum_set_timeout(int type, int timeout);
+const char *stratum_error_string(int err);
 #endif

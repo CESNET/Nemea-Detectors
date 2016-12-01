@@ -120,7 +120,7 @@ trap_module_info_t *module_info = NULL;
  */
 int arguments(int argc, char *argv[], const char *module_getopt_string, const struct option *long_options)
 {
-   char opt;
+   signed char opt;
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {

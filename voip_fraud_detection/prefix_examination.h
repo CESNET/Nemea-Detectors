@@ -73,7 +73,7 @@ int prefix_examination_tree_detection(prefix_tree_t * tree, prefix_tree_inner_no
  * \param[in] prefix_statistic Indication of printing prefix statistic.
  * \return Return value for decrementing of basic calculation prefix_sum_count.
  */
-unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t * node, unsigned int sum_prefix_down, char first_node, char prefix_statistic);
+unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tree_inner_node_t *node, unsigned int sum_prefix_down, char first_node, char prefix_statistic);
 
 /** \brief Detection of prefix examination attack and write/send information about it.
  * \param[in] hash_table_user_agent Pointer to hash table of User-Agent headers.
@@ -81,7 +81,7 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
  * \param[in] ip_src Source IP address as ip_addr_t structure.
  * \return ID that indicates results of detection (STATE_NO_ATTACK or STATE_ATTACK_DETECTED).
  */
-int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_item_t * hash_table_item, ip_addr_t * ip_src);
+int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_item_t *hash_table_item, ip_addr_t * ip_src);
 
 /** \brief Print prefix statistic of node to file.
  * \param[in] tree Pointer to suffix tree (data structure named prefix_tree).

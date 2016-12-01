@@ -52,7 +52,7 @@ import pytrap
 minutes = 5
 
 # Global list of events
-eventList = []
+eventList = {}
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=False)
@@ -120,11 +120,12 @@ def sendEvents():
     # Send data to output interface
     for event in eventList:
         try:
-            trap.send(event)
+            trap.send(eventList[event])
         except pytrap.Terminated:
             print("Terminated TRAP.")
             break
-    eventList = []
+
+    eventList = {}
 
 print("starting timer for sending...")
 rt = RepeatedTimer(int(options.time) * 60, sendEvents)
@@ -158,28 +159,27 @@ while True:
       break
 
    lock.acquire()
+
    # Set data for access using attributes
    UR_Input.setData(data)
-   # update list of events
-   added = False
-   for e in eventList:
-      URtmp.setData(e)
-      if UR_Input.EVENT_TYPE == URtmp.EVENT_TYPE and UR_Input.SRC_IP == URtmp.SRC_IP:
-         if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
-            URtmp.TIME_FIRST = UR_Input.TIME_FIRST
-         if URtmp.TIME_LAST < UR_Input.TIME_LAST:
-            URtmp.TIME_LAST = UR_Input.TIME_LAST
-         URtmp.PORT_CNT += UR_Input.PORT_CNT
-         added = True
-         break
 
-   if not added:
-      eventList.append(data)
+   # Update the list of events
+   key = str(UR_Input.SRC_IP)
+   if key in eventList:
+      # Updating the value
+      URtmp.setData(eventList[key])
+      if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
+         URtmp.TIME_FIRST = UR_Input.TIME_FIRST
+      if URtmp.TIME_LAST < UR_Input.TIME_LAST:
+         URtmp.TIME_LAST = UR_Input.TIME_LAST
+      URtmp.ADDR_CNT += UR_Input.ADDR_CNT
+   else:
+      # Inserting new key
+      eventList[key] = data
 
    lock.release()
 
+
 rt.stop()
 sendEvents()
-
 trap.sendFlush()
-
