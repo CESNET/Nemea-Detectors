@@ -10,7 +10,7 @@ MODULE_NAME = "booterfilter2idea"
 MODULE_DESC = "Converts output of booterfilter module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 HTTP_REQUEST_AGENT_ID,uint32 HTTP_REQUEST_METHOD_ID,uint32 HTTP_RESPONSE_STATUS_CODE,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,string HTTP_REQUEST_AGENT,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL,string HTTP_RESPONSE_CONTENT_TYPE"
+REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,string HTTP_REQUEST_AGENT,string HTTP_REQUEST_HOST"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -34,7 +34,7 @@ def convert_to_idea(rec, opts=None):
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "DetectTime": endTime,
         'CeaseTime': endTime,
-        "Category": [ "Suspicious.Booter" ],
+        "Category": [ "Anomaly.Connection" ],
         "PacketCount": rec.PACKETS,
         "ByteCount": rec.BYTES,
 
