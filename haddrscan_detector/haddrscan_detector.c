@@ -79,6 +79,8 @@
 UR_FIELDS (
    ipaddr DST_IP,
    ipaddr SRC_IP,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
 
    uint32 PACKETS,
    uint8 PROTOCOL,
@@ -115,18 +117,16 @@ struct item_s {
 
 /***********************************************/
 
-int compare_32b(void *a, void *b)
+int compare_64b(void *a, void *b)
 {
-   uint32_t *h1, *h2;
-   h1 = (uint32_t *)a;
-   h2 = (uint32_t *)b;
+   uint64_t *h1, *h2;
+   h1 = (uint64_t *) a;
+   h2 = (uint64_t *) b;
    if (*h1 == *h2) {
       return EQUAL;
-   }
-   else if (*h1 < *h2) {
+   } else if (*h1 < *h2) {
       return LESS;
-   }
-   else {
+   } else {
       return MORE;
    }
 }
@@ -194,12 +194,14 @@ int main(int argc, char **argv)
    uint32_t packets = 0;
    uint8_t protocol = 0;
    uint8_t tcp_flags = 0;
+   uint16_t dst_port = 0;
 
+   uint64_t key_to_tree = 0;
    uint32_t int_src_ip = 0;
    uint32_t int_dst_ip = 0;
    ur_time_t ts_first, ts_last;
 
-   bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_32b, sizeof(item_t), sizeof(uint32_t));
+   bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_64b, sizeof(item_t), sizeof(uint32_t));
    if (b_plus_tree == NULL) {
       fprintf(stderr, "ERROR: Could not initialize B_PLUS_TREE\n");
       fflush(stderr);
@@ -227,7 +229,7 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   out_tmplt = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,PROTOCOL,ADDR_CNT", NULL);
+   out_tmplt = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_PORT,SRC_PORT,PROTOCOL,ADDR_CNT", NULL);
    if (out_tmplt == NULL){
       fprintf(stderr, "ERROR: Output template could not be created.\n");
       fflush(stderr);
@@ -269,14 +271,20 @@ int main(int argc, char **argv)
       }
 
       packets = ur_get(in_tmplt, recv_data, F_PACKETS);
+      dst_port = ur_get(in_tmplt, recv_data, F_DST_PORT);
       protocol = ur_get(in_tmplt, recv_data, F_PROTOCOL);
       tcp_flags = ur_get(in_tmplt, recv_data, F_TCP_FLAGS);
 
       int_src_ip = ip_get_v4_as_int(src_ip); // also key to B+ tree
       int_dst_ip = ip_get_v4_as_int(dst_ip);
 
+      // Concatenate ip_v4 SRC_IP and DST_PORT to uint64 (used as a key value in B+ tree)
+      key_to_tree = int_src_ip;
+      key_to_tree = key_to_tree << 16;
+      key_to_tree |= dst_port;
+
       if (packets == MAX_PACKETS && (protocol == TCP_PROTOCOL && (tcp_flags == TCP_FLAGS_SYN))) {
-         new_item = bpt_search_or_insert(b_plus_tree, &int_src_ip);
+         new_item = bpt_search_or_insert(b_plus_tree, &key_to_tree);
          if (new_item == NULL) {
             fprintf(stderr, "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
             fflush(stderr);
@@ -313,7 +321,7 @@ int main(int argc, char **argv)
                free(np->dynamic_addrs);
             }
             // delete item from tree no matter how successful was trap_send()
-            bpt_item_del(b_plus_tree, &int_src_ip);
+            bpt_item_del(b_plus_tree, &key_to_tree);
             // break on error, do nothing on timeout in order to perform tree pruning
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, (void) 0, break);
          }
