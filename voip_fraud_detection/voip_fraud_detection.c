@@ -139,7 +139,7 @@ void check_and_free_module_memory(cc_hash_table_v2_t * hash_table)
    ip_item_t * hash_table_item;
 
    // check if check memory interval was expired
-   if ((current_time - time_last_check) > CHECK_MEMORY_INTERVAL) {
+   if (current_time > time_last_check && (current_time - time_last_check > CHECK_MEMORY_INTERVAL)) {
       // printf("Checking memory: %"PRIu64", %"PRIu64", %"PRIu64"\n", current_time, time_last_check, current_time - time_last_check);
       // iterate over items in hash table
       for (i = 0; i < hash_table->table_size; i++) {

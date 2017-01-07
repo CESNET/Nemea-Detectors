@@ -266,8 +266,7 @@ unsigned int prefix_examination_minus_detection(prefix_tree_t * tree, prefix_tre
 int prefix_examination_detection(cc_hash_table_v2_t * hash_table_user_agent, ip_item_t * hash_table_item, ip_addr_t * ip_src)
 {
    // check if detection interval was expired
-   if ((current_time - hash_table_item->time_last_check_prefix_examination) >= modul_configuration.detection_interval) {
-      printf("Checking memory: %"PRIu64", %"PRIu64", %"PRIu64"\n", current_time, hash_table_item->time_last_check_prefix_examination, current_time - hash_table_item->time_last_check_prefix_examination);
+   if ((current_time > hash_table_item->time_last_check_prefix_examination && (current_time - hash_table_item->time_last_check_prefix_examination) >= modul_configuration.detection_interval)) {
       // check if detection_pause_after_attack was expired
       if ((current_time - hash_table_item->time_attack_detected_prefix_examination) >= modul_configuration.detection_pause_after_attack) {
 
