@@ -201,7 +201,7 @@ int main(int argc, char **argv)
    uint32_t int_dst_ip = 0;
    ur_time_t ts_first, ts_last;
 
-   bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_64b, sizeof(item_t), sizeof(uint32_t));
+   bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_64b, sizeof(item_t), sizeof(uint64_t));
    if (b_plus_tree == NULL) {
       fprintf(stderr, "ERROR: Could not initialize B_PLUS_TREE\n");
       fflush(stderr);
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
       int_dst_ip = ip_get_v4_as_int(dst_ip);
 
       // Concatenate ip_v4 SRC_IP and DST_PORT to uint64 (used as a key value in B+ tree)
-      key_to_tree = int_src_ip;
+      key_to_tree = (uint64_t) int_src_ip;
       key_to_tree = key_to_tree << 16;
       key_to_tree |= dst_port;
 
