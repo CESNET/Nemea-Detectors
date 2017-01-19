@@ -27,7 +27,6 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
 
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
-  echo "do pkgconfig"
     PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
   fi
   if test "${TRAPLIB}" != "yes"; then
@@ -64,5 +63,8 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
+  nemeasupdir=${sysconfdir}
+  AC_SUBST(nemeasupdir)
+  AC_PATH_PROG([TRAP2MAN], [trap2man.sh], [], [/usr/bin/nemea$PATH_SEPARATOR$PATH$PATH_SEPARATOR$PWD/../nemea-framework/libtrap/tools])
 ])
 

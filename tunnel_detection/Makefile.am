@@ -1,4 +1,3 @@
-include ../aminclude.am
 
 bin_PROGRAMS=dnstunnel_detection
 dnstunnel_detection_SOURCES=tunnel_detection_dns.c \
@@ -15,3 +14,4 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/dnstunnel_detection
 dist_pkgdoc_DATA=README.md
 
+include ../aminclude.am

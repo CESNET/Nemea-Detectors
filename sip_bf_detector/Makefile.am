@@ -1,4 +1,3 @@
-include ../aminclude.am
 bin_PROGRAMS=sip_bf_detector
 sip_bf_detector_SOURCES=sip_bf_detector.cpp sip_bf_detector.h fields.c fields.h
 sip_bf_detector_LDADD=-ltrap -lunirec -lnemea-common
@@ -10,3 +9,4 @@ doc:
 
 clean-local:
 	rm -rf doc
+include ../aminclude.am

@@ -1,4 +1,3 @@
-include ../aminclude.am
 
 bin_PROGRAMS=amplification_detection
 amplification_detection_SOURCES=amplification_detection.cpp \
@@ -11,3 +10,4 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/amplification_detection
 pkgdoc_DATA=README.md
 
+include ../aminclude.am

@@ -5,4 +5,12 @@ fields.h:
 
 fields.c: fields.h
 
-CLEANFILES = fields.c fields.h
+mansources := $(addprefix $(srcdir)/,$($(bin_PROGRAMS)_SOURCES))
+mantargets := $(bin_PROGRAMS:=.1)
+$(mantargets): $(mansources)
+	$(TRAP2MAN) $^ > $@
+
+man_MANS=$(mantargets)
+
+CLEANFILES = fields.c fields.h $(mantargets)
+

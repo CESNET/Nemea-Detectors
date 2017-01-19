@@ -1,5 +1,3 @@
-include ../../aminclude.am
-
 HOSTSTATSNEMEASRCS=aux_func.h \
 		   config.cpp \
 		   hs_config.h \
@@ -21,4 +19,6 @@ bin_PROGRAMS=hoststatsnemea
 hoststatsnemea_SOURCES=$(HOSTSTATSNEMEASRCS)
 hoststatsnemea_LDADD=-lnemea-common -ltrap -lunirec
 hoststatsnemea_CXXFLAGS=-pthread -Wno-write-strings
+
+include ../../aminclude.am
 
