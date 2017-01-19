@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-detectors], [1.3.3], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.3.4], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -114,6 +114,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/ipdetect/Makefile
+                 booterfilter/Makefile
                  brute_force_detector/Makefile
                  amplification_detection/Makefile
                  hoststatsnemea/Makefile

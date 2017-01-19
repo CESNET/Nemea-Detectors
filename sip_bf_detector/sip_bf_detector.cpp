@@ -47,6 +47,8 @@
 UR_FIELDS (
    ipaddr DST_IP,                // IP address of attack source
    ipaddr SRC_IP,                // IP address of attack target
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
    uint64 LINK_BIT_FIELD,        // number of link
    uint8 PROTOCOL,               // TCP or UDP protocol
    time TIME_FIRST,              // time of the message
@@ -437,12 +439,13 @@ void User::getDBFStats(stats_t *stats) const
    stats->m_total_count += m_dbf->m_other_attempts;   
 }
 
-bool Client::init(ip_addr_t *ip)
+bool Client::init(ip_addr_t *ip, uint16_t port)
 {
    m_names = NULL;
    m_ip = NULL;
    m_scan = NULL;
    m_index = 0;
+   m_port = port;
    m_size = DEFAULT_SCAN_START_SIZE;
    m_names = (User **) malloc(m_size * sizeof(User *));
    m_ip = (ip_addr_t *) malloc(sizeof(ip_addr_t));
@@ -585,7 +588,7 @@ bool Server::init(const data_t *flow)
    m_users = m_clients = NULL;
    m_name_suffix = NULL;
    m_ip = NULL;
-
+   m_port = flow->server_port;
    length = strlen(flow->name_suffix);
    m_ipv4 = flow->ipv4;
    m_name_suffix = (char *) malloc(length + 1);
@@ -688,6 +691,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
    ostringstream ss;
    ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TYPE, event);
    ur_set(alert_tmplt, alert_rec, F_SBFD_TARGET, *m_ip);
+   ur_set(alert_tmplt, alert_rec, F_DST_PORT, m_port);
 
    if (event == BF) {
       if (!bf || !usr) {
@@ -704,6 +708,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(bf->m_source->m_ip));
       ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, bf->m_protocol);
       ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, bf->m_link_bit_field);
+      ur_set(alert_tmplt, alert_rec, F_SRC_PORT, bf->m_source->m_port);
       ss << usr->m_name << '@' << m_name_suffix;
       ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, ss.str().c_str(), ss.str().length());
    } else if (event == DBF) {
@@ -734,6 +739,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(dbf->m_time_last, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
+      ur_set(alert_tmplt, alert_rec, F_SRC_PORT, 0);
       
       ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, stats->m_protocol);
       ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, stats->m_link_bit_field);      
@@ -763,6 +769,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_AVG_ATTEMPTS, stats->m_avg_count);
       ur_set(alert_tmplt, alert_rec, F_SBFD_SOURCE, *(clt->m_ip));
+      ur_set(alert_tmplt, alert_rec, F_SRC_PORT, clt->m_port);
       ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, stats->m_protocol);
       ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, stats->m_link_bit_field);      
       ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, "", 0);
@@ -854,7 +861,7 @@ bool Server::insertFlow(const data_t *flow)
       if(usr->getDBF()) {
          updateDBF(flow, clt, usr);
       } else {
-         clt = createClientNode(tree_key, flow->ip_dst);
+         clt = createClientNode(tree_key, flow->ip_dst, flow->client_port);
          if (!clt) {
             return false;
          }
@@ -867,7 +874,7 @@ bool Server::insertFlow(const data_t *flow)
          return false;
       }
 
-      clt = createClientNode(tree_key, flow->ip_dst);
+      clt = createClientNode(tree_key, flow->ip_dst, flow->client_port);
       if (!clt) {
          usr->destroy(this);
          bpt_item_del(m_users, flow->user);
@@ -946,11 +953,11 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
    scan->m_time_last = flow->time_stamp;
 }
 
-Client* Server::createClientNode(void *tree_key, ip_addr_t *ip)
+Client* Server::createClientNode(void *tree_key, ip_addr_t *ip, uint16_t port)
 {
    Client *clt = (Client *) bpt_insert(m_clients, tree_key);
    if (clt) {
-      if (!clt->init(ip)) {
+      if (!clt->init(ip, port)) {
          bpt_item_del(m_clients, tree_key);
          clt = NULL;
       }
@@ -1519,6 +1526,8 @@ int main(int argc, char **argv)
          continue;
       }
       sip_data->link_bit_field = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
+      sip_data->server_port = ur_get(in_tmplt, in_rec, F_SRC_PORT);
+      sip_data->client_port = ur_get(in_tmplt, in_rec, F_DST_PORT);
       sip_data->protocol = ur_get(in_tmplt, in_rec, F_PROTOCOL);
       sip_data->time_stamp = ur_time_get_sec((ur_time_t *) ur_get(in_tmplt, in_rec, F_TIME_FIRST));
       sip_data->ipv4 = ip_is4(sip_data->ip_src);

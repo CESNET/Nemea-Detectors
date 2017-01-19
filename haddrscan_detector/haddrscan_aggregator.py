@@ -99,7 +99,7 @@ trap.init(sys.argv, 1, 1)
 
 # Specifier of UniRec records will be received during libtrap negotiation
 alertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
-                "time TIME_LAST,uint8 EVENT_TYPE,uint8 PROTOCOL"
+                "time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
 
 UR_Input = pytrap.UnirecTemplate(alertURFormat)
 
@@ -164,7 +164,7 @@ while True:
    UR_Input.setData(data)
 
    # Update the list of events
-   key = str(UR_Input.SRC_IP)
+   key = str(UR_Input.SRC_IP) + ',' + str(UR_Input.DST_PORT)
    if key in eventList:
       # Updating the value
       URtmp.setData(eventList[key])

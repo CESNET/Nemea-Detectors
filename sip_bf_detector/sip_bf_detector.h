@@ -90,10 +90,10 @@ using namespace std;
 #define FREE_MEMORY_INTERVAL     1800
 
 /** \brief UniRec input template definition. */
-#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
+#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,SRC_PORT,DST_PORT,LINK_BIT_FIELD,PROTOCOL,TIME_FIRST,SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY"
 
 /** \brief UniRec alert template definition. */
-#define UNIREC_ALERT_TEMPLATE "SBFD_TARGET,SBFD_SOURCE,SBFD_LINK_BIT_FIELD,SBFD_PROTOCOL,SBFD_EVENT_TIME,SBFD_CEASE_TIME,SBFD_BREACH_TIME,SBFD_EVENT_TYPE,SBFD_EVENT_ID,SBFD_ATTEMPTS,SBFD_AVG_ATTEMPTS,SBFD_USER"
+#define UNIREC_ALERT_TEMPLATE "SBFD_TARGET,SBFD_SOURCE,SRC_PORT,DST_PORT,SBFD_LINK_BIT_FIELD,SBFD_PROTOCOL,SBFD_EVENT_TIME,SBFD_CEASE_TIME,SBFD_BREACH_TIME,SBFD_EVENT_TYPE,SBFD_EVENT_ID,SBFD_ATTEMPTS,SBFD_AVG_ATTEMPTS,SBFD_USER"
 
 /** \brief UniRec time machine template definition. */
 #define UNIREC_TM_TEMPLATE "SRC_IP"
@@ -128,7 +128,9 @@ struct data_t {
    char *name_suffix;
    uint16_t status_code;                  ///< sip status code
    uint8_t link_bit_field;                ///< indicator of particular monitoring probe
-   uint8_t protocol;                      ///< sip protocol used for data transfer
+   uint8_t protocol;					  ///< sip protocol used for data transfer
+   uint16_t server_port;
+   uint16_t client_port;
    ur_time_t time_stamp;                  ///< time when the message was received
    ip_addr_t *ip_src;                     ///< IP address of the server
    ip_addr_t *ip_dst;                     ///< IP address of the attacker
@@ -190,7 +192,7 @@ private:
 class Client {
 public:
    void destroy();
-   bool init(ip_addr_t *ip);
+   bool init(ip_addr_t *ip, uint16_t port);
    bool addTarget(const data_t *flow, User *usr);
    User* findUser(User *usr) const;
    scan_t* getScan() const;
@@ -198,6 +200,7 @@ public:
    void getScanStats(stats_t *stats) const;
    int getSize() const;
 
+   uint16_t m_port;
    ip_addr_t *m_ip;
 private:
    bool extendUsers();
@@ -218,9 +221,10 @@ public:
    void reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event);
    void alertTimeMachine(const ip_addr_t *source);
 
+   uint16_t m_port;
    ip_addr_t *m_ip;
 private:
-   Client* createClientNode(void *tree_key, ip_addr_t *ip);
+   Client* createClientNode(void *tree_key, ip_addr_t *ip, uint16_t port);
    User* createUserNode(char *name);
    bool insertSourceAndTarget(const data_t *flow, User *user, Client *clt);
    void updateScan(const data_t *flow, Client *clt, User *usr);

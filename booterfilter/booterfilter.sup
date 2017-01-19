@@ -1,0 +1,47 @@
+<module>
+<name>booter_filter</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/unirecfilter</path>
+<params>-f /data/booter-filter/filter</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>http_data_source</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>bootertraffic:buffer=off</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>booter_filter_logger</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/logger</path>
+<params>-t -a /data/booter-filter/log</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>bootertraffic</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>booterfilter2idea</name>
+<enabled>false</enabled>
+<path>/usr/bin/nemea/booterfilter2idea.py</path>
+<params>--name=cz.cesnet.nemea.booterfilter --warden=/etc/warden/booterfilter.cfg</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>bootertraffic</params>
+</interface>
+</trapinterfaces>
+</module>
+

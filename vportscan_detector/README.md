@@ -21,3 +21,21 @@ The input of algorithm are all incoming flow records, however, only the flow rec
 ![Vportscan detector](documentation/img/algorithm-diagram.png)
 
 The threshold 1 (number of packets) is checked immediately when a flow record is received. The source and destination addresses are used as a key to find the stored list of ports. If the pair of addresses is not known, a new list of ports is allocated, the current destination port is inserted into the list and the algorithm continues with the next flow record. Otherwise, the destination port from the flow record is looked up in the found list of ports. If the port is found it is removed (it is a repeating port), otherwise, it is inserted. Reaching the threshold 2 (number of stored ports) generates an alert. Finally, the threshold 3 (age of inactivity) is used for cleaning memory once every minute.
+
+
+## Output data
+
+In case some source IP address reaches the threshold 50 for number of destination ports, an alert is sent via output interface.
+The alert is in Unirec format and it contains the following information:
+
+| Unirec field | Description                        |
+|:------------:|:----------------------------------:|
+| EVENT_TYPE   | type of event (1 for scanning)     |
+| TIME_FIRST   | first time stamp                   |
+| TIME_LAST    | last time stamp                    |
+| SRC_IP       | IP address of the attacker         |
+| DST_IP       | IP address of the victim           |
+| SRC_PORT     | last src port used by the attacker |
+| DST_PORT     | last dst port used by the attacker |
+| PROTOCOL     | transport protocol (TCP)           |
+| PORT_CNT     | number of probed destination ports |

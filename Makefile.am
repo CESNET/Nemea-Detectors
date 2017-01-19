@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=amplification_detection \
 	blacklistfilter \
+	booterfilter \
 	brute_force_detector \
 	hoststatsnemea \
 	haddrscan_detector \
