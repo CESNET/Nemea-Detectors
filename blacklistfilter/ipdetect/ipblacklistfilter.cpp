@@ -99,7 +99,7 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("IPBlacklistFilter", "Module receives the UniRec record and checks if the source address " \
+  BASIC("ipblacklistfilter", "Module receives the UniRec record and checks if the source address " \
     "or destination address is present in any blacklist that are available. " \
     "If any of the addresses is blacklisted the record is changed by adding " \
     "a identification number of the list which blacklisted the address for both IP addresses and " \

@@ -77,7 +77,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("voip_fraud_detection module","This module detecting fraud in VoIP telephony - in SIP communication.",1,-1)
+  BASIC("voip_fraud_detection","This module detecting fraud in VoIP telephony - in SIP communication.",1,-1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('l', "log_file", "Path to a log file.", required_argument, "string") \

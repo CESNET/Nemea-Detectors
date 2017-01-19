@@ -82,8 +82,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("DNS-tunnel-detection module","Module that detects DNS tunnels on the network. Input interface needs DNS FLOW data. \
-There can be two output interfaces. First output interface sends alerts from the detector. Second output interface sends rules to SDMCAP to catch reel traffic.",1,-1)
+  BASIC("dnstunnel_detection","Module that detects DNS tunnels on the network. Input interface needs DNS FLOW data. There can be two output interfaces. First output interface sends alerts from the detector. Second output interface sends rules to SDMCAP to catch reel traffic.", 1, -1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('i', "ifc", "Specification of interface types and their parameters", required_argument, "string") \

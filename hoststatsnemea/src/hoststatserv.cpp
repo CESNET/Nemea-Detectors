@@ -107,7 +107,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("HostStatsNemea module","This module calculates statistics for IP addresses and subprofiles(SSH,DNS,...)",1,1)
+  BASIC("hoststatsnemea","This module calculates statistics for IP addresses and subprofiles (SSH,DNS,...)",1,1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('c', "config", "Load configuration from file.", required_argument, "string") \

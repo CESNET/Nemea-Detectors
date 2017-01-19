@@ -89,7 +89,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Vertical portscan detector", "Threshold-based detector for vertical port scans", 1, 1)
+  BASIC("vportscan_detector", "Vportscan detector is a simple, threshold-based detector for vertical scans detection. The detection algorithm uses information from basic flow records (source and destination IP addresses and ports, protocol, #packets, #bytes).", 1, 1)
 
 #define MODULE_PARAMS(PARAM)
 

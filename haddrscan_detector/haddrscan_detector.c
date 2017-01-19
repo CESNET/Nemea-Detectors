@@ -93,7 +93,8 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Horizontal address scan detector", "Threshold-based detector for horizontal address scans", 1, 1)
+  BASIC("haddrscan_detector", "This module is a simple, threshold-based detector for horizontal scans which processes incoming flow records and outputs alerts.The detection algorithm uses information from basic flow records and it is based on analysis of the number of destination addresses per source address.  It is important to remember all unique destination addresses for each source address separately.  The source address is a potential source of scan, meanwhile, the destination addresses are victims.", 1, 1)
+
 
 #define MODULE_PARAMS(PARAM)
 

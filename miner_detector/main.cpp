@@ -47,10 +47,10 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Miner Detector","Module for detecting bitcoin pool mining.",1,1)
+  BASIC("miner_detector","Module for detecting bitcoin pool mining.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "", "Specify user configuration file for miner detector. [Default: " SYSCONFDIR "/miner_detector/userConfigurationFile.xml]", required_argument, "string")
+  PARAM('u', "user-conf", "Specify user configuration file for miner detector. [Default: " SYSCONFDIR "/miner_detector/userConfigurationFile.xml]", required_argument, "string")
 
 
 

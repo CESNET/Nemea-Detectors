@@ -100,7 +100,7 @@ trap_module_info_t *module_info = NULL;
 TelnetServerProfileMap TELNETRecord::TSPMap;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Brute force detector module","A module used for detecting brute force dictionary attacks on SSH, RDP and Telnet protocols. For detection is used window with N last flows and if threshold of a suspicious flows (packet and byte range is checked) is reached, alarm is triggered.",1,1)
+  BASIC("brute_force_detector","A module used for detecting brute force dictionary attacks on SSH, RDP and Telnet protocols. For detection is used window with N last flows and if threshold of a suspicious flows (packet and byte range is checked) is reached, alarm is triggered.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
     PARAM('S', "SSH", "Set detection mode to SSH.", no_argument, "none") \
