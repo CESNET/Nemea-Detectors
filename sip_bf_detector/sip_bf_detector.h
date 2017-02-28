@@ -72,7 +72,7 @@ using namespace std;
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
 #define DEFAULT_SCAN_LIMIT       25
-#define DEFAULT_DBF_LIMIT        3
+#define DEFAULT_DBF_LIMIT        5
 #define DEFAULT_SCAN_START_SIZE  5
 #define DEFAULT_DBF_START_SIZE   1
 #define DEFAULT_OK_COUNT_LIMIT   5
@@ -185,8 +185,8 @@ public:
 private:
    bool extendCom();
    dbf_t *m_dbf;
-   int m_index;
-   int m_size;
+   uint32_t m_index;
+   uint32_t m_size;
    bf_t **m_com;
 };
 
@@ -204,8 +204,8 @@ public:
    ip_addr_t *m_ip;
 private:
    bool extendCom();
-   int m_index;
-   int m_size;
+   uint32_t m_index;
+   uint32_t m_size;
    bf_t **m_com;
    scan_t *m_scan;
 };
