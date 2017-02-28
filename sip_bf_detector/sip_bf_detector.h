@@ -157,9 +157,10 @@ struct dbf_t {
 };
 
 struct bf_t {
-   bf_t(const data_t *flow, Client *clt);
+   bf_t(const data_t *flow, Client *clt, User *usr);
    bool isReportable() const;
    Client *m_source;
+   User *m_target;
    uint32_t m_attempts;
    ur_time_t m_time_first;
    ur_time_t m_time_last;
@@ -173,40 +174,39 @@ class User {
 public:
    void destroy(Server *srv);
    bool init(char *name);
-   int addSource(const data_t *flow, Client *clt, bf_t *bf);
+   int addCom(const data_t *flow, Client *clt, bf_t *bf);
+   void removeCom(bf_t *bf);
    dbf_t* getDBF() const;
-   bf_t* findClient(const Client *clt) const;
-   void removeBF(bf_t *bf);
+   bf_t* findCom(const Client *clt) const;
    void getDBFStats(stats_t *stats) const;
    int evaluateFlows(ur_time_t current_time, Server *srv);
 
    char *m_name;
 private:
-   bool extendSources();
+   bool extendCom();
    dbf_t *m_dbf;
    int m_index;
    int m_size;
-   bf_t **m_sources;
+   bf_t **m_com;
 };
 
 class Client {
 public:
    void destroy();
    bool init(ip_addr_t *ip, uint16_t port);
-   bool addTarget(const data_t *flow, User *usr);
-   User* findUser(User *usr) const;
+   bool addCom(const data_t *flow, bf_t *bf);
+   void removeCom(bf_t *bf);
    scan_t* getScan() const;
-   void removeUser(User *usr);
    void getScanStats(stats_t *stats) const;
    int getSize() const;
 
    uint16_t m_port;
    ip_addr_t *m_ip;
 private:
-   bool extendUsers();
+   bool extendCom();
    int m_index;
    int m_size;
-   User **m_names;
+   bf_t **m_com;
    scan_t *m_scan;
 };
 
