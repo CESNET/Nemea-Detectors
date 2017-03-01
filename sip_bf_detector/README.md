@@ -84,8 +84,17 @@ Additional parameters:
     -c <num>		Number of seconds between the checks on
                   ceased attacks (300 by default).
 
+    -d <num>    Number of clients attempting to connect to a specific user (on one particular server)
+                   which is considered a distributed brute-force attack. (25 by default)
+
     -f <num>		Number of seconds after the last action to
                   consider attack as ceased (1800 by default).
+
+    -o <num>    Number of observed OK responses after crossing alert threshold 
+                  to consider the alert false and drop the communication. (5 by default)
+
+    -s <num>    Number of extensions a specific client attempted to register as 
+                  (on one particular server) which is considered a scan. (5 by default)
 
 Example:
 
