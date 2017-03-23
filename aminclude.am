@@ -5,13 +5,15 @@ fields.h:
 
 fields.c: fields.h
 
+if HAVE_TRAP2MAN
 mansources := $(addprefix $(srcdir)/,$($(bin_PROGRAMS)_SOURCES))
 mantargets := $(bin_PROGRAMS:=-nemea.1)
 
 $(mantargets): $(mansources)
-	$(TRAP2MAN) $^ > $@
+	$(AM_V_GEN)test -x "$(TRAP2MAN)" && $(TRAP2MAN) $^ > $@
 
 man_MANS=$(mantargets)
+endif
 
 CLEANFILES = fields.c fields.h $(mantargets)
 
