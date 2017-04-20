@@ -4,6 +4,7 @@ SUBDIRS=amplification_detection \
 	blacklistfilter \
 	booterfilter \
 	brute_force_detector \
+	ddos_detector \
 	hoststatsnemea \
 	haddrscan_detector \
 	miner_detector \

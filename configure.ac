@@ -116,6 +116,7 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/ipdetect/Makefile
                  booterfilter/Makefile
                  brute_force_detector/Makefile
+                 ddos_detector/Makefile
                  amplification_detection/Makefile
                  hoststatsnemea/Makefile
                  hoststatsnemea/src/Makefile
