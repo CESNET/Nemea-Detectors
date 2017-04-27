@@ -11,19 +11,21 @@
 ## Module description
 
 This module is a **simple, threshold-based detector for distributed denial of service attacks** which processes incoming flow records and outputs alerts.
-The module uses the TRAP platform and has **one input and one output interface**.
+The module uses the TRAP platform and has **one input and one output interface** (basic flow records, alerts).
 
-The detection algorithm uses information from basic flow records and it is based on comparing flow in historical windows for every *DST_IP* of prefix.
+The detection algorithm uses information from basic flow records. It stores a short history of amount of traffic going to each *DST_IP* or prefix. Number of unique SRC_IPs sending traffic to each destination is stored as well. When large and quick increase of the traffic to a single destination is detected and the number of distinct sources is above threshold, it is reported as an attack.
 
-For each flow record, the detector finds an appropriate entry in a B+tree and stores the number of bytes in windows according to the duration of the flow. It also updates the count of unique SRC_IP in every affected window.
-Every time an entry is updated, the algorithm checks whether following conditions for 2 consecutive windows are satisfied:
+In particular, it work as follows: There is a B+ tree storing a record for each observed DST_IP. The record contains number of bytes and number of SRC_IPs for each time window. By default, there are 7 windows, each 1 minute long.
+For each incoming flow record, the detector finds an appropriate entry in a B+tree and adds uniformly distributes the number of bytes of the flow into traffic counters in one on more time windows according to flow duration. Number of unique SRC_IPs is also updated in every affected window.
+Every time an entry is updated, the algorithm checks whether the following conditions are satisfied for any two consecutive windows (except the oldest ones):
 
 * the number of bytes in 2 consecutive windows is *threshold_flow_rate* times higher then the average number of bytes in preceding windows
-* the average flow in both windows is higher than *minimal_attack_size*
+* the average number of bytes in both windows is higher than *minimal_attack_size*
 * the number of unique *SRC_IP* in both windows must be *threshold_ip_cnt_rate* times higher than the average number of unique *SRC_IP* in preceding windows
 
 If all of these conditions are satisfied, a flood report is sent.
 
+If number of bytes is lower then *min_threshold_pruning* in all windows of some IP record, the record is removed from the B+ tree.
 
 ## Input data
 
