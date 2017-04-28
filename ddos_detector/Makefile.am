@@ -4,5 +4,7 @@ ddos_detector_LDADD=-ltrap -lunirec -lnemea-common
 
 dist_bin_SCRIPTS=ddos_detector2idea.py
 
-include ../aminclude.am
+pkgdocdir=${docdir}/ddos_detector
+pkgdoc_DATA=README.md
 
+include ../aminclude.am

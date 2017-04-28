@@ -1,0 +1,7 @@
+2017-04-28 ddos_detector-1.0.1
+	updated README
+	fixed memory bug
+	fixed algorithm counting bytes of the flood
+	fixed comment style and English
+	updated output - added some fields
+	updated Makefile - added documentation
