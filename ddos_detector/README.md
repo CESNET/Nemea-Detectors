@@ -53,8 +53,8 @@ The report is also in the UniRec format and it contains the following informatio
 | TIME_LAST           | the end of the reported interval                    |
 | EVENT_ID            | identifier of reported event                        |
 | EVENT_SEQ           | serial number of event with same EVENT_ID           |
-| AVG_FLOW_CURRENT    | average of the flow in the reported interval        |
-| AVG_FLOW_ORIGINAL   | average of the flow before the flood                |
+| AVG_BYTES_CURRENT   | average of the flow in the reported interval (bps)  |
+| AVG_BYTES_ORIGINAL  | average of the flow before the flood (bps)          |
 | AVG_IP_CNT_CURRENT  | average number of source IP in the reported interval|
 | AVG_IP_CNT_ORIGINAL | average number of source IP before the flood        |
 
