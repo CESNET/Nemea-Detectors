@@ -137,8 +137,8 @@ UR_FIELDS (
    time   TIME_LAST,
    uint64 EVENT_ID,
    uint16 EVENT_SEQ,
-   uint64 AVG_FLOW_CURRENT,
-   uint64 AVG_FLOW_ORIGINAL,
+   uint64 AVG_BYTES_CURRENT,
+   uint64 AVG_BYTES_ORIGINAL,
    uint32 AVG_IP_CNT_CURRENT,
    uint32 AVG_IP_CNT_ORIGINAL
 )
@@ -192,7 +192,7 @@ typedef struct flood_s {
 typedef struct dst_addr_record_s {
    uint64_t bytes_per_int[N_INTERVALS];
    uint16_t src_ip_per_int[N_INTERVALS];
-   char src_ip_table[N_INTERVALS][N_TABLE_SIZE / 8];
+   char src_ip_table[N_TABLE_SIZE / 8];
    uint64_t total;
    flood_t *flood_info;
 } dst_addr_record_t;
@@ -267,8 +267,8 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec,
 
    #ifdef DEBUG1
    printf("# TIME_LAST: %u\n", flood_info->last_reported);
-   printf("# AVG_FLOW: %lu\n", flood_info->avg_flow_current);
-   printf("# AVG_FLOW_ORIGINAL: %lu\n", flood_info->avg_flow_original / INTERVAL);
+   printf("# AVG_BYTES: %lu\n", flood_info->avg_flow_current);
+   printf("# AVG_BYTES_ORIGINAL: %lu\n", flood_info->avg_flow_original / INTERVAL);
    printf("# AVG_IP_CNT: %u\n", flood_info->avg_ip_cnt_current);
    printf("# AVG_IP_CNT_ORIGINAL: %u\n", flood_info->avg_ip_cnt_original);
    printf("# EVENT_ID: %lu\n", flood_info->uuid);
@@ -278,8 +278,8 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec,
 
    ur_set(out_tmplt, out_rec, F_EVENT_ID, flood_info->uuid);
    ur_set(out_tmplt, out_rec, F_EVENT_SEQ, flood_info->msg_cnt);
-   ur_set(out_tmplt, out_rec, F_AVG_FLOW_CURRENT, flood_info->avg_flow_current);
-   ur_set(out_tmplt, out_rec, F_AVG_FLOW_ORIGINAL, flood_info->avg_flow_original / INTERVAL);
+   ur_set(out_tmplt, out_rec, F_AVG_BYTES_CURRENT, flood_info->avg_flow_current);
+   ur_set(out_tmplt, out_rec, F_AVG_BYTES_ORIGINAL, flood_info->avg_flow_original / INTERVAL);
    ur_set(out_tmplt, out_rec, F_AVG_IP_CNT_CURRENT, flood_info->avg_ip_cnt_current);
    ur_set(out_tmplt, out_rec, F_AVG_IP_CNT_ORIGINAL, flood_info->avg_ip_cnt_original);
 
@@ -338,7 +338,8 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
       if (rec->flood_info != NULL && rec->flood_info->is_valid == true) {
          int last_flood = -1;
          for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS; ++i) {
-            if (rec->bytes_per_int[i % N_INTERVALS] >= 2 * rec->flood_info->avg_flow_original) {
+            if (rec->bytes_per_int[i % N_INTERVALS] >= threshold_flow_rate * rec->flood_info->avg_flow_original
+               && rec->src_ip_per_int[ i % N_INTERVALS] >= threshold_ip_cnt_rate * rec->flood_info->avg_ip_cnt_original) {
                last_flood = i - current_int_idx - 1;
             }
          }
@@ -358,18 +359,32 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
 
       /* Calculate the average flow and the number of SRC_IP before the flood. */
       if (rec->flood_info != NULL && rec->flood_info->is_valid == false) {
+         /* Calculate the number of windows before the flood begins. */
          int int_size = (rec->flood_info->last_reported - current_int_start + (N_INTERVALS - 1) * INTERVAL) / INTERVAL;
+         int empty_window = 0;
          if (int_size == 0) {
             fprintf(stderr, "ERROR during calculating average flow\n");
             bpt_list_clean(b_item);
             return false;
          }
+         /* Skip windows with no traffic. */
          for (i = current_int_idx + 1; i < current_int_idx + 1 + int_size; ++i) {
-            rec->flood_info->avg_flow_original += rec->bytes_per_int[i % N_INTERVALS];
-            rec->flood_info->avg_ip_cnt_original= rec->src_ip_per_int[i % N_INTERVALS];
+            if (rec->bytes_per_int[i % N_INTERVALS] != 0) {
+               break;
+            }
+            empty_window++;
          }
-         rec->flood_info->avg_flow_original /= int_size;
-         rec->flood_info->avg_ip_cnt_original /= int_size;
+         for (; i < current_int_idx + 1 + int_size; ++i) {
+            rec->flood_info->avg_flow_original += rec->bytes_per_int[i % N_INTERVALS];
+            rec->flood_info->avg_ip_cnt_original += rec->src_ip_per_int[i % N_INTERVALS];
+         }
+         if (int_size - empty_window <= 0) {
+            fprintf(stderr, "ERROR during calculating average flow\n");
+            bpt_list_clean(b_item);
+            return false;
+         }
+         rec->flood_info->avg_flow_original /= (int_size - empty_window);
+         rec->flood_info->avg_ip_cnt_original /= (int_size - empty_window);
          rec->flood_info->is_valid = true;
       }
 
@@ -396,9 +411,9 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
          rec->total -= rec->bytes_per_int[i % N_INTERVALS];
          rec->bytes_per_int[i % N_INTERVALS] = 0;
          rec->src_ip_per_int[i % N_INTERVALS] = 0;
-         for (j = 0; j < N_TABLE_SIZE / 8; ++j) {
-            rec->src_ip_table[i % N_INTERVALS][j] = 0;
-         }
+      }
+      for (j = 0; j < N_TABLE_SIZE / 8; ++j) {
+         rec->src_ip_table[j] = 0;
       }
 
       /* If there is no flow / bytes for ip address, leaf is deleted. */
@@ -517,7 +532,7 @@ int main(int argc, char **argv)
 
    /*
     * Macro allocates and initializes module_info structure according to
-    * MODULE_BASIC_INFO and MODULE_PARAMS definitions on the lines 69 and 77 of
+    * MODULE_BASIC_INFO and MODULE_PARAMS definitions on the lines 161 and 167 of
     * this file. It also creates a string with short_opt letters for getopt
     * function called "module_getopt_string" and long_options field for
     * getopt_long function in variable "long_options"
@@ -614,7 +629,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Input template could not be created.\n");
       goto cleanup;
    }
-   out_tmplt = ur_create_output_template(0, "DST_IP,BYTES,TIME_FIRST,TIME_LAST,EVENT_ID,EVENT_SEQ,AVG_FLOW_CURRENT,AVG_FLOW_ORIGINAL,AVG_IP_CNT_CURRENT,AVG_IP_CNT_ORIGINAL", NULL);
+   out_tmplt = ur_create_output_template(0, "DST_IP,BYTES,TIME_FIRST,TIME_LAST,EVENT_ID,EVENT_SEQ,AVG_BYTES_CURRENT,AVG_BYTES_ORIGINAL,AVG_IP_CNT_CURRENT,AVG_IP_CNT_ORIGINAL", NULL);
    if (out_tmplt == NULL) {
       fprintf(stderr, "Error: Output template could not be created.\n");
       goto cleanup;
@@ -760,6 +775,11 @@ int main(int argc, char **argv)
       uint32_t src_ip_bit = src_ip_idx % 8;
       src_ip_idx /= 8;
 
+      if ((rec->src_ip_table[src_ip_idx] & (1 << src_ip_bit)) == 0) {
+         rec->src_ip_table[src_ip_idx] |= (1 << src_ip_bit);
+         rec->src_ip_per_int[current_int_idx]++;
+      }
+
       for (i = 0; i < N_INTERVALS && bytes > 0; ++i) {
          uint32_t int_start = current_int_start - i * INTERVAL;
          uint32_t int_end = int_start + INTERVAL;
@@ -779,10 +799,6 @@ int main(int argc, char **argv)
           */
          if (flow_start >= int_start) {
             rec->bytes_per_int[int_idx] += bytes;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes;
             break;
          }
@@ -794,10 +810,6 @@ int main(int argc, char **argv)
             /* Flow runs over the whole interval. */
             uint64_t bytes_portion = bytes * INTERVAL / dur;
             rec->bytes_per_int[int_idx] += bytes_portion;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes_portion;
             bytes -= bytes_portion;
             dur -= INTERVAL;
@@ -811,10 +823,6 @@ int main(int argc, char **argv)
             uint32_t seconds_in_interval = flow_end - int_start + 1;
             uint64_t bytes_portion = bytes * seconds_in_interval / dur;
             rec->bytes_per_int[int_idx] += bytes_portion;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes_portion;
             bytes -= bytes_portion;
             dur -= seconds_in_interval;
@@ -823,6 +831,7 @@ int main(int argc, char **argv)
 
       uint64_t avg_flow = 0;
       uint64_t avg_ip_cnt = 0;
+      uint8_t empty_window = 0;
 
       /*
        * For each of the 2 following windows check if bytes per second are
@@ -832,11 +841,18 @@ int main(int argc, char **argv)
        */
 
       if (rec->flood_info == NULL) {
+         /* Skip windows with no traffic. */
          for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
+            if (rec->bytes_per_int[i % N_INTERVALS] != 0) {
+               break;
+            }
+            empty_window++;
+         }
+         for (; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
             avg_flow += rec->bytes_per_int[i % N_INTERVALS];
             avg_ip_cnt += rec->src_ip_per_int[i % N_INTERVALS];
-            uint64_t current_avg_flow = avg_flow / (i - current_int_idx);
-            uint64_t current_avg_ip_cnt = avg_ip_cnt / (i - current_int_idx);
+            uint64_t current_avg_flow = avg_flow / (i - current_int_idx - empty_window);
+            uint64_t current_avg_ip_cnt = avg_ip_cnt / (i - current_int_idx - empty_window);
             if (current_avg_flow * threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
                && current_avg_flow * threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
                && rec->bytes_per_int[(i + 1) % N_INTERVALS] > minimal_attack_size
