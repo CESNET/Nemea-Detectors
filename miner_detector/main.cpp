@@ -47,7 +47,7 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("miner_detector","Module for detecting bitcoin pool mining.",1,1)
+  BASIC("miner_detector","Module for detecting cryptocurrency pool mining.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "user-conf", "Specify user configuration file for miner detector. [Default: " SYSCONFDIR "/miner_detector/userConfigurationFile.xml]", required_argument, "string")
@@ -59,7 +59,7 @@ int STOP = 0;
 Sender *SENDER;
 
 extern pthread_t MINER_DETECTOR_CHECK_THREAD_ID;
-
+extern pthread_t MINER_DETECTOR_LISTTIMEOUT_THREAD_ID;
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(STOP = 1);
@@ -82,6 +82,12 @@ int main(int argc, char **argv)
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
     // Register signal handler.
     TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, 10000);
+    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_AUTOFLUSH_TIMEOUT, 60000);
+
 
     // Initialize sender
     bool senderState;
@@ -207,22 +213,23 @@ int main(int argc, char **argv)
     //printf("DEBUG_MAIN: Waiting for miner detector to finish...\n");
     STOP = 1;
     pthread_join(MINER_DETECTOR_CHECK_THREAD_ID, NULL);
+    pthread_join(MINER_DETECTOR_LISTTIMEOUT_THREAD_ID, NULL);
 
-    // Send 1 Byte sized data to both output interfaces to signalize end
+    // Send 1 Byte sized data to output interface to signalize end
     char dummy[1] = {0};
     trap_send(0, dummy, 1);
 
 
-   // ***** Cleanup *****
-   // Do all necessary cleanup before exiting
-   // (close interfaces and free allocated memory)
+    // ***** Cleanup *****
+    // Do all necessary cleanup before exiting
+    // (close interfaces and free allocated memory)
     delete SENDER;
     trap_finalize();
     free(config);
 
-   ur_free_template(tmplt);
-   ur_finalize();
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+    ur_free_template(tmplt);
+    ur_finalize();
+    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return 0;
 }

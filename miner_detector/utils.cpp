@@ -47,8 +47,15 @@ using namespace std;
 /**
  * Message sent to server to check if it supports stratum protocol.
  */
-const char *MINER_POOL_SUBSCRIBE_STR = "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"cpuminer/2.4.3\"]}\x0a";
-//{"id": 1, "method": "mining.subscribe", "params": ["cpuminer/2.4.3"]}
+const char *MINER_POOL_BITCOIN_STR = "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"cpuminer/2.4.3\"]}\x0a";
+const char *MINER_POOL_ETHEREUM_STR = "{\"worker\": \"eth1.0\", \"jsonrpc\": \"2.0\", \"params\": [\"0x42/k.work1/email@mail\", \"x\"], \"id\": 2, \"method\": \"eth_submitLogin\"}\x0a";
+const char *MINER_POOL_MONERO_STR = "{\"method\": \"login\", \"params\": {\"login\": \"42\", \"pass\": \"x\", \"agent\": \"xmr/1.0\"}, \"id\": 1}\x0a";
+const char *MINER_POOL_ZCASH_STR = "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"equihashminer\", null, \"zec\", \"6666\"]}\x0a";
+/*
+const char *MINER_POOL_ZCASH_STR2 = "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"equihashminer\", null, \"zec\", \"6666\"]}\x0a"
+                                    "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"t.k\",\"pass\"]}\x0a"
+                                    "{\"id\": 5, \"method\": \"mining.extranonce.subscribe\", \"params\": []}\x0a";
+*/
 
 
 /*
@@ -159,10 +166,10 @@ int get_data(char *ip, int port, const char *data_out, char **data_in)
 
 
     // Send data to server
-    DEBUG_PRINT("Sending data to server...\n");
+    DEBUG_PRINT("Sending data to server: '%s'\n", data_out);
     n = write(sockfd, data_out, strlen(data_out));
     if (n < 0) {
-        DEBUG_PRINT("No data was writed\n");
+        DEBUG_PRINT("No data was written\n");
         close(sockfd);
         return ERR_WRITE;
     }
@@ -208,6 +215,7 @@ int get_data(char *ip, int port, const char *data_out, char **data_in)
     memcpy(*data_in, buffer, strlen(buffer));
     (*data_in)[strlen(buffer)] = 0; // terminate
 
+    DEBUG_PRINT("%s\n", *data_in);
 
     DEBUG_PRINT("Successfully received data\n");
     return DATA_OK;
@@ -216,12 +224,13 @@ int get_data(char *ip, int port, const char *data_out, char **data_in)
 
 /**
  * \brief Check using regex for stratum protocol in specified data.
+ * \param re_str Regular expression to find in data.
  * \param data Data to be checked for stratum protocol.
  * \return 1 on successfull match, 0 otherwise.
  */
-int find_stratum_in_data(char *data)
+int find_stratum_in_data(const char *re_str, char *data)
 {
-    const char *regex_str = "mining.notify";
+    const char *regex_str = re_str;
     regex_t preg;
     int res;
 
@@ -236,9 +245,11 @@ int find_stratum_in_data(char *data)
     // Check regex
     if (regexec(&preg, data, 0, NULL, 0) != REG_NOMATCH) {
         // Pattern was found
+	DEBUG_PRINT("stratum detected\n");
         return STRATUM_MATCH;
     } else {
         // Pattern was not found
+	DEBUG_PRINT("stratum NOT detected\n");
         return STRATUM_NO_MATCH;
     }
 }
@@ -249,20 +260,71 @@ int find_stratum_in_data(char *data)
  * \brief Chech given IP address and port for stratum protocol
  * \param ip   IP adddress of remote server.
  * \param port Port on the remote server.
+ * \param pool_id ID of identified mining pool will be stored here.
  * \return True on success, false otherwise.
  */
-int stratum_check_server(char *ip, uint16_t port)
+int stratum_check_server(char *ip, uint16_t port, uint8_t *pool_id)
 {
     char *data_in = NULL;
     int ret;
 
-    if ((ret = get_data(ip, port, MINER_POOL_SUBSCRIBE_STR, &data_in)) == DATA_OK) {
-        ret = find_stratum_in_data(data_in);
+    // TEST FOR BITCOIN
+    if ((ret = get_data(ip, port, MINER_POOL_BITCOIN_STR, &data_in)) == DATA_OK) {
+        ret = find_stratum_in_data("mining.notify", data_in);
         free(data_in);
-        return ret;
+
+        if (ret == STRATUM_MATCH) {
+            DEBUG_PRINT("BITCOIN\n");
+            *pool_id = STRATUM_MPOOL_BITCOIN;
+            return ret;
+        }
+
+        // TEST FOR MONERO
+        if ((ret = get_data(ip, port, MINER_POOL_MONERO_STR, &data_in)) == DATA_OK) {
+            ret = find_stratum_in_data(".*blob.*job_id.*target.*", data_in);
+            free(data_in);
+
+            if (ret == STRATUM_MATCH) {
+                DEBUG_PRINT("MONERO\n");
+                *pool_id = STRATUM_MPOOL_MONERO;
+                return ret;
+            }
+
+            // TEST FOR ETHEREUM
+            if ((ret = get_data(ip, port, MINER_POOL_ETHEREUM_STR, &data_in)) == DATA_OK) {
+                ret = find_stratum_in_data("jsonrpc.*result\":[ \t]*true", data_in);
+                free(data_in);
+
+                if (ret == STRATUM_MATCH) {
+                    DEBUG_PRINT("ETHEREUM\n");
+                    *pool_id = STRATUM_MPOOL_ETHEREUM;
+                    return ret;
+                }
+
+                // TEST FOR ZCASH
+                if ((ret = get_data(ip, port, MINER_POOL_ZCASH_STR, &data_in)) == DATA_OK) {
+                    ret = find_stratum_in_data("mining.set_target", data_in);
+                    free(data_in);
+
+                    if (ret == STRATUM_MATCH) {
+                        DEBUG_PRINT("ZCASH\n");
+                        *pool_id = STRATUM_MPOOL_ZCASH;
+                        return ret;
+                    }
+                } else {
+                    return ret;
+                }
+            } else {
+                return ret;
+            }
+        } else {
+            return ret;
+        }
     } else {
         return ret;
     }
+
+    return ret;
 }
 
 
@@ -307,5 +369,22 @@ const char *stratum_error_string(int err_code)
         case ERR_READ_TIMEOUT: return "Read timeout";
         case ERR_MEMORY: return "Could not allocate memory";
         default: return "Unknown error";
+    }
+}
+
+/**
+ * \brief USED ONLY FOR TESTING PURPOSES. Function convert pool id
+ *        to its name.
+ * \param id ID to convert.
+ * \return String with corresponding pool name.
+ */
+const char *stratum_mpool_string(uint8_t id)
+{
+    switch (id) {
+        case STRATUM_MPOOL_BITCOIN: return "Bitcoin (BTC)";
+        case STRATUM_MPOOL_MONERO: return "Monero (XMR)";
+        case STRATUM_MPOOL_ETHEREUM: return "Ethereum (ETH)";
+        case STRATUM_MPOOL_ZCASH: return "ZCash (ZEC)";
+        default: return "Unknown pool";
     }
 }

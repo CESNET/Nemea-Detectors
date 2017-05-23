@@ -38,9 +38,16 @@ enum stratum_check_ret_codes {
     STRATUM_NO_MATCH
 };
 
+enum miner_pool_ids {
+    STRATUM_MPOOL_BITCOIN,
+    STRATUM_MPOOL_MONERO,
+    STRATUM_MPOOL_ETHEREUM,
+    STRATUM_MPOOL_ZCASH
+};
 
 suspect_item_key_t create_suspect_key(ip_addr_t& suspect, ip_addr_t& pool, uint16_t port);
-int stratum_check_server(char *ip, uint16_t port);
+int stratum_check_server(char *ip, uint16_t port, uint8_t *pool_id);
 void stratum_set_timeout(int type, int timeout);
 const char *stratum_error_string(int err);
+const char *stratum_mpool_string(uint8_t id);
 #endif
