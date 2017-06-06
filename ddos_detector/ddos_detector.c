@@ -160,6 +160,7 @@ trap_module_info_t *module_info = NULL;
  */
 #define MODULE_PARAMS(PARAM) \
    PARAM('m', "minimal_attack_size", "Minimal attack size (kb/s). Default value is 1000 kb/s.", required_argument, "uint64") \
+   PARAM('b', "min_traffic_before_attack", "Minimal average traffic before attack (kb/s). Default value is 1 kb/s.", required_argument, "uint64") \
    PARAM('t', "threshold_flow_rate", "Rate, how many times must increase flow in next 2 windows compared to average of previous windows to be detected as flood attack.", required_argument, "uint16") \
    PARAM('c', "threshold_ip_count_rate", "Rate between the increase of number of unique SRC_IP addresses in next 2 windows and the average from previous windows to consider this behavior as a flood attack.", required_argument, "uint16") \
    PARAM('s', "mask_source_addresses", "Get only prefix bits from source addresses corresponding given mask, default value/mask is 24.", required_argument, "uint8") \
@@ -196,6 +197,18 @@ typedef struct dst_addr_record_s {
    uint64_t total;
    flood_t *flood_info;
 } dst_addr_record_t;
+
+typedef struct param_s {
+   uint64_t minimal_attack_size;
+   uint64_t min_threshold_pruning;
+   uint64_t min_traffic_before_attack;
+   uint16_t threshold_flow_rate;
+   uint16_t threshold_ip_cnt_rate;
+   uint8_t src_mask;
+   uint8_t dst_mask;
+} param_t;
+
+static param_t param;
 
 /* Current time - the highest TIME_LAST value seen so far (seconds only). */
 uint32_t current_time = 0;
@@ -234,6 +247,10 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec,
 {
    if (flood_info == NULL) {
       fprintf(stderr, "ERROR: flood_info is NULL\n");
+      return false;
+   }
+   if (out_tmplt == NULL || out_rec == NULL) {
+      fprintf(stderr, "ERROR: output template is NULL\n");
       return false;
    }
    #ifdef DEBUG1
@@ -300,9 +317,7 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec,
  * successfull.
  */
 bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
-                 void *out_rec, uint32_t threshold_flow_rate,
-                 uint64_t minimal_attack_size, uint8_t min_threshold_pruning,
-                 uint8_t threshold_ip_cnt_rate)
+                 void *out_rec)
 {
 
    #ifdef DEBUG2
@@ -338,20 +353,24 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
       if (rec->flood_info != NULL && rec->flood_info->is_valid == true) {
          int last_flood = -1;
          for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS; ++i) {
-            if (rec->bytes_per_int[i % N_INTERVALS] >= threshold_flow_rate * rec->flood_info->avg_flow_original
-               && rec->src_ip_per_int[ i % N_INTERVALS] >= threshold_ip_cnt_rate * rec->flood_info->avg_ip_cnt_original) {
+            if (rec->bytes_per_int[i % N_INTERVALS] >= param.threshold_flow_rate * rec->flood_info->avg_flow_original
+               && rec->src_ip_per_int[ i % N_INTERVALS] >= param.threshold_ip_cnt_rate * rec->flood_info->avg_ip_cnt_original) {
                last_flood = i - current_int_idx - 1;
             }
          }
          if (last_flood == -1) {
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
             free(rec->flood_info);
             rec->flood_info = NULL;
          } else if (last_flood < move) {
             for (i = current_int_idx + 1; i < current_int_idx + 1 + last_flood + 1; ++i) {
                rec->flood_info->total_bytes += rec->bytes_per_int[i % N_INTERVALS] - rec->flood_info->avg_flow_original;
             }
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
             free(rec->flood_info);
             rec->flood_info = NULL;
          }
@@ -422,10 +441,13 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
          bytes += rec->bytes_per_int[i];
       }
 
-      if (rec->total <= min_threshold_pruning) {
+      if (rec->total <= param.min_threshold_pruning) {
          /* Delete the flood_info struct if it exists and report. */
          if (rec->flood_info != NULL) {
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            if (rec->flood_info->is_valid == true
+               && rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
             free(rec->flood_info);
             rec->flood_info = NULL;
          }
@@ -434,7 +456,12 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
          uint32_t time_last = current_int_start - (N_INTERVALS - 1 - move) * INTERVAL;
          if (rec->flood_info != NULL
             && rec->flood_info->last_reported + MIN_TIME_BETWEEN_REPORT <= time_last) {
-            report_flood(rec->flood_info, out_tmplt, out_rec, time_last);
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, time_last);
+            } else {
+               free(rec->flood_info);
+               rec->flood_info = NULL;
+            }
          }
          has_next = bpt_list_item_next(b_plus_tree, b_item);
       }
@@ -485,7 +512,9 @@ bool delete_tree(bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *out_rec)
                rec->flood_info->avg_flow_current += rec->bytes_per_int[i];
                rec->flood_info->window_cnt++;
             }
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
          }
          free(rec->flood_info);
          rec->flood_info = NULL;
@@ -519,12 +548,13 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = NULL;
    uint32_t key;
 
-   uint64_t minimal_attack_size = 1000 * 1000 / 8 * INTERVAL;
-   uint64_t min_threshold_pruning = 10 * 1000 / 8 * INTERVAL * N_INTERVALS;
-   uint16_t threshold_flow_rate = 4;
-   uint16_t threshold_ip_cnt_rate = 4;
-   uint8_t src_mask = 24;
-   uint8_t dst_mask = 32;
+   param.minimal_attack_size = 1000 * 1000 / 8 * INTERVAL;
+   param.min_threshold_pruning = 10 * 1000 / 8 * INTERVAL * N_INTERVALS;
+   param.min_traffic_before_attack = 1 * 1000 / 8 * INTERVAL;
+   param.threshold_flow_rate = 4;
+   param.threshold_ip_cnt_rate = 4;
+   param.src_mask = 24;
+   param.dst_mask = 32;
 
    bpt_t *b_plus_tree = NULL;
 
@@ -560,41 +590,49 @@ int main(int argc, char **argv)
       && invalid_argument == false) {
       switch (opt) {
       case 'm':
-         if (sscanf(optarg,"%" SCNu64, &minimal_attack_size) != 1) {
+         if (sscanf(optarg,"%" SCNu64, &param.minimal_attack_size) != 1) {
             invalid_argument = true;
          } else {
-            minimal_attack_size = minimal_attack_size * INTERVAL * 1000 / 8;
+            param.minimal_attack_size = param.minimal_attack_size * INTERVAL * 1000 / 8;
          }
          break;
 
       case 'p':
-         if (sscanf(optarg,"%" SCNu64, &min_threshold_pruning) != 1) {
+         if (sscanf(optarg,"%" SCNu64, &param.min_threshold_pruning) != 1) {
             invalid_argument = true;
          } else {
-            min_threshold_pruning = min_threshold_pruning * INTERVAL * N_INTERVALS * 1000 / 8;
+            param.min_threshold_pruning = param.min_threshold_pruning * INTERVAL * N_INTERVALS * 1000 / 8;
+         }
+         break;
+
+      case 'b':
+         if (sscanf(optarg,"%" SCNu64, &param.min_traffic_before_attack) != 1) {
+            invalid_argument = true;
+         } else {
+            param.min_traffic_before_attack = param.min_traffic_before_attack * INTERVAL * 1000 / 8;
          }
          break;
 
       case 't':
-         if (sscanf(optarg,"%" SCNu16, &threshold_flow_rate) != 1) {
+         if (sscanf(optarg,"%" SCNu16, &param.threshold_flow_rate) != 1) {
             invalid_argument = true;
          }
          break;
 
       case 'c':
-         if (sscanf(optarg,"%" SCNu16, &threshold_ip_cnt_rate) != 1) {
+         if (sscanf(optarg,"%" SCNu16, &param.threshold_ip_cnt_rate) != 1) {
             invalid_argument = true;
          }
          break;
 
       case 's':
-         if (sscanf(optarg,"%" SCNu8, &src_mask) != 1) {
+         if (sscanf(optarg,"%" SCNu8, &param.src_mask) != 1) {
             invalid_argument = true;
          }
          break;
 
       case 'd':
-         if (sscanf(optarg,"%" SCNu8, &dst_mask) != 1) {
+         if (sscanf(optarg,"%" SCNu8, &param.dst_mask) != 1) {
             invalid_argument = true;
          }
          break;
@@ -612,7 +650,7 @@ int main(int argc, char **argv)
       return -1;
    }
 
-   if (src_mask > 32 || dst_mask > 32) {
+   if (param.src_mask > 32 || param.dst_mask > 32) {
       fprintf(stderr, "Invalid value of argument. Mask must be between 0 and 32.\n");
       goto cleanup;
    }
@@ -665,8 +703,8 @@ int main(int argc, char **argv)
 
       src_ip = &ur_get(in_tmplt, in_rec, F_SRC_IP);
       dst_ip = &ur_get(in_tmplt, in_rec, F_DST_IP);
-      src_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - src_mask));
-      dst_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - dst_mask));
+      src_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - param.src_mask));
+      dst_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - param.dst_mask));
 
 
       /* Filter ip_v4 addresses only. */
@@ -735,9 +773,7 @@ int main(int argc, char **argv)
       /* Move time windows if necessary. */
       if (current_time >= current_int_start + INTERVAL) {
          int move = (current_time - current_int_start) / INTERVAL;
-         if (move_window(move, b_plus_tree, out_tmplt, out_rec,
-                         threshold_flow_rate, minimal_attack_size,
-                         min_threshold_pruning, threshold_ip_cnt_rate) == false) {
+         if (move_window(move, b_plus_tree, out_tmplt, out_rec) == false) {
             goto cleanup;
          }
          current_int_idx = (current_int_idx + move) % N_INTERVALS;
@@ -853,12 +889,12 @@ int main(int argc, char **argv)
             avg_ip_cnt += rec->src_ip_per_int[i % N_INTERVALS];
             uint64_t current_avg_flow = avg_flow / (i - current_int_idx - empty_window);
             uint64_t current_avg_ip_cnt = avg_ip_cnt / (i - current_int_idx - empty_window);
-            if (current_avg_flow * threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
-               && current_avg_flow * threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
-               && rec->bytes_per_int[(i + 1) % N_INTERVALS] > minimal_attack_size
-               && rec->bytes_per_int[(i + 2) % N_INTERVALS] > minimal_attack_size
-               && current_avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 1) % N_INTERVALS]
-               && current_avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 2) % N_INTERVALS]
+            if (current_avg_flow * param.threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
+               && current_avg_flow * param.threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
+               && rec->bytes_per_int[(i + 1) % N_INTERVALS] > param.minimal_attack_size
+               && rec->bytes_per_int[(i + 2) % N_INTERVALS] > param.minimal_attack_size
+               && current_avg_ip_cnt * param.threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 1) % N_INTERVALS]
+               && current_avg_ip_cnt * param.threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 2) % N_INTERVALS]
                ) {
                rec->flood_info = (flood_t *) calloc(sizeof(flood_t), 1);
                if (rec->flood_info == NULL) {

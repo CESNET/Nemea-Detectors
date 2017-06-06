@@ -65,6 +65,7 @@ One flood is reported several times (repeatedly in intervals at least 5 minutes 
 
 ------------------
 	-m		Minimal attack size (kb/s). Default value is 1000 kb/s.
+	-p 		Minimal average traffic before attack (kb/s). Default value is 1 kb/s.
 	-t		Rate, how many times must increase flow in next 2 windows compared
 			to average of previous windows to be detected as flood attack.
 	-c		Rate between the increase of number of unique SRC_IP addresses in

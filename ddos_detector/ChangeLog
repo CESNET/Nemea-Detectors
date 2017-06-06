@@ -1,3 +1,7 @@
+2017-06-06 ddos_detector-1.0.3
+	added parameter for minimal traffic before flood
+	fixed bugs from coverity scan
+
 2017-05-09 ddos_detector-1.0.2
 	renamed output fields
 	changed the rule of detection - windows before flood can not be empty
