@@ -2,9 +2,8 @@
  * \file ddos_detector.c
  * \brief Module for detecting volumetric DDoS attacks.
  * \author Otto Hollmann <hollmott@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>
- * \author Marek Svepes <svepemar@fit.cvut.cz>
- * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
  * \date 2017
  */
 /*
@@ -61,44 +60,74 @@
 #include <assert.h>
 
 /*#define DEBUG1
-#define DEBUG2
-
-#define TCP_PROTOCOL 0x6
-#define TCP_FLAGS_SYN 0x2*/
+#define DEBUG2*/
 
 #define NUM_OF_ITEMS_IN_TREE_LEAF 5
 
 /* ---------------------------------------------------------------------- */
-/* Module parameters (not run-time configurable to allow compile-time optimizations). */
+/*
+ * Module parameters (not run-time configurable to allow compile-time
+ * optimizations).
+ */
+/*
+ * Base interval in seconds (average amount of traffic per this interval is
+ * computed and compared to threshold).
+ */
+#define INTERVAL 60
 
-#define INTERVAL 60 /* Base interval in seconds (average amount of traffic per this interval is computed and compared to threshold). */
-#define MAX_FLOW_LEN 330 /* Maximum duration of flows (i.e. active timeout set on exporter(s)) in seconds. */
-#define MAX_FLOW_DELAY 90 /* Maximum delay between flow records (i.e. how long can it take for a flow from last seen packet to arrival of the flow record to this module; or inactive timeout + some time to travel from exporter to the module). */
-/* According to experiments, delay of 120s never happens, 90 very few times, 60 happens normally so 60 is good value (at CESNET's deployment). */
-#define N_INTERVALS ((MAX_FLOW_LEN + MAX_FLOW_DELAY) / INTERVAL) /* Number of intervals of history to store. */
-/* History must be stored because flows can be longer than base intervals so we sometimes need to update more intervals than just the latest one. */
+/*
+ * Maximum duration of flows (i.e. active timeout set on exporter(s)) in
+ * seconds.
+ */
+#define MAX_FLOW_LEN 330
 
-/* Note: MAX_FLOW_LEN+MAX_FLOW_DELAY should be divisible by INTERVAL. */
+/*
+ * Maximum delay between flow records (i.e. how long can it take for a flow
+ * from last seen packet to arrival of the flow record to this module, or
+ * inactive timeout + some time to travel from exporter to the module).
+ */
+#define MAX_FLOW_DELAY 90
 
-#if (MAX_FLOW_LEN + MAX_FLOW_DELAY) % INTERVAL != 0
-   #warning (MAX_FLOW_LEN + MAX_FLOW_DELAY) should be divisible by INTERVAL
+/*
+ * Number of intervals of history to store.
+ *
+ * According to experiments, delay of 120s never happens, 90 very few times,
+ * 60 happens normally so 60 is good value (at CESNET's deployment).
+ */
+#define N_INTERVALS ((MAX_FLOW_LEN + MAX_FLOW_DELAY) / (INTERVAL))
+
+/*
+ * History must be stored because flows can be longer than base intervals so we
+ * sometimes need to update more intervals than just the latest one.
+ * Note: MAX_FLOW_LEN+MAX_FLOW_DELAY should be divisible by INTERVAL.
+ */
+#if (MAX_FLOW_LEN + MAX_FLOW_DELAY) % (INTERVAL) != 0
+#warning (MAX_FLOW_LEN + MAX_FLOW_DELAY) should be divisible by INTERVAL
 #endif
 
-
-#define N_TABLE_SIZE 128 * 8 /* Number of entries in SRC_IP table. Should be divisible by 8. */
+/* Number of entries in SRC_IP table. Should be divisible by 8. */
+#define N_TABLE_SIZE 64 * 8
 
 #if (N_TABLE_SIZE) % 8 != 0
-   #warning N_TABLE_SIZE should be divisible by 8
+#warning N_TABLE_SIZE should be divisible by 8
 #endif
 
-#define MIN_TIME_BETWEEN_REPORT (N_INTERVALS - 1) * INTERVAL
+#define MIN_TIME_BETWEEN_REPORT 5 * 60
 
-#define TREE_BRANCH_FACTOR 16 /* Number of descendants of each tree node ("order" or "branching factor" of the tree). */
-
+#if (MIN_TIME_BETWEEN_REPORT) % (INTERVAL) != 0
+#warning MIN_TIME_BETWEEN_REPORT should be divisible by INTERVAL
+#endif
+/*
+ * Number of descendants of each tree node ("order" or "branching factor" of
+ * the tree).
+ */
+#define TREE_BRANCH_FACTOR 16
 
 /**
- * Definition of fields used in UniRec templates (for both input and output interfaces) in this example basic flow from flow_meter.
- * This module functions as a filter of flows forwarded by flow_meter, I need all fields written below to be forwarded to the next module.
+ * Definition of fields used in UniRec templates (for both input and output
+ * interfaces) in this example basic flow from flow_meter. This module
+ * functions as a filter of flows forwarded by flow_meter, I need all fields
+ * written below to be forwarded to the next module.
  */
 UR_FIELDS (
    ipaddr SRC_IP,
@@ -107,44 +136,40 @@ UR_FIELDS (
    time   TIME_FIRST,
    time   TIME_LAST,
    uint64 EVENT_ID,
-   uint8  EVENT_TYPE
-
-   /*time   TIME,
-   uint64 LINK_BIT _FIELD,
-   uint32 PACKETS,
-   uint16 DST_PORT,
-   uint16 SRC_PORT,
-   uint8 DIR_BIT_FIELD,
-   uint8 PROTOCOL,
-   uint8 TCP_FLAGS,
-   uint8 TOS,
-   uint8 TTL*/
+   uint16 EVENT_SEQ,
+   uint64 AVG_BYTES_CURRENT,
+   uint64 AVG_BYTES_ORIGINAL,
+   uint32 AVG_IP_CNT_CURRENT,
+   uint32 AVG_IP_CNT_ORIGINAL
 )
 
 trap_module_info_t *module_info = NULL;
 
 /**
- * Definition of basic module information - module name, module description, number of input and output interfaces.
+ * Definition of basic module information - module name, module description,
+ * number of input and output interfaces.
  */
 #define MODULE_BASIC_INFO(BASIC) \
    BASIC("ddos_detector", "A simple module for detection of extremely intensive flooding attacks.", 1, 1)
 
 /**
- * Definition of module parameters - every parameter has short_opt, long_opt, description,
- * flag whether an argument is required or optional (NULL)
- * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
+ * Definition of module parameters - every parameter has short_opt, long_opt,
+ * description, flag whether an argument is required or optional (NULL)
+ * Module parameter argument types: int8, int16, int32, int64, uint8, uint16,
+ * uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM) \
    PARAM('m', "minimal_attack_size", "Minimal attack size (kb/s). Default value is 1000 kb/s.", required_argument, "uint64") \
-   PARAM('t', "threshold_flow_rate", "Rate, how many times must increase flow in next 2 windows compare to average of previous windows to be detected as flood attack.", required_argument, "uint8") \
-   PARAM('c', "threshold_ip_count_rate", "Rate between the increase of number of unique SRC_IP addresses in next 2 windows and the average from previous windows to consider this behavior as a flood attack.", required_argument, "uint8") \
+   PARAM('b', "min_traffic_before_attack", "Minimal average traffic before attack (kb/s). Default value is 1 kb/s.", required_argument, "uint64") \
+   PARAM('t', "threshold_flow_rate", "Rate, how many times must increase flow in next 2 windows compared to average of previous windows to be detected as flood attack.", required_argument, "uint16") \
+   PARAM('c', "threshold_ip_count_rate", "Rate between the increase of number of unique SRC_IP addresses in next 2 windows and the average from previous windows to consider this behavior as a flood attack.", required_argument, "uint16") \
    PARAM('s', "mask_source_addresses", "Get only prefix bits from source addresses corresponding given mask, default value/mask is 24.", required_argument, "uint8") \
    PARAM('d', "mask_destination_addresses", "Get only prefix bits from destination addresses corresponding given mask, default value/mask is 32.", required_argument, "uint8") \
    PARAM('p', "min_threshold_before_pruning", "Minimal size of flow traffic (average of flow in windows) in kb/s which will not be removed. Entries containing less flow will be removed. Default value is 10kb/s.", required_argument, "uint64")
 
 static int stop = 0;
 /**
- * Function to handle SIGTERM and SIGINT signals (used to stop the module).
+ * A function to handle SIGTERM and SIGINT signals (used to stop the module).
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
@@ -154,25 +179,49 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 typedef struct flood_s {
    uint32_t dst_ip;
    uint32_t last_reported;
-   uint32_t total_bytes;
+   uint64_t total_bytes;
    uint64_t uuid;
    uint8_t msg_cnt;
+   uint64_t avg_flow_original;
+   uint64_t avg_flow_current;
+   uint32_t avg_ip_cnt_original;
+   uint32_t avg_ip_cnt_current;
+   uint8_t window_cnt;
+   bool is_valid;
 } flood_t;
 
 typedef struct dst_addr_record_s {
    uint64_t bytes_per_int[N_INTERVALS];
    uint16_t src_ip_per_int[N_INTERVALS];
-   char src_ip_table[N_INTERVALS][N_TABLE_SIZE / 8];
+   char src_ip_table[N_TABLE_SIZE / 8];
    uint64_t total;
-   bool flood;
-   uint64_t avg_flow;
-   uint64_t avg_ip_cnt;
    flood_t *flood_info;
 } dst_addr_record_t;
 
-uint32_t current_time = 0; /* Current time - highest TIME_LAST value (seconds only) seen so far. */
-uint32_t current_int_start = 0; /* Start of currently latest interval (i.e. current_time rounded down to INTERVAL). */
-int current_int_idx = N_INTERVALS - 1; /* Index to the current interval in addr_record_t.bytes_per_int. */
+typedef struct param_s {
+   uint64_t minimal_attack_size;
+   uint64_t min_threshold_pruning;
+   uint64_t min_traffic_before_attack;
+   uint16_t threshold_flow_rate;
+   uint16_t threshold_ip_cnt_rate;
+   uint8_t src_mask;
+   uint8_t dst_mask;
+} param_t;
+
+static param_t param;
+
+/* Current time - the highest TIME_LAST value seen so far (seconds only). */
+uint32_t current_time = 0;
+
+/*
+ * Start of the current latest interval (i.e. current_time rounded down to
+ * INTERVAL).
+ */
+uint32_t current_int_start = 0;
+
+/* Index of the current interval in addr_record_t.bytes_per_int. */
+int current_int_idx = N_INTERVALS - 1;
+
 /***********************************************/
 
 int compare_32b(void *a, void *b)
@@ -190,20 +239,38 @@ int compare_32b(void *a, void *b)
 }
 
 /**
- * Function returns true after successfully send report, otherwise returns false.
+ * A function that returns true only if the flood has been successfully
+ * reported, otherwise returns false.
  */
-bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec, uint32_t time_last)
+bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec,
+                  uint32_t time_last)
 {
+   if (flood_info == NULL) {
+      fprintf(stderr, "ERROR: flood_info is NULL\n");
+      return false;
+   }
+   if (out_tmplt == NULL || out_rec == NULL) {
+      fprintf(stderr, "ERROR: output template is NULL\n");
+      return false;
+   }
    #ifdef DEBUG1
-      printf("######## reporting flood:\n");
-      char addr[64];
-      ip_addr_t ip_key = ip_from_int((flood_info->dst_ip));
-      ip_to_str(&ip_key, addr);
-      printf("# DST_IP: %s\n", addr);
-      printf("# BYTES: %u\n", flood_info->total_bytes);
-      printf("# DURATION: %u\n", time_last ? time_last - flood_info->last_reported : 0);
-      printf("# TIME_FIRST: %u\n", flood_info->last_reported);
+   printf("######## reporting flood:\n");
+   char addr[64];
+   ip_addr_t ip_key = ip_from_int((flood_info->dst_ip));
+   ip_to_str(&ip_key, addr);
+   printf("# DST_IP: %s\n", addr);
+   printf("# BYTES: %lu\n", flood_info->total_bytes);
+   printf("# DURATION: %u\n", time_last ? time_last - flood_info->last_reported : 0);
+   printf("# TIME_FIRST: %u\n", flood_info->last_reported);
    #endif
+
+   if (flood_info->window_cnt != 0) {
+      flood_info->avg_flow_current /= flood_info->window_cnt * INTERVAL;
+      flood_info->avg_ip_cnt_current /= flood_info->window_cnt;
+   } else {
+      flood_info->avg_flow_current = 0;
+      flood_info->avg_ip_cnt_current = 0;
+   }
 
    ur_set(out_tmplt, out_rec, F_DST_IP, ip_from_int(flood_info->dst_ip));
    ur_set(out_tmplt, out_rec, F_BYTES, flood_info->total_bytes);
@@ -216,17 +283,28 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec, 
    }
 
    #ifdef DEBUG1
-      printf("# TIME_LAST: %u\n", flood_info->last_reported);
-      printf("# EVENT_ID: %lu\n", flood_info->uuid);
-      printf("# EVENT_TYPE: %u\n", flood_info->msg_cnt);
-      printf("########\n");
+   printf("# TIME_LAST: %u\n", flood_info->last_reported);
+   printf("# AVG_BYTES: %lu\n", flood_info->avg_flow_current);
+   printf("# AVG_BYTES_ORIGINAL: %lu\n", flood_info->avg_flow_original / INTERVAL);
+   printf("# AVG_IP_CNT: %u\n", flood_info->avg_ip_cnt_current);
+   printf("# AVG_IP_CNT_ORIGINAL: %u\n", flood_info->avg_ip_cnt_original);
+   printf("# EVENT_ID: %lu\n", flood_info->uuid);
+   printf("# EVENT_SEQ: %u\n", flood_info->msg_cnt);
+   printf("########\n");
    #endif
 
    ur_set(out_tmplt, out_rec, F_EVENT_ID, flood_info->uuid);
-   ur_set(out_tmplt, out_rec, F_EVENT_TYPE, flood_info->msg_cnt);
+   ur_set(out_tmplt, out_rec, F_EVENT_SEQ, flood_info->msg_cnt);
+   ur_set(out_tmplt, out_rec, F_AVG_BYTES_CURRENT, flood_info->avg_flow_current);
+   ur_set(out_tmplt, out_rec, F_AVG_BYTES_ORIGINAL, flood_info->avg_flow_original / INTERVAL);
+   ur_set(out_tmplt, out_rec, F_AVG_IP_CNT_CURRENT, flood_info->avg_ip_cnt_current);
+   ur_set(out_tmplt, out_rec, F_AVG_IP_CNT_ORIGINAL, flood_info->avg_ip_cnt_original);
 
    flood_info->msg_cnt++;
    flood_info->total_bytes = 0;
+   flood_info->avg_ip_cnt_current = 0;
+   flood_info->avg_flow_current = 0;
+   flood_info->window_cnt = 0;
 
    int ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
 
@@ -235,17 +313,17 @@ bool report_flood(flood_t *flood_info, ur_template_t *out_tmplt, void *out_rec, 
 }
 
 /**
- * Function move each tree entry, returns true in success, otherwise false.
+ * A function that moves each tree entry, returns whether the operation was
+ * successfull.
  */
-bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *out_rec,
-                 uint32_t threshold_flow_rate, uint64_t minimal_attack_size,
-                 uint8_t min_threshold_pruning, uint8_t threshold_ip_cnt_rate)
+bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt,
+                 void *out_rec)
 {
 
    #ifdef DEBUG2
-      printf("Move window by %d\n", move);
+   printf("Move window by %d\n", move);
    #endif
-   /* Create a structure for iterating throw the leaves. */
+   /* Create a structure for iterating through the leaves. */
    bpt_list_item_t *b_item = bpt_list_init(b_plus_tree);
    if (b_item == NULL) {
       fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
@@ -255,82 +333,106 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *o
    dst_addr_record_t *rec = NULL;
    int has_next = 0;
 
-   /* Get first value from the list. Function returns 1 if there are more values, 0 if there is no value. */
+   /*
+    * Get the first value from the list. Function returns 1 if there are more
+    * values, 0 if there are no values.
+    */
    has_next = bpt_list_start(b_plus_tree, b_item);
    while (has_next == 1) {
       int i, j;
       /* Get the value from B+ item structure */
       rec = b_item->value;
       if (rec == NULL) {
-         /*There is problem in the tree. This case should be unreachable*/
-          fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
+         /*There is a problem in the tree. This case should be unreachable*/
+         fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
          bpt_list_clean(b_item);
          return false;
       }
 
-      /* Check end of flood. */
-      if (rec->flood_info != NULL && rec->flood == true && rec->avg_flow != 0) {
+      /* Check the end of the flood. */
+      if (rec->flood_info != NULL && rec->flood_info->is_valid == true) {
          int last_flood = -1;
          for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS; ++i) {
-            if (rec->bytes_per_int[i % N_INTERVALS] >= 2 * rec->avg_flow) {
-               last_flood = i - current_int_idx + 1;
+            if (rec->bytes_per_int[i % N_INTERVALS] >= param.threshold_flow_rate * rec->flood_info->avg_flow_original
+               && rec->src_ip_per_int[ i % N_INTERVALS] >= param.threshold_ip_cnt_rate * rec->flood_info->avg_ip_cnt_original) {
+               last_flood = i - current_int_idx - 1;
             }
          }
          if (last_flood == -1) {
-            rec->flood = false;
-            rec->avg_flow = 0;
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
-            free(rec->flood_info);
-         } else if (last_flood < move) {
-            for (i = current_int_idx + 1; i < current_int_idx + 1 + last_flood - 1; ++i) {
-               rec->flood_info->total_bytes += rec->bytes_per_int[i % N_INTERVALS] - rec->avg_flow;
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
             }
-            rec->flood = false;
-            rec->avg_flow = 0;
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
             free(rec->flood_info);
+            rec->flood_info = NULL;
+         } else if (last_flood < move) {
+            for (i = current_int_idx + 1; i < current_int_idx + 1 + last_flood + 1; ++i) {
+               rec->flood_info->total_bytes += rec->bytes_per_int[i % N_INTERVALS] - rec->flood_info->avg_flow_original;
+            }
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
+            free(rec->flood_info);
+            rec->flood_info = NULL;
          }
       }
 
-      /* Calculate average flow and number of SRC_IP before flood. */
-      if (rec->flood == true && rec->avg_flow == 0){
-         uint64_t avg_flow = 0;
-         uint64_t avg_ip_cnt = 0;
-         for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
-            avg_flow += rec->bytes_per_int[i % N_INTERVALS];
-            avg_ip_cnt = rec->src_ip_per_int[i % N_INTERVALS];
-            uint64_t current_avg = avg_flow / (i - current_int_idx);
-            if (current_avg * threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
-               && current_avg * threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
-               && rec->bytes_per_int[(i + 1) % N_INTERVALS] > minimal_attack_size
-               && rec->bytes_per_int[(i + 2) % N_INTERVALS] > minimal_attack_size
-               && avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 1) % N_INTERVALS]
-               && avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 2) % N_INTERVALS]
-               ) {
-
-               rec->avg_flow = avg_flow;
-               rec->avg_ip_cnt = avg_ip_cnt;
+      /* Calculate the average flow and the number of SRC_IP before the flood. */
+      if (rec->flood_info != NULL && rec->flood_info->is_valid == false) {
+         /* Calculate the number of windows before the flood begins. */
+         int int_size = (rec->flood_info->last_reported - current_int_start + (N_INTERVALS - 1) * INTERVAL) / INTERVAL;
+         int empty_window = 0;
+         if (int_size == 0) {
+            fprintf(stderr, "ERROR during calculating average flow\n");
+            bpt_list_clean(b_item);
+            return false;
+         }
+         /* Skip windows with no traffic. */
+         for (i = current_int_idx + 1; i < current_int_idx + 1 + int_size; ++i) {
+            if (rec->bytes_per_int[i % N_INTERVALS] != 0) {
                break;
             }
+            empty_window++;
          }
-         if (rec->avg_flow == 0) {
-            rec->avg_flow = rec->bytes_per_int[(current_int_idx + 1) % N_INTERVALS];
-            rec->avg_ip_cnt = rec->src_ip_per_int[(current_int_idx + 1) % N_INTERVALS];
+         for (; i < current_int_idx + 1 + int_size; ++i) {
+            rec->flood_info->avg_flow_original += rec->bytes_per_int[i % N_INTERVALS];
+            rec->flood_info->avg_ip_cnt_original += rec->src_ip_per_int[i % N_INTERVALS];
          }
+         if (int_size - empty_window <= 0) {
+            fprintf(stderr, "ERROR during calculating average flow\n");
+            bpt_list_clean(b_item);
+            return false;
+         }
+         rec->flood_info->avg_flow_original /= (int_size - empty_window);
+         rec->flood_info->avg_ip_cnt_original /= (int_size - empty_window);
+         rec->flood_info->is_valid = true;
       }
 
       /* Move window and set new intervals to 0. */
-      for (i = current_int_idx + 1; i < current_int_idx + 1 + move; ++i) {
-         if(rec->flood_info != NULL && rec->avg_flow !=0
-            && rec->bytes_per_int[i % N_INTERVALS] > rec->avg_flow) {
-            rec->flood_info->total_bytes += rec->bytes_per_int[i % N_INTERVALS] - rec->avg_flow;
+      if(rec->flood_info != NULL && rec->flood_info->is_valid == true) {
+         int int_start = 0;
+         if (current_int_start - (N_INTERVALS - 1) * INTERVAL < rec->flood_info->last_reported) {
+            int_start = (rec->flood_info->last_reported - current_int_start + (N_INTERVALS - 1) * INTERVAL) / INTERVAL;
          }
+         for (i = current_int_idx + 1 + int_start; i < current_int_idx + 1 + move; ++i) {
+            if (rec->bytes_per_int[i % N_INTERVALS] > rec->flood_info->avg_flow_original) {
+               rec->flood_info->total_bytes += rec->bytes_per_int[i % N_INTERVALS] - rec->flood_info->avg_flow_original;
+               rec->flood_info->avg_ip_cnt_current += rec->src_ip_per_int[i % N_INTERVALS];
+               rec->flood_info->avg_flow_current += rec->bytes_per_int[i % N_INTERVALS];
+               rec->flood_info->window_cnt++;
+            } else {
+               /* TODO: End of the flood? */
+               /* break; */
+            }
+         }
+      }
+
+      for (i = current_int_idx + 1; i < current_int_idx + 1 + move; ++i) {
          rec->total -= rec->bytes_per_int[i % N_INTERVALS];
          rec->bytes_per_int[i % N_INTERVALS] = 0;
          rec->src_ip_per_int[i % N_INTERVALS] = 0;
-         for (j = 0; j < N_TABLE_SIZE / 8; ++j){
-            rec->src_ip_table[i % N_INTERVALS][j] = 0;
-         }
+      }
+      for (j = 0; j < N_TABLE_SIZE / 8; ++j) {
+         rec->src_ip_table[j] = 0;
       }
 
       /* If there is no flow / bytes for ip address, leaf is deleted. */
@@ -339,19 +441,27 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *o
          bytes += rec->bytes_per_int[i];
       }
 
-      if (rec->total <= min_threshold_pruning) {
-         /* Delete flood_info struct if exists and report. */
+      if (rec->total <= param.min_threshold_pruning) {
+         /* Delete the flood_info struct if it exists and report. */
          if (rec->flood_info != NULL) {
-            report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            if (rec->flood_info->is_valid == true
+               && rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
+            }
             free(rec->flood_info);
             rec->flood_info = NULL;
          }
          has_next = bpt_list_item_del(b_plus_tree, b_item);
       } else {
-         uint32_t time_last = current_int_start + (move - N_INTERVALS - 1) * INTERVAL;
+         uint32_t time_last = current_int_start - (N_INTERVALS - 1 - move) * INTERVAL;
          if (rec->flood_info != NULL
-             && rec->flood_info->last_reported + MIN_TIME_BETWEEN_REPORT <= time_last) {
-             report_flood(rec->flood_info, out_tmplt, out_rec, time_last);
+            && rec->flood_info->last_reported + MIN_TIME_BETWEEN_REPORT <= time_last) {
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, time_last);
+            } else {
+               free(rec->flood_info);
+               rec->flood_info = NULL;
+            }
          }
          has_next = bpt_list_item_next(b_plus_tree, b_item);
       }
@@ -361,11 +471,12 @@ bool move_window(int move, bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *o
 }
 
 /**
- * Function delete tree and additional alocated structure. Returns true after successfully deleting, otherwise false.
+ * A function that deletes a tree and additional allocated structure. Returns
+ * true after a successful deletion, otherwise false.
  */
 bool delete_tree(bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *out_rec)
 {
-   /* Create a structure for iterating throw the leaves. */
+   /* Create a structure for iterating through the leaves. */
    bpt_list_item_t *b_item = bpt_list_init(b_plus_tree);
    if (b_item == NULL) {
       fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
@@ -375,26 +486,36 @@ bool delete_tree(bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *out_rec)
    dst_addr_record_t *rec = NULL;
    int has_next = 0;
 
-   /* Get first value from the list. Function returns 1 if there are more values, 0 if there is no value. */
+   /*
+    * Get the first value from the list. Function returns 1 if there are more
+    * values, 0 if there are no values.
+    */
    has_next = bpt_list_start(b_plus_tree, b_item);
    while (has_next == 1) {
-      /* Get the value from B+ item structure. */
+      /* Get value from B+ item structure. */
       rec = b_item->value;
       if (rec == NULL) {
-         /* There is problem in the tree. This case should be unreachable. */
+         /* There is a problem in the tree. This case should be unreachable. */
          fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
          bpt_list_clean(b_item);
          return false;
       }
-      /* Delete flood_info struct if exists and report. */
+      /* Delete the flood_info struct if it exists and report. */
       if (rec->flood_info != NULL) {
          int i;
-         for (i = 0; i < N_INTERVALS; ++i){
-            if (rec->bytes_per_int[i] > rec->avg_flow){
-               rec->flood_info->total_bytes += rec->bytes_per_int[i] - rec->avg_flow;
+         if (rec->flood_info->is_valid == true){
+            for (i = 0; i < N_INTERVALS; ++i) {
+               if (rec->bytes_per_int[i] > rec->flood_info->avg_flow_original) {
+                  rec->flood_info->total_bytes += rec->bytes_per_int[i] - rec->flood_info->avg_flow_original;
+               }
+               rec->flood_info->avg_ip_cnt_current += rec->src_ip_per_int[i];
+               rec->flood_info->avg_flow_current += rec->bytes_per_int[i];
+               rec->flood_info->window_cnt++;
+            }
+            if (rec->flood_info->avg_flow_original >= param.min_traffic_before_attack) {
+               report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
             }
          }
-         report_flood(rec->flood_info, out_tmplt, out_rec, current_int_start + INTERVAL);
          free(rec->flood_info);
          rec->flood_info = NULL;
       }
@@ -407,9 +528,9 @@ bool delete_tree(bpt_t *b_plus_tree, ur_template_t *out_tmplt, void *out_rec)
 }
 
 /**
- * Function return index for SRC_IP in src_ip_table.
+ * A function that returns an index for SRC_IP in src_ip_table.
  */
-uint8_t get_index(ip_addr_t *src_ip)
+uint32_t get_index(ip_addr_t *src_ip)
 {
    /* TODO find some better hash function */
    return ip_get_v4_as_int(src_ip) % (N_TABLE_SIZE - 1);
@@ -427,25 +548,29 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = NULL;
    uint32_t key;
 
-   uint64_t minimal_attack_size = 1000 * 1000 / 8 * INTERVAL;
-   uint64_t min_threshold_pruning = 10 * 1000 / 8 * INTERVAL * N_INTERVALS;
-   uint8_t threshold_flow_rate = 4;
-   uint8_t threshold_ip_cnt_rate = 4;
-   uint8_t src_mask = 24;
-   uint8_t dst_mask = 32;
+   param.minimal_attack_size = 1000 * 1000 / 8 * INTERVAL;
+   param.min_threshold_pruning = 10 * 1000 / 8 * INTERVAL * N_INTERVALS;
+   param.min_traffic_before_attack = 1 * 1000 / 8 * INTERVAL;
+   param.threshold_flow_rate = 4;
+   param.threshold_ip_cnt_rate = 4;
+   param.src_mask = 24;
+   param.dst_mask = 32;
 
    bpt_t *b_plus_tree = NULL;
 
    /***** TRAP initialization *****/
 
    /*
-    * Macro allocates and initializes module_info structure according to MODULE_BASIC_INFO and MODULE_PARAMS
-    * definitions on the lines 69 and 77 of this file. It also creates a string with short_opt letters for getopt
-    * function called "module_getopt_string" and long_options field for getopt_long function in variable "long_options"
+    * Macro allocates and initializes module_info structure according to
+    * MODULE_BASIC_INFO and MODULE_PARAMS definitions on the lines 161 and 167 of
+    * this file. It also creates a string with short_opt letters for getopt
+    * function called "module_getopt_string" and long_options field for
+    * getopt_long function in variable "long_options"
     */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    /*
-    * Let TRAP library parse program arguments, extract its parameters and initialize module interfaces
+    * Let TRAP library parse program arguments, extract its parameters and
+    * initialize module interfaces
     */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
@@ -453,46 +578,79 @@ int main(int argc, char **argv)
     * Register signal handler.
     */
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
-
    /*
-    * Parse program arguments defined by MODULE_PARAMS macro with getopt() function (getopt_long() if available).
-    * This macro is defined in config.h file generated by configure script.
+    * Parse program arguments defined by MODULE_PARAMS macro with getopt()
+    * function (getopt_long() if available).  This macro is defined in config.h
+    * file generated by configure script.
     */
-   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+
+   bool invalid_argument = false;
+
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1
+      && invalid_argument == false) {
       switch (opt) {
       case 'm':
-         minimal_attack_size = atoi(optarg) * INTERVAL * 1000 / 8;
+         if (sscanf(optarg,"%" SCNu64, &param.minimal_attack_size) != 1) {
+            invalid_argument = true;
+         } else {
+            param.minimal_attack_size = param.minimal_attack_size * INTERVAL * 1000 / 8;
+         }
          break;
 
       case 'p':
-         min_threshold_pruning = atoi(optarg) * INTERVAL * 1000 / 8;
+         if (sscanf(optarg,"%" SCNu64, &param.min_threshold_pruning) != 1) {
+            invalid_argument = true;
+         } else {
+            param.min_threshold_pruning = param.min_threshold_pruning * INTERVAL * N_INTERVALS * 1000 / 8;
+         }
+         break;
+
+      case 'b':
+         if (sscanf(optarg,"%" SCNu64, &param.min_traffic_before_attack) != 1) {
+            invalid_argument = true;
+         } else {
+            param.min_traffic_before_attack = param.min_traffic_before_attack * INTERVAL * 1000 / 8;
+         }
          break;
 
       case 't':
-         threshold_flow_rate = atoi(optarg);
+         if (sscanf(optarg,"%" SCNu16, &param.threshold_flow_rate) != 1) {
+            invalid_argument = true;
+         }
          break;
 
       case 'c':
-         threshold_ip_cnt_rate = atoi(optarg);
+         if (sscanf(optarg,"%" SCNu16, &param.threshold_ip_cnt_rate) != 1) {
+            invalid_argument = true;
+         }
          break;
 
       case 's':
-         src_mask = atoi(optarg);
+         if (sscanf(optarg,"%" SCNu8, &param.src_mask) != 1) {
+            invalid_argument = true;
+         }
          break;
 
       case 'd':
-         dst_mask = atoi(optarg);
+         if (sscanf(optarg,"%" SCNu8, &param.dst_mask) != 1) {
+            invalid_argument = true;
+         }
          break;
 
       default:
-         fprintf(stderr, "Invalid arguments.\n");
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-         TRAP_DEFAULT_FINALIZATION();
-         return -1;
+         invalid_argument = true;
+         break;
       }
    }
 
-   if (src_mask > 32 || dst_mask > 32) {
+   if (invalid_argument == true) {
+      fprintf(stderr, "Invalid arguments.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
+      return -1;
+   }
+
+   if (param.src_mask > 32 || param.dst_mask > 32) {
       fprintf(stderr, "Invalid value of argument. Mask must be between 0 and 32.\n");
       goto cleanup;
    }
@@ -509,7 +667,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Input template could not be created.\n");
       goto cleanup;
    }
-   out_tmplt = ur_create_output_template(0, "DST_IP,BYTES,TIME_FIRST,TIME_LAST,EVENT_ID,EVENT_TYPE", NULL);
+   out_tmplt = ur_create_output_template(0, "DST_IP,BYTES,TIME_FIRST,TIME_LAST,EVENT_ID,EVENT_SEQ,AVG_BYTES_CURRENT,AVG_BYTES_ORIGINAL,AVG_IP_CNT_CURRENT,AVG_IP_CNT_ORIGINAL", NULL);
    if (out_tmplt == NULL) {
       fprintf(stderr, "Error: Output template could not be created.\n");
       goto cleanup;
@@ -522,7 +680,7 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   /*Initializes random number generator*/
+   /* Initializes random number generator */
    srand(time(NULL));
 
    /***** Main processing loop *****/
@@ -533,7 +691,11 @@ int main(int argc, char **argv)
       int i;
 
       /* Receive data from input interface 0. */
-      /* Block if data are not available immediately (unless a timeout is set using trap_ifcctl) */
+      /*
+       * Block if data are not available immediately (unless a timeout is set
+       * using trap_ifcctl)
+       */
+
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
 
       /* Handle possible errors */
@@ -541,8 +703,8 @@ int main(int argc, char **argv)
 
       src_ip = &ur_get(in_tmplt, in_rec, F_SRC_IP);
       dst_ip = &ur_get(in_tmplt, in_rec, F_DST_IP);
-      src_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - src_mask));
-      dst_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - dst_mask));
+      src_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - param.src_mask));
+      dst_ip->ui32[2] &= htonl((uint32_t)0xffffffff << (32 - param.dst_mask));
 
 
       /* Filter ip_v4 addresses only. */
@@ -551,15 +713,15 @@ int main(int argc, char **argv)
       }
 
       #ifdef DEBUG2
-         char addr[64];
-         ip_to_str(src_ip, addr);
-         printf("%s\t",addr);
-         ip_to_str(dst_ip, addr);
-         printf("->%s\t",addr);
-         printf("(%lu)\n",ur_get(in_tmplt, in_rec, F_BYTES));
+      char addr[64];
+      ip_to_str(src_ip, addr);
+      printf("%s\t(%u)\t",addr, get_index(src_ip));
+      ip_to_str(dst_ip, addr);
+      printf("->%s\t",addr);
+      printf("(%lu)\n",ur_get(in_tmplt, in_rec, F_BYTES));
       #endif
 
-      /* Check size of received data. */
+      /* Check the size of received data. */
       if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
          if (in_rec_size <= 1) {
             break; /* End of data (used for testing purposes) */
@@ -574,8 +736,9 @@ int main(int argc, char **argv)
       /* Set current time */
       uint32_t flow_end = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_LAST));
       if (flow_end > current_time) {
-         /* If this is the first flow or if there is too large difference from
-          * last time (this can happen when invalid flow with timestamp far in
+         /*
+          * If this is the first flow or if the difference from last time is
+          * too large (this can happen when invalid flow with timestamp far in
           * the future arrives, or when input stream was interrupted for some
           * time)->(re)initialize everything
           */
@@ -590,7 +753,10 @@ int main(int argc, char **argv)
                goto cleanup;
             }
 
-            /* Set interval start to the closet "rounded" interval before (or equal to) the flow end. */
+            /*
+             * Set interval start to the closest "rounded" interval before
+             * (or equal to) the flow end.
+             */
             current_int_start = flow_end - flow_end % INTERVAL;
 
             b_plus_tree = NULL;
@@ -600,21 +766,21 @@ int main(int argc, char **argv)
                goto cleanup;
             }
          }
-         /* Set current_time to the end timestamp of current flow. */
+         /* Set current_time to the end timestamp of the current flow. */
          current_time = flow_end;
       }
 
       /* Move time windows if necessary. */
       if (current_time >= current_int_start + INTERVAL) {
          int move = (current_time - current_int_start) / INTERVAL;
-         if (move_window(move, b_plus_tree, out_tmplt, out_rec,threshold_flow_rate, minimal_attack_size, min_threshold_pruning, threshold_ip_cnt_rate) == false) {
+         if (move_window(move, b_plus_tree, out_tmplt, out_rec) == false) {
             goto cleanup;
          }
          current_int_idx = (current_int_idx + move) % N_INTERVALS;
          current_int_start += INTERVAL * move;
       }
 
-      /* Search record for dst_ip. */
+      /* Search the records for dst_ip. */
       key = ip_get_v4_as_int(dst_ip);
 
       void *new_item = bpt_search_or_insert(b_plus_tree, &key);
@@ -629,61 +795,70 @@ int main(int argc, char **argv)
 
       if (flow_end < flow_start) {
          fprintf(stderr, "WARNING: Received flow with TIME_LAST < TIME_FIRST. It will be ignored.\n");
-         goto cleanup;
+         continue;
       }
 
-      /* The end of a flow should always be before the end of the current interval (if a flow with TIME_LAST greater than end of the current interval arrives, a new interval(s) is/are created). */
+      /*
+       * The end of a flow should always be before the end of the current
+       * interval (if a flow with TIME_LAST greater than end of the current
+       * interval arrives, a new interval(s) is/are created).
+       **/
       assert(flow_end < current_int_start + INTERVAL);
 
       dst_addr_record_t *rec = new_item;
 
-      uint8_t src_ip_idx = get_index(src_ip);
-      uint8_t src_ip_bit = src_ip_idx % 8;
+      uint32_t src_ip_idx = get_index(src_ip);
+      uint32_t src_ip_bit = src_ip_idx % 8;
       src_ip_idx /= 8;
+
+      if ((rec->src_ip_table[src_ip_idx] & (1 << src_ip_bit)) == 0) {
+         rec->src_ip_table[src_ip_idx] |= (1 << src_ip_bit);
+         rec->src_ip_per_int[current_int_idx]++;
+      }
 
       for (i = 0; i < N_INTERVALS && bytes > 0; ++i) {
          uint32_t int_start = current_int_start - i * INTERVAL;
          uint32_t int_end = int_start + INTERVAL;
          int int_idx = (current_int_idx - i + N_INTERVALS) % N_INTERVALS;
 
-         /* Flow ends before this interval starts, go to the next (i.e. older) interval. */
+         /*
+          * If flow ends before the start of this interval, go to the next (i.e.
+          * older) interval.
+          */
          if (flow_end < int_start) {
             continue;
          }
 
-         /* Flow starts in this interval - store the rest of bytes into this interval and stop. */
+         /*
+          * Flow starts in this interval - store the rest of bytes into this
+          * interval and stop.
+          */
          if (flow_start >= int_start) {
             rec->bytes_per_int[int_idx] += bytes;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes;
             break;
          }
-         /* If we get there, only a part of the flow lies within this interval. */
-         /* Store portion of bytes proportional to portion of flow duration lying in this interval and go the next one. */
+         /*
+          * If we getopt there, only a part of the flow lies within this
+          * interval.
+          */
          if (flow_end > int_end) {
             /* Flow runs over the whole interval. */
             uint64_t bytes_portion = bytes * INTERVAL / dur;
             rec->bytes_per_int[int_idx] += bytes_portion;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes_portion;
             bytes -= bytes_portion;
             dur -= INTERVAL;
             break;
          } else {
-            /* Flow ends inside this interval. */
-            uint32_t seconds_in_interval = flow_end - int_start + 1; /* +1 because flow end is inclusive, see note above. */
+            /*
+             * Flow ends inside this interval.
+             * +1 because the end of the flow is inside the interval, see note
+             * above.
+             */
+            uint32_t seconds_in_interval = flow_end - int_start + 1;
             uint64_t bytes_portion = bytes * seconds_in_interval / dur;
             rec->bytes_per_int[int_idx] += bytes_portion;
-            if ((rec->src_ip_table[int_idx][src_ip_idx] & (1 << src_ip_bit)) == 0) {
-               rec->src_ip_table[int_idx][src_ip_idx] |= (1 << src_ip_bit);
-               rec->src_ip_per_int[int_idx]++;
-            }
             rec->total += bytes_portion;
             bytes -= bytes_portion;
             dur -= seconds_in_interval;
@@ -692,82 +867,87 @@ int main(int argc, char **argv)
 
       uint64_t avg_flow = 0;
       uint64_t avg_ip_cnt = 0;
+      uint8_t empty_window = 0;
 
       /*
-       * For each 2 following window check, if bytes per second are threshold_flow_rate times
-       * higher than average of previous windows and the same for SRC_IP.
-       * Each flood must be higher than minimal_attack_size
+       * For each of the 2 following windows check if bytes per second are
+       * threshold_flow_rate times higher than the average of preceding
+       * windows and the same for SRC_IP. Each flood must be higher than
+       * minimal_attack_size.
        */
 
-      for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
-         avg_flow += rec->bytes_per_int[i % N_INTERVALS];
-         avg_ip_cnt = rec->src_ip_per_int[i % N_INTERVALS];
-         uint64_t current_avg = avg_flow / (i - current_int_idx);
-         if (current_avg * threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
-            && current_avg * threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
-            && rec->bytes_per_int[(i + 1) % N_INTERVALS] > minimal_attack_size
-            && rec->bytes_per_int[(i + 2) % N_INTERVALS] > minimal_attack_size
-            && avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 1) % N_INTERVALS]
-            && avg_ip_cnt * threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 2) % N_INTERVALS]
-            ) {
-            if (rec->flood_info == NULL) {
-               rec->flood = true;
+      if (rec->flood_info == NULL) {
+         /* Skip windows with no traffic. */
+         for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
+            if (rec->bytes_per_int[i % N_INTERVALS] != 0) {
+               break;
+            }
+            empty_window++;
+         }
+         for (; i < current_int_idx + 1 + N_INTERVALS - 2; ++i) {
+            avg_flow += rec->bytes_per_int[i % N_INTERVALS];
+            avg_ip_cnt += rec->src_ip_per_int[i % N_INTERVALS];
+            uint64_t current_avg_flow = avg_flow / (i - current_int_idx - empty_window);
+            uint64_t current_avg_ip_cnt = avg_ip_cnt / (i - current_int_idx - empty_window);
+            if (current_avg_flow * param.threshold_flow_rate < rec->bytes_per_int[(i + 1) % N_INTERVALS]
+               && current_avg_flow * param.threshold_flow_rate < rec->bytes_per_int[(i + 2) % N_INTERVALS]
+               && rec->bytes_per_int[(i + 1) % N_INTERVALS] > param.minimal_attack_size
+               && rec->bytes_per_int[(i + 2) % N_INTERVALS] > param.minimal_attack_size
+               && current_avg_ip_cnt * param.threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 1) % N_INTERVALS]
+               && current_avg_ip_cnt * param.threshold_ip_cnt_rate < rec->src_ip_per_int[(i + 2) % N_INTERVALS]
+               ) {
                rec->flood_info = (flood_t *) calloc(sizeof(flood_t), 1);
                if (rec->flood_info == NULL) {
                   fprintf(stderr, "ERROR: Could not initialize flood_info struct.\n");
                   goto cleanup;
                }
-               int flood_begin_pos = (current_int_idx - i + N_INTERVALS)%N_INTERVALS;
-               rec->flood_info->last_reported = current_int_start - INTERVAL * (N_INTERVALS - 1 - flood_begin_pos);
+               int relative_flood_begin = (current_int_idx - i - 1 + N_INTERVALS) % N_INTERVALS;
+               rec->flood_info->last_reported = current_int_start - INTERVAL * relative_flood_begin;
                rec->flood_info->dst_ip = key;
                rec->flood_info->uuid = (uint64_t) rand() << 32;
                rec->flood_info->uuid += (uint32_t) key;
-               report_flood(rec->flood_info, out_tmplt, out_rec, 0);
+               break;
             }
          }
       }
    }
 
    #ifdef DEBUG1
-      /* End - print whole tree */
-      puts("--- END - printing all records ---");
-      /* Create a structure for iterating throw the leaves */
-      bpt_list_item_t *b_item = bpt_list_init(b_plus_tree);
-      if (b_item == NULL) {
-         fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
+   /* End - print whole tree */
+   printf("--- END - printing all records ---\n");
+   /* Create a structure for iterating through the leaves */
+   bpt_list_item_t *b_item = bpt_list_init(b_plus_tree);
+   if (b_item == NULL) {
+      fprintf(stderr, "ERROR: could not initialize a list iterator structure\n");
+      goto cleanup;
+   }
+
+   dst_addr_record_t *rec = NULL;
+   int has_next = 0;
+
+   /*
+    * Get first value from the list. Function returns 1 if there are more
+    * values, 0 if there is no value.
+    */
+   has_next = bpt_list_start(b_plus_tree, b_item);
+   while (has_next == 1) {
+      /* Get the value from B+ item structure. */
+      rec = b_item->value;
+      if (rec == NULL) {
+         /* There is problem in the tree. This case should be unreachable. */
+         fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
+         bpt_list_clean(b_item);
          goto cleanup;
       }
+      /* Convert key to IP address and print. */
+      char addr[64];
+      ip_addr_t ip_key = ip_from_int( *(uint32_t *) (b_item->key));
+      ip_to_str(&ip_key, addr);
+      printf("%s  %lu\t\n", addr, rec->total);
 
-      dst_addr_record_t *rec = NULL;
-      int has_next = 0;
-
-      /* Get first value from the list. Function returns 1 if there are more values, 0 if there is no value. */
-      has_next = bpt_list_start(b_plus_tree, b_item);
-      while (has_next == 1) {
-         /* Get the value from B+ item structure. */
-         rec = b_item->value;
-         if (rec == NULL) {
-            /* There is problem in the tree. This case should be unreachable. */
-            fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
-            bpt_list_clean(b_item);
-            goto cleanup;
-         }
-         /* Convert key to IP address and print. */
-         char addr[64];
-         ip_addr_t ip_key = ip_from_int( *(uint32_t *) (b_item->key));
-         ip_to_str(&ip_key, addr);
-         printf("%s  %lu\t", addr, rec->total);
-
-         /* Print total bytes per interval for current IP address. */
-         /*for (i = current_int_idx + 1; i < current_int_idx + 1 + N_INTERVALS; ++i) {
-            printf("%lu %u   ", rec->bytes_per_int[i % N_INTERVALS], rec->flows_per_int[i % N_INTERVALS]);
-         }*/
-         printf("\n");
-
-         has_next = bpt_list_item_next(b_plus_tree, b_item);
-      }
-      bpt_list_clean(b_item);
-
+      has_next = bpt_list_item_next(b_plus_tree, b_item);
+   }
+   bpt_list_clean(b_item);
    #endif
 
    /***** Cleanup *****/
@@ -776,11 +956,11 @@ cleanup:
 
    delete_tree(b_plus_tree, out_tmplt, out_rec);
 
-   /* Do all necessary cleanup in libtrap before exiting. */
+   /* Do all the necessary cleanup in libtrap before exiting. */
    TRAP_DEFAULT_FINALIZATION();
 
-   /* Release allocated memory for module_info structure. */
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   /* Release the memory allocated for module_info structure. */
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
    /* Free UniRec templates and output record. */
    ur_free_record(out_rec);
