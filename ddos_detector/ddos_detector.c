@@ -79,7 +79,7 @@
  * Maximum duration of flows (i.e. active timeout set on exporter(s)) in
  * seconds.
  */
-   #define MAX_FLOW_LEN 330
+#define MAX_FLOW_LEN 330
 
 /*
  * Maximum delay between flow records (i.e. how long can it take for a flow
