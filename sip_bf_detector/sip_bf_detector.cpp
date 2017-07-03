@@ -44,6 +44,12 @@
 #include "sip_bf_detector.h"
 #include "fields.h"
 
+#include <getopt.h>
+#include <signal.h>
+#include <sstream>
+#include <cmath>
+#include <ctime>
+
 UR_FIELDS (
    ipaddr DST_IP,                // IP address of attack source
    ipaddr SRC_IP,                // IP address of attack target
@@ -1440,42 +1446,42 @@ int main(int argc, char **argv)
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'a':
-         if (sscanf(optarg,"%" SCNu64"", &g_alert_threshold) != 1 || g_alert_threshold < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_alert_threshold) != 1 || g_alert_threshold < 1) {
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
          break;
 
       case 'c':
-         if (sscanf(optarg,"%" SCNu64"", &g_check_mem_interval) != 1 || g_check_mem_interval < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_check_mem_interval) != 1 || g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory check intervals.\n");
             goto cleanup;
          }
          break;
 
       case 'd':
-         if (sscanf(optarg,"%" SCNu32"", &g_dbf_limit) != 1 || g_dbf_limit < 1) {
+         if (sscanf(optarg, "%" SCNu32 "", &g_dbf_limit) != 1 || g_dbf_limit < 1) {
             fprintf(stderr, "Error: irrational value of distributed brute-force limit.\n");
             goto cleanup;
          }
          break;
 
       case 'f':
-         if (sscanf(optarg,"%" SCNu64"", &g_free_mem_interval) != 1 || g_free_mem_interval < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_free_mem_interval) != 1 || g_free_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory deallocation after last attack action.\n");
             goto cleanup;
          }
          break;
 
       case 'o':
-         if (sscanf(optarg,"%" SCNu32"", &g_ok_limit) != 1 || g_ok_limit < 1) {
+         if (sscanf(optarg, "%" SCNu32 "", &g_ok_limit) != 1 || g_ok_limit < 1) {
             fprintf(stderr, "Error: irrational value of OK count limit.\n");
             goto cleanup;
          }
          break;
 
       case 's':
-         if (sscanf(optarg,"%" SCNu32"", &g_scan_limit) != 1 || g_scan_limit < 1) {
+         if (sscanf(optarg, "%" SCNu32 "", &g_scan_limit) != 1 || g_scan_limit < 1) {
             fprintf(stderr, "Error: irrational value of scan limit.\n");
             goto cleanup;
          }

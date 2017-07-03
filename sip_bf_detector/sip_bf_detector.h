@@ -48,15 +48,8 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <getopt.h>
-#include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include <sstream>
-#include <string>
 extern "C" {
 #include <b_plus_tree.h>
 }
