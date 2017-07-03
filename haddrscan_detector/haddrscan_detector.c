@@ -46,6 +46,7 @@
 #endif
 
 #include <stdio.h>
+#include <time.h>
 #include <signal.h>
 #include <getopt.h>
 #include <libtrap/trap.h>
