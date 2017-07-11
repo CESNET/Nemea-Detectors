@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-detectors], [1.3.6], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=3
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -22,8 +22,8 @@ AC_ARG_ENABLE([debug],
         [if test "$enableval" = "yes"; then
                 CFLAGS="-Wall -g -O0 $CFLAGS"
                 CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
-        fi], [CFLAGS="-Wall -O3 $CFLAGS"
-              CXXFLAGS="-Wall -O3 $CXXFLAGS"
+        fi], [CFLAGS="-Wall -g -O3 $CFLAGS"
+              CXXFLAGS="-Wall -g -O3 $CXXFLAGS"
               CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
