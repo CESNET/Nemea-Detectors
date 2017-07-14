@@ -394,40 +394,42 @@ int main(int argc, char *argv[])
    if (!offline_mode) {
       // ONLINE MODE -----------------------------------------------------------
       log(LOG_INFO, "HostStatsNemea: ONLINE mode");
-      pthread_t data_reader_thread;
-      pthread_t data_process_thread;
-
+      pthread_t data_reader_thread = 0;
+      pthread_t data_process_thread = 0;
+      sigset_t signal_mask;
       int rc = 0;
-      bool failed = false;
 
       rc = pthread_create(&data_reader_thread, NULL, &data_reader_trap, NULL);
       if (rc) {
          trap_terminate();
-         failed = true;
+         goto exitD;
       }
 
-      if (!failed) {
-         rc = pthread_create(&data_process_thread, NULL, &data_process_trap, NULL);
-         if (rc) {
-            trap_terminate();
-            failed = true;
-         }
+      rc = pthread_create(&data_process_thread, NULL, &data_process_trap, NULL);
+      if (rc) {
+         trap_terminate();
+         goto exitD;
       }
 
       // Block signal SIGALRM
-      sigset_t signal_mask;
       sigemptyset(&signal_mask);
       sigaddset(&signal_mask, SIGALRM);
 
       rc = pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
       if (rc != 0) {
          trap_terminate();
-         failed = true;
       }
 
       // Wait until end of TRAP threads
-      pthread_join(data_process_thread, NULL);
-      pthread_join(data_reader_thread, NULL);
+exitD:
+      if (data_reader_thread != 0) {
+         pthread_join(data_reader_thread, NULL);
+      }
+
+      if (data_process_thread != 0) {
+         pthread_join(data_process_thread, NULL);
+      }
+
    } else {
       // OFFLINE MODE ----------------------------------------------------------
       log(LOG_INFO, "HostStatsNemea: OFFLINE mode");
