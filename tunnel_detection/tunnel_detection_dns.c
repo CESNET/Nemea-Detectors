@@ -469,6 +469,8 @@ void calculate_statistic(ip_address_t * ip_rec, calulated_result_t * result)
    result->var_request = (float)(ip_rec->counter_request.sum_Xi2_request - xn2_request * ip_rec->counter_request.dns_request_count ) / (float)(ip_rec->counter_request.dns_request_count - 1);
    result->var_response = (float)(ip_rec->counter_response.sum_Xi2_response - xn2_response * ip_rec->counter_response.dns_response_count ) / (float)(ip_rec->counter_response.dns_response_count - 1);
    //this variables could be used for improving the module
+   result->skewness_request = 0;
+   result->skewness_response = 0;
    /*
       //calculace skewness
       //skewness = n * (Sum(Xi^4) - 4 * Xn * Sum(Xi^3)  +  6 * Xn^2 * Sum(Xi^2) - 4 * Xn^3 * Sum(Xi) + Xn^4 * n ) / (var x)^2
@@ -588,9 +590,13 @@ int is_traffic_on_ip_ok_request_other(ip_address_t * item, calulated_result_t * 
          //if it is first suspision
          if (item->suspision_request_other == NULL) {
             item->suspision_request_other = (ip_address_suspision_request_other_t*)calloc(sizeof(ip_address_suspision_request_other_t),1);
+            if (!item->suspision_request_other) {
+               fprintf(stderr, "Error: calloc failed.\n");
+               return STATE_NEW;
+            }
          }
          //if it is first other suspision
-         if (item->suspision_request_other != NULL && item->suspision_request_other->other_suspision == NULL) {
+         if (item->suspision_request_other->other_suspision == NULL) {
             time(&(item->suspision_request_other->time_first));
             item->suspision_request_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }
@@ -628,9 +634,13 @@ int is_traffic_on_ip_ok_request_tunnel(ip_address_t * item, calulated_result_t *
          //if it is first suspision
          if (item->suspision_request_tunnel == NULL) {
             item->suspision_request_tunnel = (ip_address_suspision_request_tunnel_t*)calloc(sizeof(ip_address_suspision_request_tunnel_t),1);
+            if (!item->suspision_request_tunnel) {
+               fprintf(stderr, "Error: calloc failed.\n");
+               return STATE_NEW;
+            }
          }
          //if it is first other suspision
-         if (item->suspision_request_tunnel != NULL && item->suspision_request_tunnel->tunnel_suspision == NULL) {
+         if (item->suspision_request_tunnel->tunnel_suspision == NULL) {
             time(&(item->suspision_request_tunnel->time_first));
             item->suspision_request_tunnel->tunnel_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }
@@ -661,9 +671,13 @@ int is_traffic_on_ip_ok_response_other(ip_address_t * item, calulated_result_t *
          //if it is first suspision
          if (item->suspision_response_other == NULL) {
             item->suspision_response_other = (ip_address_suspision_response_other_t*)calloc(sizeof(ip_address_suspision_response_other_t),1);
+            if (!item->suspision_response_other) {
+               fprintf(stderr, "Error: calloc failed.\n");
+               return STATE_NEW;
+            }
          }
          //if it is first other suspision
-         if (item->suspision_response_other != NULL && item->suspision_response_other->other_suspision == NULL) {
+         if (item->suspision_response_other->other_suspision == NULL) {
             time(&(item->suspision_response_other->time_first));
             item->suspision_response_other->other_suspision = prefix_tree_initialize(SUFFIX ,0,'.',DOMAIN_EXTENSION_YES, RELAXATION_AFTER_DELETE_YES);
          }
@@ -895,7 +909,8 @@ int is_payload_on_ip_ok_request_tunnel(ip_address_t * item)
               )
               )) {
             char buff[1000];
-               prefix_tree_domain_t *dom = item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
+            buff[999] = '\0';
+            prefix_tree_domain_t *dom = item->suspision_request_tunnel->tunnel_suspision->domain_extension->list_of_most_unused_domains;
             if (dom != NULL) {
                prefix_tree_read_string(item->suspision_request_tunnel->tunnel_suspision, dom, buff);
             }
@@ -1605,10 +1620,15 @@ void print_suspision_ip(char *ip_address, ip_address_t *ip_item, FILE *file)
 }
 
 
-void write_summary_result(char * record_folder_name, unsigned long * histogram_dns_requests, unsigned long * histogram_dns_response)
+void write_summary_result(char *record_folder_name, unsigned long *histogram_dns_requests, unsigned long *histogram_dns_response)
 {
    FILE *file;
-   char file_path [255];
+   char *file_path = (char *) calloc(strlen(record_folder_name) + strlen(FILE_NAME_SUMMARY_REQUESTS) + 2, sizeof(char));
+   if (!file_path) {
+      fprintf(stdout, "Error: calloc failed, program terminated.\n");
+      exit(EXIT_FAILURE);
+   }
+
    strcpy(file_path, record_folder_name);
    strcat(file_path, "/" FILE_NAME_SUMMARY_REQUESTS);
 
@@ -1650,6 +1670,7 @@ void write_summary_result(char * record_folder_name, unsigned long * histogram_d
    }
    fprintf(file, "%lu\n", histogram_dns_response[HISTOGRAM_SIZE_RESPONSE -1]);
    fclose(file);
+   free(file_path);
 
 }
 
@@ -1681,24 +1702,28 @@ void print_histogram_values (char *ip_address, ip_address_t *ip_item, FILE *file
 
 void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int count_of_btree)
 {
-   FILE *file_requests,
-        *file_responses,
-        *file_requests_count_letters,
-        *file_suspision,
-        *file_anomaly;
+   FILE *file_requests = NULL,
+        *file_responses = NULL,
+        *file_requests_count_letters = NULL,
+        *file_suspision = NULL,
+        *file_anomaly = NULL;
    char ip_buff[100] = {0};
-   char file_path [255];
    int i;
    int is_there_next;
    bpt_list_item_t *b_item;
    ip_address_t *ip_item;
+   char *file_path = (char *) calloc(strlen(record_folder_name) + strlen(FILE_NAME_SUMMARY_REQUESTS) + 2, sizeof(char));
+   if (!file_path) {
+      fprintf(stdout, "Error: calloc failed, program terminated.\n");
+      goto cleanup;
+   }
 //requests
    //open file
    strcpy(file_path, record_folder_name);
    strcat(file_path, "/" FILE_NAME_REQUESTS);
    file_requests = fopen(file_path, "w");
    if (file_requests == NULL) {
-      return;
+      goto cleanup;
    }
    //print titles
    fprintf(file_requests, TITLE_REQUESTS "\n");
@@ -1716,7 +1741,7 @@ void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int co
    strcat(file_path, "/" FILE_NAME_RESPONSES);
    file_responses = fopen(file_path, "w");
    if (file_responses == NULL) {
-      return;
+      goto cleanup;
    }
    //print titles
    fprintf(file_responses, TITLE_RESPONSES "\n");
@@ -1733,7 +1758,7 @@ void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int co
    strcat(file_path, "/" FILE_NAME_REQUEST_COUNT_LETTERS);
    file_requests_count_letters = fopen(file_path, "w");
    if (file_requests_count_letters == NULL) {
-      return;
+      goto cleanup;
    }
    //print titles
    fprintf(file_requests_count_letters, TITLE_REQUEST_COUNT_LETTERS "\n");
@@ -1750,7 +1775,7 @@ void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int co
    strcat(file_path, "/" FILE_NAME_FOUND_ANOMALY);
    file_anomaly = fopen(file_path, "w");
    if (file_anomaly == NULL) {
-      return;
+      goto cleanup;
    }
 
 //suspision list
@@ -1759,7 +1784,7 @@ void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int co
    strcat(file_path, "/" FILE_NAME_SUSPICION_LIST);
    file_suspision = fopen(file_path, "w");
    if (file_suspision == NULL) {
-      return;
+      goto cleanup;
    }
    //print title
    fprintf(file_suspision, TITLE_SUSPICION_LIST "\n");
@@ -1785,11 +1810,31 @@ void write_detail_result(char * record_folder_name, bpt_t ** b_plus_tree, int co
       }
       bpt_list_clean(b_item);
    }
-   fclose(file_requests);
-   fclose(file_requests_count_letters);
-   fclose(file_responses);
-   fclose(file_anomaly);
-   fclose(file_suspision);
+
+cleanup:
+   if (file_requests) {
+      fclose(file_requests);   
+   }
+   
+   if (file_requests_count_letters) {
+      fclose(file_requests_count_letters);
+   }
+
+   if (file_responses) {
+      fclose(file_responses);   
+   }
+   
+   if (file_anomaly) {
+      fclose(file_anomaly);   
+   }
+   
+   if (file_suspision) {
+      fclose(file_suspision);
+   }
+
+   if (file_path) {
+      free(file_path);   
+   }
 }
 
 static inline int copy_string(char *dst, char *src, int size, int max_size_of_dst)
@@ -1862,7 +1907,7 @@ unsigned int read_event_id_from_file(char * file_name)
 
    if (fp == NULL)
    {
-      if( access(file_name, F_OK) != -1 ) {
+      if ( access(file_name, F_OK) != -1 ) {
          // file exists
          fprintf(stderr, "Warning: File with last event ID (%s) exists, but it could not be opened. Last event_id = 0.\n", file_name);
          return 0;
@@ -1988,7 +2033,11 @@ int main(int argc, char **argv)
             record_folder_name = optarg;
             write_summary = 1;
             //if the folder does not exist it will create
-            mkdir(optarg,  S_IRWXU|S_IRGRP|S_IXGRP);
+            if (mkdir(optarg,  S_IRWXU|S_IRGRP|S_IXGRP) != 0) {
+               fprintf(stderr, "mkdir failed.\n");
+               goto failed_trap;
+            }
+
             break;
          case 'S':
             if (sscanf(optarg, "%d,%d", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
@@ -2188,7 +2237,7 @@ int main(int argc, char **argv)
          if (ur_notification.detection_sdm == NULL) {
             fprintf(stderr,"ERROR: No memory available for detection record. Unable to continue.\n");
             ur_free_template(tmplt);
-            ur_free_template(ur_notification.unirec_out);
+            ur_free_template(ur_notification.unirec_out_sdm);
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 4;
          }
