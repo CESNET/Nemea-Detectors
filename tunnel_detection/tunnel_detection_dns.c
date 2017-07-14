@@ -471,6 +471,8 @@ void calculate_statistic(ip_address_t * ip_rec, calulated_result_t * result)
    //this variables could be used for improving the module
    result->skewness_request = 0;
    result->skewness_response = 0;
+   result->kurtosis_request = 0;
+   result->kurtosis_response = 0;
    /*
       //calculace skewness
       //skewness = n * (Sum(Xi^4) - 4 * Xn * Sum(Xi^3)  +  6 * Xn^2 * Sum(Xi^2) - 4 * Xn^3 * Sum(Xi) + Xn^4 * n ) / (var x)^2
