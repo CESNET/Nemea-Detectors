@@ -271,7 +271,7 @@ void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call
 {
    // check if Call-ID doesn't exist in node data
    if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 0) {
-      unsigned int call_id_insert_position = call_id_insert_position = ((node_data_t *) (prefix_tree_node->parent->value))->call_id_insert_position;
+      unsigned int call_id_insert_position = ((node_data_t *) (prefix_tree_node->parent->value))->call_id_insert_position;
 
       // calculation hash of call_id
       uint32_t call_id_hash = SuperFastHash(call_id, sizeof (char) * call_id_len);
