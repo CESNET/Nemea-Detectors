@@ -103,12 +103,18 @@ ur_template_t *alert_tmplt = NULL;
 ur_template_t *tm_tmplt = NULL;
 void *alert_rec = NULL;
 void *tm_rec = NULL;
+int sig_counter = 0;
 
 /* *********************** */
 
 void signal_handler(int signal)
 {
    stop = 1;
+   sig_counter++;
+   if (sig_counter > 1) {
+      trap_terminate();
+   }
+   
 }
 
 /**
