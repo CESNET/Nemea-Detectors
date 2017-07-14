@@ -113,13 +113,13 @@ trap_module_info_t *module_info = NULL;
    PARAM('d', "log_dir", "path to log files, has to be ended by slash", required_argument, "string") \
    PARAM('p', "port", "port used for detection (53)", required_argument, "int32") \
    PARAM('n', "top", "number of top N values chosen (10)", required_argument, "int32") \
-   PARAM('q', "step", "step of histogram (10)", required_argument, "int32") \
+   PARAM('q', "step", "step of histogram (10)", required_argument, "uint32") \
    PARAM('a', "min_ampf", "minimal amplification effect considered an attack (5)", required_argument, "int32") \
-   PARAM('t', "min_flow", "minimal threshold for number of flows in TOP-N (1000)", required_argument, "int32") \
+   PARAM('t', "min_flow", "minimal threshold for number of flows in TOP-N (1000)", required_argument, "uint32") \
    PARAM('i', "min_count", "minimal normalized threshold for count of flows in TOP-N (0.4)", required_argument, "float") \
-   PARAM('y', "min_resp_pack", "minimal threshold for average size of responses in packets in TOP-N (0)", required_argument, "int32") \
-   PARAM('l', "min_resp_byte", "minimal threshold for average size of responses in bytes in TOP-N (1000)", required_argument, "int32") \
-   PARAM('m', "max_query", "maximal threshold for average size of queries in bytes in TOP-N (300)", required_argument, "int32") \
+   PARAM('y', "min_resp_pack", "minimal threshold for average size of responses in packets in TOP-N (0)", required_argument, "uint32") \
+   PARAM('l', "min_resp_byte", "minimal threshold for average size of responses in bytes in TOP-N (1000)", required_argument, "uint32") \
+   PARAM('m', "max_query", "maximal threshold for average size of queries in bytes in TOP-N (300)", required_argument, "uint32") \
    PARAM('w', "timeout", "time window of detection / timeout of inactive flow (3600)", required_argument, "int32") \
    PARAM('s', "period", "time window of deletion / period of inactive flows checking(300)", required_argument, "int32") \
    PARAM('S', "record_count", "count of records to store for query / response direction (max size of vector).", required_argument, "uint32")
@@ -175,7 +175,7 @@ void delete_inactive() {
  * @param direction direction of histogram (query/response)
  * @return histogram
  */
-histogram_t createHistogram(flow_data_t flows, int type, int direction) {
+histogram_t createHistogram(flow_data_t &flows, int type, int direction) {
 
    histogram_t histogram;
    histogram_t histogram_q;
@@ -206,9 +206,9 @@ histogram_t createHistogram(flow_data_t flows, int type, int direction) {
    }
 
    // divide by Q according to histogram step
-   int max = config.q;
+   uint32_t max = config.q;
 
-   for (int i = 0; i < BYTES_MAX; i+=config.q) {
+   for (uint32_t i = 0; i < BYTES_MAX; i+=config.q) {
       for (histogram_iter it = histogram.begin(); it != histogram.end(); ++it) {
          if ((it->first >= i) && (it->first < max)) {
             histogram_q[max] = it->second;
@@ -278,7 +278,7 @@ histogram_t topnHistogram(histogram_t h) {
    sort(values.rbegin(), values.rend());
 
    // take only first n items in correct order now
-   int i = 0;
+   uint32_t i = 0;
    for (int j = 0; j < config.n; j++) {
       if (i < values.size()) {
          topn[values[i].second] = values[i].first;
@@ -312,7 +312,7 @@ histogram_norm_t topnNormHistogram(histogram_norm_t h) {
    sort(values.rbegin(), values.rend());
 
    // take first n pairs in correct order
-   int i = 0;
+   uint32_t i = 0;
    for (int j = 0; j < config.n; j++) {
       if (i < values.size()) {
          topn[values[i].second] = values[i].first;
@@ -401,9 +401,9 @@ float sum_average (histogram_t h) {
  * @param vec input vector
  * @return maximum packet count
  */
-int max_packets (vector<flow_item_t> &vec) {
+uint32_t max_packets (vector<flow_item_t> &vec) {
 
-   int max = 0;
+   uint32_t max = 0;
 
    for (vector<flow_item_t>::iterator it = vec.begin(); it != vec.end(); ++it) {
       if (it->packets > max){
@@ -420,9 +420,9 @@ int max_packets (vector<flow_item_t> &vec) {
  * @param vec input vector
  * @return maximum byte count
  */
-int max_bytes (vector<flow_item_t> &vec) {
+uint64_t max_bytes (vector<flow_item_t> &vec) {
 
-   int max = 0;
+   uint64_t max = 0;
 
    for (vector<flow_item_t>::iterator it = vec.begin(); it != vec.end(); ++it) {
       if (it->bytes > max){

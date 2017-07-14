@@ -98,13 +98,13 @@ typedef struct config_s {
    uint32_t q;         /** histogram step */
    uint32_t min_a;     /** minimal amplification effect considered as attack */
    float min_flows_norm;   /** minimal normalized threshold for count of flows in TOP-N */
-   int min_resp_packets;   /** minimal average of response packets in TOP-N */
-   int min_resp_bytes;  /** minimal threshold for average size of responses in bytes in TOP-N */
-   int max_quer_bytes;  /** maximal threshold for average size of queries in bytes in TOP-N */
-   int max_quer_flow_packets; /** maximal threshold for number of packets in one flow for requests */
-   int max_quer_flow_bytes;   /** maximal threshold for number of bytes in one flow for requests */
-   int max_resp_flow_packets; /** maximal threshold for number of packets in one flow for responses */
-   int max_resp_flow_bytes;   /** maximal threshold for number of bytes in one flow for responses */
+   uint32_t min_resp_packets;   /** minimal average of response packets in TOP-N */
+   uint64_t min_resp_bytes;  /** minimal threshold for average size of responses in bytes in TOP-N */
+   uint64_t max_quer_bytes;  /** maximal threshold for average size of queries in bytes in TOP-N */
+   uint32_t max_quer_flow_packets; /** maximal threshold for number of packets in one flow for requests */
+   uint64_t max_quer_flow_bytes;   /** maximal threshold for number of bytes in one flow for requests */
+   uint32_t max_resp_flow_packets; /** maximal threshold for number of packets in one flow for responses */
+   uint64_t max_resp_flow_bytes;   /** maximal threshold for number of bytes in one flow for responses */
    uint32_t det_window;      /** length of detection window */
    int del_time;     /** length of delete window after detection */
    uint32_t max_flow_items;     /** maximal size of vector with query/response records */
@@ -152,8 +152,8 @@ struct flow_key_t {
 struct flow_item_t {
 
    ur_time_t t;   // timestamp of flow
-   int bytes;  // bytes in flow
-   int packets;   // packets in flow
+   uint64_t bytes;  // bytes in flow
+   uint32_t packets;   // packets in flow
 };
 
 
