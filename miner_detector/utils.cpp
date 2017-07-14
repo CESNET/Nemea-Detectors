@@ -131,7 +131,10 @@ int get_data(char *ip, int port, const char *data_out, char **data_in)
     struct timeval tv;
     memset(&tv, 0, sizeof(tv));
     tv.tv_sec = CONNECTION_TIMEOUT;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv));
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv)) != 0) {
+        close(sockfd);
+        return ERR_SOCKET_SETSOCKOPT;
+    }
 
     // Clear and copy IP and port to server structure
     memset(&serv_addr, 0, sizeof(serv_addr));

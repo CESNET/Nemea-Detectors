@@ -248,7 +248,7 @@ uint32_t compute_suspect_score(suspect_item_t &s)
         score += SUSPECT_SCORE_PPM;
     }
 
-    if (s.req_flows / flows > SUSPECT_REQ_FLOWS_TRESHOLD) {
+    if (s.req_flows / (double) flows > SUSPECT_REQ_FLOWS_TRESHOLD) {
         score += SUSPECT_SCORE_REQ_FLOWS;
     }
 
@@ -1043,27 +1043,27 @@ bool miner_detector_initialization(config_struct_t* config)
     }
 
 
-    if (config->blacklist_file != NULL && strcmp(config->blacklist_file, "-") != 0) {
+    if (strcmp(config->blacklist_file, "-") != 0) {
         // Create blacklist DB
         create_db_from_file(BLACKLIST_DB, config->blacklist_file);
     }
 
-    if (config->whitelist_file != NULL && strcmp(config->whitelist_file, "-") != 0) {
+    if (strcmp(config->whitelist_file, "-") != 0) {
          // Create whitelist DB
         create_db_from_file(WHITELIST_DB, config->whitelist_file);
     }
 
-    if (config->store_blacklist_file != NULL && strcmp(config->store_blacklist_file, "-") != 0) {
+    if (strcmp(config->store_blacklist_file, "-") != 0) {
         // Set store file for blacklistlist
         BL_STORE_FILE = config->store_blacklist_file;
     }
 
-    if (config->store_whitelist_file != NULL && strcmp(config->store_whitelist_file, "-") != 0) {
+    if (strcmp(config->store_whitelist_file, "-") != 0) {
         // Set store file for whitelist
         WL_STORE_FILE = config->store_whitelist_file;
     }
 
-    if (config->stratum_check != NULL && strcmp(config->stratum_check, "true") == 0) {
+    if (strcmp(config->stratum_check, "true") == 0) {
         CHECK_STRATUM_FLAG = true;
     } else  {
         CHECK_STRATUM_FLAG = false;

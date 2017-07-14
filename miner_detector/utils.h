@@ -25,6 +25,7 @@ enum stratum_check_ret_codes {
     ERR_SOCKET_CREATE,
     ERR_SOCKET_FGET,
     ERR_SOCKET_FSET,
+    ERR_SOCKET_SETSOCKOPT,
     ERR_CONNECT,
     ERR_SELECT,
     ERR_CONNECT_TIMEOUT,
