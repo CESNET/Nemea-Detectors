@@ -150,10 +150,17 @@ bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
 
 void printFlowPercent(uint64_t b, uint64_t p)
 {
-    cout << " ("
-         << std::fixed << std::setprecision(2)
-         << 100.0 / b * p
-         << "%)";
+    if (b && p && b * p) {
+        ios::fmtflags f(cout.flags());
+        cout << " ("
+            << std::fixed << std::setprecision(2)
+            << 100.0 / b * p
+             << "%)";
+        cout.flags(f);
+    } else {
+        cerr << "Attempted division by zero in printFlowPercent." << endl;
+    }
+
 }
 
 int main(int argc, char **argv)

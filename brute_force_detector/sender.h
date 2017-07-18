@@ -127,14 +127,14 @@ private:
 
         //Incoming
         note.append("I:");
-        for (int i = 0; i < incIpsVictims.size(); i++) {
+        for (unsigned int i = 0; i < incIpsVictims.size(); i++) {
             note.append(incIpsVictims.at(i));
             note.append(",");
         }
 
         //Outgoing
         note.append("O:");
-        for (int i = 0; i < outIpsVictims.size(); i++) {
+        for (unsigned int i = 0; i < outIpsVictims.size(); i++) {
             note.append(outIpsVictims.at(i));
             note.append(",");
         }
