@@ -76,14 +76,14 @@ using namespace std;
 enum report_codes{
    DO_NOT_REPORT = 0,
    REPORT_BIG,
-   REPORT_COMPLEX,
+   REPORT_COMPLEX
 };
 
 enum direction_codes{// codes and indexes of direction (type)
    QUERY = 0,
    RESPONSE,
    Q_REPORTED,
-   R_REPORTED,
+   R_REPORTED
 };
 
 

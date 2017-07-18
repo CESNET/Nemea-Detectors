@@ -101,7 +101,7 @@ UR_FIELDS(
    uint32 RSP_FLOWS,    //Number of flows in an interval (responses)
    uint32 RSP_PACKETS,  //Number of packets in a flow or in an interval (responses)
    uint64 RSP_BYTES,    //Number of bytes in a flow or in an interval (responses)
-   uint32 EVENT_ID,     //Identification number of reported event
+   uint32 EVENT_ID      //Identification number of reported event
 )
 
 trap_module_info_t *module_info = NULL;
@@ -137,7 +137,7 @@ bool delete_inactive_flag = false;
 
 static char time_buff[25];
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /**
  * Deletes inactive flows stored in history. Triggered by alarm.
