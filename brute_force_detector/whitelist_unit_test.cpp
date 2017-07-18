@@ -109,7 +109,8 @@ int main()
 	 *******************************************/
     TEST(1);
 
-    parser->addAllPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32);
+    string ports = string(); //empty string behaves like all port rule
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32, ports);
 
     //ip should be whitelisted
     if(wl->isWhitelisted(&ip1, &zeroIp, getRandomPort(), getRandomPort()))
@@ -140,7 +141,7 @@ int main()
      ****** TEST FOR ALL PORTS, SRC DIR ********
      *******************************************/
     TEST(2);
-    parser->addAllPortRule(ip2, WHITELIST_PARSER_IP_DIRECTION_SRC, 32);
+    parser->addSelectedPortRule(ip2, WHITELIST_PARSER_IP_DIRECTION_SRC, 32, ports);
     //ip should be whitelisted
     if(wl->isWhitelisted(&ip2, &zeroIp, getRandomPort(), getRandomPort()))
         subTestRes(1, "passed");
@@ -164,7 +165,7 @@ int main()
      ****** TEST FOR ALL PORTS, DST DIR ********
      *******************************************/
     TEST(3);
-    parser->addAllPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32);
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //ip should be whitelisted
     if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), getRandomPort()))
         subTestRes(1, "passed");
@@ -188,7 +189,8 @@ int main()
      ****** TEST FOR SINGLE PORT, ALL DIR ******
      *******************************************/
     TEST(4);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32, "80");
+    ports = "80";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32, ports);
 
     //ip port should be whitelisted
     if(wl->isWhitelisted(&ip1, &zeroIp, 80, zeroPort))
@@ -225,7 +227,8 @@ int main()
      ****** TEST FOR SINGLE PORT, SRC DIR ******
      *******************************************/
     TEST(5);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_SRC, 32, "80");
+    ports = "80";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_SRC, 32, ports);
     //ip should be whitelisted
     if(wl->isWhitelisted(&ip1, &zeroIp, 80, getRandomPort()))
         subTestRes(1, "passed");
@@ -249,7 +252,8 @@ int main()
      ****** TEST FOR SINGLE PORT, DST DIR ******
      *******************************************/
     TEST(6);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, "80");
+    ports = "80";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //ip should be whitelisted
     if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 80))
         subTestRes(1, "passed");
@@ -273,7 +277,8 @@ int main()
      ****** TEST FOR RANGE PORTS, DST DIR ******
      *******************************************/
     TEST(7);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, "80-100");
+    ports = "80-100";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //inside 80-100 range
     if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 95))
         subTestRes(1, "passed");
@@ -316,7 +321,8 @@ int main()
      ******** & RANGE PORTS, DST DIR ***********
      *******************************************/
     TEST(8);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, "50,10-20,1000");
+    ports = "50,10-20,1000";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //1000 whitelisted
     if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 1000))
         subTestRes(1, "passed");
@@ -352,8 +358,10 @@ int main()
      ***** SHORT PREFIX SINGLE PORT DST DIR ****
      *******************************************/
     TEST(9);
-    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 16, "10-20");
-    parser->addAllPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 16);
+    ports = "10-20";
+    parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 16, ports);
+    ports = string();
+    parser->addSelectedPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 16, ports);
 
     if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 15))
         subTestRes(1, "passed");
@@ -390,7 +398,8 @@ int main()
      ***** ZERO PREFIX SINGLE PORT DST DIR ****
      *******************************************/
     TEST(10);
-    parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 0, "10-20");
+    ports = "10-20";
+    parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 0, ports);
 
     if(wl->isWhitelisted(&zeroIp, &ip4, getRandomPort(), 10))
         subTestRes(1, "passed");
@@ -402,7 +411,8 @@ int main()
     else
         subTestRes(2, "fail");
 
-    parser->addAllPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 0);
+    ports = string();
+    parser->addSelectedPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 0, ports);
     if(wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9))
         subTestRes(3, "passed");
     else
@@ -413,7 +423,8 @@ int main()
      ********  PREFIX SINGLE PORT DST DIR ******
      *******************************************/
     TEST(11);
-    parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 8, "25");
+    ports = "25";
+    parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 8, ports);
 
     if(wl->isWhitelisted(&zeroIp, &ip5, getRandomPort(), 25))
         subTestRes(1, "passed");
