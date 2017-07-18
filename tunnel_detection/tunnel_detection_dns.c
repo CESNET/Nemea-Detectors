@@ -121,7 +121,7 @@ static values_t values;
 #endif /*TIME*/
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 void signal_handler(int signal)
 {
@@ -2042,7 +2042,7 @@ int main(int argc, char **argv)
 
             break;
          case 'S':
-            if (sscanf(optarg, "%d,%d", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
+            if (sscanf(optarg, "%u,%u", &values.sdm_count_of_packets, &values.sdm_timeout) != 2) {
                fprintf(stderr, "Missing 'S' argument\n");
                goto failed_trap;
             }
@@ -2078,14 +2078,14 @@ int main(int argc, char **argv)
             file_or_port |= READ_FROM_FILE;
             break;
          case 'g':
-            if (sscanf(optarg, "%d,%d,%d,%d", &values.ex_request_min, &values.ex_request_max, &values.var_request_min, &values.var_request_max) != 4) {
+            if (sscanf(optarg, "%u,%u,%u,%u", &values.ex_request_min, &values.ex_request_max, &values.var_request_min, &values.var_request_max) != 4) {
                fprintf(stderr, "Missing 'g' argument\n");
                goto failed_trap;
             }
             break;
 
          case 'j':
-            if (sscanf(optarg, "%d,%d", &values.request_max_count_of_used_letters, &values.response_max_count_of_used_letters) != 2) {
+            if (sscanf(optarg, "%u,%u", &values.request_max_count_of_used_letters, &values.response_max_count_of_used_letters) != 2) {
                fprintf(stderr, "Missing 'j' argument\n");
                goto failed_trap;
             }
@@ -2097,7 +2097,7 @@ int main(int argc, char **argv)
             }
             break;
          case 'l':
-            if (sscanf(optarg, "%d,%f", &values.max_count_of_numbers_in_domain_prefix_tree_filter, &values.max_percent_of_numbers_in_domain_prefix_tree_filter) != 2) {
+            if (sscanf(optarg, "%u,%f", &values.max_count_of_numbers_in_domain_prefix_tree_filter, &values.max_percent_of_numbers_in_domain_prefix_tree_filter) != 2) {
                fprintf(stderr, "Missing 'l' argument\n");
                goto failed_trap;
             }
@@ -2109,13 +2109,13 @@ int main(int argc, char **argv)
             }
             break;
          case 'n':
-            if (sscanf(optarg, "%d,%d", &values.min_dns_request_count_other_anomaly, &values.min_dns_request_count_tunnel) != 2) {
+            if (sscanf(optarg, "%u,%u", &values.min_dns_request_count_other_anomaly, &values.min_dns_request_count_tunnel) != 2) {
                fprintf(stderr, "Missing 'n' argument\n");
                goto failed_trap;
             }
             break;
          case 'o':
-            if (sscanf(optarg, "%d,%d", &values.min_dns_response_count_other_anomaly, &values.min_dns_response_count_tunnel) != 2) {
+            if (sscanf(optarg, "%u,%u", &values.min_dns_response_count_other_anomaly, &values.min_dns_response_count_tunnel) != 2) {
                fprintf(stderr, "Missing 'o' argument\n");
                goto failed_trap;
             }
@@ -2127,25 +2127,25 @@ int main(int argc, char **argv)
             }
             break;
          case 'r':
-            if (sscanf(optarg, "%d,%d,%d,%d", &values.ex_response_min, &values.ex_response_max, &values.var_response_min, &values.var_response_max) != 4) {
+            if (sscanf(optarg, "%u,%u,%u,%u", &values.ex_response_min, &values.ex_response_max, &values.var_response_min, &values.var_response_max) != 4) {
                fprintf(stderr, "Missing 'r' argument\n");
                goto failed_trap;
             }
             break;
          case 't':
-            if (sscanf(optarg, "%d,%d", &values.max_count_of_round_in_suspiction, &values.max_count_of_round_in_attack) != 2) {
+            if (sscanf(optarg, "%u,%u", &values.max_count_of_round_in_suspiction, &values.max_count_of_round_in_attack) != 2) {
                fprintf(stderr, "Missing 't' argument\n");
                goto failed_trap;
             }
             break;
          case 'w':
-            if (sscanf(optarg, "%d", &values.min_length_of_tunnel_string) != 1) {
+            if (sscanf(optarg, "%u", &values.min_length_of_tunnel_string) != 1) {
                fprintf(stderr, "Missing 'w' argument\n");
                goto failed_trap;
             }
             break;
          case 'z':
-            if (sscanf(optarg, "%d", &values.time_of_one_session) != 1) {
+            if (sscanf(optarg, "%u", &values.time_of_one_session) != 1) {
                fprintf(stderr, "Missing 'z' argument\n");
                goto failed_trap;
             }

@@ -135,6 +135,5 @@ FILE * parser_initialize(char *name);
  * \param[in] file pointer to file.
  */
 void parser_end(FILE *file);
-;
 
  #endif /* _PARSER_PCAP_DNS_ */
