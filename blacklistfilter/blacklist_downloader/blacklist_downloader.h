@@ -157,7 +157,6 @@ typedef struct {
    char **reg_pattern;
    int delay;
    int update_mode;
-   uint8_t *use_regex;
    int line_max_length;
    int el_max_length;
    int el_max_count;
@@ -201,7 +200,6 @@ typedef struct {
    bl_down_cmd_t cmd;
    int delay;
    regex_t *preg;
-   uint8_t *use_regex;
    int update_mode;
    uint64_t lut_id[64];
    bl_down_buf_t buf;

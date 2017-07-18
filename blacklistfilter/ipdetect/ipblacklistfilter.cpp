@@ -401,11 +401,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
             continue;
          }
          ip.erase(0, str_pos + 1);
-         if (str_pos != string::npos) {
-            bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
-         } else {
-            continue;
-         }
+         bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
       }
 
       // Determine blacklist
@@ -815,7 +811,6 @@ int main (int argc, char** argv)
 {
    int retval = 0; // return value
    int send_terminating_unirec = 1;
-   bl_down_args_t bl_args;
    uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
    uint32_t hash_table_stash_size = 0;
    int8_t *fht_lock = NULL;
