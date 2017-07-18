@@ -68,8 +68,8 @@ UR_FIELDS (
    uint32 EVENT_ID,
    uint8 EVENT_TYPE,
    time DETECTION_TIME,
-   uint64 INVITE_CNT
-   uint64 CALLER_CNT
+   uint64 INVITE_CNT,
+   uint64 CALLER_CNT,
    uint64 CALLEE_CNT
 )
 
@@ -96,7 +96,7 @@ trap_module_info_t *module_info = NULL;
   PARAM('n', "prefix_stat_file", "Path to prefix examination statistic file.", required_argument, "string")
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /** \brief Definition of modul_configuration (modul_configuration_struct). */
 modul_configuration_t modul_configuration;
