@@ -90,7 +90,12 @@ UR_FIELDS (
    uint8 EVENT_TYPE,
    time TIME_FIRST,
    time TIME_LAST,
-   uint32 ADDR_CNT
+   uint32 ADDR_CNT,
+
+   ipaddr DST_IP0,
+   ipaddr DST_IP1,
+   ipaddr DST_IP2,
+   ipaddr DST_IP3
 )
 
 trap_module_info_t *module_info = NULL;
@@ -231,7 +236,11 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   out_tmplt = ur_create_output_template(0, "EVENT_TYPE,TIME_FIRST,TIME_LAST,SRC_IP,DST_PORT,SRC_PORT,PROTOCOL,ADDR_CNT", NULL);
+   out_tmplt = ur_create_output_template(0,
+                                         "EVENT_TYPE,TIME_FIRST,TIME_LAST,"
+                                         "SRC_IP,DST_PORT,PROTOCOL,ADDR_CNT,"
+                                         "DST_IP0,DST_IP1,DST_IP2,DST_IP3",
+                                         NULL);
    if (out_tmplt == NULL){
       fprintf(stderr, "ERROR: Output template could not be created.\n");
       fflush(stderr);
@@ -315,6 +324,11 @@ int main(int argc, char **argv)
             ur_set(out_tmplt, out_rec, F_ADDR_CNT, MAX_ADDRS);
             ur_set(out_tmplt, out_rec, F_TIME_FIRST, np->ts_first);
             ur_set(out_tmplt, out_rec, F_TIME_LAST, np->ts_last);
+
+            ur_set(out_tmplt, out_rec, F_DST_IP0, ip_from_int(np->static_addrs[0]));
+            ur_set(out_tmplt, out_rec, F_DST_IP1, ip_from_int(np->static_addrs[1]));
+            ur_set(out_tmplt, out_rec, F_DST_IP2, ip_from_int(np->static_addrs[2]));
+            ur_set(out_tmplt, out_rec, F_DST_IP3, ip_from_int(np->static_addrs[3]));
 
             ret_val = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
 
