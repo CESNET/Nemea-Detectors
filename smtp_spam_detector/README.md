@@ -1,7 +1,7 @@
 # SMTP SPAM BOT DETECTION 
 @author Ladislav Macoun <macoulad@fit.cvut.cz>
 @org CESNET / CVUT
-# Table of Contents 
+## Table of Contents 
 * 1.0 Intr0
 * 2.0 Algoritmus
 * 3.0 Spam BOT definition according to this module
@@ -19,8 +19,8 @@ a) Legit mail server exlustion
    (shown in image 2.0.0) whereas a bot server will have massive diffrence
    between incoming and outgoing smtp traffic (image 2.0.1).
 
-##MAIL SERVERS
-
+## MAIL SERVERS
+```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
 -------------------------->| SMTP      |-------------------------->
                            | MAIL      |
@@ -29,8 +29,9 @@ a) Legit mail server exlustion
 -------------------------->|           |-------------------------->
                            +-----------+
 (2.0.0)
-##MALICIOUS SPAM SERVERR
-
+```
+## MALICIOUS SPAM SERVERR
+```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
                            | SPAM      |-------------------------->
                            | BOT       |-------------------------->
@@ -39,7 +40,7 @@ a) Legit mail server exlustion
                            |           |-------------------------->
                            +-----------+
 (2.0.1)
-
+```
 b) 
 
 
