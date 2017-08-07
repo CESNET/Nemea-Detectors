@@ -10,7 +10,7 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Requires: nemea-framework wget
-BuildRequires: gcc make doxygen pkgconfig nemea-framework-devel
+BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel
 Provides: nemea-detectors
 
 %description
