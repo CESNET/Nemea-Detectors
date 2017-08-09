@@ -56,12 +56,12 @@
 #include "fields.h"
 #include "b_plus_tree.h"
 
-/* 
- * Detector defenitions 
+/*
+ * Detector defenitions
  * */
 #define DEFAULT_TH_ALLOC 20 // default size of trash hold allocated memory
-/* 
- * Definition of basic module information - module name, module 
+/*
+ * Definition of basic module information - module name, module
  * description, number of input and output interfaces
  */
 #define trash_interval 3600 // define trashhold cleanup interval
@@ -72,9 +72,9 @@
         "", 1, 1)
 /**
  * Definition of module parameters - every parameter has short_opt, long_opt,
- * description, flag whether an argument is required or it is optional and 
+ * description, flag whether an argument is required or it is optional and
  * argument type which is NULL in case the parameter does not need argument.
- * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, 
+ * Module parameter argument types: int8, int16, int32, int64, uint8, uint16,
  * uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM) \
@@ -93,7 +93,7 @@
  * Definition of fields used in unirec templates (for both input and output
  * interfaces) in this example basic flow from flow_meter
  *
- * This module functions as a filter of flows forwarded by flow_meter, I need 
+ * This module functions as a filter of flows forwarded by flow_meter, I need
  * all fields written below to be forwarded to the next module.
  * */
 UR_FIELDS (
@@ -152,7 +152,7 @@ UR_FIELDS (
 
 
 // structure for detector parameters
-typedef struct detec_param { 
+typedef struct detec_param {
    uint32_t trash_hold_interval;
 } detect_param_t;
 
@@ -180,25 +180,25 @@ typedef struct smtp_flow {
    uint8_t ttl;               // TTL
    } smtp_flow_t;
 
-// structure for email record 
+// structure for email record
 typedef struct email_rec {
    ip_addr_t *dst_ip;         // destination ip address
    ip_addr_t *src_ip;         // source ip address
-   char *smtp_dom;            // domain name, SMTP_DOMAIN 
-   char *smtp_first_rec;      // email of first recipient 
+   char *smtp_dom;            // domain name, SMTP_DOMAIN
+   char *smtp_first_rec;      // email of first recipient
    char *smtp_first_send;     // email of first sender
    smtp_flow_t *flow;    // additional flow imformation about smtp
 } email_rec_t;
 
 // structure for storing email records from senders
-// sender has an unique id which is his ip address 
+// sender has an unique id which is his ip address
 typedef struct item {
    ip_addr_t ID;              // unique id of sender email record
-   email_rec_t **records;     // email record 
+   email_rec_t **records;     // email record
    size_t num;                // number of records
    size_t size;               // allocated size of current database
    ur_time_t time;            // timestamp of email record
-   // recived 
+   // recived
 } item_t;
 
 trap_module_info_t *module_info = NULL;
@@ -218,14 +218,14 @@ int ip_comparator(void *lhs, void *rhs)
 }
 
 /*! @brief new email record constructor
- * @return NULL when an error occurs otherwise allocated 
+ * @return NULL when an error occurs otherwise allocated
  * new email record with filled values from link
  */
 email_rec_t *create_new_record(const ur_template_t *in_tmplt,
-                              const void *in_rec) 
+                              const void *in_rec)
 {
    email_rec_t *ret_val = (email_rec_t *) malloc(sizeof(email_rec_t));
-   
+
    if (!ret_val) {
       fprintf(stderr, "Error: Cannot allocate new email record.\n");
       return NULL;
@@ -237,16 +237,16 @@ email_rec_t *create_new_record(const ur_template_t *in_tmplt,
    ret_val->smtp_dom = strndup(&ur_get(in_tmplt, in_rec, F_SMTP_DOMAIN),
                                ur_get_len(in_tmplt, in_rec, F_SMTP_DOMAIN));
    ret_val->smtp_first_rec = strndup(&ur_get(in_tmplt, in_rec, F_SMTP_FIRST_RECIPIENT),
-                                     ur_get_len(in_tmplt, in_rec, F_SMTP_FIRST_RECIPIENT)); 
-   ret_val->smtp_first_send = strndup(&ur_get(in_tmplt, in_rec, F_SMTP_FIRST_SENDER), 
+                                     ur_get_len(in_tmplt, in_rec, F_SMTP_FIRST_RECIPIENT));
+   ret_val->smtp_first_send = strndup(&ur_get(in_tmplt, in_rec, F_SMTP_FIRST_SENDER),
                                       ur_get_len(in_tmplt, in_rec, F_SMTP_FIRST_SENDER));
    // check for failure
-   if (!ret_val->dst_ip || !ret_val->src_ip || !ret_val->smtp_dom || 
+   if (!ret_val->dst_ip || !ret_val->src_ip || !ret_val->smtp_dom ||
        !ret_val->smtp_first_rec || !ret_val->smtp_first_send) {
       fprintf(stderr, "Error: UR_GET bad seed.");
-      goto cleanup;   
+      goto cleanup;
    }
-   smtp_flow_t *rec_header = (smtp_flow_t *) calloc(1, sizeof(smtp_flow_t));   
+   smtp_flow_t *rec_header = (smtp_flow_t *) calloc(1, sizeof(smtp_flow_t));
    if (!rec_header) {
       fprintf(stderr, "Error: Cannot alllocate new email record header.\n");
       goto cleanup;
@@ -254,12 +254,12 @@ email_rec_t *create_new_record(const ur_template_t *in_tmplt,
    rec_header->dst_port = ur_get(in_tmplt, in_rec, F_DST_PORT);
    // check if destination port is correct
    if (rec_header->dst_port != 25) {
-      // todo report wierd behavior dst_port should be 25 
-   }    
-   // todo fill more values, now just for debugging    
+      // todo report wierd behavior dst_port should be 25
+   }
+   // todo fill more values, now just for debugging
    // assign email additional information to email record
    ret_val->flow = rec_header;
-   // return new email record 
+   // return new email record
    return ret_val;
 cleanup:
    // todo remove spagheti code - do cleanup codes
@@ -282,37 +282,32 @@ cleanup:
    return NULL;
 }
 
-int drop_database(bpt_t *db) 
+int drop_database(bpt_t *db)
 {
    int has_next = 0;
    item_t *value_pt = NULL;
    bpt_list_item *b_item = NULL;
 
    b_item = bpt_list_init(b_plus_tree);
-
-   
-
-  
-       
 }
 
-/* 
- * @bried function adds new email record to database 
+/*
+ * @bried function adds new email record to database
  *
- * if @param email_recors SRC_IP is already in database 
- * record get appended to email records array, otherwise 
- * new array is allocated until TRASH_HOLD_CLEANUP_INTERVAL 
+ * if @param email_recors SRC_IP is already in database
+ * record get appended to email records array, otherwise
+ * new array is allocated until TRASH_HOLD_CLEANUP_INTERVAL
  * passes
  *
  * @param b_plus_tree is initialized bpt of email_rec_t structers
- * with src_ip as a key 
- * 
+ * with src_ip as a key
+ *
  * @param email_record is email record that should be inserted to
- * the database  
- * 
- * @retun positive value on succes otherwise negative one 
+ * the database
+ *
+ * @retun positive value on succes otherwise negative one
  * */
-int insert_to_db(bpt_t *b_plus_tree, email_rec_t *email_record) 
+int insert_to_db(bpt_t *b_plus_tree, email_rec_t *email_record)
 {
    // add record to database
    void *new_item = bpt_search_or_insert(b_plus_tree, &email_record->dst_ip);
@@ -324,26 +319,26 @@ int insert_to_db(bpt_t *b_plus_tree, email_rec_t *email_record)
       if (data->records) {//SENDER IS IN DB
          // append this record to the sender
          // check allocated memory space
-         if (data->num++ >= data->size) { // have to allocate new memory 
-            // double extened the memory 
+         if (data->num++ >= data->size) { // have to allocate new memory
+            // double extened the memory
             data->size *= 2;
-            email_rec_t **tmp = (email_rec_t **) 
+            email_rec_t **tmp = (email_rec_t **)
                                 realloc(data->records, sizeof(email_rec_t) * data->size);
             if (!tmp) {
                fprintf(stderr, "Error: REALLOC failed.\n");
-               return -1; 
+               return -1;
             }
-         } 
+         }
          // append
          data->records[data->num] = email_record;
          #ifndef DEBUG
          fprintf(stderr, "> rec appended\n");
          #endif
-         
+
       } else { //SENDER HAS NOT BEEN RECORDED YET, ADD NEW RECORD TO DB
-         
+
          data->num = 0;
-         data->records = (email_rec_t **) 
+         data->records = (email_rec_t **)
                          malloc(sizeof(email_rec_t *) * DEFAULT_TH_ALLOC);
          if (!data->records) {
             fprintf(stderr, "Error: Data records allocation failed.\n");
@@ -353,11 +348,11 @@ int insert_to_db(bpt_t *b_plus_tree, email_rec_t *email_record)
          #ifndef DEBUG
          fprintf(stderr, "> new rec added\n");
          #endif
-      } 
+      }
    return 1;
    }
 }
-  
+
 int main(int argc, char **argv)
 {
    int ret;
@@ -368,9 +363,9 @@ int main(int argc, char **argv)
    bpt_t *b_plus_tree = NULL; // database for data
 
    char buffer1[1024], buffer2[1024];
-   
-   /* 
-    * *** TRAP initialization **** 
+
+   /*
+    * *** TRAP initialization ****
     * Macro allocates and initializes module_info structure according
     * to MODULE_BASIC_INFO and MODULE_PARAMS definitions on the lines
     * 69 and 77 of this file. It also creates a string with short_opt
@@ -429,7 +424,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Memory allocation problem (output record).\n");
       return -1;
    }
-   // Initialize bpt with email_rec_t structure #? 16 
+   // Initialize bpt with email_rec_t structure #? 16
    b_plus_tree = bpt_init(16, &ip_comparator,
                           sizeof(item_t),
                           sizeof(ip_addr_t));
@@ -443,7 +438,7 @@ int main(int argc, char **argv)
       const void *in_rec;
       uint16_t in_rec_size;
       // Receive data from input interface 0.
-      // Block if data are not available immediately 
+      // Block if data are not available immediately
       // (unless a timeout is set using trap_ifcctl)
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
       // Handle possible errors
@@ -460,11 +455,11 @@ int main(int argc, char **argv)
             break;
          }
       }
-      // In the following code flows with destination input by parameters 
+      // In the following code flows with destination input by parameters
       // (ip address and port) are filtered and forwarded on the outgoing
-      // interface, other flows are discarded. 
-      if ( (ur_get(in_tmplt, in_rec, F_DST_PORT) == port) || 
-           (ip_cmp(&ur_get(in_tmplt, in_rec, F_DST_IP), &ip) == 0) ) { 
+      // interface, other flows are discarded.
+      if ( (ur_get(in_tmplt, in_rec, F_DST_PORT) == port) ||
+           (ip_cmp(&ur_get(in_tmplt, in_rec, F_DST_IP), &ip) == 0) ) {
          ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
          ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
          TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
@@ -480,12 +475,12 @@ int main(int argc, char **argv)
       ip_to_str(email_record->src_ip, buffer1);
       ip_to_str(email_record->dst_ip, buffer2);
       printf("%s %s %i\n", buffer1, buffer2, email_record->flow->dst_port);
-      #endif 
+      #endif
       if (insert_to_db(b_plus_tree, email_record) < 0) {
          fprintf(stderr, "Insert to db failed.\n");
          return -1;
       }
-       
+
    }
    /* **** Cleanup **** */
    // Clean BTP database
@@ -499,6 +494,6 @@ int main(int argc, char **argv)
    ur_free_template(in_tmplt);
    ur_free_template(out_tmplt);
    ur_finalize();
-   
+
    return EXIT_SUCCESS;
 }
