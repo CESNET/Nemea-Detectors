@@ -68,8 +68,8 @@ UR_FIELDS (
    uint32 EVENT_ID,
    uint8 EVENT_TYPE,
    time DETECTION_TIME,
-   uint64 INVITE_CNT
-   uint64 CALLER_CNT
+   uint64 INVITE_CNT,
+   uint64 CALLER_CNT,
    uint64 CALLEE_CNT
 )
 
@@ -96,7 +96,7 @@ trap_module_info_t *module_info = NULL;
   PARAM('n', "prefix_stat_file", "Path to prefix examination statistic file.", required_argument, "string")
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /** \brief Definition of modul_configuration (modul_configuration_struct). */
 modul_configuration_t modul_configuration;
@@ -271,7 +271,7 @@ void call_id_node_data_save(prefix_tree_domain_t * prefix_tree_node, char * call
 {
    // check if Call-ID doesn't exist in node data
    if (call_id_node_data_exists(prefix_tree_node, call_id, call_id_len) == 0) {
-      unsigned int call_id_insert_position = call_id_insert_position = ((node_data_t *) (prefix_tree_node->parent->value))->call_id_insert_position;
+      unsigned int call_id_insert_position = ((node_data_t *) (prefix_tree_node->parent->value))->call_id_insert_position;
 
       // calculation hash of call_id
       uint32_t call_id_hash = SuperFastHash(call_id, sizeof (char) * call_id_len);

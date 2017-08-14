@@ -1,9 +1,0 @@
-PROJECT_NAME   = "SIP Brute-Force Detector"
-PROJECT_BRIEF  = "Module for detecting brute-force attacks on Session Initiation Protocol."
-GENERATE_LATEX = YES
-HAVE_DOT       = YES
-UML_LOOK       = YES
-IMAGE_PATH     = "."
-INPUT          = .
-HTML_OUTPUT    = doc
-

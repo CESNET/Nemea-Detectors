@@ -76,13 +76,13 @@ char *time_t_to_str(ur_time_t t)
 }
 
 // Convert signed integer to char array (string)
-GENERATE_FUNCTION_CONVERT_TO_STR(int_to_str, int, "%d");
+GENERATE_FUNCTION_CONVERT_TO_STR(int_to_str, int, "%d")
 
 // Convert unsigned integer to char array (string)
-GENERATE_FUNCTION_CONVERT_TO_STR(uint_to_str, unsigned int, "%u");
+GENERATE_FUNCTION_CONVERT_TO_STR(uint_to_str, unsigned int, "%u")
 
 // Convert unsigned short integer to char array (string)
-GENERATE_FUNCTION_CONVERT_TO_STR(ushortint_to_str, unsigned short int, "%hu");
+GENERATE_FUNCTION_CONVERT_TO_STR(ushortint_to_str, unsigned short int, "%hu")
 
 
 // Write input strings to defined stream output (variadic function)

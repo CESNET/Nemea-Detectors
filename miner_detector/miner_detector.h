@@ -16,9 +16,9 @@
 
 #define TCP_FIN 0x01
 #define TCP_SYN 0x02
-#define TCP_RST 0x04
+#define TCP_RST 0x04    
 #define TCP_PSH 0x08
-#define TCP_ACK 0x10
+#define TCP_ACK 0x10    // 16
 
 
 /**
@@ -88,8 +88,33 @@
 #define SUSPECT_SCORE_REQ_FLOWS 3
 #define SUSPECT_SCORE_ACTIVE_TIME 3
 
-
+/**
+ * Used when not using active test.
+ */
 #define STRATUM_NOT_USED 0xdeadbeaf
+
+/**
+ * Used to identify permanent records in blacklist/whitelist DB.
+ */
+#define BWL_PERMANENT_RECORD 0
+
+
+/**
+ * After what time whitelisted item will expire in seconds.
+ */
+#define WL_ITEM_EXPIRE_TIME (3600*24)
+
+/**
+ * After what time blacklisted item will expire in seconds.
+ */
+#define BL_ITEM_EXPIRE_TIME (3600*24)
+
+/**
+ * Duration to sleep after iteration in list expire thread.
+ */
+#define BWL_LIST_EXPIRE_SLEEP_DURATION 3600
+
+
 
 
 /**
@@ -107,8 +132,12 @@ typedef struct {
  */
 typedef struct suspect_item {
     bool flagged;
+    uint8_t pool_id;
     uint64_t ack_flows;
     uint64_t ackpush_flows;
+    uint64_t syn_flows;
+    uint64_t rst_flows;
+    uint64_t fin_flows;
     uint64_t other_flows;
     uint64_t req_flows;
     uint64_t packets;

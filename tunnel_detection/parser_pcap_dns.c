@@ -45,7 +45,7 @@
 uint32_t read_ip_address_v4(FILE * file){
 	int ip=0;
 	char a[4];
-	char sign;
+	int sign;
 	int num = 0;
 	for (int i = 0; i < 4; i++){
 		ip <<= 8;
@@ -107,7 +107,7 @@ int read_string(FILE * file, char * string, int maxsize){
 }
 
 void read_ip_address_v6(FILE * file, uint64_t * ip){
-	char sign;
+	int sign;
 	unsigned char size = 0;
 	char str[40];
 	sign = fgetc(file);
@@ -160,7 +160,7 @@ int read_packet(FILE *file, packet_t * create){
 
 	//read time
 	create->time = read_double(file);
-	sign = fgetc(file);
+	fgetc(file);
 
 	//read ip address v4
 	sign = fgetc(file);
@@ -168,9 +168,9 @@ int read_packet(FILE *file, packet_t * create){
 		ungetc(sign,file);
 
 		create->src_ip_v4 = read_ip_address_v4(file);
-		sign = fgetc(file);
+		fgetc(file);
 		create->dst_ip_v4 = read_ip_address_v4(file);
-		sign = fgetc(file);
+		fgetc(file);
 		create->ip_version = IP_VERSION_4;
 	}
 	//read ip address v6
@@ -178,9 +178,9 @@ int read_packet(FILE *file, packet_t * create){
 	if(sign != ';'){
 		ungetc(sign,file);
 		read_ip_address_v6(file, create->src_ip_v6);
-		sign = fgetc(file);
+		fgetc(file);
 		read_ip_address_v6(file, create->dst_ip_v6);
-		sign = fgetc(file);
+		fgetc(file);
 		create->ip_version = IP_VERSION_6;
 	}
 	//read type (response/request)
@@ -188,26 +188,26 @@ int read_packet(FILE *file, packet_t * create){
 	if(sign != ';'){
 		ungetc(sign,file);
 		create->is_response = read_int(file);
-		sign = fgetc(file);
+		fgetc(file);
 	}
 	//read size
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
 		create->size = read_int(file);
-		sign = fgetc(file);
+		fgetc(file);
 	}
 	//read request string
 	sign = fgetc(file);
 	if(sign != ';'){
 		ungetc(sign,file);
 		create->request_length = read_string(file, create->request_string, MAX_LENGTH_OF_REQUEST_DOMAIN);
-		sign = fgetc(file);
+		fgetc(file);
 	}
 
 	if(create->is_response){
 		//read response ip
-		sign = fgetc(file);
+		fgetc(file);
 		read_item(file);
 
 		//read txt string
@@ -215,28 +215,28 @@ int read_packet(FILE *file, packet_t * create){
 		if(sign != ';'){
 			ungetc(sign,file);
 			read_string(file, create->txt_response, MAX_LENGTH_OF_RESPONSE_STRING);
-			sign = fgetc(file);
+			fgetc(file);
 		}
 		//read cname string
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
 			read_string(file, create->cname_response, MAX_LENGTH_OF_RESPONSE_STRING);
-			sign = fgetc(file);
+			fgetc(file);
 		}
 		//read mx string
 		sign = fgetc(file);
 		if(sign != ';'){
 			ungetc(sign,file);
 			read_string(file, create->mx_response, MAX_LENGTH_OF_RESPONSE_STRING);
-			sign = fgetc(file);
+			fgetc(file);
 		}
 		//read ns string
 		sign = fgetc(file);
 		if(sign != ';' && sign != '\n' && sign != -1){
 			ungetc(sign,file);
 			read_string(file, create->ns_response, MAX_LENGTH_OF_RESPONSE_STRING);
-			sign = fgetc(file);
+			fgetc(file);
 		}
 		read_rest_of_line(file);
 	}

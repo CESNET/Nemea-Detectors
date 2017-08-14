@@ -66,5 +66,6 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
   nemeasupdir=${sysconfdir}
   AC_SUBST(nemeasupdir)
   AC_PATH_PROG([TRAP2MAN], [trap2man.sh], [], [/usr/bin/nemea$PATH_SEPARATOR$PATH$PATH_SEPARATOR$PWD/../nemea-framework/libtrap/tools])
+  AM_CONDITIONAL([HAVE_TRAP2MAN], [test -x "$TRAP2MAN"])
 ])
 

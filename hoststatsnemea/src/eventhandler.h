@@ -74,7 +74,7 @@ public:
    std::string note;
 
    Event(const uint32_t &time_first, const uint32_t &time_last, uint8_t type)
-    : type(type), time_first(time_first), time_last(time_last)
+    : type(type), time_first(time_first), time_last(time_last), scale(0)
    { }
 
    // Methods to set parameters

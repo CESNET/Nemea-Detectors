@@ -170,24 +170,27 @@ static char *get_dir_str(char *path_to_file)
 int create_warden_recv_file(bl_down_config_t *config, char *path_str, char *pid_str, char *infix_str, char *source_str, char *suffix_str)
 {
    int ret;
-   char *filename = malloc(strlen(path_str) + strlen(pid_str) + strlen(infix_str) + strlen(source_str) + strlen(suffix_str) + 1);
+   char *filename = (char *) calloc(strlen(path_str) + strlen(pid_str) + strlen(infix_str) + strlen(source_str) + strlen(suffix_str) + 1, sizeof(char));
    strcat(filename, path_str);
    strcat(filename, pid_str);
    strcat(filename, infix_str);
    strcat(filename, source_str);
    strcat(filename, suffix_str);
-   filename[strlen(path_str) + strlen(pid_str) + strlen(infix_str) + strlen(source_str) + strlen(suffix_str)] = 0;
 
    FILE *fp = fopen(filename, "w");
    if (fp != NULL) {
       fprintf(fp, "%s", BL_WARDEN_RECV_FILE_PL_SOURCE_CODE);
       fclose(fp);
       ret = 1;
-      chmod(filename, S_IRWXU);
+      if (chmod(filename, S_IRWXU) != 0) {
+      	fprintf(stderr, "Error: Could not set file permissions: %s!\n", filename);
+      }
+
       config->warden_scripts.fnames[config->warden_scripts.count++] = filename;
    } else {
       fprintf(stderr, "Error: Could not create file: %s!\n", filename);
       ret = 0;
+      free(filename);
    }
 
    return ret;
@@ -399,7 +402,9 @@ void bl_down_destroy_config()
 {
    // Free warden script names a delete files
    for (int i = 0; i < CONFIG->warden_scripts.count; i++) {
-      remove(CONFIG->warden_scripts.fnames[i]);
+      if (remove(CONFIG->warden_scripts.fnames[i])) {
+      	fprintf(stderr, "Unable to remove file %s.\n", CONFIG->warden_scripts.fnames[i]);
+      }
       free(CONFIG->warden_scripts.fnames[i]);
    }
    // Free command strings and file names
@@ -467,6 +472,7 @@ void *bl_down_process(void *not_used_data)
          FILE *fd = popen(CONFIG->cmd.ar[i], "r");
          if (fd == NULL) {
             fprintf(stderr, "Error: popen failed!\n");
+            break;
          }
          el_count_ar[swap_flag] = bl_down_parse(fd, CONFIG->buf.line, CONFIG->buf.el_ar[swap_flag], CONFIG->buf.blf_ar[swap_flag],
                                                 el_count_ar[swap_flag], CONFIG->lut_id[i], i);
@@ -746,7 +752,6 @@ setup_malloc_fail_file:
    free(config->cmd.ar);
 setup_malloc_fail_cmd:
    free(config->preg);
-   free(config->use_regex);
 setup_malloc_fail_regex:
    free(config);
 setup_malloc_fail_config:

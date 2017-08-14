@@ -1,3 +1,17 @@
+2017-06-08 Nemea-detectors-1.3.6
+	* ddos_detector:
+		added threshold-based detector of distributed denial of service attacks
+	* miner_detector: 
+		added support for other cryptocurrencies
+		passive detection based on decision tree
+		whitelist/blacklist items now expire
+
+2017-03-01 Nemea-detectors-1.3.5
+	* sip_bf_detector:
+		fixed bug causing the detector to crash
+		added possibility to change some additional default thresholds
+		updated README
+
 2016-10-07 Nemea-detectors-1.3.4
         * sip_bf_detector:
 		added source and destination port to alert

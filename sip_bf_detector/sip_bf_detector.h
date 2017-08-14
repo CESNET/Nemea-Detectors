@@ -48,15 +48,8 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <getopt.h>
-#include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include <sstream>
-#include <string>
 extern "C" {
 #include <b_plus_tree.h>
 }
@@ -72,7 +65,7 @@ using namespace std;
 #define IP_VERSION_4_BYTES       4
 #define IP_VERSION_6_BYTES       32
 #define DEFAULT_SCAN_LIMIT       25
-#define DEFAULT_DBF_LIMIT        3
+#define DEFAULT_DBF_LIMIT        5
 #define DEFAULT_SCAN_START_SIZE  5
 #define DEFAULT_DBF_START_SIZE   1
 #define DEFAULT_OK_COUNT_LIMIT   5
@@ -157,9 +150,10 @@ struct dbf_t {
 };
 
 struct bf_t {
-   bf_t(const data_t *flow, Client *clt);
+   bf_t(const data_t *flow, Client *clt, User *usr);
    bool isReportable() const;
    Client *m_source;
+   User *m_target;
    uint32_t m_attempts;
    ur_time_t m_time_first;
    ur_time_t m_time_last;
@@ -173,40 +167,39 @@ class User {
 public:
    void destroy(Server *srv);
    bool init(char *name);
-   int addSource(const data_t *flow, Client *clt, bf_t *bf);
+   int addCom(const data_t *flow, Client *clt, bf_t *bf);
+   void removeCom(bf_t *bf);
    dbf_t* getDBF() const;
-   bf_t* findClient(const Client *clt) const;
-   void removeBF(bf_t *bf);
+   bf_t* findCom(const Client *clt) const;
    void getDBFStats(stats_t *stats) const;
    int evaluateFlows(ur_time_t current_time, Server *srv);
 
    char *m_name;
 private:
-   bool extendSources();
+   bool extendCom();
    dbf_t *m_dbf;
-   int m_index;
-   int m_size;
-   bf_t **m_sources;
+   uint32_t m_index;
+   uint32_t m_size;
+   bf_t **m_com;
 };
 
 class Client {
 public:
    void destroy();
    bool init(ip_addr_t *ip, uint16_t port);
-   bool addTarget(const data_t *flow, User *usr);
-   User* findUser(User *usr) const;
+   bool addCom(const data_t *flow, bf_t *bf);
+   void removeCom(bf_t *bf);
    scan_t* getScan() const;
-   void removeUser(User *usr);
    void getScanStats(stats_t *stats) const;
    int getSize() const;
 
    uint16_t m_port;
    ip_addr_t *m_ip;
 private:
-   bool extendUsers();
-   int m_index;
-   int m_size;
-   User **m_names;
+   bool extendCom();
+   uint32_t m_index;
+   uint32_t m_size;
+   bf_t **m_com;
    scan_t *m_scan;
 };
 

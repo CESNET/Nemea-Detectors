@@ -48,6 +48,7 @@
 #endif
 
 #include <stdio.h>
+#include <time.h>
 #include <signal.h>
 #include <getopt.h>
 #include <libtrap/trap.h>
@@ -96,7 +97,7 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 typedef struct item_s item_t;
 

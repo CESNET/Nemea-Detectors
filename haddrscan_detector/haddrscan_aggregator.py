@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- mode: python; python-indent-offset: 3; coding: utf-8; -*-
 #
 # Aggregation of alert from haddrscan_detector.
 # It receives alerts and aggregates them into time window.
@@ -99,18 +100,27 @@ trap.init(sys.argv, 1, 1)
 
 # Specifier of UniRec records will be received during libtrap negotiation
 alertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
-                "time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
+                          "time TIME_LAST,uint16 DST_PORT," +\
+                          "uint8 EVENT_TYPE,uint8 PROTOCOL," + \
+                          "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3"
+
+aggregatedAlertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
+                          "time TIME_LAST,uint16 DST_PORT," +\
+                          "uint8 EVENT_TYPE,uint8 PROTOCOL," + \
+                          "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3," + \
+                          "ipaddr DST_IP4,ipaddr DST_IP5,ipaddr DST_IP6,ipaddr DST_IP7," + \
+                          "ipaddr DST_IP8,ipaddr DST_IP9,ipaddr DST_IP10,ipaddr DST_IP11," + \
+                          "ipaddr DST_IP12,ipaddr DST_IP13,ipaddr DST_IP14,ipaddr DST_IP15"
 
 UR_Input = pytrap.UnirecTemplate(alertURFormat)
 
 # this module accepts all UniRec fieds -> set required format:
 trap.setRequiredFmt(0, pytrap.FMT_UNIREC, alertURFormat)
 
-trap.ifcctl(0,  False, pytrap.CTL_BUFFERSWITCH, 0)
-trap.setDataFmt(0, pytrap.FMT_UNIREC, alertURFormat)
+trap.ifcctl(0, False, pytrap.CTL_BUFFERSWITCH, 0)
+trap.setDataFmt(0, pytrap.FMT_UNIREC, aggregatedAlertURFormat)
 
-UR_Output = pytrap.UnirecTemplate(alertURFormat)
-URtmp = UR_Input.copy()
+UR_Output = pytrap.UnirecTemplate(aggregatedAlertURFormat)
 
 # Send aggregated alerts by RepeatedTimer
 def sendEvents():
@@ -144,7 +154,6 @@ while True:
 
       # Update UniRec template
       UR_Input = pytrap.UnirecTemplate(fmtspec)
-      URtmp = UR_Input.copy()
 
       # Store data from the exception
       data = e.data
@@ -166,16 +175,39 @@ while True:
    # Update the list of events
    key = str(UR_Input.SRC_IP) + ',' + str(UR_Input.DST_PORT)
    if key in eventList:
-      # Updating the value
-      URtmp.setData(eventList[key])
-      if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
-         URtmp.TIME_FIRST = UR_Input.TIME_FIRST
-      if URtmp.TIME_LAST < UR_Input.TIME_LAST:
-         URtmp.TIME_LAST = UR_Input.TIME_LAST
-      URtmp.ADDR_CNT += UR_Input.ADDR_CNT
+      # Update key for known addr × port
+      # Set data for access using attributes
+      UR_Output.setData(eventList[key])
+      if UR_Output.TIME_FIRST > UR_Input.TIME_FIRST:
+         UR_Output.TIME_FIRST = UR_Input.TIME_FIRST
+      if UR_Output.TIME_LAST < UR_Input.TIME_LAST:
+         UR_Output.TIME_LAST = UR_Input.TIME_LAST
+      if UR_Output.DST_IP4.isNull():
+         UR_Output.DST_IP4 = UR_Input.DST_IP0
+         UR_Output.DST_IP5 = UR_Input.DST_IP1
+         UR_Output.DST_IP6 = UR_Input.DST_IP2
+         UR_Output.DST_IP7 = UR_Input.DST_IP3
+      elif UR_Output.DST_IP8.isNull():
+         UR_Output.DST_IP8 = UR_Input.DST_IP0
+         UR_Output.DST_IP9 = UR_Input.DST_IP1
+         UR_Output.DST_IP10 = UR_Input.DST_IP2
+         UR_Output.DST_IP11 = UR_Input.DST_IP3
+      else:
+         # Keep overwriting the last four destination addresses
+         UR_Output.DST_IP12 = UR_Input.DST_IP0
+         UR_Output.DST_IP12 = UR_Input.DST_IP1
+         UR_Output.DST_IP14 = UR_Input.DST_IP2
+         UR_Output.DST_IP15 = UR_Input.DST_IP3
+      UR_Output.ADDR_CNT += UR_Input.ADDR_CNT
    else:
-      # Inserting new key
-      eventList[key] = data
+      # Insert key for new addr × port
+      eventList[key] = UR_Output.createMessage()
+      # Set data for access using attributes
+      UR_Output.setData(eventList[key])
+      for attr, value in UR_Input:
+         # This sets UR_Output.DST_IP{0-3}
+         if hasattr(UR_Output, attr):
+            setattr(UR_Output, attr, value)
 
    lock.release()
 

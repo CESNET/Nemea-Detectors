@@ -44,6 +44,12 @@
 #include "sip_bf_detector.h"
 #include "fields.h"
 
+#include <getopt.h>
+#include <signal.h>
+#include <sstream>
+#include <cmath>
+#include <ctime>
+
 UR_FIELDS (
    ipaddr DST_IP,                // IP address of attack source
    ipaddr SRC_IP,                // IP address of attack target
@@ -76,27 +82,39 @@ trap_module_info_t *module_info = NULL;
   BASIC("sip_bf_detector","Module for detecting brute-force attacks on Session Initiation Protocol.",1,2)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack (20 by default).", required_argument, "uint64") \
-   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks (300 by default).", required_argument, "uint64") \
-   PARAM('f', "free_mem_delay", "Number of seconds after the last action to consider attack as ceased (1800 by default).", required_argument, "uint64")
+   PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack. (50 by default)", required_argument, "uint64") \
+   PARAM('c', "check_mem_int", "Number of seconds between the checks on ceased attacks. (300 by default)", required_argument, "uint64") \
+   PARAM('d', "dist_threshold", "Number of clients attempting to connect to a specific user (on one particular server) which is considered a distributed brute-force attack. (25 by default)", required_argument, "uint32") \
+   PARAM('f', "free_mem_delay", "Number of seconds after the last action to consider attack as ceased. (1800 by default)", required_argument, "uint64") \
+   PARAM('o', "ok_count", "Number of observed OK responses after crossing alert threshold to consider the alert false and drop the communication. (5 by default)", required_argument, "uint32") \
+   PARAM('s', "scan_threshold", "Number of extensions a specific client attempted to register as (on one particular server) which is considered a scan. (5 by default)", required_argument, "uint32")
 
 static int stop = 0;
 int verbose;
 uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
 uint64_t g_check_mem_interval = CHECK_MEMORY_INTERVAL;
 uint64_t g_free_mem_interval = FREE_MEMORY_INTERVAL;
+uint32_t g_scan_limit = DEFAULT_SCAN_LIMIT;
+uint32_t g_dbf_limit = DEFAULT_DBF_LIMIT;
+uint32_t g_ok_limit = DEFAULT_OK_COUNT_LIMIT;
 uint16_t g_min_sec = 0;
 uint16_t g_event_row = 0;
 ur_template_t *alert_tmplt = NULL;
 ur_template_t *tm_tmplt = NULL;
 void *alert_rec = NULL;
 void *tm_rec = NULL;
+int sig_counter = 0;
 
 /* *********************** */
 
 void signal_handler(int signal)
 {
    stop = 1;
+   sig_counter++;
+   if (sig_counter > 1) {
+      trap_terminate();
+   }
+   
 }
 
 /**
@@ -183,9 +201,10 @@ bool dbf_t::addBreacher(const ip_addr_t *breacher)
    return true;
 }
 
-bf_t::bf_t(const data_t *flow, Client *clt)
+bf_t::bf_t(const data_t *flow, Client *clt, User *usr)
 {
    m_source = clt;
+   m_target = usr;
    m_attempts = 1;
    m_time_first = flow->time_stamp;
    m_time_last = flow->time_stamp;
@@ -197,7 +216,7 @@ bf_t::bf_t(const data_t *flow, Client *clt)
 
 bool bf_t::isReportable() const
 {
-   if (m_attempts >= g_alert_threshold && m_source->getScan() == NULL && m_ok_count <= DEFAULT_OK_COUNT_LIMIT) {
+   if (m_attempts >= g_alert_threshold && m_source->getScan() == NULL && m_ok_count <= g_ok_limit) {
       return true;
    }
 
@@ -216,20 +235,19 @@ bool User::init(char *name)
 {
    size_t length = strlen(name);
    m_name = NULL;
-   m_sources = NULL;
    m_dbf = NULL;
    m_index = 0;
    m_size = DEFAULT_DBF_START_SIZE;
    m_name = (char *) malloc((length + 1) * sizeof(char));
-   m_sources = (bf_t **) malloc(m_size * sizeof(bf_t *));
-   if (!m_name || !m_sources) {
+   m_com = (bf_t **) malloc(m_size * sizeof(bf_t *));
+   if (!m_name || !m_com) {
       fprintf(stderr, "ERROR: User::init - malloc failed.\n");
       if (m_name) {
          free(m_name);
       }
 
-      if (m_sources) {
-         free(m_sources);
+      if (m_com) {
+         free(m_com);
       }
 
       return false;
@@ -241,7 +259,7 @@ bool User::init(char *name)
    return true;
 }
 
-int User::addSource(const data_t *flow, Client *clt, bf_t *bf)
+int User::addCom(const data_t *flow, Client *clt, bf_t *bf)
 {
    if (bf) {
       bf->m_time_last = flow->time_stamp;
@@ -253,38 +271,39 @@ int User::addSource(const data_t *flow, Client *clt, bf_t *bf)
       return 0;
    }
 
-   if (m_index + 1 == DEFAULT_DBF_LIMIT) {
+   m_com[m_index] = new bf_t(flow, clt, this);
+   if (!m_com[m_index]) {
+      fprintf(stderr, "ERROR: User::addCom - new failed when creating BF structure.\n");
+      return -1;
+   }
+
+   clt->addCom(flow, m_com[m_index]);
+   m_index++;
+
+   if (m_index == g_dbf_limit) {
       m_dbf = new dbf_t(flow);
       if (!m_dbf) {
-         fprintf(stderr, "ERROR: User::addSource - new failed when creating DBF structure.\n");
+         fprintf(stderr, "ERROR: User::addCom - new failed when creating DBF structure.\n");
          return -1;
       }
 
       return 0;
    }
 
-   if (m_index + 1 == m_size) {
-      if (!extendSources()) {
+   if (m_index == m_size) {
+      if (!extendCom()) {
          return -1;
       }
    }
 
-   m_sources[m_index] = new bf_t(flow, clt);
-   if (!m_sources[m_index]) {
-      fprintf(stderr, "ERROR: User::addSource - new failed when creating BF structure.\n");
-      return -1;
-   }
-
-   clt->addTarget(flow, this);
-   m_index++;
    return 0;
 }
 
-bf_t* User::findClient(const Client* clt) const
+bf_t* User::findCom(const Client* clt) const
 {
-   for (int i = 0; i < m_index; i++) {
-      if (clt == m_sources[i]->m_source) {
-         return m_sources[i];
+   for (uint32_t i = 0; i < m_index; i++) {
+      if (clt == m_com[i]->m_source) {
+         return m_com[i];
       }
    }
 
@@ -298,54 +317,72 @@ dbf_t* User::getDBF() const
 
 int User::evaluateFlows(ur_time_t current_time, Server *srv)
 {
-      if (m_dbf && m_dbf->m_destroy) {
-      for (int i = 0; i < m_index; i++) {
-         m_sources[i]->m_source->removeUser(this);
-         delete m_sources[i];
-      }
-
-      delete m_dbf;
-      free(m_sources);
-      free(m_name);
-      return 1;
-   }
-
-   if (m_dbf && (current_time > m_dbf->m_time_last) && ((current_time - m_dbf->m_time_last) > g_free_mem_interval)) {
+   if (m_dbf && !m_dbf->m_destroy && (current_time > m_dbf->m_time_last) && ((current_time - m_dbf->m_time_last) > g_free_mem_interval)) {
       srv->reportAlert(NULL, this, NULL, DBF);
-      for (int i = 0; i < m_index; i++) {
-         m_sources[i]->m_source->removeUser(this);
-         delete m_sources[i];
-      }
-
-      delete m_dbf;
-      free(m_sources);
-      free(m_name);
-      return 1;
+      m_dbf->m_destroy = true;
    }
 
-   for (int i = 0; i < m_index; i++) {
-      bf_t *bf = m_sources[i];
-      scan_t *scan = bf->m_source->getScan();
-      if (scan) {
-         if (scan->m_destroy) {
-            removeBF(bf);
+   if (m_dbf && m_dbf->m_destroy) {
+      int j = 0;
+      for (uint32_t i = 0; i < m_index; i++) {
+         bf_t *bf = m_com[i];
+         scan_t *scan = bf->m_source->getScan();
+
+         if (!(scan && !scan->m_destroy)) {
+            bf->m_source->removeCom(bf);
+            removeCom(bf);
+            delete bf;
+            j++;
+            i--;
          }
-      } else if (bf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
-         bf->m_source->removeUser(this);
-         removeBF(bf);
-      } else if ((current_time > bf->m_time_last) && ((current_time - bf->m_time_last) > g_free_mem_interval)) {
-         if (bf->m_attempts >= g_alert_threshold) {
-            srv->reportAlert(bf, this, NULL, BF);   
+      }
+
+      if (j != 0) {
+         delete m_dbf;
+         m_dbf = NULL;   
+      }
+      
+      if (m_index == 0) {
+         free(m_com);
+         free(m_name);
+         return 1;      
+      }
+
+      return 0;
+   }
+
+   if (!m_dbf) {
+      for (uint32_t i = 0; i < m_index; i++) {
+         bf_t *bf = m_com[i];
+         scan_t *scan = bf->m_source->getScan();
+         if (scan) {
+            if (scan->m_destroy) {
+               bf->m_source->removeCom(bf);
+               removeCom(bf);
+               delete bf;
+               i--;
+            }
+         } else if (bf->m_ok_count > g_ok_limit) {
+            bf->m_source->removeCom(bf);
+            removeCom(bf);
+            delete bf;
+            i--;
+         } else if ((current_time > bf->m_time_last) && ((current_time - bf->m_time_last) > g_free_mem_interval)) {
+            if (bf->m_attempts >= g_alert_threshold) {
+               srv->reportAlert(bf, NULL, NULL, BF);   
+            }
+
+            bf->m_source->removeCom(bf);
+            removeCom(bf);
+            delete bf;
+            i--;  
          }
-         
-         bf->m_source->removeUser(this);
-         removeBF(bf);
       }
    }
 
    if (m_index == 0) {
       delete m_dbf;
-      free(m_sources);
+      free(m_com);
       free(m_name);
       return 1;      
    }
@@ -353,21 +390,21 @@ int User::evaluateFlows(ur_time_t current_time, Server *srv)
    return 0;
 }
 
-bool User::extendSources()
+bool User::extendCom()
 {
    bf_t **tmp = NULL;
    m_size *= 2;
-   if (m_size > DEFAULT_DBF_LIMIT) {
-      m_size = DEFAULT_DBF_LIMIT;
+   if (m_size > g_dbf_limit) {
+      m_size = g_dbf_limit;
    }
 
-   tmp = (bf_t **) realloc(m_sources, m_size * sizeof(bf_t *));
+   tmp = (bf_t **) realloc(m_com, m_size * sizeof(bf_t *));
    if (!tmp) {
-      fprintf(stderr, "ERROR: User::extendSources - realloc failed.\n");
+      fprintf(stderr, "ERROR: User::extendCom - realloc failed.\n");
       return false;
    }
 
-   m_sources = tmp;
+   m_com = tmp;
    return true;
 }
 
@@ -378,35 +415,36 @@ void User::destroy(Server *srv)
          srv->reportAlert(NULL, this, NULL, DBF);   
       }
       
-      for (int i = 0; i < m_index; i++) {
-         delete m_sources[i];
+      for (uint32_t i = 0; i < m_index; i++) {
+         m_com[i]->m_source->removeCom(m_com[i]);
+         delete m_com[i];
       }
 
    } else {
-      for (int i = 0; i < m_index; i++) {
-         bf_t *bf = m_sources[i];
+      for (uint32_t i = 0; i < m_index; i++) {
+         bf_t *bf = m_com[i];
          if (bf->isReportable()) {
-            srv->reportAlert(bf, this, NULL, BF);
+            srv->reportAlert(bf, NULL, NULL, BF);
          }
 
+         bf->m_source->removeCom(bf);
          delete bf;
       }
    }
 
    delete m_dbf;
-   free(m_sources);
+   free(m_com);
    free(m_name);
 }
 
-void User::removeBF(bf_t *bf) {
-   for (int i = 0; i < m_index; i++) {
-      if (m_sources[i] == bf) {
-         delete m_sources[i];
+void User::removeCom(bf_t *bf) {
+   for (uint32_t i = 0; i < m_index; i++) {
+      if (m_com[i] == bf) {
          if (i + 1 == m_index) {
-            m_sources[i] = NULL;
+            m_com[i] = NULL;
          } else {
-            m_sources[i] = m_sources[m_index - 1];
-            m_sources[m_index - 1] = NULL;
+            m_com[i] = m_com[m_index - 1];
+            m_com[m_index - 1] = NULL;
          }
 
          m_index--;
@@ -417,9 +455,8 @@ void User::removeBF(bf_t *bf) {
 
 void User::getDBFStats(stats_t *stats) const
 {
-   bf_t *bf = NULL;
-   for (int i = 0; i < m_index; i++) {
-      bf = m_sources[i];
+   for (uint32_t i = 0; i < m_index; i++) {
+      bf_t *bf = m_com[i];
       if (i == 0) {
          stats->m_protocol = bf->m_protocol;
          stats->m_link_bit_field = bf->m_link_bit_field;
@@ -441,18 +478,17 @@ void User::getDBFStats(stats_t *stats) const
 
 bool Client::init(ip_addr_t *ip, uint16_t port)
 {
-   m_names = NULL;
    m_ip = NULL;
    m_scan = NULL;
    m_index = 0;
    m_port = port;
    m_size = DEFAULT_SCAN_START_SIZE;
-   m_names = (User **) malloc(m_size * sizeof(User *));
+   m_com = (bf_t **) malloc(m_size * sizeof(bf_t *));
    m_ip = (ip_addr_t *) malloc(sizeof(ip_addr_t));
-   if (!m_names || !m_ip) {
+   if (!m_com || !m_ip) {
       fprintf(stderr, "ERROR: Client::init - malloc failed.\n");
-      if (m_names) {
-         free(m_names);
+      if (m_com) {
+         free(m_com);
       }
 
       if (m_ip) {
@@ -471,30 +507,26 @@ scan_t* Client::getScan() const
    return m_scan;
 }
 
-bool Client::addTarget(const data_t *flow, User *usr)
+bool Client::addCom(const data_t *flow, bf_t *bf)
 {
-   if (findUser(usr)) {
-      return true;
-   }
+   m_com[m_index] = bf;
+   m_index++;
 
-   if (m_index + 1 == DEFAULT_SCAN_LIMIT) {
+   if (m_index == g_scan_limit) {
       m_scan = new scan_t(flow);
       if (!m_scan) {
-         fprintf(stderr, "ERROR: Client::addTarget - new failed.\n");
+         fprintf(stderr, "ERROR: Client::addCom - new failed.\n");
          return false;
       }
 
       return true;
    } 
 
-   if (m_index + 1 == m_size) {
-      if (!extendUsers()) {
+   if (m_index == m_size) {
+      if (!extendCom()) {
          return false;
       }
    }
-
-   m_names[m_index] = usr;
-   m_index++;
 
    return true;
 }
@@ -504,26 +536,15 @@ int Client::getSize() const
    return m_index;
 }
 
-User* Client::findUser(User *usr) const
+void Client::removeCom(bf_t *bf)
 {
-   for (int i = 0; i < m_index; i++) {
-      if (m_names[i] == usr) {
-         return usr;
-      }
-   }
-
-   return NULL;
-}
-
-void Client::removeUser(User *usr)
-{
-   for (int i = 0; i < m_index; i++) {
-      if (m_names[i] == usr) {
+   for (uint32_t i = 0; i < m_index; i++) {
+      if (m_com[i] == bf) {
          if (i + 1 == m_index) {
-            m_names[i] = NULL;
+            m_com[i] = NULL;
          } else {
-            m_names[i] = m_names[m_index - 1];
-            m_names[m_index - 1] = NULL;
+            m_com[i] = m_com[m_index - 1];
+            m_com[m_index - 1] = NULL;
          }
 
          m_index--;
@@ -532,21 +553,21 @@ void Client::removeUser(User *usr)
    }
 }
 
-bool Client::extendUsers()
+bool Client::extendCom()
 {
-   User **tmp = NULL;
+   bf_t **tmp = NULL;
    m_size *= 2;
-   if (m_size > DEFAULT_SCAN_LIMIT) {
-      m_size = DEFAULT_SCAN_LIMIT;
+   if (m_size > g_scan_limit) {
+      m_size = g_scan_limit;
    }
 
-   tmp = (User **) realloc(m_names, m_size * sizeof(User *));
+   tmp = (bf_t **) realloc(m_com, m_size * sizeof(bf_t *));
    if (!tmp) {
-      fprintf(stderr, "ERROR: Client::extendTargets - realloc failed.\n");
+      fprintf(stderr, "ERROR: Client::extendCom - realloc failed.\n");
       return false;
    }
 
-   m_names = tmp;
+   m_com = tmp;
    return true;
 }
 
@@ -554,14 +575,13 @@ void Client::destroy()
 {
    free(m_ip);
    delete m_scan;
-   free(m_names);
+   free(m_com);
 }
 
 void Client::getScanStats(stats_t *stats) const
 {
-   bf_t *bf = NULL;
-   for (int i = 0; i < m_index; i++) {
-      bf = m_names[i]->findClient(this);
+   for (uint32_t i = 0; i < m_index; i++) {
+      bf_t *bf = m_com[i];   	
       if (i == 0) {
          stats->m_protocol = bf->m_protocol;
          stats->m_link_bit_field = bf->m_link_bit_field;
@@ -694,7 +714,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
    ur_set(alert_tmplt, alert_rec, F_DST_PORT, m_port);
 
    if (event == BF) {
-      if (!bf || !usr) {
+      if (!bf) {
          fprintf(stderr, "ERROR: Server::reportAlert - method received NULL pointer when reporting BF.\n");
          return;
       }
@@ -709,7 +729,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
       ur_set(alert_tmplt, alert_rec, F_SBFD_PROTOCOL, bf->m_protocol);
       ur_set(alert_tmplt, alert_rec, F_SBFD_LINK_BIT_FIELD, bf->m_link_bit_field);
       ur_set(alert_tmplt, alert_rec, F_SRC_PORT, bf->m_source->m_port);
-      ss << usr->m_name << '@' << m_name_suffix;
+      ss << bf->m_target->m_name << '@' << m_name_suffix;
       ur_set_var(alert_tmplt, alert_rec, F_SBFD_USER, ss.str().c_str(), ss.str().length());
    } else if (event == DBF) {
       if (!usr) {
@@ -734,7 +754,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
          ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, ur_time_from_sec_msec(dbf->m_time_breach, 0));
       }
 
-      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
+      ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(stats->m_time_first));
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(stats->m_time_first, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(dbf->m_time_last, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_ATTEMPTS, stats->m_total_count);
@@ -788,7 +808,7 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
 
 bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
 {
-   bf_t *bf = usr->findClient(clt);
+   bf_t *bf = usr->findCom(clt);
    if (flow->status_code == SIP_STATUS_OK) {
       if (!bf) {
          return true;
@@ -797,9 +817,10 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
       if (bf->m_time_breach != 0) {
          bf->m_ok_count++;
          bf->m_time_last = flow->time_stamp;
-         if (bf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
-            usr->removeBF(bf);
-            clt->removeUser(usr);
+         if (bf->m_ok_count > g_ok_limit) {
+            usr->removeCom(bf);
+            clt->removeCom(bf);
+            delete bf;
          }
       } else if (bf->m_attempts >= g_alert_threshold) {
          bf->m_attempts++;
@@ -808,14 +829,15 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
          bf->m_ok_count++;
          alertTimeMachine(flow->ip_dst);
       } else {
-         usr->removeBF(bf);
-         clt->removeUser(usr);
+         usr->removeCom(bf);
+         clt->removeCom(bf);
+         delete bf;
       }
 
       return true;
    }
    
-   int ret = usr->addSource(flow, clt, bf);
+   int ret = usr->addCom(flow, clt, bf);
    switch (ret) {
       case 1:
       case 0:
@@ -869,15 +891,15 @@ bool Server::insertFlow(const data_t *flow)
          insertSourceAndTarget(flow, usr, clt);         
       }
    } else {
-      usr = createUserNode(flow->user);
-      if (!usr) {
+      clt = createClientNode(tree_key, flow->ip_dst, flow->client_port);
+      if (!clt) {
          return false;
       }
 
-      clt = createClientNode(tree_key, flow->ip_dst, flow->client_port);
-      if (!clt) {
-         usr->destroy(this);
-         bpt_item_del(m_users, flow->user);
+      usr = createUserNode(flow->user);
+      if (!usr) {
+         clt->destroy();
+         bpt_item_del(m_clients, tree_key);
          return false;
       }
 
@@ -900,7 +922,7 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
       if (!dbf->m_breacher) {
          dbf->addBreacher(flow->ip_dst);
          alertTimeMachine(flow->ip_dst);
-      } else if(dbf->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+      } else if(dbf->m_ok_count > g_ok_limit) {
          dbf->m_destroy = true;
       }
    }
@@ -908,7 +930,7 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
    if (!clt) {
       dbf->m_other_attempts++;
    } else {
-      bf_t *bf = usr->findClient(clt);
+      bf_t *bf = usr->findCom(clt);
       if (bf) {
          bf->m_time_last = flow->time_stamp;
          bf->m_attempts++;            
@@ -929,7 +951,7 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
 
    if (flow->status_code == SIP_STATUS_OK) {
       scan->m_ok_count++;
-      if (scan->m_ok_count > DEFAULT_OK_COUNT_LIMIT) {
+      if (scan->m_ok_count > g_ok_limit) {
          scan->m_destroy = true;
       }
    }
@@ -937,7 +959,7 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
    if (!usr) {
       scan->m_other_attempts++;
    } else {
-      bf_t *bf = usr->findClient(clt);
+      bf_t *bf = usr->findCom(clt);
       if (bf) {
          if (flow->status_code == SIP_STATUS_OK && bf->m_time_breach == 0) {
             bf->m_time_breach = flow->time_stamp;
@@ -1048,9 +1070,8 @@ bool Server::evaluateFlows(const ur_time_t current_time)
    is_there_next = bpt_list_start(m_clients, b_item);
    while (is_there_next == 1) {
       Client *clt = (Client *) (b_item->value);
-      scan_t *scan = (scan_t *) clt->getScan();
 
-      if ((scan && scan->m_destroy) || (clt->getSize() == 0)) {
+      if (clt->getSize() == 0) {
          clt->destroy();
          is_there_next = bpt_list_item_del(m_clients, b_item);
       } else {
@@ -1431,22 +1452,43 @@ int main(int argc, char **argv)
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'a':
-         if (sscanf(optarg,"%" SCNu64"", &g_alert_threshold) != 1 || g_alert_threshold < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_alert_threshold) != 1 || g_alert_threshold < 1) {
             fprintf(stderr, "Error: irrational value of alert threshold.\n");
             goto cleanup;
          }
          break;
 
       case 'c':
-         if (sscanf(optarg,"%" SCNu64"", &g_check_mem_interval) != 1 || g_check_mem_interval < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_check_mem_interval) != 1 || g_check_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory check intervals.\n");
             goto cleanup;
          }
          break;
 
+      case 'd':
+         if (sscanf(optarg, "%" SCNu32 "", &g_dbf_limit) != 1 || g_dbf_limit < 1) {
+            fprintf(stderr, "Error: irrational value of distributed brute-force limit.\n");
+            goto cleanup;
+         }
+         break;
+
       case 'f':
-         if (sscanf(optarg,"%" SCNu64"", &g_free_mem_interval) != 1 || g_free_mem_interval < 1) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_free_mem_interval) != 1 || g_free_mem_interval < 1) {
             fprintf(stderr, "Error: irrational value of memory deallocation after last attack action.\n");
+            goto cleanup;
+         }
+         break;
+
+      case 'o':
+         if (sscanf(optarg, "%" SCNu32 "", &g_ok_limit) != 1 || g_ok_limit < 1) {
+            fprintf(stderr, "Error: irrational value of OK count limit.\n");
+            goto cleanup;
+         }
+         break;
+
+      case 's':
+         if (sscanf(optarg, "%" SCNu32 "", &g_scan_limit) != 1 || g_scan_limit < 1) {
+            fprintf(stderr, "Error: irrational value of scan limit.\n");
             goto cleanup;
          }
          break;
