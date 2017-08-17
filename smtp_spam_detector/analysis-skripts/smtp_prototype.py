@@ -118,14 +118,17 @@ class SMTP_Flow:
         if int(self.SMTP_STAT_CODE_FLAGS) & int(SC_SPAM) > 0:
         # It contains a spam key word
             spam_flag += 50
-            print("SPAM FLAG PRESENT [FROM:{0}{1}]".format(self.SRC_IP,
+            print("Alert(SPAM flag present) [{0},{1}]".format(self.SRC_IP,
                                                    str(self.SMTP_FIRST_SENDER)))
         if self.SMTP_FIRST_SENDER == "" or self.SMTP_FIRST_RECIPIENT == "":
             spam_flag += 20
-            print("SENDER OR RECIEVER ADDRESS NOT FILLED[FROM:{0}{1}]".format(self.SRC_IP,
+            print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP,
                                                                        str(self.SMTP_FIRST_SENDER)))
         # todo more filters
         return spam_flag
+
+    def get_name(self):
+        return self.SMTP_FIRST_SENDER.partition("@")[0][1:]
 
 # A class for storing information about sender with time window that record
 # a first occourence of sender in traffic and his last interaction on
@@ -174,30 +177,61 @@ class SMTP_Server:
     # traffic ratio is X then function returns positive value, otherwise
     # negative one.
     def is_mail_server(self):
-        sent = len(self.sent_history))
+        sent = len(self.sent_history)
         if sent == 0 or (self.incoming / sent)  < 1.2:
             return False
         else:
             return True
 
+class Cluster:
+    def __init__(self):
+        self.cluster_nodes = []
+
+    def clustering(self, data_pool):
+        """data_pool dict(SRC_IP)"""
+        print("Started clustering.\n")
+
+        for ip in data_pool:
+            server = data_pool[ip]
+            added = False
+
+            for cluster in self.cluster_nodes:
+                if (is_similar(server, cluster)):
+                    cluster.append(server)
+                    added = True
+                    break
+
+            if not added:
+                # add new group/cluster with only one server
+                self.cluster_nodes.append([server])
+
+    def __str__(self):
+        cnt = 0
+        ret = "************************************************************\n"
+        ret += "Clustering report:\n"
+        ret += "Number of clusters: " + str(len(self.cluster_nodes)) + "\n"
+
+        for i in self.cluster_nodes:
+            ret += "Node: " + str(cnt) + "\n"
+            for q in i:
+                print("\tServer ID: {0}").format(q.id)
+                for j in q.sent_history:
+                    ret += "\t\t" + j.SMTP_FIRST_SENDER + "\n"
+
+            cnt += 1
+        return ret
+
 # Functions that compares two strings and decide they similarity according to
 # SIMILARITY_INDEX, return true if they are similar otherwise false
-def is_similar(l_srv, r_srv):
-    if SequenceMatcher(None, str1, str2).ratio() > SIMILARITY_INDEX:
-        return True
-    else:
-        return False
-
-def clustering(data_pool):
-    clusters = []
-    for server in data_pool:
-        for cluster in clusters:
-            if (is_similar(server, cluster)):
-                clusters[cluster].append(server)
-                continue
-        clusters.append(server)
-
-    return clusters
+def is_similar(server, cluster):
+    """Server, list(Server)"""
+    for s_flow in server.sent_history:
+        for cluster_server in cluster:
+            for c_flow in cluster_server.sent_history:
+                if SequenceMatcher(None, s_flow.get_name(),
+                                  c_flow.get_name()).ratio() > SIMILARITY_INDEX:
+                    return True
+    return False
 
 # Main loop ********************************************************************
 # =========
@@ -206,21 +240,22 @@ def clustering(data_pool):
 # to dictionary with SRC_IP as a key
 flow_data_pool = {}
 potencial_spammers = []
-cleanup_interval    = 5*60
-clustering_interval = 1*60
+cleanup_interval    = 2*60
+clustering_interval = 5
 checked = 0
 alerts = 0
 analysis_ts = time.time()
 last_clustering = time.time()
-clusters = []
+cluster = Cluster()
 
+datafilled = 0
 # Automat for smtp spam detection
 while (True):
 
      # Start analysis timer
     curr_time = time.time()
 
-    if analysis_ts + interval < curr_time:
+    if analysis_ts + cleanup_interval < curr_time:
         # Create timestamp of current statistics
         data_report_time = time.time()
         data_report_path = '/tmp/smtp_stats'+str(data_report_time)
@@ -271,9 +306,11 @@ while (True):
         if checked%10000 == 0:
             print('Flows in pool [{0}]').format(checked)
 
+        datafilled = 1
+
         # Similarity analysis clustering
         if last_clustering + clustering_interval < curr_time:
-            clusters = clustering(flow_data_pool)
+            cluster.clustering(flow_data_pool)
             last_clustering = time.time()
 
 # Free allocated TRAP IFCs
@@ -281,3 +318,5 @@ trap.finalize()
 print("Flow scan report:")
 print("{0} suspicious in {1} flows").format(alerts, checked)
 print("Potencial spammers: {0}.\n").format(len(potencial_spammers))
+
+print(cluster)
