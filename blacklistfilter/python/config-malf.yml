@@ -1,0 +1,5 @@
+blacklist1:
+  file: file1
+  name: my_blacklist
+  description: Evil addresses
+  type: ip

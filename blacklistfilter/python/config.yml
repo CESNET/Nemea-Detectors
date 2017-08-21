@@ -1,0 +1,11 @@
+spamhaus-drop:
+  file: spamhaus-org-edrop.txt
+  name: spamhaus.org edrop
+  description: Evil addresses
+  filter_type: ip
+ 
+blocklist:
+  file: blocklist-de-ssh.txt
+  name: blocklist.de SSH
+  description: Evil addresses
+  filter_type: ip
