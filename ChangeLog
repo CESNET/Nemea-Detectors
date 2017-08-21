@@ -1,3 +1,22 @@
+2017-08-21 Nemea-detectors-1.3.7
+	* blacklistfilter: 
+		removed PalevoTracker
+
+	* brute_force_detector:
+		whitelist: code refactoring, reworked coding style
+		fixed possible division by zero, fixed some warnings regarding int and unsigned int comparison
+		updated whitelist unit tests
+
+	* hoststats:
+		removed ippaddr_cpp.h, now uses ip_to_str
+		bugfixes
+	
+	* sip_bf_detector:
+		improved signal handler
+
+	* ignore build artefacts
+	* minor bugfixes all over the Nemea-detectors
+
 2017-06-08 Nemea-detectors-1.3.6
 	* ddos_detector:
 		added threshold-based detector of distributed denial of service attacks

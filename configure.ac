@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-detectors], [1.3.6], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.3.7], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=3
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
