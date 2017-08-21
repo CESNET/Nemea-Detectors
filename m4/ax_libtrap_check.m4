@@ -56,10 +56,7 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
     fi
   fi
   if test -n "$TRAPLIB"; then
-    LDFLAGS="$libtrap_LDFLAGS $LDFLAGS"
     LIBS="$libtrap_LIBS $LIBS"
-    CFLAGS="$libtrap_CFLAGS $CFLAGS"
-    CXXFLAGS="$libtrap_CFLAGS $CXXFLAGS"
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
