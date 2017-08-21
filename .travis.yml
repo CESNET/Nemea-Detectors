@@ -39,13 +39,13 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - ( git clone --depth 1 https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd python && sudo python setup.py install;); (cd pycommon && sudo python setup.py install;); )
+   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd python && sudo python setup.py install;); (cd pycommon && sudo python setup.py install;); )
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
 script:
-  - ./bootstrap.sh && ./configure --disable-repobuild && make check
+  - ./bootstrap.sh && ./configure --disable-repobuild && make distcheck
   - mkdir dist-pkgs && cp *.spec *.tar.gz dist-pkgs && (cd dist-pkgs/"$d"; tar --strip-components=1 -xf *.tar.gz;)
   - ./configure -q --enable-debug CXXFLAGS=-coverage CFLAGS=-coverage LDFLAGS=-lgcov && make clean && make check
 
