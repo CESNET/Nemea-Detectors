@@ -158,16 +158,10 @@ class IPEntity(object):
         return not(self == other)
 
     def __compare_address(self, recaddr, filteraddr):
-        if isinstance(filteraddr, pytrap.UnirecIPAddr):
-            if filteraddr == recaddr:
-                return True
-            else:
-                return False
+        if recaddr in filteraddr:
+            return True
         else:
-            if recaddr in filteraddr:
-                return True
-            else:
-                return False
+            return False
 
     def __contains__(self, rec):
         if not isinstance(rec, pytrap.UnirecTemplate):
@@ -180,23 +174,19 @@ class IPEntity(object):
         result = False
 
         if self.ip:
-            if isinstance(self.ip, pytrap.UnirecIPAddr):
-                if sip == self.ip or dip == self.ip:
-                    result = True
-                else:
-                    return False
+            if sip in self.ip or dip in self.ip:
+                result = True
             else:
-                if sip in self.ip or dip in self.ip:
-                    result = True
-                else:
-                    return False
+                return False
         if self.srcip:
-            result = self.__compare_address(sip, self.srcip)
-            if not result:
+            if sip in self.srcip:
+                result = True
+            else:
                 return False
         if self.dstip:
-            result = self.__compare_address(dip, self.dstip)
-            if not result:
+            if dip in self.dstip:
+                result = True
+            else:
                 return False
         if self.srcport:
             if sp == self.srcport:
@@ -213,7 +203,6 @@ class IPEntity(object):
                 result = True
             else:
                 return False
-        
         if self.srcportrange:
             if sp >= self.srcportrange[0] and sp <= self.srcportrange[1]:
                 result = True
@@ -227,14 +216,14 @@ class IPBlacklist(Blacklist):
         This method returns None when i is not found or UnirecIPAddrRange which contains i."""
         while True:
             size = hi - lo
-            mid = (lo + hi) / 2
             if size <= 1:
-                if i in a[mid]:
-                    return a[mid]
+                if i in a[lo]:
+                    return a[lo]
                 elif hi != lo and i in a[hi]:
                     return a[hi]
                 else:
                     return None
+            mid = (lo + hi) / 2
             if i in a[mid]:
                 return a[mid]
             elif i < a[mid].start:
@@ -306,14 +295,14 @@ class IPBlacklist(Blacklist):
 
     def __contains__(self, rec):
         """Check if any entity from this blacklist matches rec (UniRec record).
-        
+
         This function returns True if rec matches the blacklist."""
         if rec.SRC_IP in self.ips:
             entitylist = self.ips[rec.SRC_IP]
             for e in entitylist:
                 if rec in e:
                     return True
-            
+
         if rec.SRC_IP in self.srcips:
             entitylist = self.srcips[rec.SRC_IP]
             for e in entitylist:
