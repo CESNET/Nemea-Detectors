@@ -1,10 +1,14 @@
 #!/usr/bin/python
-
+# Full imports *****************************************************************
 import pytrap
 import sys
 import time
+# Partial imports **************************************************************
 from difflib import SequenceMatcher
+
+# print current version of python
 print (sys.version)
+
 # ******************************************************************************
 # ******************************  GLOBAL DEFINITIONS ***************************
 # ******************************************************************************
@@ -54,8 +58,8 @@ SC_UNKNOWN  =   0x80000000
 # Global variables
 # ================
 # path to temp data
-file_data="/home/current/macoun/data/smtp_data_sample.csv"
-SIMILARITY_INDEX = 0.6
+POTENTIAL_SPAMMERS_REPORT="/tmp/potencial_spam.csv"
+SIMILARITY_INDEX = 0.8
 # ******************************************************************************
 
 trap = pytrap.TrapCtx()
@@ -122,8 +126,7 @@ class SMTP_Flow:
                                                    str(self.SMTP_FIRST_SENDER)))
         if self.SMTP_FIRST_SENDER == "" or self.SMTP_FIRST_RECIPIENT == "":
             spam_flag += 20
-            print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP,
-                                                                       str(self.SMTP_FIRST_SENDER)))
+            print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
         # todo more filters
         return spam_flag
 
@@ -142,7 +145,7 @@ class SMTP_Server:
         self.last_seen = flow.TIME_LAST
     def __str__(self):
         return ("{0},{1},{2},{3}").format(self.id, len(self.sent_history),
-                                        self.incoming, self.last_seen)
+                                          self.incoming, self.last_seen)
     # Getter for number of sent mails from this server
     def count_sent(self):
         return len(self.sent_history)
@@ -158,9 +161,10 @@ class SMTP_Server:
     def add_new_flow(self, flow):
         self.sent_history.append(flow)
 
-    # Function writes current statistics for this server
+    # Function writes current statistics for this server such as how many flows
+    # were send and recieved, and last time seen this server in traffic.
     def report_statistics(self, data_report_path):
-        #open file and write new statistics
+        # Open file and write new statistics
         with open(data_report_path, 'a') as f:
             try:
                 f.write(str(self))
@@ -178,10 +182,21 @@ class SMTP_Server:
     # negative one.
     def is_mail_server(self):
         sent = len(self.sent_history)
-        if sent == 0 or (self.incoming / sent)  < 1.2:
+        if sent == 0:
+            return False
+        if (self.incoming / sent)  < 1.2:
             return False
         else:
             return True
+
+class ClusterNode:
+    def __init__(self):
+        self.common_index = ""
+        self.cluster_data = list()
+
+    # Setter for the most common index
+    def setCommonIndex(self):
+        return None
 
 class Cluster:
     def __init__(self):
@@ -191,6 +206,7 @@ class Cluster:
         """data_pool dict(SRC_IP)"""
         print("Started clustering.\n")
 
+        # iteration through all recorded servers
         for ip in data_pool:
             server = data_pool[ip]
             added = False
@@ -214,7 +230,7 @@ class Cluster:
         for i in self.cluster_nodes:
             ret += "Node: " + str(cnt) + "\n"
             for q in i:
-                print("\tServer ID: {0}").format(q.id)
+                ret += "\tServer IP: " + str(q.id) + "\n"
                 for j in q.sent_history:
                     ret += "\t\t" + j.SMTP_FIRST_SENDER + "\n"
 
@@ -224,7 +240,7 @@ class Cluster:
 # Functions that compares two strings and decide they similarity according to
 # SIMILARITY_INDEX, return true if they are similar otherwise false
 def is_similar(server, cluster):
-    """Server, list(Server)"""
+    #Server, list(Server)
     for s_flow in server.sent_history:
         for cluster_server in cluster:
             for c_flow in cluster_server.sent_history:
@@ -233,6 +249,21 @@ def is_similar(server, cluster):
                     return True
     return False
 
+# Takes list() of SMTP_Servers and writes them to file.
+def write_report(potencial_spammers):
+    # Open file and start writing
+    with open(POTENTIAL_SPAMMERS_REPORT, 'w') as f:
+        for ps in potencial_spammers:
+            try:
+                f.write(str(ps))
+                f.write("\n")
+            except:
+                sys.stderr.write("Could not write to file!\n")
+                return None
+        f.close()
+    print("Potencial spam servers saved to: {0}").format(POTENTIAL_SPAMMERS_REPORT)
+    return 0
+
 # Main loop ********************************************************************
 # =========
 
@@ -240,32 +271,29 @@ def is_similar(server, cluster):
 # to dictionary with SRC_IP as a key
 flow_data_pool = {}
 potencial_spammers = []
-cleanup_interval    = 2*60
-clustering_interval = 5
+cleanup_interval    = 60
+clustering_interval = 60
 checked = 0
 alerts = 0
 analysis_ts = time.time()
 last_clustering = time.time()
 cluster = Cluster()
 
-datafilled = 0
 # Automat for smtp spam detection
 while (True):
-
      # Start analysis timer
     curr_time = time.time()
 
-    if analysis_ts + cleanup_interval < curr_time:
-        # Create timestamp of current statistics
+    if analysis_ts + cleanup_interval < curr_time or len(flow_data_pool) > 50000:
+        # Create timestamp of current statistics and create path for log
         data_report_time = time.time()
         data_report_path = '/tmp/smtp_stats'+str(data_report_time)
 
-        for flow in flow_data_pool:
-            flow_data_pool[flow].report_statistics(data_report_path)
-
+        for server in flow_data_pool:
+            flow_data_pool[server].report_statistics(data_report_path)
             # Add alert record to potencial spam bot pool for further analysis
-            if (flow_data_pool[flow].is_mail_server() == False):
-                potencial_spammers.append(flow)
+            if (flow_data_pool[server].is_mail_server() is False):
+                potencial_spammers.append(server)
 
         print("Analysis runtime: {0}").format(data_report_time - analysis_ts)
 
@@ -284,6 +312,7 @@ while (True):
 
         if len(data) <= 1:
             break
+
         rec.setData(data)
 
         # Create a new flow record
@@ -296,17 +325,21 @@ while (True):
         if flow.SRC_IP in flow_data_pool.keys():
             if flow.DST_IP in flow_data_pool.keys():
                 flow_data_pool[flow.DST_IP].incoming += 1
+
+            # TODO:there should be an else code block to add incomming msg to
+            # DST_IP even if there is not any record of it in database anyway
+
             flow_data_pool[flow.SRC_IP].add_new_flow(flow)
             flow_data_pool[flow.SRC_IP].update_time(flow)
         else:
             flow_data_pool[flow.SRC_IP] = SMTP_Server(flow)
 
+        # increment flow checked counter
         checked += 1
 
-        if checked%10000 == 0:
-            print('Flows in pool [{0}]').format(checked)
-
-        datafilled = 1
+        # Print every 10k flows in pool
+        if checked % 10000 == 0:
+            print('Flows in pool [{0}]').format(len(flow_data_pool))
 
         # Similarity analysis clustering
         if last_clustering + clustering_interval < curr_time:
@@ -318,5 +351,9 @@ trap.finalize()
 print("Flow scan report:")
 print("{0} suspicious in {1} flows").format(alerts, checked)
 print("Potencial spammers: {0}.\n").format(len(potencial_spammers))
-
 print(cluster)
+
+write_report(potencial_spammers)
+
+# TODO: there should be proper python main function
+
