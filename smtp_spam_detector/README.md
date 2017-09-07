@@ -1,19 +1,36 @@
 # SMTP SPAM BOT DETECTION
+```
 @author Ladislav Macoun <macoulad@fit.cvut.cz>
 @org CESNET / CVUT
+```
+
 ## Table of Contents
+* 0.0 License
 * 1.0 Intro
 * 2.0 Algoritmus
-* 3.0 Spam BOT definition according to this module
+* 3.0 SPAM and SPAM BOT definition according to this module
 * 4.0 Data analysis
 * X.X XXXXXXXXXXXXX
 * X.0 Conclusion
+
+## 0.0 License
+   TBD
 
 ## 1.0 Intro
    Function of this detector
    ...
 
    How to use
+   ==========
+   The module is implemented on TRAP platform so you have to specify TRAP
+   interfaces correctly. Then you can specify one of the parameters listed below.
+
+   Parameters:
+   TBD
+   Example:
+   TBD
+   Usage:
+   TBD
    ...
 
 ## 2.0 Algoritmus
@@ -55,7 +72,7 @@ d) Clustering (domain clustering for now, TODO: more clustering attributes)
                            +-----------+
 (2.0.0)
 ```
-## MALICIOUS SPAM SERVERR
+## MALICIOUS SPAM SERVER
 ```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
                            | SPAM      |-------------------------->
