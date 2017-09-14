@@ -58,35 +58,14 @@ SC_UNKNOWN  =   0x80000000
 # Global variables
 # ================
 # path to temp data
-POTENTIAL_SPAMMERS_REPORT="/tmp/potencial_spam.csv"
+POTENTIAL_SPAMMERS_REPORT = "/tmp/potencial_spam.csv"
 SIMILARITY_INDEX = 0.8
+CLUST_INTERVAL = 30*60         # How often should datepool get clustered
+CLEAN_INTERVAL = 20*60         # How often should datapool get cleaned
+MAX_ALLOWED_SERVERS = 10       # Number of maximum allowded server that mail
+                               # server is able to communicate
+CDF_PATH = "/tmp/smtp_cdf.csv"
 # ******************************************************************************
-
-trap = pytrap.TrapCtx()
-trap.init(sys.argv, 1, 1)
-
-# Set the list of required fields in received messages.
-# This list is an output of e.g. flow_meter - basic flow.
-inputspec = ("ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD," +
-            "time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint32 SMTP_2XX_STAT_CODE_COUNT," +
-            "uint32 SMTP_3XX_STAT_CODE_COUNT,uint32 SMTP_4XX_STAT_CODE_COUNT," +
-            "uint32 SMTP_5XX_STAT_CODE_COUNT,uint32 SMTP_COMMAND_FLAGS," +
-            "uint32 SMTP_MAIL_CMD_COUNT,uint32 SMTP_RCPT_CMD_COUNT," +
-            "uint32 SMTP_STAT_CODE_FLAGS,uint16 DST_PORT,uint16 SRC_PORT," +
-            "uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS," +
-            "uint8 TTL,string SMTP_DOMAIN,string SMTP_FIRST_RECIPIENT,string SMTP_FIRST_SENDER")
-trap.setRequiredFmt(0, pytrap.FMT_UNIREC, inputspec)
-rec = pytrap.UnirecTemplate(inputspec)
-
-# Define a template of alert (can be extended by any other field)
-alertspec = "ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,string SMTP_DOMAIN,string SMTP_FIRST_SENDER"
-alert = pytrap.UnirecTemplate(alertspec)
-# Set the data format to the output IFC
-trap.setDataFmt(0, pytrap.FMT_UNIREC, alertspec)
-
-# Allocate memory for the alert, we do not have any variable fields
-# so no argument is needed.
-alert.createMessage()
 
 # Class for SMTP flow handling
 class SMTP_Flow:
@@ -117,7 +96,7 @@ class SMTP_Flow:
     # function that detecs whether current flow could be a spam
     # based on SMTP FLAGS, it returns positive value on suspicion
     # flow otherwise negative one
-    def is_spam(self):
+    def BCP_Filter(self):
         spam_flag = 0
         if int(self.SMTP_STAT_CODE_FLAGS) & int(SC_SPAM) > 0:
         # It contains a spam key word
@@ -137,12 +116,21 @@ class SMTP_Flow:
 # a first occourence of sender in traffic and his last interaction on
 # the network
 class SMTP_Server:
-    def __init__(self, flow):
-        self.id = flow.SRC_IP
+    def __init__(self, arg):
         self.sent_history = []
+        self.last_seen = 0
         self.incoming = 0
-        self.sent_history.append(flow)
-        self.last_seen = flow.TIME_LAST
+        self.id = ""
+        # got whole template
+        if isinstance(arg, pytrap.UnirecTemplate):
+            self.id = flow.SRC_IP
+            self.sent_history.append(flow)
+            self.last_seen = flow.TIME_LAST
+        # got only ip address
+        elif isinstance(arg, pytrap.UnirecIPAddr):
+            self.id = arg
+            self.incoming += 1
+
     def __str__(self):
         return ("{0},{1},{2},{3}").format(self.id, len(self.sent_history),
                                           self.incoming, self.last_seen)
@@ -179,15 +167,22 @@ class SMTP_Server:
     # smtp mail server or not. It looks at incoming and outgoing traffic
     # and compares the ratio between these two parameters, if the outgoing
     # traffic ratio is X then function returns positive value, otherwise
-    # negative one.
+    # negative one, also it checks for unqie DST_IP's in sent history
     def is_mail_server(self):
+        # Calculate traffic ratio
         sent = len(self.sent_history)
-        if sent == 0:
-            return False
-        if (self.incoming / sent)  < 1.2:
-            return False
-        else:
+        traffic_ratio = self.incoming / sent
+
+        # Check for unique DST_IPs
+        unique_ips = set()
+
+        for flow in self.sent_history:
+            unique_ips.add(flow.DST_IP)
+
+        if len(unique_ips) > MAX_ALLOWED_SERVERS or traffic_ratio < 1.2:
             return True
+        else:
+            return False
 
 class ClusterNode:
     def __init__(self):
@@ -264,96 +259,173 @@ def write_report(potencial_spammers):
     print("Potencial spam servers saved to: {0}").format(POTENTIAL_SPAMMERS_REPORT)
     return 0
 
+# data_pool is dictionary of servers with flow history as a list
+def CDF(data_pool):
+    CDF_dict = {}
+    for server in data_pool:
+        CDF_dict[data_pool[server].id] = set()
+        for flow in data_pool[server].sent_history:
+            CDF_dict[data_pool[server].id].add(flow)
+
+    CDF_vals = []
+    for i in CDF_dict:
+        ln = len(CDF_dict[i])
+        CDF_vals.append(ln)
+
+    with open(CDF_PATH, 'w') as f:
+        for val in CDF_vals:
+            try:
+                f.write(str(val))
+                f.write(",")
+            except:
+                sys.stderr.write("Error while writing CDF report.!\n")
+                return None
+        f.close()
+
+    return True
+
+def main():
 # Main loop ********************************************************************
 # =========
+    # Stores data about previous flows and saves them
+    # to dictionary with SRC_IP as a key
+    flow_data_pool = {}
+    potencial_spammers = []
+    cleanup_interval    = CLEAN_INTERVAL
+    clustering_interval = CLUST_INTERVAL
+    checked = 0
+    alerts = 0
 
-# Stores data about previous flows and saves them
-# to dictionary with SRC_IP as a key
-flow_data_pool = {}
-potencial_spammers = []
-cleanup_interval    = 60
-clustering_interval = 60
-checked = 0
-alerts = 0
-analysis_ts = time.time()
-last_clustering = time.time()
-cluster = Cluster()
+    # Timestamp flag
+    TS_SET = 0
 
-# Automat for smtp spam detection
-while (True):
-     # Start analysis timer
-    curr_time = time.time()
+    # Inerval timestamps
+    flow_first_ts = 0
+    flow_curr_ts = 0
 
-    if analysis_ts + cleanup_interval < curr_time or len(flow_data_pool) > 50000:
-        # Create timestamp of current statistics and create path for log
-        data_report_time = time.time()
-        data_report_path = '/tmp/smtp_stats'+str(data_report_time)
+    analysis_ts = time.time()
+    last_clustering = time.time()
 
-        for server in flow_data_pool:
-            flow_data_pool[server].report_statistics(data_report_path)
-            # Add alert record to potencial spam bot pool for further analysis
-            if (flow_data_pool[server].is_mail_server() is False):
-                potencial_spammers.append(server)
 
-        print("Analysis runtime: {0}").format(data_report_time - analysis_ts)
+    # Cluster for similiarity analysis
+    cluster = Cluster()
 
-        # Clear history
-        flow_data_pool.clear()
-        analysis_ts = curr_time
+    # Traplib init
+    trap = pytrap.TrapCtx()
+    trap.init(sys.argv, 1, 1)
 
-    else:
-        # Recieve data from libtrap
-        try:
-            data = trap.recv()
-        except pytrap.FormatChanged as e:
-            fmttype, inputspec = trap.getDataFmt(0)
-            rec = pytrap.UnirecTemplate(inputspec)
-            data = e.data
+    # Set the list of required fields in received messages.
+    # This list is an output of e.g. flow_meter - basic flow.
+    inputspec = ("ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD," +
+                "time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint32 SMTP_2XX_STAT_CODE_COUNT," +
+                "uint32 SMTP_3XX_STAT_CODE_COUNT,uint32 SMTP_4XX_STAT_CODE_COUNT," +
+                "uint32 SMTP_5XX_STAT_CODE_COUNT,uint32 SMTP_COMMAND_FLAGS," +
+                "uint32 SMTP_MAIL_CMD_COUNT,uint32 SMTP_RCPT_CMD_COUNT," +
+                "uint32 SMTP_STAT_CODE_FLAGS,uint16 DST_PORT,uint16 SRC_PORT," +
+                "uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS," +
+                "uint8 TTL,string SMTP_DOMAIN,string SMTP_FIRST_RECIPIENT,string SMTP_FIRST_SENDER")
+    trap.setRequiredFmt(0, pytrap.FMT_UNIREC, inputspec)
+    rec = pytrap.UnirecTemplate(inputspec)
 
-        if len(data) <= 1:
-            break
+    # Define a template of alert (can be extended by any other field)
+    alertspec = "ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,string SMTP_DOMAIN,string SMTP_FIRST_SENDER"
+    alert = pytrap.UnirecTemplate(alertspec)
+    # Set the data format to the output IFC
+    trap.setDataFmt(0, pytrap.FMT_UNIREC, alertspec)
 
-        rec.setData(data)
+    # Allocate memory for the alert, we do not have any variable fields
+    # so no argument is needed.
+    #TODO:alert.createMessage()
 
-        # Create a new flow record
-        flow = SMTP_Flow(rec)
+    # Automat for smtp spam detection
+    while (True):
+        # Start analysis timer
+        curr_time = time.time()
 
-        if flow.is_spam():
-            alerts += 1
+        flow_ts = 0 # A flow timestamp
 
-        # Add it to the history flow datapool
-        if flow.SRC_IP in flow_data_pool.keys():
-            if flow.DST_IP in flow_data_pool.keys():
-                flow_data_pool[flow.DST_IP].incoming += 1
+        if flow_curr_ts + CLEAN_INTERVAL < flow_first_ts:
+            # BASIC Analysis - no SMTP header is needed
+            # Create timestamp of current statistics and create path for log
+            data_report_time = time.time()
+            data_report_path = '/tmp/smtp_stats'+str(data_report_time)
 
-            # TODO:there should be an else code block to add incomming msg to
-            # DST_IP even if there is not any record of it in database anyway
+            for server in flow_data_pool:
+                flow_data_pool[server].report_statistics(data_report_path)
+                # Add alert record to potencial spam pool for further analysis
+                if (flow_data_pool[server].is_mail_server() is False):
+                    potencial_spammers.append(server)
 
-            flow_data_pool[flow.SRC_IP].add_new_flow(flow)
-            flow_data_pool[flow.SRC_IP].update_time(flow)
+            print("Analysis runtime: {0}").format(data_report_time - analysis_ts)
+
+            # Clear history
+            flow_data_pool.clear()
+            analysis_ts = curr_time
+
         else:
-            flow_data_pool[flow.SRC_IP] = SMTP_Server(flow)
+            # Recieve data from libtrap
+            try:
+                data = trap.recv()
+            except pytrap.FormatChanged as e:
+                fmttype, inputspec = trap.getDataFmt(0)
+                rec = pytrap.UnirecTemplate(inputspec)
+                adata = e.data
 
-        # increment flow checked counter
-        checked += 1
+            if len(data) <= 1:
+                break
 
-        # Print every 10k flows in pool
-        if checked % 10000 == 0:
-            print('Flows in pool [{0}]').format(len(flow_data_pool))
+            rec.setData(data)
 
-        # Similarity analysis clustering
-        if last_clustering + clustering_interval < curr_time:
-            cluster.clustering(flow_data_pool)
-            last_clustering = time.time()
+            # Create a new flow record
+            flow = SMTP_Flow(rec)
 
-# Free allocated TRAP IFCs
-trap.finalize()
-print("Flow scan report:")
-print("{0} suspicious in {1} flows").format(alerts, checked)
-print("Potencial spammers: {0}.\n").format(len(potencial_spammers))
-print(cluster)
+            if flow.BCP_Filter():
+                alerts += 1
 
-write_report(potencial_spammers)
+            # Update time timestamps
+            if not TS_SET:
+                flow_first_ts = flow.TIME_FIRST
+                TS_SET = 1
 
-# TODO: there should be proper python main function
+            if flow.TIME_LAST > flow_curr_ts:
+                flow_curr_ts = flow.TIME_LAST
+
+            # Add it to the history flow datapool
+            if flow.SRC_IP in flow_data_pool.keys():
+                if flow.DST_IP in flow_data_pool.keys():
+                    flow_data_pool[flow.DST_IP].incoming += 1
+                else:
+                    flow_data_pool[flow.DST_IP] = SMTP_Server(flow.DST_IP)
+
+                flow_data_pool[flow.SRC_IP].add_new_flow(flow)
+                flow_data_pool[flow.SRC_IP].update_time(flow)
+
+            else:
+                flow_data_pool[flow.SRC_IP] = SMTP_Server(flow)
+
+            # Increment flow checked counter
+            checked += 1
+
+            # Print every 10k flows in pool
+            if checked % 10000 == 0:
+                print('Flows in pool [{0}]').format(len(flow_data_pool))
+
+            # Similarity clustering
+            #if last_clustering + clustering_interval < curr_time:
+            #    cluster.clustering(flow_data_pool)
+            #    last_clustering = time.time()
+
+    # Free allocated TRAP IFCs
+    trap.finalize()
+    print("Flow scan report:")
+    print("{0} suspicious in {1} flows").format(alerts, checked)
+    print("Potencial spammers: {0}.\n").format(len(potencial_spammers))
+    print(cluster)
+
+    CDF(flow_data_pool)
+
+    write_report(potencial_spammers)
+
+if __name__ == "__main__":
+    main()
 
