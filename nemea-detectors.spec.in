@@ -9,8 +9,8 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: nemea-framework wget
-BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel
+Requires: nemea-framework wget libidn openssl
+BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel libidn-devel openssl-devel
 Provides: nemea-detectors
 
 %description
@@ -19,8 +19,8 @@ Provides: nemea-detectors
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules --disable-repobuild --docdir=%{_docdir}/nemea-detectors;
-make -j5
+./configure --disable-silent-rules --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea --disable-repobuild --docdir=%{_docdir}/nemea-detectors;
+make
 
 %install
 make -j5 DESTDIR=$RPM_BUILD_ROOT install
