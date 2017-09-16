@@ -827,7 +827,7 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
          bf->m_time_breach = flow->time_stamp;
          bf->m_time_last = flow->time_stamp;
          bf->m_ok_count++;
-         alertTimeMachine(flow->ip_dst);
+         /*	alertTimeMachine(flow->ip_dst);	*/
       } else {
          usr->removeCom(bf);
          clt->removeCom(bf);
@@ -921,7 +921,7 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
       dbf->m_ok_count++;
       if (!dbf->m_breacher) {
          dbf->addBreacher(flow->ip_dst);
-         alertTimeMachine(flow->ip_dst);
+         /*	alertTimeMachine(flow->ip_dst); */
       } else if(dbf->m_ok_count > g_ok_limit) {
          dbf->m_destroy = true;
       }
