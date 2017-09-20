@@ -61,10 +61,10 @@ SC_UNKNOWN  =   0x80000000
 POTENTIAL_SPAMMERS_REPORT = "/tmp/potencial_spam.csv"
 SIMILARITY_INDEX = 0.8
 CLUST_INTERVAL = 30*60         # How often should datepool get clustered
-CLEAN_INTERVAL = 20*60         # How often should datapool get cleaned
+CLEAN_INTERVAL = 30*60         # How often should datapool get cleaned
 MAX_ALLOWED_SERVERS = 10       # Number of maximum allowded server that mail
                                # server is able to communicate
-CDF_PATH = "/tmp/smtp_cdf.csv"
+CDF_DST_IPS_PATH = "/tmp/smtp_cdf.csv"
 # ******************************************************************************
 
 # Class for SMTP flow handling
@@ -112,15 +112,18 @@ class SMTP_Flow:
     def get_name(self):
         return self.SMTP_FIRST_SENDER.partition("@")[0][1:]
 
-# A class for storing information about sender with time window that record
-# a first occourence of sender in traffic and his last interaction on
-# the network
-class SMTP_Server:
+# A class for storing information about sender or reciever with time window
+# that record a first occourence of sender in traffic and his last interaction
+# on the network
+class SMTP_ENTITY:
     def __init__(self, arg):
+        self.id = ""
         self.sent_history = []
         self.last_seen = 0
         self.incoming = 0
-        self.id = ""
+
+        self.traffic_ratio = 0.0
+
         # got whole template
         if isinstance(arg, pytrap.UnirecTemplate):
             self.id = flow.SRC_IP
@@ -138,14 +141,14 @@ class SMTP_Server:
     def count_sent(self):
         return len(self.sent_history)
 
-    # Updates last_seen parametr of server
+    # Updates last_seen parametr of this entity
     def update_time(self, flow):
         if flow.TIME_LAST > self.last_seen:
             self.last_seen = flow.TIME_LAST
         else:
             return None
 
-    # Function that adds flows for this server history
+    # Function that adds flows for server history
     def add_new_flow(self, flow):
         self.sent_history.append(flow)
 
@@ -184,6 +187,19 @@ class SMTP_Server:
         else:
             return False
 
+    # Setter for current ratio of traffic on this smtp server
+    def set_up_traffic_ratio(self):
+        outgoing = len(self.sent_history)
+        incoming = self.incoming
+        if outgoing is not 0:
+            tr = float(incoming) / float(outgoing)
+            self.traffic_ratio = tr
+            return True
+        else:
+            self.traffic_ratio = 0
+            return None
+
+""" ************************** CLUSTER CLASS ************************ """
 class ClusterNode:
     def __init__(self):
         self.common_index = ""
@@ -244,7 +260,7 @@ def is_similar(server, cluster):
                     return True
     return False
 
-# Takes list() of SMTP_Servers and writes them to file.
+# Takes list() of SMTP_ENTITYs and writes them to file.
 def write_report(potencial_spammers):
     # Open file and start writing
     with open(POTENTIAL_SPAMMERS_REPORT, 'w') as f:
@@ -262,23 +278,42 @@ def write_report(potencial_spammers):
 # data_pool is dictionary of servers with flow history as a list
 def CDF(data_pool):
     CDF_dict = {}
+    tr_l = []
+
     for server in data_pool:
+        # Create a set for counting unqiu
         CDF_dict[data_pool[server].id] = set()
         for flow in data_pool[server].sent_history:
             CDF_dict[data_pool[server].id].add(flow)
 
-    CDF_vals = []
+        # Traffic ratio
+        data_pool[server].set_up_traffic_ratio()
+        tr_l.append(float(data_pool[server].traffic_ratio))
+
+    # CDF for DST_IPs
+    CDF_DST_IP_vals = []
     for i in CDF_dict:
         ln = len(CDF_dict[i])
-        CDF_vals.append(ln)
+        if ln > 0:
+            CDF_DST_IP_vals.append(ln)
 
-    with open(CDF_PATH, 'w') as f:
-        for val in CDF_vals:
+    with open(CDF_DST_IPS_PATH, 'w') as f:
+        for val in CDF_DST_IP_vals:
             try:
                 f.write(str(val))
                 f.write(",")
             except:
-                sys.stderr.write("Error while writing CDF report.!\n")
+                sys.stderr.write("Error while writing CDF report!\n")
+                return None
+        f.close()
+
+    with open('/tmp/smtp_spam_tr.csv', 'w') as f:
+        for val in tr_l:
+            try:
+                f.write(str(val))
+                f.write(',')
+            except:
+                sys.stderr.write("Error while writing CDF report!\n")
                 return None
         f.close()
 
@@ -395,13 +430,13 @@ def main():
                 if flow.DST_IP in flow_data_pool.keys():
                     flow_data_pool[flow.DST_IP].incoming += 1
                 else:
-                    flow_data_pool[flow.DST_IP] = SMTP_Server(flow.DST_IP)
+                    flow_data_pool[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP)
 
                 flow_data_pool[flow.SRC_IP].add_new_flow(flow)
                 flow_data_pool[flow.SRC_IP].update_time(flow)
 
             else:
-                flow_data_pool[flow.SRC_IP] = SMTP_Server(flow)
+                flow_data_pool[flow.SRC_IP] = SMTP_ENTITY(flow)
 
             # Increment flow checked counter
             checked += 1
