@@ -5,13 +5,14 @@ import sys
 import time
 # Partial imports **************************************************************
 from difflib import SequenceMatcher
-
+from pytrap import TrapCtx
 # print current version of python
 print (sys.version)
 
 # ******************************************************************************
 # ******************************  GLOBAL DEFINITIONS ***************************
 # ******************************************************************************
+
 # SMTP COMMANDS
 # =============
 SMTP_CMD_EHLO = 0x0001
@@ -26,6 +27,7 @@ SMTP_CMD_HELP = 0x0100
 SMTP_CMD_NOOP = 0x0200
 SMTP_CMD_QUIT = 0x0400
 CMD_UNKNOWN   = 0x8000
+
 # SMTP status codes
 # =================
 SMTP_SC_211 =   0x00000001
@@ -57,25 +59,42 @@ SC_UNKNOWN  =   0x80000000
 # ******************************************************************************
 # Global variables
 # ================
-# path to temp data
-POTENTIAL_SPAMMERS_REPORT = "/tmp/potencial_spam.csv"
 SIMILARITY_INDEX = 0.8
-CLUST_INTERVAL = 30*60         # How often should datepool get clustered
-CLEAN_INTERVAL = 30*60         # How often should datapool get cleaned
+CLUST_INTERVAL = 1000*60         # How often should datepool get clustered
+CLEAN_INTERVAL = 20*60         # How often should datapool get cleaned
 MAX_ALLOWED_SERVERS = 10       # Number of maximum allowded server that mail
                                # server is able to communicate
-CDF_DST_IPS_PATH = "/tmp/smtp_cdf.csv"
+# Statistics and report paths
+PATH = "/tmp/"
+PATH_CDF_DST = PATH + "smtp_cdf.csv"    # Path for CDF of DST_IPs report
+PATH_CDF_TR = PATH + "smtp_srv_tr.csv"  # Path for CDF of servers traffic report
+PATH_CLUSTER = PATH + "smtp_clustering_"# Path for clustering report
+PATH_P_SPAMMERS = PATH + "potencial_spam.csv"
+PATH_STATS_REPORT = PATH + "smtp_stats_"
 # ******************************************************************************
 
-# Class for SMTP flow handling
-class SMTP_Flow:
+# Class for basic flow without SMTP Headers
+class Flow:
     def __init__(self, rec):
+        # Basic flow
         self.DST_IP = rec.DST_IP
         self.SRC_IP = rec.SRC_IP
         self.BYTES = rec.BYTES
         self.TIME_FIRST = rec.TIME_FIRST
         self.TIME_LAST = rec.TIME_LAST
         self.PACKETS = rec.PACKETS
+    def __repr__(self):
+        return "SRC_IP:" + self.SRC_IP + ",DST_IP:" + self.DST_IP + ",BYTES:" \
+                 + self.BYTES + ",TIME_FIRST;" + self.TIME_FIRST + ",TIME_LAST:" \
+                 + self.TIME_LAST + ",PACKETS:" + self.PACKETS
+
+# Class for SMTP flow handling
+class SMTP_Flow(Flow):
+    def __init__(self, rec):
+        # Base constructor
+        Flow.__init__(self, rec)
+
+        # SMTP Header extension
         self.SMTP_2XX_STAT_CODE_COUNT = rec.SMTP_2XX_STAT_CODE_COUNT
         self.SMTP_3XX_STAT_CODE_COUNT = rec.SMTP_3XX_STAT_CODE_COUNT
         self.SMTP_4XX_STAT_CODE_COUNT = rec.SMTP_4XX_STAT_CODE_COUNT
@@ -89,9 +108,12 @@ class SMTP_Flow:
         self.SMTP_FIRST_SENDER = rec.SMTP_FIRST_SENDER
 
     def __repr__(self):
-        return "FLOW:\nSRC:" + self.SRC_IP + "\nDST:" + self.DST_IP + "\nCMD_FLAGS:" + self.SMTP_COMMAND_FLAGS + "\n"
+        return "FLOW:\nSRC:" + self.SRC_IP + "\nDST:" + self.DST_IP \
+                + "\nCMD_FLAGS:" + self.SMTP_COMMAND_FLAGS + "\n"
+
     def __str__(self):
-        return "FLOW:\nSRC:" + self.SRC_IP + "\nDST:" + self.DST_IP + "\nCMD_FLAGS:" + self.SMTP_COMMAND_FLAGS + "\n"
+        return "FLOW:\nSRC:" + self.SRC_IP + "\nDST:" + self.DST_IP \
+                + "\nCMD_FLAGS:" + self.SMTP_COMMAND_FLAGS + "\n"
 
     # function that detecs whether current flow could be a spam
     # based on SMTP FLAGS, it returns positive value on suspicion
@@ -112,27 +134,38 @@ class SMTP_Flow:
     def get_name(self):
         return self.SMTP_FIRST_SENDER.partition("@")[0][1:]
 
+""" ************************ CLASS SMTP_ENTITY ***************************** """
 # A class for storing information about sender or reciever with time window
 # that record a first occourence of sender in traffic and his last interaction
 # on the network
 class SMTP_ENTITY:
+    # SMTP_ENTITY constructor from whole unirec record or just ip from traffic
     def __init__(self, arg):
-        self.id = ""
-        self.sent_history = []
-        self.last_seen = 0
-        self.incoming = 0
+        self.id = None              # an unique entity identification (it's IP)
+        self.sent_history = []      # history of sent msgs from this entity
+        self.last_seen = 0          # time of last occurrence in traffic
 
+        # traffic counters
+        self.incoming = 0           # counter for incoming messages from others
+        self.outgoing = 0           # currently using len(sent_history) #TODO
+
+        # entity parameters
         self.traffic_ratio = 0.0
+        self.rep =  0.0             # reputation score
 
+        # Set up params based on input data
         # got whole template
         if isinstance(arg, pytrap.UnirecTemplate):
             self.id = flow.SRC_IP
             self.sent_history.append(flow)
             self.last_seen = flow.TIME_LAST
+
+
         # got only ip address
         elif isinstance(arg, pytrap.UnirecIPAddr):
             self.id = arg
             self.incoming += 1
+
 
     def __str__(self):
         return ("{0},{1},{2},{3}").format(self.id, len(self.sent_history),
@@ -248,7 +281,20 @@ class Cluster:
             cnt += 1
         return ret
 
-# Functions that compares two strings and decide they similarity according to
+    # Save current cluster report to defined path with timestamp
+    # returns True on success otherwise None
+    def save_cluster(self):
+        with open('CLUSTER_PATH'+str(time.time()), "w") as cl_file:
+            try:
+                cl_file.write(str(self))
+                #TODO this could be formatted better got to think about this
+            except:
+                sys.stderr.write("Error while saving clustering report.\n")
+                return None
+        return True
+
+
+# Functions that compares two strings and decide their similarity according to
 # SIMILARITY_INDEX, return true if they are similar otherwise false
 def is_similar(server, cluster):
     #Server, list(Server)
@@ -260,10 +306,10 @@ def is_similar(server, cluster):
                     return True
     return False
 
-# Takes list() of SMTP_ENTITYs and writes them to file.
-def write_report(potencial_spammers):
+# Takes list() of SMTP_ENTITYs and writes them as a csv file with '\n' sep.
+def save_potencial_spam_machines(potencial_spammers):
     # Open file and start writing
-    with open(POTENTIAL_SPAMMERS_REPORT, 'w') as f:
+    with open(PATH_P_SPAMMERS, 'w') as f:
         for ps in potencial_spammers:
             try:
                 f.write(str(ps))
@@ -272,7 +318,7 @@ def write_report(potencial_spammers):
                 sys.stderr.write("Could not write to file!\n")
                 return None
         f.close()
-    print("Potencial spam servers saved to: {0}").format(POTENTIAL_SPAMMERS_REPORT)
+    print("Potencial spammers saved to: {0}").format(PATH_P_SPAMMERS)
     return 0
 
 # data_pool is dictionary of servers with flow history as a list
@@ -297,7 +343,7 @@ def CDF(data_pool):
         if ln > 0:
             CDF_DST_IP_vals.append(ln)
 
-    with open(CDF_DST_IPS_PATH, 'w') as f:
+    with open(PATH_CDF_DST, 'w') as f:
         for val in CDF_DST_IP_vals:
             try:
                 f.write(str(val))
@@ -307,7 +353,7 @@ def CDF(data_pool):
                 return None
         f.close()
 
-    with open('/tmp/smtp_spam_tr.csv', 'w') as f:
+    with open(PATH_CDF_TR, 'w') as f:
         for val in tr_l:
             try:
                 f.write(str(val))
@@ -324,8 +370,10 @@ def main():
 # =========
     # Stores data about previous flows and saves them
     # to dictionary with SRC_IP as a key
-    flow_data_pool = {}
-    potencial_spammers = []
+    flow_pool = {}          # All mail traffic
+    smtp_flow_pool = {}     # Only flows with smtp headers
+    potencial_spammers = [] # List for potencial spammers
+
     cleanup_interval    = CLEAN_INTERVAL
     clustering_interval = CLUST_INTERVAL
     checked = 0
@@ -340,7 +388,6 @@ def main():
 
     analysis_ts = time.time()
     last_clustering = time.time()
-
 
     # Cluster for similiarity analysis
     cluster = Cluster()
@@ -383,22 +430,26 @@ def main():
             # BASIC Analysis - no SMTP header is needed
             # Create timestamp of current statistics and create path for log
             data_report_time = time.time()
-            data_report_path = '/tmp/smtp_stats'+str(data_report_time)
+            data_report_path = PATH_STATS_REPORT + str(data_report_time)
 
-            for server in flow_data_pool:
-                flow_data_pool[server].report_statistics(data_report_path)
+            for server in flow_pool:
+                flow_pool[server].report_statistics(data_report_path)
                 # Add alert record to potencial spam pool for further analysis
-                if (flow_data_pool[server].is_mail_server() is False):
+                if (flow_pool[server].is_mail_server() is False):
                     potencial_spammers.append(server)
 
             print("Analysis runtime: {0}").format(data_report_time - analysis_ts)
 
             # Clear history
-            flow_data_pool.clear()
+            flow_pool.clear()
             analysis_ts = curr_time
 
         else:
             # Recieve data from libtrap
+
+            #TODO split flows here -> basic/smtp
+            ctx = trap.getDataFmt()
+
             try:
                 data = trap.recv()
             except pytrap.FormatChanged as e:
@@ -426,29 +477,32 @@ def main():
                 flow_curr_ts = flow.TIME_LAST
 
             # Add it to the history flow datapool
-            if flow.SRC_IP in flow_data_pool.keys():
-                if flow.DST_IP in flow_data_pool.keys():
-                    flow_data_pool[flow.DST_IP].incoming += 1
+            if flow.SRC_IP in flow_pool.keys():
+                if flow.DST_IP in flow_pool.keys():
+                    flow_pool[flow.DST_IP].incoming += 1
                 else:
-                    flow_data_pool[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP)
+                    flow_pool[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP)
 
-                flow_data_pool[flow.SRC_IP].add_new_flow(flow)
-                flow_data_pool[flow.SRC_IP].update_time(flow)
+                flow_pool[flow.SRC_IP].add_new_flow(flow)
+                flow_pool[flow.SRC_IP].update_time(flow)
 
             else:
-                flow_data_pool[flow.SRC_IP] = SMTP_ENTITY(flow)
+                flow_pool[flow.SRC_IP] = SMTP_ENTITY(flow)
 
             # Increment flow checked counter
             checked += 1
 
-            # Print every 10k flows in pool
+            # Print every 10k checked flows
             if checked % 10000 == 0:
-                print('Flows in pool [{0}]').format(len(flow_data_pool))
+                print('Flows in pool {0} | Checked {1}').format(len(flow_pool),
+                                                                checked)
 
             # Similarity clustering
-            #if last_clustering + clustering_interval < curr_time:
-            #    cluster.clustering(flow_data_pool)
-            #    last_clustering = time.time()
+            # ! MIND THAT THIS IS NP-HARD PROBLEM ( Finding similiarity in
+            # strings) thus demands huge computing power
+            if last_clustering + clustering_interval < curr_time:
+                cluster.clustering(flow_pool)
+                last_clustering = time.time()
 
     # Free allocated TRAP IFCs
     trap.finalize()
@@ -457,9 +511,9 @@ def main():
     print("Potencial spammers: {0}.\n").format(len(potencial_spammers))
     print(cluster)
 
-    CDF(flow_data_pool)
+    CDF(flow_pool)
 
-    write_report(potencial_spammers)
+    save_potencial_spam_machines(potencial_spammers)
 
 if __name__ == "__main__":
     main()
