@@ -6,28 +6,20 @@
             <struct>
                 <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
                      BEWARE: Could be number from interval <0, 63> -->
-                <element name="id">0</element>
+                <element name="id">1</element>
                 <!-- Method of retrieving blacklist, currently supported is only web via wget tool -->
                 <element name="method">web</element>
-                <!-- Name of the blacklist, modules uses this name to choose which blacklist to use -->
-                <element name="name">Malware Domains</element>
+                <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
+                <element name="name">ZeuS tracker</element>
                 <!-- Address from which the blacklist will be downloaded -->
-                <element name="source">http://mirror2.malwaredomains.com/files/justdomains</element>
+                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
                 <!-- Type of blacklist, only informational value -->
                 <element name="type">BOTNET</element>
                 <!-- Regular expression to extract needed information (IP for example) from blacklist source -->
-                <element name="regex">.*</element>
-            </struct>
-            <struct>
-                <element name="id">1</element>
-                <element name="method">web</element>
-                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
-                <element name="name">ZeuS tracker</element>
-                <element name="type">BOTNET</element>
                 <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
             </struct>
             <struct>
-                <element name="id">4</element>
+                <element name="id">2</element>
                 <element name="method">web</element>
                 <element name="source">https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist</element>
                 <element name="name">Feodo tracker</element>
@@ -35,7 +27,7 @@
                 <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
             </struct>
             <struct>
-                <element name="id">5</element>
+                <element name="id">3</element>
                 <element name="method">web</element>
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
                 <element name="name">Spamhaus</element>
@@ -43,15 +35,7 @@
                 <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
             </struct>
             <struct>
-                <element name="id">6</element>
-                <element name="method">web</element>
-                <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
-                <element name="name">PhishTank</element>
-                <element name="type">Phishing</element>
-                <element name="regex">.*</element>
-            </struct>
-            <struct>
-                <element name="id">7</element>
+                <element name="id">4</element>
                 <element name="method">web</element>
                 <element name="source">http://torstatus.blutmagie.de/ip_list_exit.php</element>
                 <element name="name">TOR</element>
@@ -59,7 +43,7 @@
                 <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
             </struct>
             <struct>
-                <element name="id">8</element>
+                <element name="id">5</element>
                 <element name="method">web</element>
                 <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt</element>
                 <element name="name">Ransomware Tracker</element>
