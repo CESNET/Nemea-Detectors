@@ -1,8 +1,7 @@
 # SMTP SPAM BOT DETECTION
-```
 @author Ladislav Macoun <macoulad@fit.cvut.cz>
+
 @org CESNET / CVUT
-```
 
 ## Table of Contents
 * 0.0 License
@@ -18,6 +17,7 @@
 
 ## 1.0 Intro
    Function of this detector
+   =========================
    ...
 
    How to use
@@ -39,8 +39,15 @@
 a) RFC Filtering
    =============
    (Applying best current practices for avoiding spam)
-   Filtering flow record through multiple RFC rules. If any of these fails add
-   that record to suspicious database for further analysis.
+   Filtering flow recordis through multiple RFC rules. If any of these fails add
+   that IP to database as a supicios server for further analysis.
+   Current filters:
+      possitive SC_SPAM flag
+      error SMTP codes
+      missing SMTP_FIRST_RECIPIENT
+      missing SMTP_FIRST_SENDER
+
+   TODO: Reputation system
 
 b) Frequency analysis
    ==================
@@ -81,9 +88,53 @@ d) Clustering (domain clustering for now, TODO: more clustering attributes)
                            |           |-------------------------->
                            |           |-------------------------->
                            +-----------+
-(2.0.1)a
+(2.0.1)
 ```
+## 2.1 Data Model
+```
+CURRENT DATA MODEL
 
++--------------------------------+                   +------------------------------+
+|    SMTP_Flow (SMTP Header)     |                   |        SMTP_ENTITY           |
++--------------------------------+                   +------------------------------+
+| string SMTP_FIRST_RECIPIENT    |                   | ipaddr ID (machine IP)       |
+| string SMTP_FIRST_SENDER       |                   | uint32_t incoming            |
+| string SMTP_DOMAIN             |      m:n          | uint32_t outgoing            |
+| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list^Flow^ sent_history      |
+| uint32_t SMTP_3XX_STAT_CODE    |                   | time last_seen               |
+| uint32_t SMTP_4XX_STAT_CODE    |                   | double rep (reputation score)|
+| uint32_t SMTP_5XX_STAT_CODE    |                   | double traffic_ratio         |
+| uint32_t SMTP_COMMAND_FLAGS    |                   |                              |
+| uint32_t SMTP_STAT_CODE_FLAGS  |                   |                              |
+| uint32_t SMTP_RCPT_CMD_COUNT   |                   | constructor()                |
+| uint32_t SMTP_MAIL_CMD_COUNT   |                   | add_new_flow()               |
+|                                |                   | update_time()                |
+|                                |                   | report_statistics()          |
+|                                |                   | is_mail_ser^er()             |
++----------^---------------------+                   |                              |
+           |                                         |                              |
+           |                                         |                              |
+           |                                         +------------------------------+
+           |
++----------+-----------+
+|      Flow (Basic)    |
++----------------------+
+| ipaddr DST_IP        |
+| ipaddr SRC_IP        |
+| uint16_t DST_PORT    |
+| uint16_t SRC_PORT    |
+| time TIME_FIRST      |
+| time TIME_LAST       |
+| uint32_t PACKETS     |
+| uint64_t BYTES       |
+|                      |
+|                      |
+|                      |
++----------------------+
+
+
+```
+## 2.2 Detector Diagram
 ```
                                                         +--------+
                                                         |        |
@@ -119,8 +170,8 @@ d) Clustering (domain clustering for now, TODO: more clustering attributes)
 |                      |                                  |        |                                  |    |
 |                      v                                  |        +-------------------+--------------+    |
 |              +-------+-----------+                      |                            |                   |
-|              |  ADD SRC IP to    |                      v                            |                   |
-|              |  SUPICIUS IP List |         +------------+------------+               |                   |
+|              | Add SRC_IP to     |                      v                            |                   |
+|              | suspicious IP List|         +------------+------------+               |                   |
 |              |                   |         |  ADD IP TO FLOW SERVER  |               v                   v
 |              +-------+-----------+         |  DATA POOL FOR FURTHER  |           +---+---------+---------+---+
 |                      |                     |  ANALYSIS               |                         |
@@ -134,8 +185,6 @@ d) Clustering (domain clustering for now, TODO: more clustering attributes)
 
 
 ```
-## 3.0 A Spam BOT definition accorting to this module
+## 3.0 A Spam BOT definition according to this module
    A spam is ... and this module detecs and is able to report ..
-
-
 
