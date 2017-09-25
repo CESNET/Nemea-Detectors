@@ -143,19 +143,19 @@ CURRENT DATA MODEL
                                               |             |           |
                                               |             |           |
                                               |             |     +-----v-----+
-+----------------------------+<---------------+-------------v-----+ FILTERING +---+
++----------------------------+^---------------+-------------v-----+ FILTERING +---+
 |                            |                                    | INTERVAL  |   |
 |                            |                                    +-----------+   |
-|      Pararell flow         |                                                    |
-|      reciever              V                                                    |
+|      Pararell flow         +                                                    |
+|      recie^er              V                                                    |
 |               +---+-------------------+---+                                     |
 |                   |                   |                                         |
 |                   |                   |                              +--+-------v-------+--+
 |                   |                   |                                 |               |
 |            +------+------+    +-------+------+                          |               |
 |            | Basic flow  |    | SMTP flow    |                          |               |
-|            | reciever    |    | reciever     |                  +-------v------+  +-----v-------+  Pararell
-|            +------+------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
+|            | reciever    |    | reciver      |                  +-------v------+  +-----v-------+  Pararell
+|            +-------------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
 |                   |                   |                         |              |  |             |
 |                   |                   |                         +-------+------+  +---------+---+  clustering is ^ery
 |                   |                   |                                 |                   |      demanding for computing
@@ -179,17 +179,19 @@ CURRENT DATA MODEL
 |           |                                  |                                    |
 |           |                                  |                         +----------v-------------+
 |           ^                                  |                         |  Data report / Alerts  |
-|   +-------+-----------+         +------------+---------+               |                        |
-|   | Add SRC_IP to     |         |  ADD IP TO FLOWRVER  |               +------------------------+
-|   | suspicious IP List|         |  DATA POOL FORRFHER  |
-|   |                   |         |  ANALYSIS            |
-|   +-------+-----------+         +------------+---------+
+|   +-------+------------+        +------------+----------+              |                        |
+|   | Add SRC_IP to      |        |  Add flow to datapool |              +------------------------+
+|   | suspicious IP List |        |  for further analysis |
+|   |                    |        |                       |
+|   +-------+------------+        +------------+----------+
 |           |                                  |
 |           |                                  |
 |           |                                  |
 |           |                                  |
 |           |                                  |
 +-----------+----------------------------------+
+
+
 ```
 ## 3.0 A Spam BOT definition according to this module
    A spam is ... and this module detecs and is able to report ..
