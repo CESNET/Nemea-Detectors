@@ -154,7 +154,7 @@ CURRENT DATA MODEL
 |                   |                   |                                 |               |
 |            +------+------+    +-------+------+                          |               |
 |            | Basic flow  |    | SMTP flow    |                          |               |
-|            | recie er    |    | reci er      |                  +-------v------+  +-----v-------+  Pararell
+|            | reciever    |    | reciever     |                  +-------v------+  +-----v-------+  Pararell
 |            +------+------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
 |                   |                   |                         |              |  |             |
 |                   |                   |                         +-------+------+  +---------+---+  clustering is ^ery
