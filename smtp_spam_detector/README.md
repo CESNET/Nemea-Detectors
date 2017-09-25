@@ -100,7 +100,7 @@ CURRENT DATA MODEL
 | string SMTP_FIRST_RECIPIENT    |                   | ipaddr ID (machine IP)       |
 | string SMTP_FIRST_SENDER       |                   | uint32_t incoming            |
 | string SMTP_DOMAIN             |      m:n          | uint32_t outgoing            |
-| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list^Flow^ sent_history      |
+| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list<Flow> sent_history      |
 | uint32_t SMTP_3XX_STAT_CODE    |                   | time last_seen               |
 | uint32_t SMTP_4XX_STAT_CODE    |                   | double rep (reputation score)|
 | uint32_t SMTP_5XX_STAT_CODE    |                   | double traffic_ratio         |
@@ -157,7 +157,7 @@ CURRENT DATA MODEL
 |            | reciever    |    | reciver      |                  +-------v------+  +-----v-------+  Pararell
 |            +-------------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
 |                   |                   |                         |              |  |             |
-|                   |                   |                         +-------+------+  +---------+---+  clustering is ^ery
+|                   |                   |                         +-------+------+  +---------+---+  clustering is very
 |                   |                   |                                 |                   |      demanding for computing
 |               +---+---------+---------+---+                             |                   |      power (NP+HARD)
 |                             |                                           |                   |
