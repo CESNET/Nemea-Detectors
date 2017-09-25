@@ -110,7 +110,7 @@ CURRENT DATA MODEL
 | uint32_t SMTP_MAIL_CMD_COUNT   |                   | add_new_flow()               |
 |                                |                   | update_time()                |
 |                                |                   | report_statistics()          |
-|                                |                   | is_mail_ser^er()             |
+|                                |                   | is_mail_server()             |
 +----------^---------------------+                   |                              |
            |                                         |                              |
            |                                         |                              |
