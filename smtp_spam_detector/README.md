@@ -178,7 +178,7 @@ CURRENT DATA MODEL
 |           |                                  |                                    |
 |           |                                  |                                    |
 |           |                                  |                         +----------v-------------+
-|           ^                                  |                         |  Data report / Alerts  |
+|           V                                  V                         |  Data report / Alerts  |
 |   +-------+------------+        +------------+----------+              |                        |
 |   | Add SRC_IP to      |        |  Add flow to datapool |              +------------------------+
 |   | suspicious IP List |        |  for further analysis |
