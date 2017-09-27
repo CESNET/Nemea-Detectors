@@ -55,13 +55,13 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
-		[disable local compilation without system installed Nemea libraries, default: yea]),
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
+		[enable local compilation without system installed NEMEA libraries, default: no]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=true])
+esac], [repobuild=false])
 
 AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK

@@ -27,9 +27,9 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
 
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
-    PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+    PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
   fi
-  if test "${TRAPLIB}" != "yes"; then
+  if test "${HAVE_TRAPLIB}" != "yes"; then
     # repobuild 
     AC_MSG_CHECKING([for libtrap in parent directory])
     if test -d "$srcdir/../libtrap"; then
@@ -52,11 +52,15 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
     else
       AC_MSG_RESULT([no])
       TRAPLIB=""
-      PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+      PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
     fi
   fi
   if test -n "$TRAPLIB"; then
-    LIBS="$libtrap_LIBS $LIBS"
+    CPPFLAGS="-I${TRAPINC} $CPPFLAGS"
+    LDFLAGS="-L${TRAPLIB} $LDFLAGS"
+  elif test "x$HAVE_TRAPLIB" = "xyes"; then
+    CPPFLAGS="-I${libtrap_CFLAGS} $CPPFLAGS"
+    LDFLAGS="${libtrap_LIBS} $LDFLAGS"
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
