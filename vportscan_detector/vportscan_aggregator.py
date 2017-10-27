@@ -45,6 +45,8 @@ from time import sleep
 from threading import Timer
 from threading import Lock
 import sys, os
+import signal
+import json
 import pytrap
 
 # how many minutes to wait?
@@ -94,35 +96,67 @@ class RepeatedTimer(object):
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
 
+def signal_h(signal, f):
+    global trap
+    trap.terminate()
+
 # Initialize module
 trap = pytrap.TrapCtx()
 trap.init(sys.argv, 1, 1)
 
+signal.signal(signal.SIGINT, signal_h)
+
 # Specifier of UniRec records will be received during libtrap negotiation
-alertURFormat = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST," + \
+urfmt = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST," + \
                 "time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE," + \
                 "uint8 PROTOCOL"
 
-UR_Input = pytrap.UnirecTemplate(alertURFormat)
+UR_Input = pytrap.UnirecTemplate(urfmt)
 
 # this module accepts all UniRec fieds -> set required format:
-trap.setRequiredFmt(0, pytrap.FMT_UNIREC, alertURFormat)
+trap.setRequiredFmt(0, pytrap.FMT_UNIREC, urfmt)
 
 trap.ifcctl(0,  False, pytrap.CTL_BUFFERSWITCH, 0)
-trap.setDataFmt(0, pytrap.FMT_UNIREC, alertURFormat)
+trap.setDataFmt(0, pytrap.FMT_JSON, "aggregated_portscan")
 
-UR_Output = pytrap.UnirecTemplate(alertURFormat)
 URtmp = UR_Input.copy()
 
 # Send aggregated alerts by RepeatedTimer
 def sendEvents():
-    global eventList
+    global eventList, URtmp
     if not eventList:
         return
-    # Send data to output interface
+    sources = {}
     for event in eventList:
+        e = eventList[event]
+        URtmp.setData(e)
+        if URtmp.SRC_IP in sources:
+            sources[URtmp.SRC_IP].append(e)
+        else:
+            sources[URtmp.SRC_IP] = [e]
+    # Send data to output interface
+    for srcip in sources:
+        src = sources[srcip]
+        URtmp.setData(src[0])
+        scan = {
+            "src_ip": str(srcip),
+            "dst_ips": dict(),
+            "ts_first": float(URtmp.TIME_FIRST),
+            "ts_last": float(URtmp.TIME_LAST),
+            "protocol": URtmp.PROTOCOL,
+        }
+
+        for dst in src:
+            URtmp.setData(dst)
+            scan["dst_ips"][str(URtmp.DST_IP)] = URtmp.PORT_CNT
+            ts_fl_f = float(URtmp.TIME_FIRST)
+            ts_fl_l = float(URtmp.TIME_LAST)
+            if scan["ts_first"] > ts_fl_f:
+                scan["ts_first"] = ts_fl_f
+            if scan["ts_last"] > ts_fl_l:
+                scan["ts_last"] = ts_fl_l
         try:
-            trap.send(eventList[event])
+            trap.send(json.dumps(scan))
         except pytrap.Terminated:
             print("Terminated TRAP.")
             break
@@ -166,7 +200,7 @@ while True:
    UR_Input.setData(data)
 
    # Update the list of events
-   key = str(UR_Input.SRC_IP) + ',' + str(UR_Input.DST_IP)
+   key = (UR_Input.SRC_IP, UR_Input.DST_IP)
    if key in eventList:
       # Updating the value
       URtmp.setData(eventList[key])
