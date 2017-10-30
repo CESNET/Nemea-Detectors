@@ -3,10 +3,12 @@
 # Aggregation of alert from vportscan_detector.
 # It receives alerts and aggregates them into time window.
 # As a result, it decreases number of alerts about the same scanners.
+# Aggregation is done by SRC_IP (or SRC_IP,DST_IP pair if --noblockscan is set).
 #
 # Author: Tomas Cejka <cejkat@cesnet.cz>
+#         Vaclav Bartos <bartos@cesnet.cz>
 #
-# Copyright (C) 2015 CESNET
+# Copyright (C) 2017 CESNET
 #
 # LICENSE TERMS
 #
@@ -44,25 +46,24 @@
 from time import sleep
 from threading import Timer
 from threading import Lock
+from collections import defaultdict
 import sys, os
 import signal
 import json
 import pytrap
 
-# how many minutes to wait?
-minutes = 5
-
-# Global list of events
-eventList = {}
+# Maximum number of dest. IPs in an event record (if there are more, the event
+# is split into several records)
+MAX_DST_IPS_PER_EVENT = 1000
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=False)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
       help="TRAP IFC specifier", metavar="IFCSPEC")
-parser.add_option("-t", "--time", dest="time",
-      help="wait MINUTES before sending aggregated alerts", metavar="MINUTES", default=5)
-parser.add_option("-m", "--maxportlist", dest="maxportlist", metavar="CHARS", default=300,
-      help="list of scanned ports will be shorter then CHARS including commas")
+parser.add_option("-t", "--time", dest="time", type="float",
+      help="Length of time interval in which alerts are aggregated.", metavar="MINUTES", default=5)
+parser.add_option("--noblockscans", dest="blockscans", action="store_false", default=True,
+      help="Don't aggregate scans of multiple destination IPs to block scans, i.e. use (src_ip,dst_ip)-pair as aggregation key rather than src_ip only.")
 
 lock = Lock()
 
@@ -106,57 +107,39 @@ trap.init(sys.argv, 1, 1)
 
 signal.signal(signal.SIGINT, signal_h)
 
-# Specifier of UniRec records will be received during libtrap negotiation
+# Specifier of UniRec format expected on input
 urfmt = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST," + \
-                "time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE," + \
-                "uint8 PROTOCOL"
+        "time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE," + \
+        "uint8 PROTOCOL"
 
 UR_Input = pytrap.UnirecTemplate(urfmt)
 
-# this module accepts all UniRec fieds -> set required format:
+# Set the template as required format
 trap.setRequiredFmt(0, pytrap.FMT_UNIREC, urfmt)
 
-trap.ifcctl(0,  False, pytrap.CTL_BUFFERSWITCH, 0)
+# Set output format and disable output buffering
 trap.setDataFmt(0, pytrap.FMT_JSON, "aggregated_portscan")
+trap.ifcctl(0, False, pytrap.CTL_BUFFERSWITCH, 0)
 
-URtmp = UR_Input.copy()
 
 # Send aggregated alerts by RepeatedTimer
 def sendEvents():
-    global eventList, URtmp
-    if not eventList:
-        return
-    sources = {}
-    for event in eventList:
-        e = eventList[event]
-        URtmp.setData(e)
-        if URtmp.SRC_IP in sources:
-            sources[URtmp.SRC_IP].append(e)
-        else:
-            sources[URtmp.SRC_IP] = [e]
-    # Send data to output interface
-    for srcip in sources:
-        src = sources[srcip]
-        URtmp.setData(src[0])
-        scan = {
-            "src_ip": str(srcip),
-            "dst_ips": dict(),
-            "ts_first": float(URtmp.TIME_FIRST),
-            "ts_last": float(URtmp.TIME_LAST),
-            "protocol": URtmp.PROTOCOL,
-        }
-
-        for dst in src:
-            URtmp.setData(dst)
-            scan["dst_ips"][str(URtmp.DST_IP)] = URtmp.PORT_CNT
-            ts_fl_f = float(URtmp.TIME_FIRST)
-            ts_fl_l = float(URtmp.TIME_LAST)
-            if scan["ts_first"] > ts_fl_f:
-                scan["ts_first"] = ts_fl_f
-            if scan["ts_last"] > ts_fl_l:
-                scan["ts_last"] = ts_fl_l
+    global eventList
+    for key in eventList:
+        event = eventList[key]
         try:
-            trap.send(json.dumps(scan))
+            # To avoid too long messages, split the event if there are more 1000 IPs
+            if len(event["dst_ips"]) > MAX_DST_IPS_PER_EVENT:
+                all_ip_cnt_pairs = list(event["dst_ips"].items())
+                all_ip_cnt_pairs.sort()
+                while all_ip_cnt_pairs:
+                    event_copy = event.copy()
+                    event_copy["dst_ips"] = dict(all_ip_cnt_pairs[:MAX_DST_IPS_PER_EVENT])
+                    all_ip_cnt_pairs = all_ip_cnt_pairs[MAX_DST_IPS_PER_EVENT:]
+                    trap.send(json.dumps(event_copy))
+            else:
+                # Send data to output interface
+                trap.send(json.dumps(event))
         except pytrap.Terminated:
             print("Terminated TRAP.")
             break
@@ -164,7 +147,14 @@ def sendEvents():
     eventList = {}
 
 print("starting timer for sending...")
-rt = RepeatedTimer(int(options.time) * 60, sendEvents)
+rt = RepeatedTimer(int(options.time * 60), sendEvents)
+
+# Global list of events
+# format: dict (srcip[,dstip] -> event_record), where event_record looks like:
+# {"src_ip": "1.8.9.39", "dst_ips": {"88.5.17.23": 400, "69.7.18.27": 2100},
+#  "ts_first": 1455131428.0, "ts_last": 1455131910.327, "protocol": 6}
+eventList = {}
+
 
 while True:
    # Read data from input interface
@@ -180,7 +170,6 @@ while True:
 
       # Update UniRec template
       UR_Input = pytrap.UnirecTemplate(fmtspec)
-      URtmp = UR_Input.copy()
 
       # Store data from the exception
       data = e.data
@@ -200,18 +189,26 @@ while True:
    UR_Input.setData(data)
 
    # Update the list of events
-   key = (UR_Input.SRC_IP, UR_Input.DST_IP)
-   if key in eventList:
-      # Updating the value
-      URtmp.setData(eventList[key])
-      if URtmp.TIME_FIRST > UR_Input.TIME_FIRST:
-         URtmp.TIME_FIRST = UR_Input.TIME_FIRST
-      if URtmp.TIME_LAST < UR_Input.TIME_LAST:
-         URtmp.TIME_LAST = UR_Input.TIME_LAST
-      URtmp.PORT_CNT += UR_Input.PORT_CNT
+   if options.blockscans:
+      key = (UR_Input.SRC_IP, UR_Input.PROTOCOL)
    else:
-      # Inserting new key
-      eventList[key] = data
+      key = (UR_Input.SRC_IP, UR_Input.DST_IP, UR_Input.PROTOCOL)
+   if key in eventList:
+      # Update the event
+      event = eventList[key]
+      event["dst_ips"][str(UR_Input.DST_IP)] += UR_Input.PORT_CNT
+      event["ts_first"] = min(event["ts_first"], float(UR_Input.TIME_FIRST))
+      event["ts_last"] = max(event["ts_last"], float(UR_Input.TIME_LAST))
+   else:
+      # Insert new event
+      event = {
+         "src_ip": str(UR_Input.SRC_IP),
+         "dst_ips": defaultdict(int, {str(UR_Input.DST_IP): UR_Input.PORT_CNT}),
+         "ts_first": float(UR_Input.TIME_FIRST),
+         "ts_last": float(UR_Input.TIME_LAST),
+         "protocol": UR_Input.PROTOCOL,
+      }
+      eventList[key] = event
 
    lock.release()
 
