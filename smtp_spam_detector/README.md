@@ -100,7 +100,7 @@ CURRENT DATA MODEL
 | string SMTP_FIRST_RECIPIENT    |                   | ipaddr ID (machine IP)       |
 | string SMTP_FIRST_SENDER       |                   | uint32_t incoming            |
 | string SMTP_DOMAIN             |      m:n          | uint32_t outgoing            |
-| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list^Flow^ sent_history      |
+| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list<Flow> sent_history      |
 | uint32_t SMTP_3XX_STAT_CODE    |                   | time last_seen               |
 | uint32_t SMTP_4XX_STAT_CODE    |                   | double rep (reputation score)|
 | uint32_t SMTP_5XX_STAT_CODE    |                   | double traffic_ratio         |
@@ -110,7 +110,7 @@ CURRENT DATA MODEL
 | uint32_t SMTP_MAIL_CMD_COUNT   |                   | add_new_flow()               |
 |                                |                   | update_time()                |
 |                                |                   | report_statistics()          |
-|                                |                   | is_mail_ser^er()             |
+|                                |                   | is_mail_server()             |
 +----------^---------------------+                   |                              |
            |                                         |                              |
            |                                         |                              |
@@ -134,52 +134,60 @@ CURRENT DATA MODEL
 ```
 ## 2.2 Detector Diagram
 ```
-                                                        +--------+
-                                                        |        |
-                                                        | START  |
-                                                        |        |
-                                                        +---+----+
-                                                            |
-+----------------------------------------------------------->
-|                                                           |
-|                                                     +-----v-----+
-|                                          +----------+ FILTERING +----------------------------+
-|                                          |          | INTERVAL  |                            |
-|                                          |          +-----------+                            |
-|                                          |                                                   |
-|                                          |                                                   |
-|                                          v                                                   v
-|                                 +--------+---------+                              +--+-------+-------+--+
-|                                 | LOAD NEW FLOW    |                                 |               |
-|                                 |                  |                                 |               |
-|                                 +--------+---------+                                 v               v
-|                                          |                                      +----+----+    +-----+------+   Pararell
-|                                          |                                      | PROBING |    | CLUSTERING |   proccess
-|                                          |                                      |         |    |            |
-|                                          |                                      +----+----+    +---------+--+   clustering is very
-|                                          v                                           |                   |      demanding for computing
-|                                  +-------+-------+                                   |                   |      power (NP-HARD)
-|                      +-----------+  BCP FILTER   +------+        +-------------------v--------------+    |
-|                      |           |               |      |        |                                  |    |
-|                      |           +---------------+      |        |   REPUTATION SCORE               |    |
-|                      |                                  |        |   Analysing whether to add IP as |    |
-|                      |                                  |        |   suspicious or not              |    |
-|                      |                                  |        |                                  |    |
-|                      |                                  |        |                                  |    |
-|                      v                                  |        +-------------------+--------------+    |
-|              +-------+-----------+                      |                            |                   |
-|              | Add SRC_IP to     |                      v                            |                   |
-|              | suspicious IP List|         +------------+------------+               |                   |
-|              |                   |         |  ADD IP TO FLOW SERVER  |               v                   v
-|              +-------+-----------+         |  DATA POOL FOR FURTHER  |           +---+---------+---------+---+
-|                      |                     |  ANALYSIS               |                         |
-|                      |                     |                         |                         |
-|                      |                     +------------+------------+                         |
-|                      |                                  |                          +-----------v-------------+
-|                      |                                  |                          |                         |
-+----------------------+----------------------------------+                          |   Data report / Alerts  |
-                                                                                     |                         |
-                                                                                     +-------------------------+
+                                        +----------+
+                                        |  START   |
+                                        +-----+----+
+                                              |             +-----------+
+                                              |             |           |
+                                              |             |           |
+                                              |             |     +-----v-----+
++----------------------------+<---------------+-------------v-----+ FILTERING +---+
+|                            |                                    | INTERVAL  |   |
+|                            |                                    +-----------+   |
+|      Pararell flow         |                                                    |
+|      recie^er              V                                                    |
+|               +---+-------------------+---+                                     |
+|                   |                   |                                         |
+|                   |                   |                              +--+-------v-------+--+
+|                   |                   |                                 |               |
+|            +------+------+    +-------+------+                          |               |
+|            | Basic flow  |    | SMTP flow    |                          |               |
+|            | reciever    |    | reciver      |                  +-------v------+  +-----v-------+  Pararell
+|            +-------------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
+|                   |                   |                         |              |  |             |
+|                   |                   |                         +-------+------+  +---------+---+  clustering is very
+|                   |                   |                                 |                   |      demanding for computing
+|               +---+---------+---------+---+                             |                   |      power (NP+HARD)
+|                             |                                           |                   |
+|                             |                         +-----------------v--------------+    |
+|                   +---------+----------+              | REPUTATION SCORE               |    |
+|                   | DataLoader         |              | Analysing whether to add IP as |    |
+|                   | helpWorker to sync |              | suspicious or not              |    |
+|                   | pararell loading   |              |                                |    |
+|                   +---------+----------+              +-----------------+--------------+    |
+|                             |                                           |                   |
+|                             |                                           |                   |
+|                             |                                           |                   |
+|                     +-------v-------+                                   |                   |
+|           +---------+  BCP FILTER   +--------+                          |                   |
+|           |         |               |        |                      +---v---------+---------v---+
+|           |         +---------------+        |                                    |
+|           |                                  |                                    |
+|           |                                  |                                    |
+|           |                                  |                                    |
+|           |                                  |                         +----------v-------------+
+|           V                                  V                         |  Data report / Alerts  |
+|   +-------+------------+        +------------+----------+              |                        |
+|   | Add SRC_IP to      |        |  Add flow to datapool |              +------------------------+
+|   | suspicious IP List |        |  for further analysis |
+|   |                    |        |                       |
+|   +-------+------------+        +------------+----------+
+|           |                                  |
+|           |                                  |
+|           |                                  |
+|           |                                  |
+|           |                                  |
++-----------+----------------------------------+
 
 
 ```
