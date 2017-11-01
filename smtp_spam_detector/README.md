@@ -128,8 +128,6 @@ CURRENT DATA MODEL
 | uint32_t PACKETS     |
 | uint64_t BYTES       |
 |                      |
-|                      |
-|                      |
 +----------------------+
 
 
