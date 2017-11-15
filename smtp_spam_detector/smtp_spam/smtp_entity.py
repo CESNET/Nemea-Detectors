@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ ************************ CLASS SMTP_ENTITY ***************************** """
 # A class for storing information about sender or reciever with time window
 # that record a first occourence of sender in traffic and his last interaction

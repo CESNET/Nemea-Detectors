@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Class for SMTP flow handling
 class SMTP_Flow(Flow):
     def __init__(self, rec):

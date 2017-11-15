@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 # Class for basic flow without SMTP Headers
 class Flow:
     def __init__(self, rec):
+#!/usr/bin/env python3
         # Basic flow
         self.DST_IP = rec.DST_IP
         self.SRC_IP = rec.SRC_IP

@@ -6,32 +6,20 @@ import sys
 import threading
 import Queue
 
+# Import project parts
+from smtp_flow import flow
+from smtp_flow import smtp_flow
+from smtp_flow import entity
+from smtp_flow import detection
+ 
+# Print current version of python
+print (sys.version)
+
+# Interfaces definition
 BASIC_IF    =   0
 SMTP_IF     =   1
 
 # Class for basic flow without SMTP Headers
-class Flow(object):
-    def __init__(self, rec):
-        # Basic flow
-        self.DST_IP = rec.DST_IP
-        self.SRC_IP = rec.SRC_IP
-        self.BYTES = rec.BYTES
-        self.TIME_FIRST = rec.TIME_FIRST
-        self.TIME_LAST = rec.TIME_LAST
-        self.PACKETS = rec.PACKETS
-        self.DST_PORT = rec.DST_PORT
-        self.SRC_PORT = rec.SRC_PORT
-
-    def __repr__(self):
-        return "SRC_IP:" + self.SRC_IP + ",DST_IP:" + self.DST_IP + ",BYTES:" \
-                 + self.BYTES + ",TIME_FIRST;" + self.TIME_FIRST + ",TIME_LAST:" \
-                 + self.TIME_LAST + ",PACKETS:" + self.PACKETS
-
-class SMTP_ENTITY(object):
-    def __init__(self, id):
-        self.id = id
-        self.history = []
-
 def get_ctx_data(trap, interface, queue):
     while (True):
         try:
@@ -45,7 +33,6 @@ def get_ctx_data(trap, interface, queue):
             break
 
         rec.setData(data)
-        #print(rec.strRecord())
         queue.put(rec)
     return True
 
@@ -69,18 +56,17 @@ def data_handling(data, q):
 if __name__ == '__main__':
     # Datapool
     data = {}
+    detector = SpamDetection(data)    
+
     # Create a new trap context
     trap = pytrap.TrapCtx()
-
     """
         Trap initialization for two input interfaces, and no output interface
     """
     trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 0)
-
-    # set up requried format to accept anything
-    trap.setRequiredFmt(BASIC_IF)
-    trap.setRequiredFmt(SMTP_IF)
-
+    # Set up requried format to accept any unirec format.
+    trap.setRequiredFmt(BASIC_IF)   # Refers to flows without SMTP headers
+    trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
     """
         *** Multireciever Implementation ***
         Splits unirec input from libtrap into multiple interfaces
@@ -88,26 +74,23 @@ if __name__ == '__main__':
     """
     # Data queue
     flow_queue = Queue.Queue()
-
-    # Create two reciever workers
-    basic_rcv = threading.Thread(target=get_ctx_data, args=(trap, BASIC_IF, flow_queue))
-    smtp_rcv = threading.Thread(target=get_ctx_data, args=(trap, SMTP_IF, flow_queue))
-    data_handler = threading.Thread(target=data_handling, args=(data, flow_queue))
-
-    print("basic started")
+    # Create workers for each reciever
+    basic_rcv = threading.Thread(target=get_ctx_data,
+                                 args=(trap, BASIC_IF, flow_queue))
+    smtp_rcv = threading.Thread(target=get_ctx_data,
+                                args=(trap, SMTP_IF, flow_queue))
+    # Handle the recieved data from recivers
+    data_handler = threading.Thread(target=data_handling,
+                                    args=(data, flow_queue))
     basic_rcv.start()
-    print("smtp started")
     smtp_rcv.start()
-    print("data handler started")
     data_handler.start()
-
 
     # Finilize multireciver
     flow_queue.put(0)
     basic_rcv.join()
     smtp_rcv.join()
     data_handler.join()
-    print("Multirecieving done")
 
     # Free allocated memory
     trap.finalize()
