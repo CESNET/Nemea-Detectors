@@ -5,6 +5,10 @@ language: c
 compiler:
   - gcc
 
+python:
+  - "2.7"
+  - "3.6"
+
 branches:
   only:
     - master
@@ -39,7 +43,8 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - pyenv global 2.7.13 3.5.3
+   - pyenv versions
+   - pyenv global 2.7 3.6
    - pip install ply
    - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
 
