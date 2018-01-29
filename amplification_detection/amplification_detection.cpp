@@ -110,7 +110,7 @@ trap_module_info_t *module_info = NULL;
   BASIC("amplification_detection","This module detects amplification attacks from NetFlow data. It is based on the flow's analysis of incoming and outgoing packets and bytes. Detection is triggered always when certain time window of src and dst ip is collected.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('d', "log_dir", "path to log files, has to be ended by slash", required_argument, "string") \
+   PARAM('d', "log_dir", "path to log files - it has to end with slash ('/'). If the parameter is omitted, no logs are stored.", required_argument, "string") \
    PARAM('p', "port", "port used for detection (53)", required_argument, "int32") \
    PARAM('n', "top", "number of top N values chosen (10)", required_argument, "int32") \
    PARAM('q', "step", "step of histogram (10)", required_argument, "uint32") \
@@ -457,7 +457,7 @@ int main (int argc, char** argv)
    uint32_t unique_id = 0;
    ofstream log;
    ostringstream filename;
-   string log_path="";
+   string log_path = "";
 
    uint16_t src_port;      // actual source port
    uint16_t dst_port;      // actual destination flows
@@ -797,47 +797,49 @@ int main (int argc, char** argv)
                }
 
                char addr_buff[INET6_ADDRSTRLEN];
-               filename.str("");
-               filename.clear();
-               filename << log_path;
-               if (report_this == REPORT_BIG){
-                  filename << "BIG/";
-               }
-               ip_to_str(&actual_key.src, addr_buff);
-               filename << LOG_FILE_PREFIX << addr_buff;
-               ip_to_str(&actual_key.dst, addr_buff);
-               filename << "-" << addr_buff << LOG_FILE_SUFFIX;
-
-               log.open(filename.str().c_str(), ofstream::app);
-
-               if (log.is_open()){
+               if (log_path.compare("") != 0) {
+                  filename.str("");
+                  filename.clear();
+                  filename << log_path;
+                  if (report_this == REPORT_BIG){
+                     filename << "BIG/";
+                  }
                   ip_to_str(&actual_key.src, addr_buff);
-                  log << "Abused server IP: " << addr_buff;
+                  filename << LOG_FILE_PREFIX << addr_buff;
                   ip_to_str(&actual_key.dst, addr_buff);
-                  log << "   Target IP: " << addr_buff << "\n";
-                  while (pos[shorter] < sooner_end){
-                     if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
-                        time2str(it->second.q[pos[QUERY]].t);
-                        log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-                        ++pos[QUERY];
-                     } else {
-                        time2str(it->second.r[pos[RESPONSE]].t);
-                        log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
-                        ++pos[RESPONSE];
+                  filename << "-" << addr_buff << LOG_FILE_SUFFIX;
+
+                  log.open(filename.str().c_str(), ofstream::app);
+
+                  if (log.is_open()){
+                     ip_to_str(&actual_key.src, addr_buff);
+                     log << "Abused server IP: " << addr_buff;
+                     ip_to_str(&actual_key.dst, addr_buff);
+                     log << "   Target IP: " << addr_buff << "\n";
+                     while (pos[shorter] < sooner_end){
+                        if (it->second.q[pos[QUERY]].t <= it->second.r[pos[RESPONSE]].t) {
+                           time2str(it->second.q[pos[QUERY]].t);
+                           log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                           ++pos[QUERY];
+                        } else {
+                           time2str(it->second.r[pos[RESPONSE]].t);
+                           log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                           ++pos[RESPONSE];
+                        }
                      }
-                  }
-                  for (pos[longer] = pos[shorter]; pos[longer] < later_end; ++pos[longer]) {
-                     if (longer == QUERY){
-                        time2str(it->second.q[pos[QUERY]].t);
-                        log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
-                     } else {
-                        time2str(it->second.r[pos[RESPONSE]].t);
-                        log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                     for (pos[longer] = pos[shorter]; pos[longer] < later_end; ++pos[longer]) {
+                        if (longer == QUERY){
+                           time2str(it->second.q[pos[QUERY]].t);
+                           log << time_buff << "\tQ\t" << it->second.q[pos[QUERY]].packets << "\t" << it->second.q[pos[QUERY]].bytes << endl;
+                        } else {
+                           time2str(it->second.r[pos[RESPONSE]].t);
+                           log << time_buff << "\tR\t" << it->second.r[pos[RESPONSE]].packets << "\t" << it->second.r[pos[RESPONSE]].bytes << endl;
+                        }
                      }
+                     log.close();
+                  } else {
+                     cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
                   }
-                  log.close();
-               } else {
-                  cerr << "Error: Cannot open log file [" << filename.str() << "]." << endl;
                }
             }
             /// Report event <<<
