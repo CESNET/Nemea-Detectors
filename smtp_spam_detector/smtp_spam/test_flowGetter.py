@@ -12,8 +12,8 @@ import time
 print (sys.version)
 
 # Interfaces definition
-BASIC_IF    =   0
-SMTP_IF     =   1
+BASIC_IF = 0
+SMTP_IF = 1
 
 semaphore = Semaphore(0)
 
@@ -41,7 +41,7 @@ def data_handling(data, q):
     qs = q.qsize()
     while (True):
         try:
-            print("Getting flows from queue.")
+            #print("Getting flows from queue.")
             flow = q.get()
             if flow is 0:
                 sys.stderr.write("data_handlig: Processed {0} flows.".format(qs))
@@ -59,11 +59,14 @@ def data_handling(data, q):
             q.task_done()
         except IndexError:
             sys.stderr.write("No data in queue.\n")
+    semaphore.release()
     return True
 
 def data_print(data):
     semaphore.acquire()
-    print(data)
+    for entity in data:
+        print(data[entity].sent_history)
+        print()
     return None
 
 

@@ -17,8 +17,8 @@ class Flow(object):
                ",BYTES:" + str(self.BYTES) + ",TIME_FIRST;" + str(self.TIME_FIRST) + \
                ",TIME_LAST:" + str(self.TIME_LAST) + ",PACKETS:" + str(self.PACKETS)
     def __repr__(self):
-        return self.SRC_IP + ":" + self.DST_IP + ":" + self.BYTES + ":" + \
-               self.TIME_FIRST + ":" + self.TIME_LAST + ":" + self.PACKETS
+        return str(self.SRC_IP) + ":" + str(self.DST_IP) + ":" + str(self.BYTES) + ":" + \
+               str(self.TIME_FIRST) + ":" + str(self.TIME_LAST) + ":" + str(self.PACKETS)
 
 # Class for SMTP flow handling
 class SMTP_Flow(Flow):
@@ -42,9 +42,9 @@ class SMTP_Flow(Flow):
         return "SMTP_FLOW:\nSRC:" + str(self.SRC_IP) + "\nDST:" + str(self.DST_IP) \
                 + "\nCMD_FLAGS:" + str(self.SMTP_COMMAND_FLAGS) + "\n"
     def __repr__(self):
-        return self.SRC_IP + ":" + self.DST_IP + ":" + self.SMTP_COMMAND_FLAGS
+        return str(self.SRC_IP) + ":" + str(self.DST_IP) + ":" + str(self.SMTP_COMMAND_FLAGS)
 
-        # function that detecs whether current flow could be a spam
+    # function that detecs whether current flow could be a spam
     # based on SMTP FLAGS, it returns positive value on suspicion
     # flow otherwise negative one
     def BCP_Filter(self):
