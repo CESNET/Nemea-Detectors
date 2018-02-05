@@ -1,36 +1,46 @@
 #!/usr/bin/env python3
+import pytrap
+from flow import *
 """ ************************ CLASS SMTP_ENTITY ***************************** """
 # A class for storing information about sender or reciever with time window
 # that record a first occourence of sender in traffic and his last interaction
 # on the network
 class SMTP_ENTITY:
     # SMTP_ENTITY constructor from whole unirec record or just ip from traffic
-    def __init__(self, arg):
+    def __init__(self, *args):
         self.id = None              # an unique entity identification (it's IP)
         self.sent_history = []      # history of sent msgs from this entity
-        self.last_seen = 0          # time of last occurrence in traffic
+        self.last_seen = None       # time of last occurrence in traffic
+
+        self.smtp_pool = []         # SMTP communication database
+        self.basic_pool = []        # POP3/IMAP communication database
 
         # traffic counters
         self.incoming = 0           # counter for incoming messages from others
         self.outgoing = 0           # currently using len(sent_history) #TODO
 
         # entity parameters
-        self.traffic_ratio = 0.0
+        self.traffic_ratio = 0.0    # ratio of incoming/outgoing traffic
         self.rep =  0.0             # reputation score
 
         # Set up params based on input data
         # got whole template
-        if isinstance(arg, pytrap.UnirecTemplate):
-            self.id = flow.SRC_IP
-            self.sent_history.append(flow)
-            self.last_seen = flow.TIME_LAST
+        if isinstance(args[0], Flow):
+            # Separate basic/smtp flows
+            if isinstance(args[0], SMTP_Flow):
+                self.smtp_pool.append(args[0])
+            else:
+                self.basic_pool.append(args[0])
 
+            self.id = args[0].SRC_IP
+            self.sent_history.append(args[0])
+            self.last_seen = args[0].TIME_LAST
 
-        # got only ip address
-        elif isinstance(arg, pytrap.UnirecIPAddr):
-            self.id = arg
+        # got only ip address (args[0] is ip and args[1] is time)
+        elif isinstance(args[0], pytrap.UnirecIPAddr):
+            self.id = args[0]
             self.incoming += 1
-
+            self.last_seen = args[1]
 
     def __str__(self):
         return ("{0},{1},{2},{3}").format(self.id, len(self.sent_history),
