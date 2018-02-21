@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 # Class for basic flow without SMTP Headers
 class Flow(object):
     def __init__(self, rec):
@@ -34,9 +35,14 @@ class SMTP_Flow(Flow):
         self.SMTP_MAIL_CMD_COUNT = rec.SMTP_MAIL_CMD_COUNT
         self.SMTP_RCPT_CMD_COUNT = rec.SMTP_RCPT_CMD_COUNT
         self.SMTP_STAT_CODE_FLAGS = rec.SMTP_STAT_CODE_FLAGS
-        self.SMTP_DOMAIN = rec.SMTP_DOMAIN
-        self.SMTP_FIRST_RECIPIENT = rec.SMTP_FIRST_RECIPIENT
-        self.SMTP_FIRST_SENDER = rec.SMTP_FIRST_SENDER
+        try:
+            self.SMTP_DOMAIN = rec.SMTP_DOMAIN
+            self.SMTP_FIRST_RECIPIENT = rec.SMTP_FIRST_RECIPIENT
+            self.SMTP_FIRST_SENDER = rec.SMTP_FIRST_SENDER
+        except:
+            self.SMTP_DOMAIN = None
+            self.SMTP_FIRST_RECIPIENT = None
+            self.SMTP_FIRST_SENDER = None
 
     def __str__(self):
         return "SMTP_FLOW:\nSRC:" + str(self.SRC_IP) + "\nDST:" + str(self.DST_IP) \
