@@ -86,7 +86,6 @@ checked if there is a server name.
 
 
 ## 4.0 Frequecy analysis and legit server exlusion
-```
 # 4.1 MAIL SERVERS
 ```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
@@ -205,9 +204,7 @@ CURRENT DATA MODEL
 |           |                                  |
 |           |                                  |
 +-----------+----------------------------------+
-
-
-
+```
 
 >Comment 
 
