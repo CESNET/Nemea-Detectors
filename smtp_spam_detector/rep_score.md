@@ -86,7 +86,7 @@ checked if there is a server name.
 
 
 ## 4.0 Frequecy analysis and legit server exlusion
-# 4.1 MAIL SERVERS
+### 4.1 MAIL SERVERS
 ```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
 -------------------------->| SMTP      |-------------------------->
@@ -96,7 +96,7 @@ checked if there is a server name.
 -------------------------->|           |-------------------------->
                            +-----------+
 ```
-# 4.2 MALICIOUS SPAM SERVER
+### 4.2 MALICIOUS SPAM SERVER
 ```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
                            | SPAM      |-------------------------->
@@ -148,7 +148,7 @@ CURRENT DATA MODEL
 
 
 ```
-## 4.5 Detector Diagram
+### 4.5 Detector Diagram
 ```
                                         +----------+
                                         |  START   |
