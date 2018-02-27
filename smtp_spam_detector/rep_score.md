@@ -1,6 +1,6 @@
 # Request for comments
 ## A Reputation score based on SMTP flow parameters
-### Abstract
+### 1.0 Abstract
 The main goal of this project is to unite best current practices from 
 RFC [821](https://tools.ietf.org/html/rfc821), [1034](https://tools.ietf.org/html/rfc1034), [1035](https://tools.ietf.org/html/rfc1035) and mostly [2025](https://tools.ietf.org/html/rfc2505).
 
@@ -17,15 +17,15 @@ flagged as a spammer.
 
 However, not for all smtp entities there's a SMTP flow header extension, if
 there is communication over POP3 or IMAP protocol we have only basic flow header.
-Therefore we have to use a frequecy analysis to determine wich entities are spammer
+Therefore we have to use a frequecy analysis to determine wich entities are spammers
 and exlude legit mail servers. 
 
 In this case we have to compute the ratio of incoming and outcoming traffic for
 each entity in timeframe t. If there is huge difference between sent and recived
 messeges we can tell this entity is not a legit server.
 
-## SMTP Status codes
-### SMTP_SC 5XX
+## 2.0 SMTP Status codes
+### 2.1 SMTP_SC 5XX
 
 It is a permanent error causing transfer termination and return of the mail to\
 the sender.This would be the right return of refusing a spam messege.
@@ -46,7 +46,7 @@ the sender.This would be the right return of refusing a spam messege.
 >Although, this would be used in perfected world where spammers follows the 
 >smtp rules.
 
-### SMTP_SC 4XX
+### 2.2 SMTP_SC 4XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
@@ -57,7 +57,7 @@ the sender.This would be the right return of refusing a spam messege.
 
 >comment
 
-### SMTP_SC 2XX
+### 2.3 SMTP_SC 2XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
@@ -70,9 +70,144 @@ the sender.This would be the right return of refusing a spam messege.
 
 >Comment
 
-## Email configuration
-If there's no filled sender or reciver domain 
+## 3.0 Email configuration
+
+It's a bad practise to not fill a sender or reciver address, therefore it should
+be checked whether sender and reciver address are filled. Also there should be
+checked if there is a server name.
+
+| Attribute | Description | Score | Comment |
+| --------- | ----------- | ----- | ------- |
+|SMTP_FIRST_SENDER|Address from first MAIL command|||
+|SMTP_FIRST_RECIPIENT|Address from first RCPT command|||
+|SMTP_DOMAIN|Domain of the server||
+
+>Comment
 
 
-### 
+## 4.0 Frequecy analysis and legit server exlusion
+```
+# 4.1 MAIL SERVERS
+```
+  incoming smtp traffic    +-----------+ outgoing smtp traffic
+-------------------------->| SMTP      |-------------------------->
+                           | MAIL      |
+-------------------------->| SERV      |-------------------------->
+                           |           |
+-------------------------->|           |-------------------------->
+                           +-----------+
+```
+# 4.2 MALICIOUS SPAM SERVER
+```
+  incoming smtp traffic    +-----------+ outgoing smtp traffic
+                           | SPAM      |-------------------------->
+                           | BOT       |-------------------------->
+-------------------------->|           |-------------------------->
+                           |           |-------------------------->
+                           |           |-------------------------->
+                           +-----------+
+```
+### 4.3 Data Model
+```
+CURRENT DATA MODEL
+
++--------------------------------+                   +------------------------------+
+|    SMTP_Flow (SMTP Header)     |                   |        SMTP_ENTITY           |
++--------------------------------+                   +------------------------------+
+| string SMTP_FIRST_RECIPIENT    |                   | ipaddr ID (machine IP)       |
+| string SMTP_FIRST_SENDER       |                   | uint32_t incoming            |
+| string SMTP_DOMAIN             |      m:n          | uint32_t outgoing            |
+| uint32_t SMTP_2XX_STAT_CODE    +-------------------+ list<Flow> sent_history      |
+| uint32_t SMTP_3XX_STAT_CODE    |                   | time last_seen               |
+| uint32_t SMTP_4XX_STAT_CODE    |                   | double rep (reputation score)|
+| uint32_t SMTP_5XX_STAT_CODE    |                   | double traffic_ratio         |
+| uint32_t SMTP_COMMAND_FLAGS    |                   |                              |
+| uint32_t SMTP_STAT_CODE_FLAGS  |                   |                              |
+| uint32_t SMTP_RCPT_CMD_COUNT   |                   | constructor()                |
+| uint32_t SMTP_MAIL_CMD_COUNT   |                   | add_new_flow()               |
+|                                |                   | update_time()                |
+|                                |                   | report_statistics()          |
+|                                |                   | is_mail_server()             |
++----------^---------------------+                   |                              |
+           |                                         |                              |
+           |                                         |                              |
+           |                                         +------------------------------+
+           |
++----------+-----------+
+|      Flow (Basic)    |
++----------------------+
+| ipaddr DST_IP        |
+| ipaddr SRC_IP        |
+| uint16_t DST_PORT    |
+| uint16_t SRC_PORT    |
+| time TIME_FIRST      |
+| time TIME_LAST       |
+| uint32_t PACKETS     |
+| uint64_t BYTES       |
+|                      |
++----------------------+
+
+
+```
+## 4.5 Detector Diagram
+```
+                                        +----------+
+                                        |  START   |
+                                        +-----+----+
+                                              |             +-----------+
+                                              |             |           |
+                                              |             |           |
+                                              |             |     +-----v-----+
++----------------------------+<---------------+-------------v-----+ FILTERING +---+
+|                            |                                    | INTERVAL  |   |
+|                            |                                    +-----------+   |
+|      Pararell flow         |                                                    |
+|      recie^er              V                                                    |
+|               +---+-------------------+---+                                     |
+|                   |                   |                                         |
+|                   |                   |                              +--+-------v-------+--+
+|                   |                   |                                 |               |
+|            +------+------+    +-------+------+                          |               |
+|            | Basic flow  |    | SMTP flow    |                          |               |
+|            | reciever    |    | reciver      |                  +-------v------+  +-----v-------+  Pararell
+|            +-------------+    +-------+------+                  | PROBING      |  | CLUSTERING  |  proccess
+|                   |                   |                         |              |  |             |
+|                   |                   |                         +-------+------+  +---------+---+  clustering is very
+|                   |                   |                                 |                   |      demanding for computing
+|               +---+---------+---------+---+                             |                   |      power (NP+HARD)
+|                             |                                           |                   |
+|                             |                         +-----------------v--------------+    |
+|                   +---------+----------+              | REPUTATION SCORE               |    |
+|                   | DataLoader         |              | Analysing whether to add IP as |    |
+|                   | helpWorker to sync |              | suspicious or not              |    |
+|                   | pararell loading   |              |                                |    |
+|                   +---------+----------+              +-----------------+--------------+    |
+|                             |                                           |                   |
+|                             |                                           |                   |
+|                             |                                           |                   |
+|                     +-------v-------+                                   |                   |
+|           +---------+  BCP FILTER   +--------+                          |                   |
+|           |         |               |        |                      +---v---------+---------v---+
+|           |         +---------------+        |                                    |
+|           |                                  |                                    |
+|           |                                  |                                    |
+|           |                                  |                                    |
+|           |                                  |                         +----------v-------------+
+|           V                                  V                         |  Data report / Alerts  |
+|   +-------+------------+        +------------+----------+              |                        |
+|   | Add SRC_IP to      |        |  Add flow to datapool |              +------------------------+
+|   | suspicious IP List |        |  for further analysis |
+|   |                    |        |                       |
+|   +-------+------------+        +------------+----------+
+|           |                                  |
+|           |                                  |
+|           |                                  |
+|           |                                  |
+|           |                                  |
++-----------+----------------------------------+
+
+
+
+
+>Comment 
 
