@@ -45,7 +45,7 @@ extern "C" {
    #include <libtrap/trap.h>
    #include "fields.h"
 }
-#include <unirec/ipaddr_cpp.h>
+#include <unirec/ipaddr.h>
 
 using namespace std;
 
@@ -63,6 +63,7 @@ void reportEvent(const Event& event)
 
    // Print info about event into a string
    stringstream line;
+   char ip_str[INET6_ADDRSTRLEN];
    line << first_t << ';' << last_t << ';';
    line << getTypeString(event.type) << ';';
    for (vector<uint8_t>::const_iterator it = event.proto.begin(); it != event.proto.end(); ++it) {
@@ -74,13 +75,15 @@ void reportEvent(const Event& event)
    for (vector<ip_addr_t>::const_iterator it = event.src_addr.begin(); it != event.src_addr.end(); ++it) {
       if (it != event.src_addr.begin())
          line << ',';
-      line << IPaddr_cpp(&(*it));
+      ip_to_str(&(*it), ip_str);
+      line << ip_str;
    }
    line << ';';
    for (vector<ip_addr_t>::const_iterator it = event.dst_addr.begin(); it != event.dst_addr.end(); ++it) {
       if (it != event.dst_addr.begin())
          line << ',';
-      line << IPaddr_cpp(&(*it));
+      ip_to_str(&(*it), ip_str);
+      line << ip_str;
    }
    line << ';';
    for (vector<uint16_t>::const_iterator it = event.src_port.begin(); it != event.src_port.end(); ++it) {

@@ -3,7 +3,11 @@ sudo: required
 dist: trusty
 language: c
 compiler:
-  - clang
+  - gcc
+
+python:
+  - "2.7"
+  - "3.6"
 
 branches:
   only:
@@ -39,8 +43,21 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - ( git clone --depth 1 https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd python && sudo python setup.py install;); (cd pycommon && sudo python setup.py install;); )
+   - pyenv versions
+   - pyenv global 2.7 3.6
+   - pip install ply
+   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
 
 script:
-  - ./bootstrap.sh && ./configure --disable-repobuild && make check
+  - ./bootstrap.sh && ./configure && make distcheck
+  - mkdir dist-pkgs && cp *.spec *.tar.gz dist-pkgs && (cd dist-pkgs/"$d"; tar --strip-components=1 -xf *.tar.gz;)
+
+deploy:
+  provider: pages
+  skip_cleanup: true
+  local_dir: dist-pkgs
+  github_token: $GITHUB_TOKEN
+  target_branch: dist-packages
+  on:
+    branch: master
 

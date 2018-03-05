@@ -18,25 +18,19 @@
              This value is optional with default value 300 (seconds).
              Delay specify time interval (in seconds) between each update done
              by blacklist downloader. -->
-        <!--
         <element name="delay">
-            300
+            600
         </element>
-        -->
         <!-- This array is used only in dynamic mode.
              It specifies which public blacklist will be used. Names of the
              blacklists are specified in user configuration XML file for
              blacklist downloader (default: bld_userConfigurationFile.xml). -->
         <array name="blacklist_arr">
-            <element>
-                ZeuS tracker
-            </element>
-            <element>
-                Palevo tracker
-            </element>
-            <element>
-                TOR
-            </element>
+            <element>ZeuS tracker</element>
+            <element>Feodo tracker</element>
+            <element>Spamhaus</element>
+            <element>TOR</element>
+            <element>Ransomware Tracker</element>
         </array>
         <!-- This value is used only in dynamic mode.
              This value is optional with default value 1024 (characters).
