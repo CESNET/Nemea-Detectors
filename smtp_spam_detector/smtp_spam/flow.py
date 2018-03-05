@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import sys
+
+from global_def import *
+
 # Class for basic flow without SMTP Headers
 class Flow(object):
     def __init__(self, rec):
@@ -50,20 +53,37 @@ class SMTP_Flow(Flow):
     def __repr__(self):
         return str(self.SRC_IP) + ":" + str(self.DST_IP) + ":" + str(self.SMTP_COMMAND_FLAGS)
 
-    # function that detecs whether current flow could be a spam
-    # based on SMTP FLAGS, it returns positive value on suspicion
-    # flow otherwise negative one
-    def BCP_Filter(self):
-        spam_flag = 0
+    """
+    Function that detecs whether current flow could be a spam
+    based on SMTP FLAGS, it returns positive value on suspicion
+    flow otherwise negative one
+    """
+    def filter(self):
+        #print("{0} \n\tSMTP_CMD:{1}\n\tSTAT_CODE:{2}".format(self.SRC_IP, self.SMTP_COMMAND_FLAGS, self.SMTP_STAT_CODE_FLAGS))
+
+        rep = 100
         if int(self.SMTP_STAT_CODE_FLAGS) & int(SC_SPAM) > 0:
         # It contains a spam key word
-            spam_flag += 50
+            rep += -50
             print("Alert(SPAM flag present) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
-        if self.SMTP_FIRST_SENDER == "" or self.SMTP_FIRST_RECIPIENT == "":
-            spam_flag += 20
-            print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
-        # todo more filters
-        return spam_flag
+        if not self.SMTP_FIRST_SENDER or not self.SMTP_FIRST_RECIPIENT:
+            rep += -20
+            #print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
+
+        if self.SMTP_5XX_STAT_CODE_COUNT:
+            print("5XX present {0}".self.SMTP_STAT_CODE_FLAGS);
+
+        if self.SMTP_4XX_STAT_CODE_COUNT:
+            print("4XX present {0}".self.SMTP_STAT_CODE_FLAGS);
+
+        if self.SMTP_3XX_STAT_CODE_COUNT:
+            print("3XX present {0}".self.SMTP_STAT_CODE_FLAGS);
+
+        if self.SMTP_2XX_STAT_CODE_COUNT:
+            print("2XX present {0}".self.SMTP_STAT_CODE_FLAGS);
+        if self.SMTP_STAT_CODE_FLAGS:
+            print("Stat code flags: {0}".format(self.SMTP_STAT_CODE_FLAGS))
+        return rep
 
     def get_name(self):
         return self.SMTP_FIRST_SENDER.partition("@")[0][1:]

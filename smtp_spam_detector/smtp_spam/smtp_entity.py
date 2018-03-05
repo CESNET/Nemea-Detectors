@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pytrap
 from flow import *
+from global_def import *
 """ ************************ CLASS SMTP_ENTITY ***************************** """
 # A class for storing information about sender or reciever with time window
 # that record a first occourence of sender in traffic and his last interaction
@@ -10,7 +11,10 @@ class SMTP_ENTITY:
     def __init__(self, *args):
         self.id = None              # an unique entity identification (it's IP)
         self.sent_history = []      # history of sent msgs from this entity
-        self.last_seen = None       # time of last occurrence in traffic
+        self.time_start = args[0].TIME_FIRST
+        self.time_end = args[0].TIME_LAST
+
+        self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
 
         self.smtp_pool = []         # SMTP communication database
         self.basic_pool = []        # POP3/IMAP communication database
@@ -34,31 +38,33 @@ class SMTP_ENTITY:
 
             self.id = args[0].SRC_IP
             self.sent_history.append(args[0])
-            self.last_seen = args[0].TIME_LAST
 
         # got only ip address (args[0] is ip and args[1] is time)
         elif isinstance(args[0], pytrap.UnirecIPAddr):
-            self.id = args[0]
+            self.id = args[0].DST_IP
             self.incoming += 1
-            self.last_seen = args[1]
+
 
     def __str__(self):
-        return ("{0},{1},{2},{3}").format(self.id, len(self.sent_history),
-                                          self.incoming, self.last_seen)
+        return ("{0},{1},{2},{3},{4},{5}").format(self.id, len(self.sent_history),
+                                                    self.incoming, self.time_start,
+                                                    self.time_end, self.time_window)
     # Getter for number of sent mails from this server
     def count_sent(self):
         return len(self.sent_history)
 
-    # Updates last_seen parametr of this entity
+    # Updates time_end parametr of this entity
     def update_time(self, flow):
-        if flow.TIME_LAST > self.last_seen:
-            self.last_seen = flow.TIME_LAST
+        if flow.TIME_LAST > self.time_end:
+            self.time_end = flow.TIME_LAST
+            self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
         else:
             return None
 
     # Function that adds flows for server history
     def add_new_flow(self, flow):
         self.sent_history.append(flow)
+        self.outgoing += 1
 
     # Function writes current statistics for this server such as how many flows
     # were send and recieved, and last time seen this server in traffic.
@@ -73,16 +79,20 @@ class SMTP_ENTITY:
             except:
                 sys.stderr.write("Error writing to file.\n")
                 return None
-
-    # Function that checks whether a machine with IP as self.id is a legit
-    # smtp mail server or not. It looks at incoming and outgoing traffic
-    # and compares the ratio between these two parameters, if the outgoing
-    # traffic ratio is X then function returns positive value, otherwise
-    # negative one, also it checks for unqie DST_IP's in sent history
-    def is_mail_server(self):
+    """
+    Function that checks whether a machine with IP as self.id is a legit
+    smtp mail server or not. It looks at incoming and outgoing traffic
+    and compares the ratio between these two parameters, if the outgoing
+    traffic ratio is X then function returns positive value, otherwise
+    negative one, also it checks for unqie DST_IP's in sent history
+    """
+    def is_legit(self):
         # Calculate traffic ratio
         sent = len(self.sent_history)
-        traffic_ratio = self.incoming / sent
+        if sent is not 0:
+            traffic_ratio = self.incoming / sent
+        else:
+            traffic_ratio = 0
 
         # Check for unique DST_IPs
         unique_ips = set()
@@ -90,7 +100,6 @@ class SMTP_ENTITY:
         for flow in self.sent_history:
             unique_ips.add(flow.DST_IP)
 
-        #TODO Rep score
         if len(unique_ips) > MAX_ALLOWED_SERVERS or traffic_ratio < 1.2:
             return True
         else:

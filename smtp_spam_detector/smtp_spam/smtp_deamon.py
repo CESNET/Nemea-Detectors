@@ -2,6 +2,7 @@
 # Full imports
 import pytrap
 import sys
+from global_def import *
 from threading import Thread, Semaphore
 from flow import Flow, SMTP_Flow
 from smtp_entity import SMTP_ENTITY
@@ -15,7 +16,7 @@ import time
 BASIC_IF = 0
 SMTP_IF = 1
 semaphore = Semaphore()
-
+#******************************************************************************
 def fetch_data(trap, interface, queue):
     """
     Fetches data from trap context and puts them to
@@ -37,10 +38,13 @@ def fetch_data(trap, interface, queue):
             break
         rec.setData(data)
         if interface is BASIC_IF:
-            flow = Flow(rec)
+            if rec.DST_PORT in email_protocols.values():
+                flow = Flow(rec)
+                queue.put(flow)
         else:
             flow = SMTP_Flow(rec)
-        queue.put(flow)
+            flow.filter()
+            queue.put(flow)
     return True
 def data_handling(detector, q):
     """
@@ -60,6 +64,8 @@ def data_handling(detector, q):
                 break
             detector.add_entity(flow, flow.SRC_IP)
             processed = processed + 1
+            if processed % 10000 is 0:
+                print("Fetched {0} flow.s".format(processed))
             q.task_done()
         except IndexError:
             sys.stderr.write("No data in queue.\n")
@@ -72,7 +78,7 @@ if __name__ == '__main__':
     # Create a new trap context
     trap = pytrap.TrapCtx()
     """
-        Trap initialization for two input interfaces, and no output interface
+    Trap initialization for two input interfaces, and no output interface
     """
     #trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 0)
     trap.init(sys.argv, 2, 0)
@@ -87,17 +93,15 @@ if __name__ == '__main__':
     smtp_rcv = Thread(target=fetch_data, args=(trap, SMTP_IF, flow_queue))
     # Handle the received data from receivers
     data_handler = Thread(target=data_handling, args=(detector, flow_queue))
-
     # Run multireciver
     basic_rcv.start()
     smtp_rcv.start()
     data_handler.start()
-
+    # Join the threads
     basic_rcv.join()
     smtp_rcv.join()
     # Stop data_handler
     flow_queue.put(None)
     data_handler.join()
-
     # Free allocated memory
     trap.finalize()
