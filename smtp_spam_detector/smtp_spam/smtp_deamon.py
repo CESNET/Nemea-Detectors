@@ -16,7 +16,7 @@ import time
 BASIC_IF = 0
 SMTP_IF = 1
 semaphore = Semaphore()
-#******************************************************************************
+
 def fetch_data(trap, interface, queue):
     """
     Fetches data from trap context and puts them to
@@ -46,6 +46,7 @@ def fetch_data(trap, interface, queue):
             flow.filter()
             queue.put(flow)
     return True
+
 def data_handling(detector, q):
     """
     Handles data from queue which are fetched from trap context to detector.
@@ -71,6 +72,7 @@ def data_handling(detector, q):
             sys.stderr.write("No data in queue.\n")
     report = detector.analysis(semaphore)
     return True
+
 if __name__ == '__main__':
     # Datapool used to store information about smtp entities
     data = {}
