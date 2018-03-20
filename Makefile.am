@@ -36,10 +36,11 @@ rpm:
 	( cd "$(RPMDIR)/SOURCES/"; tar -z -c -f $(RPMFILENAME)-$(RELEASE).tar.gz $(RPMFILENAME); rm -rf $(RPMFILENAME); )
 	$(RPMBUILD) -ba $(PACKAGE_NAME).spec --define "_topdir `pwd`/$(RPMDIR)";
 
-rpm-clean:
-	rm -rf $(RPMDIR)
 else
 endif
+
+rpm-clean:
+	rm -rf $(RPMDIR)
 
 
 if MAKE_DEB
