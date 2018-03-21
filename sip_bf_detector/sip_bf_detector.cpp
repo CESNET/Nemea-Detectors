@@ -79,7 +79,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("sip_bf_detector","Module for detecting brute-force attacks on Session Initiation Protocol.",1,2)
+  BASIC("sip_bf_detector","Module for detecting brute-force attacks on Session Initiation Protocol.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('a', "alert_threshold", "Number of unsuccessful authentication attempts for considering this behaviour as an attack. (50 by default)", required_argument, "uint64") \
@@ -100,9 +100,9 @@ uint32_t g_ok_limit = DEFAULT_OK_COUNT_LIMIT;
 uint16_t g_min_sec = 0;
 uint16_t g_event_row = 0;
 ur_template_t *alert_tmplt = NULL;
-ur_template_t *tm_tmplt = NULL;
+//ur_template_t *tm_tmplt = NULL;
 void *alert_rec = NULL;
-void *tm_rec = NULL;
+//void *tm_rec = NULL;
 int sig_counter = 0;
 
 /* *********************** */
@@ -696,7 +696,7 @@ uint64_t Server::createId(ur_time_t time_first)
    return event_id;
 }
 
-void Server::alertTimeMachine(const ip_addr_t *source)
+/*void Server::alertTimeMachine(const ip_addr_t *source)
 {
    ur_set(tm_tmplt, tm_rec, F_SRC_IP, *source);
    int ret = trap_send(1, tm_rec, ur_rec_size(tm_tmplt, tm_rec));
@@ -704,7 +704,7 @@ void Server::alertTimeMachine(const ip_addr_t *source)
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR: Server::alertTimeMachine - trap_send returned error value.\n");
    }   
-}
+}*/
 
 void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
 {
@@ -1426,12 +1426,12 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   tm_tmplt = ur_create_output_template(1, UNIREC_TM_TEMPLATE, NULL);
+  /* tm_tmplt = ur_create_output_template(1, UNIREC_TM_TEMPLATE, NULL);
    if (tm_tmplt == NULL){
       fprintf(stderr, "Error: Output tm template could not be created.\n");
       exit_value = -1;
       goto cleanup;
-   }
+   }*/
 
    // Allocate memory for output record
    alert_rec = ur_create_record(alert_tmplt, MAX_LENGTH_SIP_FROM);
@@ -1441,12 +1441,12 @@ int main(int argc, char **argv)
       goto cleanup;
    }
    // Allocate memory for output record
-   tm_rec = ur_create_record(tm_tmplt, 0);
+   /*tm_rec = ur_create_record(tm_tmplt, 0);
    if (tm_rec == NULL){
       fprintf(stderr, "Error: Memory allocation problem (output tm record).\n");
       exit_value = -1;
       goto cleanup;
-   }
+   }*/
 
    // parse additional parameters
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -1606,13 +1606,13 @@ cleanup:
       ur_free_record(alert_rec);   
    }
 
-   if (tm_rec) {
+/*   if (tm_rec) {
       ur_free_record(tm_rec);   
-   }
+   }*/
    
-   if (tm_tmplt) {
+/*   if (tm_tmplt) {
       ur_free_template(tm_tmplt);
-   }
+   }*/
 
    if (alert_tmplt) {
       ur_free_template(alert_tmplt);   

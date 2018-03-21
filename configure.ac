@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-detectors], [1.3.8], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.3.10], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -49,19 +49,20 @@ AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+AC_CHECK_PROG(DEBUILD, debuild, debuild, [""])
 AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
     CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
-		[disable local compilation without system installed Nemea libraries, default: yea]),
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
+		[enable local compilation without system installed NEMEA libraries, default: no]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=true])
+esac], [repobuild=false])
 
 AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK
@@ -107,6 +108,7 @@ fi
 RPM_RELEASE=1
 AC_SUBST(RPM_RELEASE)
 AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
+AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile

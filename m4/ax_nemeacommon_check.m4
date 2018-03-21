@@ -27,12 +27,12 @@ AC_DEFUN([AX_NEMEACOMMON_CHECK], [
     elif test -d "${srcdir}/nemea-framework/common"; then
       NEMEACOMMONINC='${top_srcdir}/nemea-framework/common/include'
       NEMEACOMMONLIB='${top_builddir}/nemea-framework/common/.libs'
-    elif test -d "$srcdir/../nemea-framework/common"; then
+    elif test -d "${srcdir}/../nemea-framework/common"; then
       NEMEACOMMONINC='$(top_srcdir)/../nemea-framework/common/include'
       NEMEACOMMONLIB='$(top_builddir)/../nemea-framework/common/.libs'
     fi
     if test -n "$NEMEACOMMONLIB"; then
-      nemeacommon_LDFLAGS="-L$NEMEACOMMONLIB"
+      nemeacommon_LIBS="-L$NEMEACOMMONLIB"
       nemeacommon_CFLAGS="-I$NEMEACOMMONINC"
       AC_MSG_RESULT([yes])
     else

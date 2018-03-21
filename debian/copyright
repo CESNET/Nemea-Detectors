@@ -1,0 +1,374 @@
+#----------------------------------------------------------------------------
+Copyright: 2013-2016 CESNET
+Files: ./tests/test_tcpip.sh
+# licensecheck(1): ./tests/test_tcpip.sh: UNKNOWN
+License:
+  LICENSE TERMS
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in
+ the documentation and/or other materials provided with the
+ distribution.
+ 3. Neither the name of the Company nor the names of its contributors
+ may be used to endorse or promote products derived from this
+ software without specific prior written permission.
+ .
+ ALTERNATIVELY, provided that this notice is retained in full, this
+ product may be distributed under the terms of the GNU General Public
+ License (GPL) version 2 or later, in which case the provisions
+ of the GPL apply INSTEAD OF those given above.
+ .
+ This software is provided ``as is'', and any express or implied
+ warranties, including, but not limited to, the implied warranties of
+ merchantability and fitness for a particular purpose are disclaimed.
+ In no event shall the company or contributors be liable for any
+ direct, indirect, incidental, special, exemplary, or consequential
+ damages (including, but not limited to, procurement of substitute
+ goods or services; loss of use, data, or profits; or business
+ interruption) however caused and on any theory of liability, whether
+ in contract, strict liability, or tort (including negligence or
+ otherwise) arising in any way out of the use of this software, even
+ if advised of the possibility of such damage.
+ .
+ set -x
+ number of lines that client receives before exit
+
+#----------------------------------------------------------------------------
+Copyright: 2006-2016 CESNET
+Files: ./mdconvert.sh
+	./tools/trap_stats.c
+	./src/ifc_tcpip.h
+	./src/trap_internal.c
+	./src/ifc_file.c
+	./src/ifc_file.h
+	./src/ifc_tcpip.c
+	./src/ifc_dummy.c
+	./src/trap_error.c
+	./src/ifc_tcpip_internal.h
+	./src/trap_ifc.h
+	./src/trap_internal.h
+	./src/trap_error.h
+	./src/ifc_dummy.h
+	./tests/test_trap_ifc_tcpip_server.c
+	./tests/test_parse_params.c
+	./tests/test_echo_reply_ctx.c
+	./tests/test_echo_reply.c
+	./tests/test_echo.c
+	./tests/test_multi_recv.c
+	./tests/test_rxtx.c
+	./tests/test_timeout_ctx.c
+	./tests/test_echo_ctx.c
+	./tests/test_trap_ifc_tcpip_client.c
+	./tests/basic_test.c
+	./include/libtrap/trap_module_info.h
+	./include/libtrap/trap.h
+# licensecheck(1): ./mdconvert.sh: UNKNOWN
+License:
+  LICENSE TERMS
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in
+ the documentation and/or other materials provided with the
+ distribution.
+ 3. Neither the name of the Company nor the names of its contributors
+ may be used to endorse or promote products derived from this
+ software without specific prior written permission.
+ .
+ ALTERNATIVELY, provided that this notice is retained in full, this
+ product may be distributed under the terms of the GNU General Public
+ License (GPL) version 2 or later, in which case the provisions
+ of the GPL apply INSTEAD OF those given above.
+ .
+ This software is provided ``as is'', and any express or implied
+ warranties, including, but not limited to, the implied warranties of
+ merchantability and fitness for a particular purpose are disclaimed.
+ In no event shall the company or contributors be liable for any
+ direct, indirect, incidental, special, exemplary, or consequential
+ damages (including, but not limited to, procurement of substitute
+ goods or services; loss of use, data, or profits; or business
+ interruption) however caused and on any theory of liability, whether
+ in contract, strict liability, or tort (including negligence or
+ otherwise) arising in any way out of the use of this software, even
+ if advised of the possibility of such damage.
+
+#............................................................................
+# Gray hits with matching text of "copyright":
+# !!! manual check needed ./tools/trap_stats.c: 328, 
+#	switch (c) {, case 'h':
+#----------------------------------------------------------------------------
+Copyright: 2013-2014 CESNET
+Files: ./tests/generate-report.sh
+	./tests/test_reconnection.sh
+# licensecheck(1): ./tests/generate-report.sh: UNKNOWN
+License:
+  LICENSE TERMS
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in
+ the documentation and/or other materials provided with the
+ distribution.
+ 3. Neither the name of the Company nor the names of its contributors
+ may be used to endorse or promote products derived from this
+ software without specific prior written permission.
+ .
+ ALTERNATIVELY, provided that this notice is retained in full, this
+ product may be distributed under the terms of the GNU General Public
+ License (GPL) version 2 or later, in which case the provisions
+ of the GPL apply INSTEAD OF those given above.
+ .
+ This software is provided ``as is'', and any express or implied
+ warranties, INCluding, but not limited to, the implied warranties of
+ merchantability and fitness for a particular purpose are disclaimed.
+ In no event shall the company or contributors be liable for any
+ direct, indirect, INCidental, special, exemplary, or consequential
+ damages (INCluding, but not limited to, procurement of substitute
+ goods or services; loss of use, data, or profits; or business
+ interruption) however caused and on any theory of liability, whether
+ in contract, strict liability, or tort (INCluding negligence or
+ otherwise) arising in any way out of the use of this software, even
+ if advised of the possibility of such damage.
+
+#----------------------------------------------------------------------------
+Copyright: 2008 Steven G. Johnson <stevenj@alum.mit.edu>
+ 2011 Daniel Richard G. <skunk@iSKUNK.ORG>
+Files: ./m4/ax_pthread.m4
+# licensecheck(1): ./m4/ax_pthread.m4: GPL
+License:
+  This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation, either version 3 of the License, or (at your
+ option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+ Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License along
+ with this program. If not, see <http://www.gnu.org/licenses/>.
+ .
+ As a special exception, the respective Autoconf Macro's copyright owner
+ gives unlimited permission to copy, distribute and modify the configure
+ scripts that are the output of Autoconf when processing the Macro. You
+ need not follow the terms of the GNU General Public License when using
+ or distributing such scripts, even though portions of the text of the
+ Macro appear in them. The GNU General Public License (GPL) does govern
+ all other use of the material that constitutes the Autoconf Macro.
+ .
+ This special exception to the GPL applies to versions of the Autoconf
+ Macro released by the Autoconf Archive. When you make and distribute a
+ modified version of the Autoconf Macro, you may extend this special
+ exception to the GPL to apply to your modified version as well.
+ .
+ serial 21
+
+#----------------------------------------------------------------------------
+Copyright: 2009 Oren Ben-Kiki <oren@ben-kiki.org>
+Files: ./m4/ax_prog_doxygen.m4
+# licensecheck(1): ./m4/ax_prog_doxygen.m4: *No copyright* GENERATED FILE
+License:
+  Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+ .
+ serial 12
+ .
+ # ----------##
+ # Defaults. ##
+ # ----------##
+
+#----------------------------------------------------------------------------
+Copyright: 2004 Free Software Foundation, Inc. Written by Scott James Remnant,
+Files: ./m4/ltversion.m4
+# licensecheck(1): ./m4/ltversion.m4: GENERATED FILE
+License:
+  This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+ .
+ Generated from ltversion.in.
+ .
+ serial 3017 ltversion.m4
+ This file is part of GNU Libtool
+
+#----------------------------------------------------------------------------
+Copyright: 2004-2007 Free Software Foundation, Inc. Written by Scott James Remnant, .
+Files: ./m4/lt~obsolete.m4
+# licensecheck(1): ./m4/lt~obsolete.m4: UNKNOWN
+License:
+  This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+ .
+ serial 4 lt~obsolete.m4
+ .
+ These exist entirely to fool aclocal when bootstrapping libtool.
+
+#----------------------------------------------------------------------------
+Copyright: 2004-2008 Free Software Foundation, Inc. Written by Gary V. Vaughan,
+Files: ./m4/ltsugar.m4
+# licensecheck(1): ./m4/ltsugar.m4: UNKNOWN
+License:
+  This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+ .
+ serial 6 ltsugar.m4
+
+#----------------------------------------------------------------------------
+Copyright: 2004-2008 Free Software Foundation, Inc. Written by Gary V. Vaughan,
+Files: ./m4/ltoptions.m4
+# licensecheck(1): ./m4/ltoptions.m4: UNKNOWN
+License:
+  This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+ .
+ serial 6 ltoptions.m4
+
+#----------------------------------------------------------------------------
+Copyright: 2009-2014 Petri Lehtinen <petri@digip.org>
+Files: ./src/third-party/libjansson/hashtable.c
+	./src/third-party/libjansson/hashtable.h
+# licensecheck(1): ./src/third-party/libjansson/hashtable.c: UNKNOWN
+License:
+  This library is free software; you can redistribute it and/or modify
+ it under the terms of the MIT license. See LICENSE for details.
+
+#----------------------------------------------------------------------------
+Copyright: 2011-2012 Graeme Smecher <graeme.smecher@mail.mcgill.ca>
+ 2009-2014 Petri Lehtinen <petri@digip.org>
+ 2011-2012 Basile Starynkevitch <basile@starynkevitch.net>
+Files: ./src/third-party/libjansson/utf.c
+	./src/third-party/libjansson/jansson_private.h
+	./src/third-party/libjansson/value.c
+	./src/third-party/libjansson/utf.h
+	./src/third-party/libjansson/dump.c
+	./src/third-party/libjansson/pack_unpack.c
+	./src/third-party/libjansson/memory.c
+	./src/third-party/libjansson/strbuffer.h
+	./src/third-party/libjansson/strbuffer.c
+	./src/third-party/libjansson/load.c
+	./include/libtrap/jansson.h
+# licensecheck(1): ./src/third-party/libjansson/utf.c: UNKNOWN
+License:
+  Jansson is free software; you can redistribute it and/or modify
+ it under the terms of the MIT license. See LICENSE for details.
+
+#----------------------------------------------------------------------------
+Copyright: 32 /*-------------------------------- last block: affect all bits of (c) */
+Files: ./src/third-party/libjansson/lookup3.h
+# licensecheck(1): ./src/third-party/libjansson/lookup3.h: *No copyright* UNKNOWN
+License: NO_LICENSE_TEXT_FOUND
+
+#----------------------------------------------------------------------------
+Copyright: NO_COPYRIGHT_INFO_FOUND
+Files: ./configure.ac
+	./AUTHORS
+	./README.ifcspec.md
+	./Doxyfile.in
+	./aminclude.am
+	./libtrap.spec.in
+	./devel-doxyfile.in
+	./Makefile.am
+	./NEWS
+	./libtrap.pc.in
+	./tools/Makefile.am
+	./src/help_trapifcspec.c
+	./src/Makefile.am
+	./src/third-party/libjansson/strconv.c
+	./src/third-party/libjansson/error.c
+	./src/third-party/libjansson/hashtable_seed.c
+	./doc/index.txt
+	./doc/develop-interface.txt
+	./doc/index-devel.txt
+	./doc/history.txt
+	./tests/basic_test_timeouts.test
+	./tests/libtrap_multiclient.test
+	./tests/libtrap_ctxapi.test
+	./tests/basic_test_arg.test
+	./tests/libtrap_simpleapi.test
+	./tests/test_finalize.c
+	./tests/libtrap_disbuffer.test
+	./tests/libtrap_ctxapi_t.test
+	./tests/libtrap_simpleapi_t.test
+	./tests/Makefile.am
+	./tests/valid_buffer.c
+	./debian/control
+	./include/Makefile.am
+# licensecheck(1): ./configure.ac: *No copyright* UNKNOWN
+License: NO_LICENSE_TEXT_FOUND
+
+#----------------------------------------------------------------------------
+# Huge files   (skipped):
+# ./src/trap.c
+# ./m4/libtool.m4
+
+#----------------------------------------------------------------------------
+# This is meant only as a template example.
+#
+# Edit this accordinng to the "Machine-readable debian/copyright file" as
+# http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/ .
+#
+# Generate typical license templates with the "debmake -c" to STDOUT
+# and merge them into here as needed.  See "man 8 debmake" for more.
+#
+# licensecheck(1) from the devscripts package is used here to determin
+# the name of the license that applies.
+#
+# Please avoid to pick license terms that are more restrictive than the
+# packaged work, as it may make Debian's contributions unacceptable upstream.
+
+#----------------------------------------------------------------------------
+# License: COPYING
+ COPYRIGHT AND PERMISSION NOTICE
+ .
+ Copyright (C) 2012-2013 CESNET, z.s.p.o.
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ .
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the distribution.
+   3. Neither the name of the Company nor the names of its contributors may
+      be used to endorse or promote products derived from this software
+      without specific prior written permission.
+ .
+ ALTERNATIVELY, provided that this notice is retained in full, this product
+ may be distributed under the terms of the GNU General Public License (GPL)
+ version 2 or later, in which case the provisions of the GPL apply INSTEAD OF
+ those given above.
+ .
+ This software is provided "as is", and any express or implied warranties,
+ including, but not limited to, the implied warranties of merchantability
+ and fitness for a particular purpose are disclaimed. In no event shall the
+ company or contributors be liable for any direct, indirect, incidental,
+ special, exemplary, or consequential damages (including, but not limited to,
+ procurement of substitute goods or services; loss of use, data, or profits;
+ or business interruption) however caused and on any theory of liability,
+ whether in contract, strict liability, or tort (including negligence or
+ otherwise) arising in any way out of the use of this software, even if
+ advised of the possibility of such damage.
+
+-----------------------------------------------------------------------------------
+|Copyright(C) 2012-2016 CESNET, z.s.p.o.|<nemea@cesnet.cz>|github.com/CESNET/Nemea|
+----------------------------------------------------------------------------------- 

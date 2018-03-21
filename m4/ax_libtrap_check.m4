@@ -27,10 +27,10 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
 
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
-    PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+    PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
   fi
-  if test "${TRAPLIB}" != "yes"; then
-    # repobuild 
+  if test "${HAVE_TRAPLIB}" != "yes"; then
+    # repobuild
     AC_MSG_CHECKING([for libtrap in parent directory])
     if test -d "$srcdir/../libtrap"; then
       TRAPINC='$(top_srcdir)/../libtrap/include'
@@ -46,17 +46,21 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
       TRAPLIB='$(top_builddir)/../nemea-framework/libtrap/src/.libs'
     fi
     if test -n "$TRAPLIB"; then
-      libtrap_LDFLAGS="-L${TRAPLIB}"
+      libtrap_LIBS="-L${TRAPLIB}"
       libtrap_CFLAGS="-I${TRAPINC}"
       AC_MSG_RESULT([yes])
     else
       AC_MSG_RESULT([no])
       TRAPLIB=""
-      PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+      PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
     fi
   fi
   if test -n "$TRAPLIB"; then
-    LIBS="$libtrap_LIBS $LIBS"
+    CPPFLAGS="-I${TRAPINC} $CPPFLAGS"
+    LIBS="-L${TRAPLIB} $LIBS"
+  elif test "x$HAVE_TRAPLIB" = "xyes"; then
+    CPPFLAGS="${libtrap_CFLAGS} $CPPFLAGS"
+    LIBS="${libtrap_LIBS} $LIBS"
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
