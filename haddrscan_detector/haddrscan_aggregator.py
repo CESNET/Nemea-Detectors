@@ -195,7 +195,7 @@ while True:
       else:
          # Keep overwriting the last four destination addresses
          UR_Output.DST_IP12 = UR_Input.DST_IP0
-         UR_Output.DST_IP12 = UR_Input.DST_IP1
+         UR_Output.DST_IP13 = UR_Input.DST_IP1
          UR_Output.DST_IP14 = UR_Input.DST_IP2
          UR_Output.DST_IP15 = UR_Input.DST_IP3
       UR_Output.ADDR_CNT += UR_Input.ADDR_CNT
