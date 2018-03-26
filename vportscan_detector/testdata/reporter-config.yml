@@ -1,0 +1,10 @@
+custom_actions:
+- id: all
+  file:
+     path: /dev/stdout
+
+rules:
+- id: 1
+  condition: True
+  actions:
+  - all
