@@ -64,7 +64,7 @@
 #include <config.h>
 #endif
 
-#include <nemea-common.h>
+#include <nemea-common/nemea-common.h>
 #include <unirec/unirec.h>
 #include <libtrap/trap.h>
 #include "ipblacklistfilter.h"
@@ -93,7 +93,6 @@ UR_FIELDS(
     //Blacklist items
     uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
     uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
-    uint32 EVENT_SCALE,     //Attack intensity
 )
 
 trap_module_info_t *module_info = NULL;
@@ -120,16 +119,6 @@ trap_module_info_t *module_info = NULL;
   PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
   PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32")
 
-
-// Global variable used for storing actual timestamps received from input UniRec records
-uint32_t TIMESTAMP = 0;
-
-// Global variable used for storing aggregated records
-fht_table_t *AGGR_TABLE;
-
-// Global variables for storing periods of timeouts
-uint32_t TIMEOUT_ACTIVE = DEFAULT_TIMEOUT_ACTIVE;
-uint32_t TIMEOUT_INACTIVE = DEFAULT_TIMEOUT_INACTIVE;
 
 // Global variable for signaling the program to stop execution
 static int stop = 0;
@@ -178,17 +167,6 @@ void check_update()
 }
 
 /**
- * \brief Function for updating internal timestamp.
- * \param new_time New timestamp in seconds.
- */
-void update_timestamp(uint32_t new_time)
-{
-   if (new_time > TIMESTAMP) {
-      TIMESTAMP = new_time;
-   }
-}
-
-/**
  * \brief Function computes nearest upper value of power of 2.
  * \param size Actual size.
  * \return Lowest power of 2 bigger or equal than actual size.
@@ -203,66 +181,6 @@ uint32_t update_hash_table_size_to_pow2(uint32_t size)
    size |= size >> 16;
    return ++size;
 }
-
-/**
- * \brief Function for creating new or finding old record in aggregation hash table.
- * \param key  Key of inserting data.
- * \param data New data to insert.
- * \param lock Reference for locked data.
- * \param kicked Data kicked from table due to insertion of new data.
- * \param kicked_flag Flag gaining values 0 (data was not kicked) or 1 (data was kicked).
- * \return NULL if insert was successfull or pointer to old data with same key as
- *         new data if data was already present in table.
- */
-aggr_data_t *create_new_aggr(aggr_data_key_t *key, aggr_data_t *data, int8_t **lock, aggr_data_t *kicked, uint8_t *kicked_flag)
-{
-   int fht_ret;
-   aggr_data_t *data_ret = NULL;
-
-   fht_ret = fht_insert(AGGR_TABLE, key, data, NULL, kicked);
-
-
-
-   switch (fht_ret) {
-      case FHT_INSERT_OK: data_ret = NULL;
-                          *kicked_flag = 0;
-                          *lock = NULL;
-                          break;
-      case FHT_INSERT_LOST: data_ret = NULL;
-                            *kicked_flag = 1;
-                            *lock = NULL;
-                            break;
-      case FHT_INSERT_FAILED: data_ret = (aggr_data_t*) fht_get_data_locked(AGGR_TABLE, key, lock);
-                              *kicked_flag = 0;
-                              break;
-   }
-
-   return data_ret;
-}
-
-/**
- * \brief Function update aggregation count and last seen timestamp of data.
- * \param tmplt Unirec template for stored data.
- * \param data  Pointer to stored data.
- * \return 0 if Active timeout has expired, 0 otherwise.
- */
-uint8_t update_aggr(ur_template_t *tmplt, aggr_data_t *data)
-{
-   uint8_t ret = 1;
-
-   // Update aggregation count
-   ur_set(tmplt, data->data, F_EVENT_SCALE, ur_get(tmplt, data->data, F_EVENT_SCALE) +1);
-   data->time_last = TIMESTAMP;
-
-   // Check Active timeout
-   if ((data->time_last - data->time_first) >= TIMEOUT_ACTIVE) {
-      // Active timeout has ran out
-      ret = 0;
-   }
-
-   return ret;
-}
-
 
 /**
  * Function for swapping bits in byte.
@@ -421,7 +339,7 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 
 /**
  * \brief Function for binary searching in prefix lists. It uses binary search
- * algorithm to determine whehter the given ip address fits any of the prefix in the list.
+ * algorithm to determine whether the given ip address fits any of the prefix in the list.
  * \param searched IP address that we are checking.
  * \param v4mm Map of IPv4 masks.
  * \param v6mm Map of IPv6 masks.
@@ -580,7 +498,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
  * similar to matching operation but instead of returning the index of the matching
  * ip it either updates the entry or returns the index where the new item should
  * be inserted. This operation keeps the list sorted for binary search without sorting
- * the vectors explicitely.
+ * the vectors explicitly.
  * \param updated Item containing the update.
  * \param v4mm Array with v4 masks used for prefix search.
  * \param v6mm Array with v6 masks used for prefix search.
@@ -637,7 +555,7 @@ int ip_binary_update(ip_blist_t* updated, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
 
 /**
  * \brief Function for updating blacklists (add operation). It performs update
- * operations borth for prefixes and addresses.
+ * operations both for prefixes and addresses.
  * \param bl_v4 Vector with blacklisted v4 prefixes.
  * \param bl_v6 Vector with blacklisted v6 prefixes.
  * \param add_upd Vector with updates (new items).
@@ -710,40 +628,6 @@ void update_remove(black_list_t& bl_v4,
 }
 
 
-
-/**
- * \brief Function for thread checking if Inactive timeout of stored flows
- * has expired.
- * \param tmplt Unirec template of stored data.
- */
-void *inactive_timeout_thread_func(void *tmplt)
-{
-   while (!stop) {
-      // Sleep for inactive timeout
-      sleep(TIMEOUT_INACTIVE);
-
-      // Send all flows still in table as SF (single flow)
-      fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
-      while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
-         // Check flow last seen timestamp
-         if (TIMESTAMP - ((aggr_data_t*)iter->data_ptr)->time_last >= TIMEOUT_INACTIVE) {
-            // Inactive timeout expired, send data to output
-            trap_send(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt));
-            fht_remove_iter(iter);
-         }
-      }
-   }
-
-   // The program is terminating, empty stored flows
-   fht_iter_t *iter = fht_init_iter(AGGR_TABLE);
-   while (fht_get_next_iter(iter) == FHT_ITER_RET_OK) {
-      trap_send(0, ((aggr_data_t*)iter->data_ptr)->data, ur_rec_fixlen_size((ur_template_t*)tmplt));
-         fht_remove_iter(iter);
-   }
-
-   return NULL;
-}
-
 /**
  * \brief Setup arguments structure for Blacklist Downloader.
  * \param args Pointer to arguments structure.
@@ -811,11 +695,8 @@ int main (int argc, char** argv)
 {
    int retval = 0; // return value
    int send_terminating_unirec = 1;
-   uint32_t hash_table_size = DEFAULT_HASH_TABLE_SIZE;
-   uint32_t hash_table_stash_size = 0;
-   int8_t *fht_lock = NULL;
 
-   // Set defaukt files names
+   // Set default files names
    char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
    char *bld_userFile = (char*) SYSCONFDIR "/ipblacklistfilter/bld_userConfigFile.xml";
 
@@ -860,6 +741,7 @@ int main (int argc, char** argv)
 // UniRec templates for recieving data and reporting blacklisted IPs
   char *errstr = NULL;
   ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
+
   if (templ == NULL) {
     cerr << "Error: Invalid UniRec specifier." << endl;
     if(errstr != NULL){
@@ -869,7 +751,8 @@ int main (int argc, char** argv)
     trap_finalize();
     return EXIT_FAILURE;
   }
-  ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST,EVENT_SCALE", &errstr);
+
+  ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
   if (tmpl_det == NULL) {
     cerr << "Error: Invalid UniRec specifier." << endl;
     if(errstr != NULL){
@@ -880,10 +763,6 @@ int main (int argc, char** argv)
     ur_free_template(templ);
     return EXIT_FAILURE;
   }
-
-   // Buffers for aggregated records
-   aggr_data_t *new_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det));
-   aggr_data_t *kicked_data = (aggr_data_t*) malloc(sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det));
 
    // Create detection record
    void *detection = NULL;
@@ -909,7 +788,7 @@ int main (int argc, char** argv)
    int bl_mode = BL_STATIC_MODE; // default mode
 
    // ********** Parse arguments **********
-   while ((opt = getopt(argc, argv, "nDA:I:s:u:U:")) != -1) {
+   while ((opt = getopt(argc, argv, "nDu:U:")) != -1) {
       switch (opt) {
          case 'u': // user configuration file for IPBlacklistFilter
                    userFile = optarg;
@@ -922,15 +801,6 @@ int main (int argc, char** argv)
                    break;
          case 'n': // Do not send terminating Unirec
                    send_terminating_unirec = 0;
-                   break;
-         case 'A': // Active timeout
-                   TIMEOUT_ACTIVE = atoi(optarg);
-                   break;
-         case 'I': // Inactive timeout
-                   TIMEOUT_INACTIVE = atoi(optarg);
-                   break;
-         case 's': // FHT table size
-                   hash_table_size = atoi(optarg);
                    break;
          case '?': if (optopt == 'I' || optopt == 'A' || optopt == 's') {
                       fprintf (stderr, "ERROR: Option -%c requires an argumet.\n", optopt);
@@ -969,24 +839,12 @@ int main (int argc, char** argv)
    }
 
 
-   // ***** Check module arguments *****
-   hash_table_size = update_hash_table_size_to_pow2(hash_table_size);
-   if ((AGGR_TABLE = fht_init(hash_table_size, sizeof(aggr_data_key_t), sizeof(aggr_data_t) + ur_rec_fixlen_size(tmpl_det), hash_table_stash_size)) == NULL) {
-      fprintf(stderr, "Error: Could not allocate memory for hash table\n");
-      ur_free_template(templ);
-      ur_free_template(tmpl_det);
-      trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return EXIT_FAILURE;
-   }
-
    // ***** Initialize Blacklist Downloader *****
    if (bl_mode == BL_DYNAMIC_MODE) {
       // Load configuration for BLD
       if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
          ur_free_template(templ);
          ur_free_template(tmpl_det);
-         fht_destroy(AGGR_TABLE);
          trap_finalize();
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return EXIT_FAILURE;
@@ -1004,7 +862,6 @@ int main (int argc, char** argv)
       fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
       ur_free_template(templ);
       ur_free_template(tmpl_det);
-      fht_destroy(AGGR_TABLE);
       trap_finalize();
       if (bl_mode == BL_DYNAMIC_MODE) {
          bld_finalize();
@@ -1019,20 +876,6 @@ int main (int argc, char** argv)
    }
    add_update.clear();
    rm_update.clear();
-
-
-    // Create thread for Inactive timeout checking
-    pthread_t inactive_timeout_thread_id;
-    if (pthread_create(&inactive_timeout_thread_id, NULL, &inactive_timeout_thread_func, tmpl_det)) {
-       fprintf(stderr, "ERROR: Could not create inactive timeout flush thread.\n");
-       ur_free_record(detection);
-       ur_free_template(templ);
-       ur_free_template(tmpl_det);
-       fht_destroy(AGGR_TABLE);
-       trap_finalize();
-       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-       return EXIT_SUCCESS;
-    }
 
 
    // ***** Main processing loop *****
@@ -1055,9 +898,6 @@ int main (int argc, char** argv)
          }
       }
 
-      // Update timestamp from record
-      update_timestamp(ur_get(templ, data, F_TIME_FIRST) >> 32);
-
       // Try to match the IP addresses to blacklist
       if (ip_is4(&(ur_get(templ, data, F_SRC_IP)))) {
          // Check blacklisted IPs
@@ -1068,39 +908,8 @@ int main (int argc, char** argv)
 
       // If IP address was found on blacklist
       if (retval == BLACKLISTED) {
-         aggr_data_t *aggr_data;
-         aggr_data_key_t aggr_data_key;
-         uint8_t kicked_flag;
-
-         aggr_data_key.srcip = ur_get(templ, data, F_SRC_IP);
-         aggr_data_key.dstip = ur_get(templ, data, F_DST_IP);
-         aggr_data_key.proto = ur_get(templ, data, F_PROTOCOL);
-
-         new_data->time_first = TIMESTAMP;
-         new_data->time_last = TIMESTAMP;
          ur_copy_fields(tmpl_det, detection, templ, data);
-         ur_set(tmpl_det, detection, F_EVENT_SCALE, 1);
-         memcpy(new_data->data, detection, ur_rec_size(tmpl_det, detection));
-
-         // Create new aggregation record or find old one already in table
-         aggr_data = create_new_aggr(&aggr_data_key, new_data, &fht_lock, kicked_data, &kicked_flag);
-
-         // If aggregation record is already present in table
-         if (aggr_data) {
-            // Update old record
-            if (!update_aggr(tmpl_det, aggr_data)) {
-               // If Active timeout has run out, send data to output
-               trap_send(0, aggr_data->data, ur_rec_fixlen_size(tmpl_det));
-               fht_remove_locked(AGGR_TABLE, &aggr_data_key, fht_lock);
-            }
-            fht_unlock_data(fht_lock);
-            fht_lock = NULL;
-         }
-
-         // If data was kicked out from table, send them to output
-         if (kicked_flag) {
-            trap_send(0, kicked_data->data, ur_rec_fixlen_size(tmpl_det));
-         }
+         trap_send(0, detection, ur_rec_fixlen_size(tmpl_det));
       }
 
       // Critical section starts here
@@ -1156,7 +965,6 @@ int main (int argc, char** argv)
             if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
                ur_free_template(templ);
                ur_free_template(tmpl_det);
-               fht_destroy(AGGR_TABLE);
                trap_finalize();
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                return EXIT_FAILURE;
@@ -1172,7 +980,6 @@ int main (int argc, char** argv)
             fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
             ur_free_template(templ);
             ur_free_template(tmpl_det);
-            fht_destroy(AGGR_TABLE);
             trap_finalize();
             if (bl_mode == BL_DYNAMIC_MODE) {
                bld_finalize();
@@ -1202,14 +1009,6 @@ int main (int argc, char** argv)
         configuratorFreeUAMBS();
     }
 
-   // Wait for inactive timeout flush thread
-   if (fht_lock != NULL) {
-      fht_unlock_data(fht_lock);
-   }
-   pthread_kill(inactive_timeout_thread_id, SIGUSR1);
-   pthread_join(inactive_timeout_thread_id, NULL);
-
-
    // If set, send terminating message to modules on output
    if (send_terminating_unirec) {
       trap_send(0, "TERMINATE", 1);
@@ -1222,7 +1021,6 @@ int main (int argc, char** argv)
    }
    ur_free_template(templ);
    ur_free_template(tmpl_det);
-   fht_destroy(AGGR_TABLE);
 
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)

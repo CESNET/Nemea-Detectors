@@ -47,7 +47,7 @@
 
 #include <vector>
 #include <unirec/unirec.h>
-#include <nemea-common.h>
+#include <nemea-common/nemea-common.h>
 
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
@@ -138,20 +138,6 @@ extern "C" {
  */
 #define BLACKLIST_UPDATE_MODE DIFF_UPDATE_MODE
 
-/**
- * Default inactive timeout in seconds.
- */
-#define DEFAULT_TIMEOUT_INACTIVE 30
-
-/**
- * Default active timeout in seconds.
- */
-#define DEFAULT_TIMEOUT_ACTIVE 300
-
-/**
- * Default aggregation hash table size.
- */
-#define DEFAULT_HASH_TABLE_SIZE 500000
 
 /**
  * Max length of blacklist name
@@ -161,35 +147,12 @@ extern "C" {
 /**
  * Comments character for every blacklist website.
  */
-char *BLACKLIST_COMMENT_AR = (char*)"#####";
+char BLACKLIST_COMMENT_AR[]= "#####";
 
 /**
  * Regular expression to parse IP address from blacklist. (only IPv4 for now).
  */
-char *BLACKLIST_REG_PATTERN = (char*)"\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
-
-
-/**
- * Structure for data aggregation
- */
-typedef struct {
-   /*@{*/
-   uint32_t time_first;/**< Timestamp of creation */
-   uint32_t time_last;/**< Timestamp of last update */
-   char data[1];/**< Buffer for data (BEWARE: dynamically allocated, so no size needed)*/
-   /*@}*/
-} aggr_data_t;
-
-/**
- * Structure for data aggregation key
- */
-typedef struct {
-   /*@{*/
-   ip_addr_t srcip;/**< Source address */
-   ip_addr_t dstip;/**< Destination address */
-   uint8_t proto;/**< Protocol */
-   /*@}*/
-} aggr_data_key_t;
+char BLACKLIST_REG_PATTERN[] = "\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
 
 
 /**
