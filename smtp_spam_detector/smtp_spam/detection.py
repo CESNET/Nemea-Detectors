@@ -12,25 +12,24 @@ from global_def import *
 import pytrap
 import sys
 import time
+import logging
 
 class SpamDetection(Thread):
     """ Data is dict of flows from multirecievers """
     def __init__(self):
+        Thread.__init__(self)
         # Storage for both flow types
-        self.data = {}
-
-        # Separated data pools
-        self.basic_db = {}
-        self.smtp_db = {}
+        self.data = dict()
+        self.white_list = dict()
 
         # Blacklisted entites that are probably spammers
-        self.potencial_spammers = []
+        self.potencial_spammers = list()
 
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
         self.t_detect = 0               # last detection time
-        self.t_cluster = 0              # last clustering time
-
+        #self.t_cluster = 0             # last clustering time
+        self.t_cflow = 0                # current time in context of processing flows
         """
         Counters for how many flows has been checked, and how many alerts
         has been generated.
@@ -73,21 +72,25 @@ class SpamDetection(Thread):
             self.data[key].update_time(flow)
         else:
             self.data[key] = SMTP_ENTITY(flow)
+
+        if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
+            self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
+
         return True
 
-    def analysis(self, semaphore):
+    def analysis(self):
         """ Do frequencual analysis here """
         potencial_spammers = list()
-        semaphore.acquire()
         self.t_detect  = time.time()
-        checked = 0
+
         for entity in self.data:
             self.data[entity].set_up_traffic_ratio()
+
             if not self.data[entity].is_legit():
                 potencial_spammers.append(self.data[entity])
-            checked += 1
-            if checked % 10000 is 0:
-                print("Checked {0} entits".format(checked))
+                print("Found potencial entity")
+
+        print("Probing done.")
         return None
 
     def clean_up(self):
@@ -95,3 +98,20 @@ class SpamDetection(Thread):
         if curr_time - last_clean > CLEAN_INTERVAL:
             data.clear()
         return None
+
+    def run(self):
+        while (True):
+            if self.t_detect + PROBE_INTERVAL < self.t_cflow:
+                print("Probing")
+                self.analysis()
+                probing = Thread(target=self.analysis, args=())
+                probing.start()
+                self.t_detect = time.time()
+
+            if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
+                print("Cleaning")
+                #self.clean_up()
+                time.sleep(5)
+                print("Cleaning done")
+                self.t_clean = time.time()
+

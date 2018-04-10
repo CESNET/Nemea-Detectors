@@ -15,7 +15,6 @@ import time
 # Interfaces definition
 BASIC_IF = 0
 SMTP_IF = 1
-semaphore = Semaphore()
 
 def fetch_data(trap, interface, queue):
     """
@@ -70,40 +69,56 @@ def data_handling(detector, q):
             q.task_done()
         except IndexError:
             sys.stderr.write("No data in queue.\n")
-    report = detector.analysis(semaphore)
     return True
 
 if __name__ == '__main__':
+
     # Datapool used to store information about smtp entities
     data = {}
     detector = SpamDetection()
+
     # Create a new trap context
     trap = pytrap.TrapCtx()
+
     """
     Trap initialization for two input interfaces, and no output interface
     """
-    #trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 0)
-    trap.init(sys.argv, 2, 0)
+
+    trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 0)
+    #trap.init(sys.argv, 2, 0)
+
     # Set up required format to accept any unirec format.
     trap.setRequiredFmt(BASIC_IF)   # Refers to flows without SMTP headers
     trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
     trap.setVerboseLevel(0)
-    # Data queue
-    flow_queue = Queue()
+
+    # Data synchronized queues
+    flow_queue = Queue()    # Synchronize input flows
+    reports = Queue()       # Synchronize output reports
+
     # Create workers for each receiver
     basic_rcv = Thread(target=fetch_data, args=(trap, BASIC_IF, flow_queue))
     smtp_rcv = Thread(target=fetch_data, args=(trap, SMTP_IF, flow_queue))
+
     # Handle the received data from receivers
     data_handler = Thread(target=data_handling, args=(detector, flow_queue))
+
     # Run multireciver
     basic_rcv.start()
     smtp_rcv.start()
     data_handler.start()
+
+    # Start detector
+    detector.start()
+
     # Join the threads
     basic_rcv.join()
     smtp_rcv.join()
+
     # Stop data_handler
     flow_queue.put(None)
     data_handler.join()
+
     # Free allocated memory
     trap.finalize()
+
