@@ -166,21 +166,6 @@ void check_update()
     bld_unlock_sync();
 }
 
-/**
- * \brief Function computes nearest upper value of power of 2.
- * \param size Actual size.
- * \return Lowest power of 2 bigger or equal than actual size.
- */
-uint32_t update_hash_table_size_to_pow2(uint32_t size)
-{
-   size--;
-   size |= size >> 1;
-   size |= size >> 2;
-   size |= size >> 4;
-   size |= size >> 8;
-   size |= size >> 16;
-   return ++size;
-}
 
 /**
  * Function for swapping bits in byte.
@@ -249,15 +234,14 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
  * \param file File with updates.
  * \return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
-int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, string& file)
+int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file)
 {
-    ifstream input; // data input
+    ifstream input;
     string line, ip, bl_flag_str;
     size_t str_pos;
     uint64_t bl_flag;
     int line_num = 0;
     ip_blist_t bl_entry; // black list entry associated with ip address
-    bool add_rem = false; // add/remove flag
 
     // Open file with blacklists
     input.open(file.c_str(), ifstream::in);
@@ -266,7 +250,6 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
         return BLIST_FILE_ERROR;
     }
 
-    // Read file line by line
     while (!input.eof()) {
         getline(input, line);
         line_num++;
@@ -277,18 +260,12 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
         // Transform all letters to lowercase (if any)
         transform(line.begin(), line.end(), line.begin(), ::tolower);
 
-        // Encountered a remove line?
-        if (line == "#remove") {
-            add_rem = true; // switch to remove mode
-            continue;
-        }
-
         // Skip empty lines
         if (!line.length()) {
             continue;
         }
 
-        // Find IP-blacklist separator
+        // Find IP-blacklist index separator
         str_pos = line.find_first_of(',');
         if (str_pos == string::npos) {
             // Blacklist index delimeter not found (bad format?), skip it
@@ -301,8 +278,10 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
 
         // Parse IP
         ip = line.substr(0, str_pos);
+
         // Are we loading prefix?
         str_pos = ip.find_first_of('/');
+
         if (str_pos == string::npos) {
             // IP only
             if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
@@ -318,20 +297,22 @@ int load_update(black_list_t& update_list_a, black_list_t& update_list_rm, strin
             if (!ip_from_str((ip.substr(0, str_pos)).c_str(), &bl_entry.ip)) {
                 continue;
             }
+
             ip.erase(0, str_pos + 1);
-            bl_entry.pref_length = strtoul(ip.c_str(), NULL, 0);
+
+            bl_entry.pref_length = (u_int8_t) strtol(ip.c_str(), NULL, 0);
         }
 
         // Determine blacklist
         bl_entry.in_blacklist = bl_flag;
 
-        // Put entry into its respective update list
-        if (!add_rem) {
-            update_list_a.push_back(bl_entry);
-        } else {
-            update_list_rm.push_back(bl_entry);
-        }
+        // Add entry to vector
+        if (ip_is4(&bl_entry.ip))
+            v4_list.push_back(bl_entry);
+        else
+            v6_list.push_back(bl_entry);
     }
+
     input.close();
 
     return ALL_OK;
@@ -694,7 +675,7 @@ bool initialize_downloader(const char *patternFile, const char *userFile, downlo
  */
 int main (int argc, char** argv)
 {
-    int retval = 0; // return value
+    int retval = 0;
     int send_terminating_unirec = 1;
 
     // Set default files names
@@ -704,10 +685,6 @@ int main (int argc, char** argv)
     // For use with prefixes
     black_list_t v4_list;
     black_list_t v6_list;
-
-    // Update lists
-    black_list_t add_update;
-    black_list_t rm_update;
 
     // Mask array for prefixes
     ipv4_mask_map_t v4_masks;
@@ -739,7 +716,7 @@ int main (int argc, char** argv)
     trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
     trap_free_ifc_spec(ifc_spec);
 
-// UniRec templates for recieving data and reporting blacklisted IPs
+    // UniRec templates for recieving data and reporting blacklisted IPs
     char *errstr = NULL;
     ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
 
@@ -856,7 +833,7 @@ int main (int argc, char** argv)
     file = down_config->file;
 
     // Load ip addresses from sources
-    retval = load_update(add_update, rm_update, file);
+    retval = reload_blacklists(v4_list, v6_list, file);
 
     // If update from file could not be processed, return error
     if (retval == BLIST_FILE_ERROR) {
@@ -870,13 +847,6 @@ int main (int argc, char** argv)
         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
         return EXIT_FAILURE;
     }
-
-    // Add update
-    if (!add_update.empty()) {
-        update_add(v4_list, v6_list, add_update, v4_masks, v6_masks);
-    }
-    add_update.clear();
-    rm_update.clear();
 
 
     // ***** Main processing loop *****
@@ -918,21 +888,13 @@ int main (int argc, char** argv)
         if (bl_mode == BL_DYNAMIC_MODE && BLD_SYNC_FLAG) {
             // Update blacklists
             string upd_path = file;
-            retval = load_update(add_update, rm_update, upd_path);
+            retval = reload_blacklists(v4_list, v6_list, upd_path);
             if (retval == BLIST_FILE_ERROR) {
                 cerr << "ERROR: Unable to load update files. Will use the old tables instead." << endl;
                 update = 0;
                 continue;
             }
-            if (!rm_update.empty()) {
-                update_remove(v4_list, v6_list, rm_update, v4_masks, v6_masks);
-            }
-            if (!add_update.empty()) {
-                update_add(v4_list, v6_list, add_update, v4_masks, v6_masks);
-            }
 
-            add_update.clear();
-            rm_update.clear();
             BLD_SYNC_FLAG = 0;
         }
 
@@ -948,9 +910,6 @@ int main (int argc, char** argv)
                 // No need to lock, blacklist downloader is no more
             }
 
-            // CLEAR UPDATES VECTOR AND LIST VECTORS
-            add_update.clear();
-            rm_update.clear();
             v4_list.clear();
             v6_list.clear();
 
@@ -974,7 +933,8 @@ int main (int argc, char** argv)
 
             // Load ip addresses from sources
             file = down_config->file;
-            retval = load_update(add_update, rm_update, file);
+
+            retval = reload_blacklists(v4_list, v6_list, file);
 
             // If update from file could not be processed, return error
             if (retval == BLIST_FILE_ERROR) {
@@ -988,16 +948,10 @@ int main (int argc, char** argv)
                 FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                 return EXIT_FAILURE;
             }
-            // Add update
-            if (!add_update.empty()) {
-                update_add(v4_list, v6_list, add_update, v4_masks, v6_masks);
-            }
-            add_update.clear();
-            rm_update.clear();
-
 
             RECONF_FLAG = 0;
         }
+
         bld_unlock_sync();
         // Critical section ends here
     }
