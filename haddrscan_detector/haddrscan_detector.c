@@ -49,20 +49,17 @@
 #include <time.h>
 #include <signal.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include "fields.h"
 #include <b_plus_tree.h>
+#include <stdbool.h>
 #include <time.h>
 
 #define MAX_PACKETS 1 // Maximum number of packets in suspicious flow
-#define MAX_ADDRS 50 // After reaching this maximum of scanned ports for one IP address, alert is sent
 
 #define STATIC_ADDR_ARR_SIZE  10
-#define DYNAMIC_ADDR_ARR_SIZE  (MAX_ADDRS - STATIC_ADDR_ARR_SIZE)
-
-#define MAX_AGE_OF_UNMODIFIED_PORTS_TABLE 5 * 60 // This determines maximum age of the unchanged ports table for one IP address
-#define TIME_BEFORE_PRUNING 1 * 60
 
 #define TCP_PROTOCOL 0x6
 #define TCP_FLAGS_SYN 0x2
@@ -101,10 +98,20 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("haddrscan_detector", "This module is a simple, threshold-based detector for horizontal scans which processes incoming flow records and outputs alerts.The detection algorithm uses information from basic flow records and it is based on analysis of the number of destination addresses per source address.  It is important to remember all unique destination addresses for each source address separately.  The source address is a potential source of scan, meanwhile, the destination addresses are victims.", 1, 1)
+  BASIC("haddrscan_detector", "This module is a simple, threshold-based detector for horizontal scans which processes incoming flow records and outputs alerts. The detection algorithm uses information from basic flow records and it is based on analysis of the number of destination addresses per source address. It is important to remember all unique destination addresses for each source address separately. The source address is a potential source of scan, meanwhile, the destination addresses are victims.", 1, 1)
 
 
-#define MODULE_PARAMS(PARAM)
+/**
+ * Definition of module parameters - every parameter has short_opt, long_opt,
+ * description, flag whether an argument is required or optional (NULL)
+ * Module parameter argument types: int8, int16, int32, int64, uint8, uint16,
+ * uint32, uint64, float, string
+ */
+#define MODULE_PARAMS(PARAM) \
+   PARAM('n', "numaddrs-threshold", "Send alert after this number of DST_IP are contacted by one SRC_IP × DST_PORT combination (default 50).", required_argument, "uint32") \
+   PARAM('d', "idle-threshold", "Discard DST_IP table for an SRC_ADDR × DST_PORT combination after it has been unchanged this many seconds (default 300).", required_argument, "uint16") \
+   PARAM('p', "pruning-interval", "Prune DST_IP tables with this interval in seconds (default 60).", required_argument, "uint16")
+
 
 static int stop = 0;
 
@@ -121,6 +128,14 @@ struct item_s {
    ur_time_t ts_first;
    ur_time_t ts_last;
 };
+
+typedef struct param_s {
+   uint32_t numaddrs_threshold;
+   uint16_t idle_threshold;
+   uint16_t pruning_interval;
+} param_t;
+
+static param_t param;
 
 /***********************************************/
 
@@ -172,7 +187,7 @@ int insert_addr(void *p, uint32_t int_dst_ip)
    } else {
       if (info->addr_cnt == STATIC_ADDR_ARR_SIZE) {
          // Inserting first address to dynamic array - allocate the array
-         info->dynamic_addrs = (uint32_t *) calloc(DYNAMIC_ADDR_ARR_SIZE, sizeof(uint32_t));
+         info->dynamic_addrs = (uint32_t *) calloc((param.numaddrs_threshold - STATIC_ADDR_ARR_SIZE), sizeof(uint32_t));
       }
       info->dynamic_addrs[info->addr_cnt - STATIC_ADDR_ARR_SIZE] = int_dst_ip;
    }
@@ -180,8 +195,8 @@ int insert_addr(void *p, uint32_t int_dst_ip)
    info->addr_cnt++;
    time(&info->ts_modified); // Update the time of table modification
 
-   if (info->addr_cnt >= MAX_ADDRS) {
-      return 1; // Signalize alert after reaching MAX_ADDRS scanned ports
+   if (info->addr_cnt >= param.numaddrs_threshold) {
+      return 1; // Signalize alert after reaching numaddrs_threshold scanned DST_IP
    }
 
    return 0;
@@ -191,6 +206,7 @@ int main(int argc, char **argv)
 {
    time_t ts_last_pruning;
    time_t ts_cur_time;
+   signed char opt;
    int ret_val = 0;
    const void *recv_data;
    uint16_t recv_data_size = 0;
@@ -208,6 +224,10 @@ int main(int argc, char **argv)
    uint32_t int_dst_ip = 0;
    ur_time_t ts_first, ts_last;
 
+   param.numaddrs_threshold = 50;
+   param.idle_threshold = 5 * 60;
+   param.pruning_interval = 1 * 60;
+
    bpt_t *b_plus_tree = bpt_init(NUM_OF_ITEMS_IN_TREE_LEAF, &compare_64b, sizeof(item_t), sizeof(uint64_t));
    if (b_plus_tree == NULL) {
       fprintf(stderr, "ERROR: Could not initialize B_PLUS_TREE\n");
@@ -220,13 +240,68 @@ int main(int argc, char **argv)
    ur_template_t *out_tmplt = NULL, *in_tmplt = NULL;
    void *out_rec = NULL;
 
-   /******************************/
+   /***** TRAP initialization *****/
 
-
+   /*
+    * Macro allocates and initializes module_info structure according
+    * to MODULE_BASIC_INFO and MODULE_PARAMS definitions earlier in
+    * this file. It also creates a string with short_opt letters for
+    * getopt function called "module_getopt_string" and long_options
+    * field for getopt_long function in variable "long_options"
+    */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   /*
+    * Let TRAP library parse program arguments, extract its parameters and
+    * initialize module interfaces
+    */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+   bool invalid_argument = false;
+
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1
+      && invalid_argument == false) {
+      switch (opt) {
+         case 'n':
+            if (sscanf(optarg, "%" SCNu32, &param.numaddrs_threshold) != 1) {
+               invalid_argument = true;
+            } else if (param.numaddrs_threshold < 2) {
+               fprintf(stderr, "Numaddrs threshold < 2 makes no sense.\n");
+               invalid_argument = true;
+            }
+            break;
+
+         case 'd':
+            if (sscanf(optarg, "%" SCNu16, &param.idle_threshold) != 1) {
+               invalid_argument = true;
+            } else if (param.idle_threshold < 1) {
+               fprintf(stderr, "Idle threshold < 1 makes no sense.\n");
+               invalid_argument = true;
+            }
+            break;
+
+         case 'p':
+            if (sscanf(optarg, "%" SCNu16, &param.pruning_interval) != 1) {
+               invalid_argument = true;
+            } else if (param.pruning_interval < 1) {
+               fprintf(stderr, "Pruning interval < 1 makes no sense.\n");
+               invalid_argument = true;
+            }
+            break;
+
+         default:
+            invalid_argument = true;
+            break;
+      }
+   }
+
+   if (invalid_argument == true) {
+      fprintf(stderr, "Invalid arguments.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
+      return -1;
+   }
 
    // ***** Create UniRec templates *****
    in_tmplt = ur_create_input_template(0, NULL, NULL);
@@ -321,7 +396,7 @@ int main(int argc, char **argv)
             ur_copy_fields(out_tmplt, out_rec, in_tmplt, recv_data);
 
             ur_set(out_tmplt, out_rec, F_EVENT_TYPE, 1);
-            ur_set(out_tmplt, out_rec, F_ADDR_CNT, MAX_ADDRS);
+            ur_set(out_tmplt, out_rec, F_ADDR_CNT, param.numaddrs_threshold);
             ur_set(out_tmplt, out_rec, F_TIME_FIRST, np->ts_first);
             ur_set(out_tmplt, out_rec, F_TIME_LAST, np->ts_last);
 
@@ -348,7 +423,7 @@ int main(int argc, char **argv)
 
       // B+ tree pruning
       time(&ts_cur_time);
-      if ((ts_cur_time - ts_last_pruning) > TIME_BEFORE_PRUNING) {
+      if ((ts_cur_time - ts_last_pruning) > param.pruning_interval) {
          item_t *value_pt = NULL;
          bpt_list_item_t *b_item = NULL;
          int has_next = 0;
@@ -373,8 +448,8 @@ int main(int argc, char **argv)
                goto cleanup;
             }
 
-            // Delete the item if it wasn't modified longer than MAX_AGE_OF_IP_IN_SEC(1)
-            if ((ts_cur_time - value_pt->ts_modified) > MAX_AGE_OF_UNMODIFIED_PORTS_TABLE) {
+            // Delete the item if it wasn't modified in over idle_threshold
+            if ((ts_cur_time - value_pt->ts_modified) > param.idle_threshold) {
                // free dynamic array of addresses
                if (value_pt->dynamic_addrs != NULL) {
                   free(value_pt->dynamic_addrs);
