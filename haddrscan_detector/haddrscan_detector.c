@@ -282,7 +282,7 @@ int main(int argc, char **argv)
       }
 
       packets = ur_get(in_tmplt, recv_data, F_PACKETS);
-      dst_port = ur_get(in_tmplt, recv_data, F_DST_PORT);
+      dst_port = ur_get(in_tmplt, recv_data, F_DST_PORT); // key to B+ tree
       protocol = ur_get(in_tmplt, recv_data, F_PROTOCOL);
       tcp_flags = ur_get(in_tmplt, recv_data, F_TCP_FLAGS);
 
