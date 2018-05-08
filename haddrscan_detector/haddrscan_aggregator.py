@@ -49,9 +49,6 @@ from threading import Lock
 import sys, os
 import pytrap
 
-# how many minutes to wait?
-minutes = 5
-
 # Global list of events
 eventList = {}
 
