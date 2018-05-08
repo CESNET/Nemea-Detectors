@@ -102,14 +102,16 @@ trap_module_info_t *module_info = NULL;
 
 
 /**
- * Definition of module parameters - every parameter has short_opt, long_opt,
- * description, flag whether an argument is required or optional (NULL)
- * Module parameter argument types: int8, int16, int32, int64, uint8, uint16,
- * uint32, uint64, float, string
+ * Definition of module parameters - every parameter has short_opt,
+ * long_opt, description, flag whether an argument is required or
+ * optional (NULL) Module parameter argument types: int8, int16,
+ * int32, int64, uint8, uint16, uint32, uint64, float, string.
+ *
+ * See README.md for more detailed descriptions of these parameters.
  */
 #define MODULE_PARAMS(PARAM) \
    PARAM('n', "numaddrs-threshold", "Send alert after this number of DST_IP are contacted by one SRC_IP × DST_PORT combination (default 50).", required_argument, "uint32") \
-   PARAM('d', "idle-threshold", "Discard DST_IP table for an SRC_ADDR × DST_PORT combination after it has been unchanged this many seconds (default 300).", required_argument, "uint16") \
+   PARAM('d', "idle-threshold", "Discard entry for an SRC_IP × DST_PORT combination after it has been unchanged this many seconds (default 300).", required_argument, "uint16") \
    PARAM('p', "pruning-interval", "Prune DST_IP tables with this interval in seconds (default 60).", required_argument, "uint16")
 
 
@@ -155,7 +157,8 @@ int compare_64b(void *a, void *b)
 
 
 /**
- * Function returns 1 in case of alert, 0 after successful added port and -1 in case of error.
+ * Function returns 1 in case of alert, 0 on already present or
+ * successful added address and -1 in case of error.
  */
 int insert_addr(void *p, uint32_t int_dst_ip)
 {
@@ -183,7 +186,7 @@ int insert_addr(void *p, uint32_t int_dst_ip)
    }
 
    if (info->addr_cnt < STATIC_ADDR_ARR_SIZE) {
-      info->static_addrs[info->addr_cnt] = int_dst_ip; // Insert the new port into first free index
+      info->static_addrs[info->addr_cnt] = int_dst_ip; // Insert the new address into first free index
    } else {
       if (info->addr_cnt == STATIC_ADDR_ARR_SIZE) {
          // Inserting first address to dynamic array - allocate the array
