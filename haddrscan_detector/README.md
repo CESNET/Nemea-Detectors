@@ -2,14 +2,14 @@
 
 ## Table of contents
 
-* [Module description](#module-description)
-* [Algorithm](#algorithm)
-* [Input data](#input-data)
-* [Output data](#output-data)
-* [Module parameters](#module-parameters)
+* [Detector module description](#detector-module-description)
+* [Detector algorithm](#detector-algorithm)
+* [Detector input data](#detector-input-data)
+* [Detector output data](#detector-output-data)
+* [Detector module parameters](#detector-module-parameters)
 
 
-## Module description
+## Detector module description
 
 This module is a **simple, threshold-based detector for horizontal
 scans** which processes incoming flow records and outputs alerts. The
@@ -24,7 +24,7 @@ destination port separately. The source address is a potential source
 of scan, meanwhile, the destination addresses are victims.
 
 
-## Algorithm
+## Detector algorithm
 
 Each flow with only 1 TCP packet that had the SYN flag set is recorded
 in a table for source address and destination port pairs where an
@@ -39,7 +39,7 @@ The table of source address and destination port pairs is examined
 every `pruning-interval` for entries unmodified for more than
 `idle-threshold` which are pruned.
 
-### Thresholds and intervals
+### Detector thresholds and intervals
 
 1. **Maximum number of packets per flow**. Only flows with 1 packet
    are processed, flows with more packets are rather a normal
@@ -66,7 +66,7 @@ every `pruning-interval` for entries unmodified for more than
    of destination addresses*.
 
 
-## Input data
+## Detector input data
 
 This module expects flow records in Unirec format. The table below
 shows required flow information together with the field names:
@@ -83,7 +83,7 @@ shows required flow information together with the field names:
 | number of packets            | `PACKETS`    |
 
 
-## Output data
+## Detector output data
 
 Alerts are sent on the output interface, also in Unirec format and
 they contain the following information:
@@ -104,7 +104,7 @@ they contain the following information:
 | `DST_IP3`    | sample probed dst address 3        |
 
 
-## Module parameters
+## Detector module parameters
 
 In addition to the implicit *libtrap* parameters `-i IFC_SPEC`, `-h`
 and `-v` (see [Execute a
@@ -120,5 +120,101 @@ module takes the following parameters:
 * `-p` `--pruning-interval` *uint16*: Interval in seconds for the
   pruning task.
 
-For more detailed information see above under [algorithm](#algorithm)
-and [thresholds and intervals](#thresholds-and-intervals).
+For more detailed information see above under [detector
+algorithm](#detector-algorithm) and [detector thresholds and
+intervals](#detector-thresholds-and-intervals).
+
+
+# Horizontal scan aggregator
+
+## Table of contents
+
+* [Aggregator module description](#aggregator-module-description)
+* [Aggregator algorithm](#aggregator-algorithm)
+* [Aggregator input data](#aggregator-input-data)
+* [Aggregator output data](#aggregator-output-data)
+* [Aggregator module parameters](#aggregator-module-parameters)
+
+
+## Aggregator module description
+
+This module is a **simple, aggregator of alerts for horizontal scans**
+which processes incoming alerts records and outputs aggregated alerts.
+The module uses the pytrap platform and it has **one input and one
+output interface**.
+
+
+## Aggregator algorithm
+
+Incoming alerts are held for up to *time* minutes (default 5) and
+aggregated with further alerts for the same source address and
+destination port pair.
+
+The first three alerts fill the sample probed destination address
+fields 0 though 11. The last alert fills fields 12 through 15.
+
+
+## Aggregator input data
+
+This module expects alerts in Unirec format. The table below shows
+required data together with the field names:
+
+| Unirec field | Description                        |
+|:------------:|:----------------------------------:|
+| `EVENT_TYPE` | type of event (1 for scanning)     |
+| `TIME_FIRST` | first time stamp                   |
+| `TIME_LAST`  | last time stamp                    |
+| `SRC_IP`     | IP address of the attacker         |
+| `SRC_PORT`   | last src port used by the attacker |
+| `DST_PORT`   | dst port probed by the attacker    |
+| `PROTOCOL`   | transport protocol (TCP)           |
+| `ADDR_CNT`   | number of probed dst addresses     |
+| `DST_IP0`    | sample probed dst address 0        |
+| `DST_IP1`    | sample probed dst address 1        |
+| `DST_IP2`    | sample probed dst address 2        |
+| `DST_IP3`    | sample probed dst address 3        |
+
+
+## Aggregator output data
+
+Aggregated alerts are sent on the output interface, also in Unirec
+format and they contain the following information:
+
+| Unirec field | Description                        |
+|:------------:|:----------------------------------:|
+| `EVENT_TYPE` | type of event (1 for scanning)     |
+| `TIME_FIRST` | first time stamp                   |
+| `TIME_LAST`  | last time stamp                    |
+| `SRC_IP`     | IP address of the attacker         |
+| `SRC_PORT`   | last src port used by the attacker |
+| `DST_PORT`   | dst port probed by the attacker    |
+| `PROTOCOL`   | transport protocol (TCP)           |
+| `ADDR_CNT`   | number of probed dst addresses     |
+| `DST_IP0`    | sample probed dst address 0        |
+| `DST_IP1`    | sample probed dst address 1        |
+| `DST_IP2`    | sample probed dst address 2        |
+| `DST_IP3`    | sample probed dst address 3        |
+| `DST_IP4`    | sample probed dst address 4        |
+| `DST_IP5`    | sample probed dst address 5        |
+| `DST_IP6`    | sample probed dst address 6        |
+| `DST_IP7`    | sample probed dst address 7        |
+| `DST_IP8`    | sample probed dst address 8        |
+| `DST_IP9`    | sample probed dst address 9        |
+| `DST_IP10`   | sample probed dst address 10       |
+| `DST_IP11`   | sample probed dst address 11       |
+| `DST_IP12`   | sample probed dst address 12       |
+| `DST_IP13`   | sample probed dst address 13       |
+| `DST_IP14`   | sample probed dst address 14       |
+| `DST_IP15`   | sample probed dst address 15       |
+
+
+## Aggregator module parameters
+
+In addition to the common pytrap parameter `-i` or `--ifcspec` this
+module takes the following parameter:
+
+* `-t` `--time` *integer*: Interval in minutes to wait between sending
+  aggregated alerts.
+
+For more detailed information see above under [aggregator
+algorithm](#aggregator-algorithm).
