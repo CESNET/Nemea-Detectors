@@ -55,15 +55,7 @@ extern "C" {
 #include <pthread.h>
 
 
-/**
- * Blacklist downloader synchronization variable.
- */
-uint8_t BLD_SYNC_FLAG;
 
-/**
- * Mutex for synchronization.
- */
-pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
  *

@@ -56,6 +56,12 @@
 extern "C" {
 #endif
 
+
+/**
+ * Mutex for synchronization.
+ */
+pthread_mutex_t BLD_SYNC_MUTEX;
+
 /**
  * Return value for matching function when address is blacklisted.
  */
