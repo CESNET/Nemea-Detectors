@@ -55,7 +55,8 @@ extern "C" {
 #include <pthread.h>
 
 
-
+uint8_t BLD_SYNC_FLAG;
+pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
  *

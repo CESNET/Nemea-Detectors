@@ -71,7 +71,7 @@ extern "C" {
 #define BL_STATIC_MODE 1
 
 /**
- * Dynamic mode ID. 
+ * Dynamic mode ID.
  */
 #define BL_DYNAMIC_MODE 2
 

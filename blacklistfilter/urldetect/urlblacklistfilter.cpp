@@ -67,7 +67,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <nemea-common.h>
+#include <nemea-common/nemea-common.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include "../blacklist_downloader/blacklist_downloader.h"
@@ -84,9 +84,9 @@ extern "C" {
 #define DEBUG
 
 #ifdef DEBUG
-#define DEBUG_PRINT(...) do{ fprintf( stderr, "DEBUG: "  __VA_ARGS__ ); } while( false )
+#define DEBUG_PRINT(...) do { fprintf( stderr, "DEBUG: "  __VA_ARGS__ ); } while( false )
 #else
-#define DEBUG_PRINT(...) do{ } while ( false )
+#define DEBUG_PRINT(...) do { } while ( false )
 #endif
 
 
@@ -142,12 +142,12 @@ UR_FIELDS(
   time TIME_FIRST,    //Timestamp of the first packet of a flow
   time TIME_LAST,     //Timestamp of the last packet of a flow
   // HTTP
-  string HTTP_SDM_REQUEST_HOST,
-  string HTTP_SDM_REQUEST_REFERER,
-  string HTTP_SDM_REQUEST_URL,
-  string HTTP_REQUEST_HOST,
-  string HTTP_REQUEST_REFERER,
-  string HTTP_REQUEST_URL,
+//  string HTTP_SDM_REQUEST_HOST,
+//  string HTTP_SDM_REQUEST_REFERER,
+//  string HTTP_SDM_REQUEST_URL,
+  string HTTP_HOST,
+  string HTTP_REFERER,
+  string HTTP_URL,
   // detection
   uint64 DST_BLACKLIST,               //ID of blacklist which contains recieved URL
 )
@@ -178,12 +178,6 @@ trap_module_info_t *module_info = NULL;
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
   PARAM('S', "", "Switch to SDM version of HTTP fields.", no_argument, "none")
 
-/* AGGREGATION IS NOT YET IMPLEMENTED
-  PARAM('A', "", "Specify active timeout in seconds. [Default: 300]", required_argument, "uint32") \
-  PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
-  PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32") \
-*/
-
 
 static int stop = 0; // global variable for stopping the program
 static int update = 0; // global variable for updating blacklists
@@ -206,7 +200,7 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 void check_update()
 {
    bld_lock_sync();
-   update = BLD_SYNC_FLAG;
+//   update = BLD_SYNC_FLAG;
    bld_unlock_sync();
 }
 
@@ -329,23 +323,23 @@ int check_blacklist(blacklist_map_t &blacklist, ur_template_t *in, ur_template_t
     string host, host_url;
 
     // Skip flows with empty HTTP host
-    if (sdm_fields_flag) {
-       if (ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST) == 0) {
+//    if (sdm_fields_flag) {
+//       if (ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST) == 0) {
+//          return URL_CLEAR;
+//       }
+//    } else {
+       if (ur_get_var_len(in, record, F_HTTP_HOST) == 0) {
           return URL_CLEAR;
        }
-    } else {
-       if (ur_get_var_len(in, record, F_HTTP_REQUEST_HOST) == 0) {
-          return URL_CLEAR;
-       }
-    }
+//    }
 
-    if (sdm_fields_flag) {
-        host = string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST));
-        host_url = host + string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_URL));
-    } else {
-        host = string(ur_get_ptr(in, record, F_HTTP_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_REQUEST_HOST));
-        host_url = host + string(ur_get_ptr(in, record, F_HTTP_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_REQUEST_URL));
-    }
+//    if (sdm_fields_flag) {
+//        host = string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST));
+//        host_url = host + string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_URL));
+//    } else {
+        host = string(ur_get_ptr(in, record, F_HTTP_HOST), ur_get_var_len(in, record, F_HTTP_HOST));
+        host_url = host + string(ur_get_ptr(in, record, F_HTTP_URL), ur_get_var_len(in, record, F_HTTP_URL));
+//    }
  
     // Strip / (slash) from URL if it is last character
     if (host_url[host_url.length() - 1] == '/') {
@@ -552,9 +546,9 @@ int main (int argc, char** argv)
         det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_SDM_REQUEST_HOST,HTTP_SDM_REQUEST_REFERER,HTTP_SDM_REQUEST_URL,DST_BLACKLIST", &errstr);
         DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
     } else {
-        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", &errstr);
+        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL", &errstr);
         DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
-        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,DST_BLACKLIST", &errstr);
+        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL,DST_BLACKLIST", &errstr);
         DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
     }
     void *detection = ur_create_record(det, 2048);
@@ -675,29 +669,29 @@ int main (int argc, char** argv)
         //cout << "Checking update";
         fflush(stdout);
         bld_lock_sync();
-        //cout << "...\n";
-        if (BLD_SYNC_FLAG) {
-           cout << "Processing update...\n";
-            retval = load_update(add_update, rm_update, file);
-
-            if (retval == BLIST_LOAD_ERROR) {
-                cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
-                update = 0;
-                continue;
-            }
-
-            if (!rm_update.empty()) {
-                update_remove(blacklist, rm_update);
-            }
-            if (!add_update.empty()) {
-                update_add(blacklist, add_update);
-            }
-
-            rm_update.clear();
-            add_update.clear();
-            BLD_SYNC_FLAG = 0;
-            cout << "Successfully updated\n";
-        }
+//        //cout << "...\n";
+//        if (BLD_SYNC_FLAG) {
+//           cout << "Processing update...\n";
+//            retval = load_update(add_update, rm_update, file);
+//
+//            if (retval == BLIST_LOAD_ERROR) {
+//                cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
+//                update = 0;
+//                continue;
+//            }
+//
+//            if (!rm_update.empty()) {
+//                update_remove(blacklist, rm_update);
+//            }
+//            if (!add_update.empty()) {
+//                update_add(blacklist, add_update);
+//            }
+//
+//            rm_update.clear();
+//            add_update.clear();
+//            BLD_SYNC_FLAG = 0;
+//            cout << "Successfully updated\n";
+//        }
         bld_unlock_sync();
     }
 
@@ -709,7 +703,7 @@ int main (int argc, char** argv)
     // send terminate message
     if (send_terminating_unirec) {
         trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-        trap_send(0, {0}, 1);
+        trap_send(0, "TERMINATE", 1);
     }
 
     // clean up before termination
