@@ -98,6 +98,7 @@ UR_FIELDS(
         uint8 TOS,              //IP type of service
         uint8 TTL,              //IP time to live
 //Blacklist items
+        uint8  BLACKLIST_TYPE,   //Index of the blacklist type (coupled with the downloader config)
         uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
         uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
 )
@@ -126,6 +127,7 @@ trap_module_info_t *module_info = NULL;
   PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
   PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32")
 
+using namespace std;
 
 // Global variable for signaling the program to stop execution
 static int stop = 0;
@@ -133,8 +135,10 @@ static int stop = 0;
 // Global variable for signaling the program to update blacklists
 static int BL_RELOAD_FLAG = 0;
 
-// Reconfiguration flag, set if signal SIGUSR2 received
+// Reconfiguration flag, set if signal SIGUSR1 received
 static int RECONF_FLAG = 0;
+
+static bool WATCH_BLACKLISTS_FLAG;
 
 /**
  * \brief Function for handling signals SIGTERM and SIGINT.
@@ -152,7 +156,7 @@ void signal_handler(int signal)
             stop = 1;
             printf("Terminating signal caught...\nPlease wait for clean up.\n");
             break;
-        case SIGUSR2:
+        case SIGUSR1:
             RECONF_FLAG = 1;
             break;
         default:
@@ -232,9 +236,9 @@ void * watch_blacklist_files(void *)
        - file was opened
        - file was closed */
 
-    wd = inotify_add_watch(fd, "./blists_dir", IN_CLOSE_WRITE);
+    wd = inotify_add_watch(fd, "./bl_records_sorted.txt", IN_CLOSE_WRITE);
     if (wd == -1) {
-        fprintf(stderr, "Cannot watch '%s'\n", "./blists_dir");
+        fprintf(stderr, "Cannot watch '%s'\n", "./bl_records_sorted.txt");
         perror("inotify_add_watch");
         exit(EXIT_FAILURE);
     }
@@ -327,30 +331,25 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 
 /**
  * \brief Function for loading updates. It parses file with blacklisted IP
- * addresses (created by #TODO).
- * Records are sorted
- * into two lists based on operation (update list and remove list). These lists
- * are used for both IPv4 and IPv6 addresses. Function also checks validity
- * of line on which the IP address was found. Invalid of bad formated lines
+ * addresses (created and preprocessd by blacklist downloader).
+ * Function also checks validity of line on which the IP address was found. Invalid of bad formated lines
  * are ignored.
- * \param update_list_a Vector with entries that will be added or updated.
- * \param update_list_rm Vector with entries that will be removed.
- * \param file File with updates.
+ * \param v4_list IPv4 vector to be filled
+ * \param v6_list IPv6 vector to be filled
+ * \param file Blacklist file.
  * \return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
 int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string &file)
 {
     std::ifstream input;
-    std::string line, ip, bl_flag_str;
-    size_t str_pos;
-    uint64_t bl_flag;
+    std::string line, ip, bl_index_str, bl_type_index_str;
+    uint64_t bl_index, bl_type_index;
     int line_num = 0;
     ip_blist_t bl_entry; // black list entry associated with ip address
 
     black_list_t v4_list_new;
     black_list_t v6_list_new;
 
-    // Open file with blacklists
     input.open(file.c_str(), std::ifstream::in);
     if (!input.is_open()) {
         std::cerr << "Cannot open file with updates!" << std::endl;
@@ -373,23 +372,26 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string 
         }
 
         // Find IP-blacklist index separator
-        str_pos = line.find_first_of(',');
-        if (str_pos == std::string::npos) {
+        size_t comma_pos = line.find_first_of(',');
+        size_t comma_pos2 = line.find_last_of(',');
+
+        if (comma_pos == std::string::npos || comma_pos2 == std::string::npos) {
             // Blacklist index delimeter not found (bad format?), skip it
             std::cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << std::endl;
             continue;
         }
 
-        // Parse blacklist ID
-        bl_flag = strtoull((line.substr(str_pos + 1, std::string::npos)).c_str(), NULL, 10);
+        // Parse blacklist type ID and ID
+        bl_type_index = strtoull((line.substr(comma_pos + 1, std::string::npos)).c_str(), NULL, 10);
+        bl_index = strtoull((line.substr(comma_pos2 + 1, std::string::npos)).c_str(), NULL, 10);
 
         // Parse IP
-        ip = line.substr(0, str_pos);
+        ip = line.substr(0, comma_pos);
 
         // Are we loading prefix?
-        str_pos = ip.find_first_of('/');
+        comma_pos = ip.find_first_of('/');
 
-        if (str_pos == std::string::npos) {
+        if (comma_pos == std::string::npos) {
             // IP only
             if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
                 continue;
@@ -401,17 +403,19 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string 
             }
         } else {
             // IP prefix
-            if (!ip_from_str((ip.substr(0, str_pos)).c_str(), &bl_entry.ip)) {
+            if (!ip_from_str((ip.substr(0, comma_pos)).c_str(), &bl_entry.ip)) {
                 continue;
             }
 
-            ip.erase(0, str_pos + 1);
+            ip.erase(0, comma_pos + 1);
 
             bl_entry.pref_length = (u_int8_t) strtol(ip.c_str(), NULL, 0);
         }
 
         // Determine blacklist
-        bl_entry.in_blacklist = bl_flag;
+        cout << bl_type_index << " " << bl_index << endl;
+        bl_entry.blacklist_type = bl_type_index;
+        bl_entry.in_blacklist = bl_index;
 
         // Add entry to vector
         if (ip_is4(&bl_entry.ip))
@@ -497,42 +501,44 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * \param net_bl List of prefixes to be compared with.
  * \return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v4_blacklist_check(ur_template_t* ur_tmp,
+int v4_blacklist_check(ur_template_t* ur_in,
                        ur_template_t* ur_det,
                        const void *record,
                        void *detected,
                        ipv4_mask_map_t& v4mm,
                        ipv6_mask_map_t& v6mm,
-                       black_list_t& net_bl)
+                       black_list_t& bl)
 {
-    bool marked = false;
+    bool blacklisted = false;
 
-    // index of the prefix the source ip fits in (return value of binary/hash search)
+    // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
 
     // Check source IP
-    ip_addr_t ip = ur_get(ur_tmp, record, F_SRC_IP);
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_SRC_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_SRC_BLACKLIST, net_bl[search_result].in_blacklist);
-        marked = true;
+    ip_addr_t ip = ur_get(ur_in, record, F_SRC_IP);
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
+        ur_set(ur_det, detected, F_BLACKLIST_TYPE, bl[search_result].blacklist_type);
+        blacklisted = true;
     } else {
         ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
     }
 
     // Check destination IP
-    ip = ur_get(ur_tmp, record, F_DST_IP);
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_DST_IP), v4mm, v6mm, net_bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_DST_BLACKLIST, net_bl[search_result].in_blacklist);
-        marked = true;
+    ip = ur_get(ur_in, record, F_DST_IP);
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
+        ur_set(ur_det, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
+        ur_set(ur_det, detected, F_BLACKLIST_TYPE, bl[search_result].blacklist_type);
+        blacklisted = true;
     } else {
         ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
     }
 
-    // Check result
-    if (marked) {
+    if (blacklisted) {
         // IP was found
         return BLACKLISTED;
     }
+
     return ADDR_CLEAR;
 }
 
@@ -580,7 +586,6 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
         ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
     }
 
-    // Check result
     if (marked) {
         // IP was found
         return BLACKLISTED;
@@ -590,10 +595,7 @@ int v6_blacklist_check(ur_template_t* ur_tmp,
 
 
 
-/*
- * MAIN FUNCTION
- */
-int main (int argc, char** argv)
+int main (int argc, char **argv)
 {
     int retval = 0;
     int send_terminating_unirec = 1;
@@ -633,6 +635,7 @@ int main (int argc, char** argv)
         fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
         return 1;
     }
+
     trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
     trap_free_ifc_spec(ifc_spec);
 
@@ -650,7 +653,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
+    ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,BLACKLIST_TYPE,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
     if (tmpl_det == NULL) {
         std::cerr << "Error: Invalid UniRec specifier." << std::endl;
         if(errstr != NULL){
@@ -672,14 +675,14 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+
     // Turn off buffer on output interface
     //trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
 
     // Set signal handling for termination
     signal(SIGTERM, signal_handler);
-    signal(SIGINT, signal_handler);
+    signal(SIGINT,  signal_handler);
     signal(SIGUSR1, signal_handler);
-    signal(SIGUSR2, signal_handler);
 
     int opt;
     std::string file, bl_str;
@@ -696,11 +699,7 @@ int main (int argc, char** argv)
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
                 break;
-            case '?': if (optopt == 'I' || optopt == 'A' || optopt == 's') {
-                    fprintf (stderr, "ERROR: Option -%c requires an argumet.\n", optopt);
-                } else {
-                    fprintf (stderr, "ERROR: Unknown option -%c.\n", optopt);
-                }
+            case '?':
                 ur_free_template(templ);
                 ur_free_template(tmpl_det);
                 trap_finalize();
@@ -709,12 +708,27 @@ int main (int argc, char** argv)
         }
     }
 
+    config_t config;
 
-    // TODO: fix
-    // Set file string
-//    file = "blists_dir/blists.txt";
-    file = "bl_records_sorted.txt";
+    // TODO: config file name
+    if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, "userConfigFile.xml", &config, CONF_PATTERN_STRING)) {
+        std::cerr << "Error: Could not parse XML configuration." << std::endl;
+        ur_free_template(templ);
+        ur_free_template(tmpl_det);
+        trap_finalize();
+        FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+        return EXIT_FAILURE;
+    }
 
+    if (strcmp(config.watch_blacklists, "true") == 0) {
+        WATCH_BLACKLISTS_FLAG = true;
+    } else {
+        WATCH_BLACKLISTS_FLAG = false;
+    }
+
+    // cout << config.blacklist_file << endl << WATCH_BLACKLISTS_FLAG << endl;
+
+    file = config.blacklist_file;
 
     // Load ip addresses from sources
     retval = reload_blacklists(v4_list, v6_list, file);
@@ -729,9 +743,10 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-
     pthread_t watcher_thread;
-    pthread_create(&watcher_thread, NULL, watch_blacklist_files, NULL);
+    if (WATCH_BLACKLISTS_FLAG) {
+        pthread_create(&watcher_thread, NULL, watch_blacklist_files, NULL);
+    }
 
     // ***** Main processing loop *****
     while (!stop) {
@@ -768,6 +783,7 @@ int main (int argc, char** argv)
         if (retval == BLACKLISTED) {
             ur_copy_fields(tmpl_det, detection, templ, data);
             trap_send(0, detection, ur_rec_fixlen_size(tmpl_det));
+            DBG((stderr, "IP detected on blacklist\n"))
         }
 
         if (BL_RELOAD_FLAG) {
@@ -787,58 +803,45 @@ int main (int argc, char** argv)
             pthread_mutex_unlock(&BLD_SYNC_MUTEX);
         }
 
-        // TODO: Reconfigure module if needed
-//        if (RECONF_FLAG) {
-//            // Terminate blacklist downloader thread if in dynamic mode
-//            if (bl_mode == BL_DYNAMIC_MODE) {
-//                // Need to unlock to avoid possible deadlock
-//                bld_unlock_sync();
-//                bld_finalize();
-//                configuratorFreeUAMBS();
-//                // No need to lock, blacklist downloader is no more
-//            }
-//
-//            v4_list.clear();
-//            v6_list.clear();
-//
-//            // LOAD NEW CONFIGURATION FOR BOTH FILTER AND DOWNLOADER
-//            // Load configuration
-//            if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, down_config, CONF_PATTERN_STRING)) {
-//                std::cerr << "Error: Could not parse XML configuration." << std::endl;
-//                return EXIT_FAILURE;
-//            }
-//
-//            // START DOWNLOADER AGAIN
-//            if (bl_mode == BL_DYNAMIC_MODE) {
-//                if (!initialize_downloader(BLD_CONFIG_PATTERN_STRING, bld_userFile, down_config, CONF_PATTERN_STRING)) {
-//                    ur_free_template(templ);
-//                    ur_free_template(tmpl_det);
-//                    trap_finalize();
-//                    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-//                    return EXIT_FAILURE;
-//                }
-//            }
-//
-//            // Load ip addresses from sources
-//            file = down_config->file;
-//
-//            retval = reload_blacklists(v4_list, v6_list, file);
-//
-//            // If update from file could not be processed, return error
-//            if (retval == BLIST_FILE_ERROR) {
-//                fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
-//                ur_free_template(templ);
-//                ur_free_template(tmpl_det);
-//                trap_finalize();
-//                if (bl_mode == BL_DYNAMIC_MODE) {
-//                    bld_finalize();
-//                }
-//                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-//                return EXIT_FAILURE;
-//            }
-//
-//            RECONF_FLAG = 0;
-//        }
+
+        if (RECONF_FLAG) {
+            DBG((stderr, "Reconfiguration..\n"))
+
+            v4_list.clear();
+            v6_list.clear();
+
+            if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, "userConfigFile.xml", &config, CONF_PATTERN_STRING)) {
+                std::cerr << "Error: Could not parse XML configuration." << std::endl;
+                ur_free_template(templ);
+                ur_free_template(tmpl_det);
+                trap_finalize();
+                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+                return EXIT_FAILURE;
+            }
+
+            if (strcmp(config.watch_blacklists, "true") == 0) {
+                WATCH_BLACKLISTS_FLAG = true;
+            } else {
+                WATCH_BLACKLISTS_FLAG = false;
+            }
+
+            file = config.blacklist_file;
+
+            // Load ip addresses from sources
+            retval = reload_blacklists(v4_list, v6_list, file);
+
+            // If update from file could not be processed, return error
+            if (retval == BLIST_FILE_ERROR) {
+                fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
+                ur_free_template(templ);
+                ur_free_template(tmpl_det);
+                trap_finalize();
+                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+                return EXIT_FAILURE;
+            }
+
+            RECONF_FLAG = 0;
+        }
 
     }
 
@@ -855,13 +858,15 @@ int main (int argc, char** argv)
         ur_free_record(detection);
         detection = NULL;
     }
+
     ur_free_template(templ);
     ur_free_template(tmpl_det);
 
     TRAP_DEFAULT_FINALIZATION();
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-    pthread_cancel(watcher_thread);
+    if (WATCH_BLACKLISTS_FLAG)
+        pthread_cancel(watcher_thread);
 
     return EXIT_SUCCESS;
 }

@@ -99,63 +99,6 @@ pthread_mutex_t BLD_SYNC_MUTEX;
 #define PREFIX_V6_DEFAULT 128
 
 /**
- * Constant returned by update function for prefixes when an existing item was
- * updated.
- */
-#define BL_ENTRY_UPDATED -1
-
-/**
- * Static mode ID.
- */
-#define BL_STATIC_MODE 1
-
-/**
- * Dynamic mode ID.
- */
-#define BL_DYNAMIC_MODE 2
-
-/**
- * Inital size for the hash table of addresses.
- */
-#define BL_HASH_SIZE 100000
-
-/**
- * Time to wait between blacklist updates.
- */
-#define BLACKLIST_UPDATE_DELAY_TIME 300
-
-/**
- * Maximum length of one line to parse from blacklist website.
- */
-#define BLACKLIST_LINE_MAX_LENGTH 1024
-
-/**
- * Maximum length of one element (in this case, it is maximum length of IP address).
- */
-#define BLACKLIST_EL_MAX_LENGTH 64
-
-/**
- * Maximum count of elements in one update (in this case, it is maximum IP addresses per update)
- */
-#define BLACKLIST_EL_MAX_COUNT 100000
-
-/**
- * Blacklist update mode. Do NOT change it unless you know what you are doing.
- */
-#define BLACKLIST_UPDATE_MODE DIFF_UPDATE_MODE
-
-
-/**
- * Max length of blacklist name
- */
-#define BL_NAME_MAX_LENGTH 32
-
-/**
- * Comments character for every blacklist website.
- */
-char BLACKLIST_COMMENT_AR[]= "#####";
-
-/**
  * Regular expression to parse IP address from blacklist. (only IPv4 for now).
  */
 char BLACKLIST_REG_PATTERN[] = "\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
@@ -168,24 +111,19 @@ typedef struct {
     /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
+    uint8_t blacklist_type; /** Index of the type of blacklist (spam, tor, ..) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
 } ip_blist_t;
 
+
 /**
- * Structure containing information used for configurating
- * blacklist downloader.
+ * Configuration structure.
  */
 typedef struct __attribute__ ((__packed__)) {
-    char file[256];
-    uint32_t delay;
-    char update_mode[16];
-    uint32_t line_max_len;
-    uint32_t element_max_len;
-    uint32_t element_max_cnt;
-    char *blacklist_arr;
-} downloader_config_struct_t;
-
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
 
 /**
  * @typedef std::vector<ip_blist_t> black_list_t;
