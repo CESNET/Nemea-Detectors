@@ -1,54 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <struct name="main struct">
-        <!-- Array with information about public blacklist -->
-        <array name="blacklist_arr">
-            <struct>
-                <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
-                     BEWARE: Could be number from interval <0, 63> -->
-                <element name="id">1</element>
+    <!-- Array with information about public blacklist -->
+    <struct name="blacklist_array">
+        <array type="Botnet" type_id="1">
+            <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
+                 BEWARE: Could be number from interval <0, 63> in one group/type -->
+            <struct id="1">
                 <!-- Method of retrieving blacklist, currently supported is only web via wget tool -->
                 <element name="method">web</element>
                 <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
                 <element name="name">ZeuS tracker</element>
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
-                <!-- Type of blacklist, only informational value -->
-                <element name="type">BOTNET</element>
-                <!-- Regular expression to extract needed information (IP for example) from blacklist source -->
-                <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
+                <!--Download interval in minutes-->
+                <element name="download_interval">10</element>
             </struct>
-            <struct>
-                <element name="id">2</element>
+
+            <struct id="2">
                 <element name="method">web</element>
                 <element name="source">https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist</element>
                 <element name="name">Feodo tracker</element>
-                <element name="type">BOTNET</element>
-                <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
+                <element name="download_interval">10</element>
             </struct>
-            <struct>
-                <element name="id">3</element>
-                <element name="method">web</element>
-                <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
-                <element name="name">Spamhaus</element>
-                <element name="type">SPAM</element>
-                <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
-            </struct>
-            <struct>
-                <element name="id">4</element>
-                <element name="method">web</element>
-                <element name="source">http://torstatus.blutmagie.de/ip_list_exit.php</element>
-                <element name="name">TOR</element>
-                <element name="type">Proxy</element>
-                <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
-            </struct>
-            <struct>
-                <element name="id">5</element>
+        </array>
+
+        <array type="Ransomware" type_id="2">
+            <struct id="1">
                 <element name="method">web</element>
                 <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt</element>
                 <element name="name">Ransomware Tracker</element>
-                <element name="type">Ransomware</element>
-                <element name="regex">\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\b</element>
+                <element name="download_interval">10</element>
+            </struct>
+        </array>
+
+        <array type="Spam" type_id="3">
+           <struct id="1">
+                <element name="method">web</element>
+                <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
+                <element name="name">Spamhaus</element>
+                <element name="download_interval">10</element>
+            </struct>
+        </array>
+
+        <array type="TOR" type_id="4">
+            <struct id="1">
+                <element name="method">web</element>
+                <element name="source">https://check.torproject.org/exit-addresses</element>
+                <element name="name">TOR exit nodes</element>
+                <element name="download_interval">10</element>
             </struct>
         </array>
     </struct>
