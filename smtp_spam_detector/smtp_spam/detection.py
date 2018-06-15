@@ -1,3 +1,39 @@
+"""
+Copyright (C) 2017-2018 CESNET
+
+LICENSE TERMS
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in
+   the documentation and/or other materials provided with the
+   distribution.
+3. Neither the name of the Company nor the names of its contributors
+   may be used to endorse or promote products derived from this
+   software without specific prior written permission.
+
+ALTERNATIVELY, provided that this notice is retained in full, this
+product may be distributed under the terms of the GNU General Public
+License (GPL) version 2 or later, in which case the provisions
+of the GPL apply INSTEAD OF those given above.
+
+This software is provided ``as is'', and any express or implied
+warranties, including, but not limited to, the implied warranties of
+merchantability and fitness for a particular purpose are disclaimed.
+In no event shall the company or contributors be liable for any
+direct, indirect, incidental, special, exemplary, or consequential
+damages (including, but not limited to, procurement of substitute
+goods or services; loss of use, data, or profits; or business
+interruption) however caused and on any theory of liability, whether
+in contract, strict liability, or tort (including negligence or
+otherwise) arising in any way out of the use of this software, even
+if advised of the possibility of such damage.
+"""
+
 #!/usr/bin/env python
 """ Module imports """
 from cluster import Cluster
@@ -8,6 +44,7 @@ from difflib import SequenceMatcher
 from pytrap import TrapCtx
 from threading import *
 from global_def import *
+from copy import deepcopy
 """ Full imports """
 import pytrap
 import sys
@@ -15,12 +52,15 @@ import time
 import logging
 
 class SpamDetection(Thread):
-    """ Data is dict of flows from multirecievers """
+    """
+    Data is dict of flows from multirecievers
+    """
     def __init__(self):
         Thread.__init__(self)
         # Storage for both flow types
         self.data = dict()
         self.white_list = dict()
+        self.data_lock = Lock()
 
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
@@ -40,20 +80,6 @@ class SpamDetection(Thread):
         # Cluster for clustering spammers, further analysis
         self.cluster = Cluster()
 
-    """
-    Functions that compares two strings and decide their similarity according
-    to SIMILARITY_INDEX, return true if they are similar otherwise false
-    """
-    def is_similar(server, cluster):
-        #Server, list(Server)
-        for s_flow in server.sent_history:
-            for cluster_server in cluster:
-                for c_flow in cluster_server.sent_history:
-                    if SequenceMatcher(None, s_flow.get_name(),
-                                      c_flow.get_name()).ratio() > SIMILARITY_INDEX:
-                        return True
-        return False
-
     def add_entity(self, flow, key):
         """
         If record of entity with flow.SRC_IP already exist in database
@@ -63,6 +89,7 @@ class SpamDetection(Thread):
         flow    Basic or SMTP Flow
         key     entity identifier (SRC_IP / DST_IP)
         """
+        self.data_lock.acquire()
         if key in self.data.keys():
             if flow.DST_IP in self.data.keys():
                 self.data[flow.DST_IP].incoming += 1
@@ -75,43 +102,53 @@ class SpamDetection(Thread):
 
         if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
             self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
-
+        self.data_lock.release()
         return True
 
     def analysis(self):
-        """ Do frequencual analysis here """
+        """
+        Do frequencual analysis here
+        """
         potencial_spammers = list()
         self.t_detect  = time.time()
+        self.data_lock.acquire()
+        print("Probing..")
 
         for entity in self.data:
             self.data[entity].set_up_traffic_ratio()
 
             if not self.data[entity].is_legit():
                 potencial_spammers.append(self.data[entity])
-                print("Found potencial entity")
 
+        self.data_lock.release()
+
+        # Data analysis
+        ps = len(potencial_spammers)
+        dl = len(self.data)
+        if ps is not 0:
+            part = (float(ps)/float(dl)) * 0.01
+        else: part = 0
+
+        print("Found {0} potencial spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
         print("Probing done.")
         return None
 
     def clean_up(self):
-        """ Do clean up here, get rid off old data """
-        if curr_time - last_clean > CLEAN_INTERVAL:
-            data.clear()
-        return None
+        """
+        Do clean up here, get rid off old data
+        """
+        if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
+            print("Cleaning")
+            self.data.clear()
+            print("Cleaning done")
+            self.t_clean = time.time()
 
     def run(self):
         while (True):
             if self.t_detect + PROBE_INTERVAL < self.t_cflow:
-                print("Probing")
-                self.analysis()
                 probing = Thread(target=self.analysis, args=())
                 probing.start()
                 self.t_detect = time.time()
 
             if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
-                print("Cleaning")
-                #self.clean_up()
-                time.sleep(5)
-                print("Cleaning done")
-                self.t_clean = time.time()
-
+                self.clean_up()
