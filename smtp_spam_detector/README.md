@@ -2,7 +2,7 @@
 ```
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright (C) 2012-2013 CESNET, z.s.p.o.
+Copyright (C) 2016-2018 CESNET, z.s.p.o.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
