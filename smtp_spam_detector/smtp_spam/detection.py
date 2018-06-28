@@ -44,18 +44,19 @@ from difflib import SequenceMatcher
 from pytrap import TrapCtx
 from threading import *
 from global_def import *
-from copy import deepcopy
 """ Full imports """
-import pytrap
-import sys
-import time
-import logging
+import pytrap, sys, os, time, logging, json
+# In case we are in nemea/modules/report2idea/ and we want to import from repo:
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+
+import argparse
+import report2idea
 
 class SpamDetection(Thread):
     """
     Data is dict of flows from multirecievers
     """
-    def __init__(self):
+    def __init__(self, trap):
         Thread.__init__(self)
         # Storage for both flow types
         self.data = dict()
@@ -79,6 +80,7 @@ class SpamDetection(Thread):
 
         # Cluster for clustering spammers, further analysis
         self.cluster = Cluster()
+        self.trap = trap
 
     def add_entity(self, flow, key):
         """
@@ -105,11 +107,36 @@ class SpamDetection(Thread):
         self.data_lock.release()
         return True
 
+    def create_report(self, entity):
+        print("Creating report for {0}".format(entity))
+
+        idea = {
+            "Format": "IDEA0",
+            "ID": report2idea.getRandomId(),
+            "DetectTime": self.t_detect,
+            "CreateTime": time.time(),
+            "EventTime": report2idea.getIDEAtime(entity.time_start),
+            "CeaseTime": report2idea.getIDEAtime(entity.time_end),
+            "Source": [{
+              "Placeholder"
+            }],
+            "Attach": [
+                  {"Placeholder"
+                  }
+            ],
+            'Node': ["Placeholder"]
+            }],
+        }
+        print("*******************IDEA*******************")
+        print(json.dumps(idea, sort_keys=True,
+                 indent=4, separators=(',', ': ')))
+        return idea
+
     def analysis(self):
         """
         Do frequencual analysis here
         """
-        potencial_spammers = list()
+        potencial_spammers = set()
         self.t_detect  = time.time()
         self.data_lock.acquire()
         print("Probing..")
@@ -118,7 +145,7 @@ class SpamDetection(Thread):
             self.data[entity].set_up_traffic_ratio()
 
             if not self.data[entity].is_legit():
-                potencial_spammers.append(self.data[entity])
+                potencial_spammers.add(self.data[entity])
 
         self.data_lock.release()
 
@@ -131,6 +158,13 @@ class SpamDetection(Thread):
 
         print("Found {0} potencial spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
         print("Probing done.")
+        print("Creating report..")
+        [ self.create_report(entity) for entity in potencial_spammers ]
+        print("Report created.")
+
+        #TODO print("Sending report to trap.")
+        #TODO send_report(report)
+
         return None
 
     def clean_up(self):

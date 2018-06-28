@@ -1,5 +1,5 @@
 """
-Copyright (C) 2016-2017 CESNET
+Copyright (C) 2016-2018 CESNET
 
 LICENSE TERMS
 

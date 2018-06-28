@@ -1,5 +1,5 @@
 """
-Copyright (C) 2016-2017 CESNET
+Copyright (C) 2016-2018 CESNET
 
 LICENSE TERMS
 
@@ -80,8 +80,8 @@ class SMTP_ENTITY:
             self.id = args[0].DST_IP
             self.incoming += 1
 
-    def __iter__(self):
-        return self
+    def __hash__(self):
+        return hash(self.id)
 
     def __str__(self):
         return ("{0},{1},{2},{3},{4},{5}").format(self.id, len(self.sent_history),
@@ -91,7 +91,7 @@ class SMTP_ENTITY:
     def count_sent(self):
         return len(self.sent_history)
 
-    # Updates time_end parametr of this entity
+    # Updates time_end parameter of this entity
     def update_time(self, flow):
         if flow.TIME_LAST > self.time_end:
             self.time_end = flow.TIME_LAST

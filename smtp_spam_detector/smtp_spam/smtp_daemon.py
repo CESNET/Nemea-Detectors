@@ -1,5 +1,5 @@
 """
-Copyright (C) 2016-2017 CESNET
+Copyright (C) 2016-2018 CESNET
 
 LICENSE TERMS
 
@@ -111,7 +111,6 @@ if __name__ == '__main__':
 
     # Datapool used to store information about smtp entities
     data = {}
-    detector = SpamDetection()
 
     # Create a new trap context
     trap = pytrap.TrapCtx()
@@ -127,6 +126,7 @@ if __name__ == '__main__':
     trap.setRequiredFmt(BASIC_IF)   # Refers to flows without SMTP headers
     trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
     trap.setVerboseLevel(0)
+    detector = SpamDetection(trap)
 
     # Data synchronized queues
     flow_queue = Queue()    # Synchronize input flows
