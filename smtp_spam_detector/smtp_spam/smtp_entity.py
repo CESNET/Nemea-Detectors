@@ -96,8 +96,7 @@ class SMTP_ENTITY:
         if flow.TIME_LAST > self.time_end:
             self.time_end = flow.TIME_LAST
             self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
-        else:
-            return None
+        else: return None
 
     # Function that adds flows for server history
     def add_new_flow(self, flow):
@@ -135,13 +134,11 @@ class SMTP_ENTITY:
         # Check for unique DST_IPs
         unique_ips = set()
 
-        for flow in self.sent_history:
-            unique_ips.add(flow.DST_IP)
+        for flow in self.sent_history : unique_ips.add(flow.DST_IP)
 
         if len(unique_ips) > MAX_ALLOWED_SERVERS or traffic_ratio < 1.2:
             return True
-        else:
-            return False
+        else: return False
 
     # Setter for current ratio of traffic on this smtp server
     def set_up_traffic_ratio(self):
@@ -155,4 +152,12 @@ class SMTP_ENTITY:
             self.traffic_ratio = 0
             return None
 
+    def get_emails(self):
+        emails = list()
+        for host in self.smtp_pool: emails.append(host.SMTP_FIRST_SENDER)
+        return emails
 
+    def get_hostnames(self):
+        hosts = list()
+        for host in self.smtp_pool: emails.append(host.SMTP_DOMAIN)
+        return hosts

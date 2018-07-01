@@ -93,10 +93,8 @@ class SpamDetection(Thread):
         """
         self.data_lock.acquire()
         if key in self.data.keys():
-            if flow.DST_IP in self.data.keys():
-                self.data[flow.DST_IP].incoming += 1
-            else:
-                self.data[flow.DST_IP] = SMTP_ENTITY(flow)
+            if flow.DST_IP in self.data.keys(): self.data[flow.DST_IP].incoming += 1
+            else: self.data[flow.DST_IP] = SMTP_ENTITY(flow)
             self.data[key].add_new_flow(flow)
             self.data[key].update_time(flow)
         else:
@@ -108,8 +106,14 @@ class SpamDetection(Thread):
         return True
 
     def create_report(self, entity):
-        print("Creating report for {0}".format(entity))
+        print("Creating report for {0}".format(entity.id))
 
+        ip = ()
+        if entity.id.isIP4() is True: ip = tuple("IP4", entity.id)
+        else: ip = tuple("IP6", entity.id)
+
+        confidience = get_confidience(entity)
+        
         idea = {
             "Format": "IDEA0",
             "ID": report2idea.getRandomId(),
@@ -117,17 +121,16 @@ class SpamDetection(Thread):
             "CreateTime": time.time(),
             "EventTime": report2idea.getIDEAtime(entity.time_start),
             "CeaseTime": report2idea.getIDEAtime(entity.time_end),
+            "Category": ["Abusive.Spam"],
+            "Note": "Testing example",
+            "Confidence": confidience,
             "Source": [{
-              "Placeholder"
-            }],
-            "Attach": [
-                  {"Placeholder"
-                  }
-            ],
-            'Node': ["Placeholder"]
-            }],
+              "Hostname" : entity.get_hostnames(),
+              "Email" : entity.get_emails(),
+              ip[0] : ip[1],
+            }]
         }
-        print("*******************IDEA*******************")
+        print("*******************************IDEA*************************************")
         print(json.dumps(idea, sort_keys=True,
                  indent=4, separators=(',', ': ')))
         return idea
@@ -139,7 +142,7 @@ class SpamDetection(Thread):
         potencial_spammers = set()
         self.t_detect  = time.time()
         self.data_lock.acquire()
-        print("Probing..")
+        print("Probing...")
 
         for entity in self.data:
             self.data[entity].set_up_traffic_ratio()
@@ -152,19 +155,24 @@ class SpamDetection(Thread):
         # Data analysis
         ps = len(potencial_spammers)
         dl = len(self.data)
-        if ps is not 0:
-            part = (float(ps)/float(dl)) * 0.01
+
+        if ps is not 0: part = (float(ps)/float(dl)) * 0.01
         else: part = 0
 
         print("Found {0} potencial spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
-        print("Probing done.")
-        print("Creating report..")
-        [ self.create_report(entity) for entity in potencial_spammers ]
-        print("Report created.")
+        print("Probing done!")
+        print("Creating reports..")
+        reports = [ self.create_report(entity) for entity in potencial_spammers ]
+        print("Reports created.")
 
-        #TODO print("Sending report to trap.")
-        #TODO send_report(report)
+        rep_cnt = 0
 
+        for report in reports:           
+            self.trap.send(bytes(report))
+            rep_cnt += 1
+            print("Send reports : {0} / {1}".format(rep_cnt, len(reports)))
+
+        print("Analysis run done!")
         return None
 
     def clean_up(self):
