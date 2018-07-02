@@ -109,7 +109,7 @@ class SpamDetection(Thread):
         print("Creating report for {0}".format(entity.id))
 
         ip = ()
-        if entity.id.isIP4() is True: ip = ("IP4", entity.id)
+        if entity.id.isIPv4() is True: ip = ("IP4", entity.id)
         else: ip = ("IP6", entity.id)
 
         confidience = entity.get_confidience()
