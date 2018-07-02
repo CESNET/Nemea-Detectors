@@ -159,5 +159,9 @@ class SMTP_ENTITY:
 
     def get_hostnames(self):
         hosts = list()
-        for host in self.smtp_pool: emails.append(host.SMTP_DOMAIN)
+        for host in self.smtp_pool: hosts.append(host.SMTP_DOMAIN)
         return hosts
+
+    def get_confidience(self):
+        l = [ email.filter() for email in self.smtp_pool ]
+        base = reduce(lambda x, y: x + y, l) / len(l)

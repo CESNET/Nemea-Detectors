@@ -119,7 +119,7 @@ if __name__ == '__main__':
     Trap initialization for two input interfaces, and no output interface
     """
 
-    trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 0)
+    trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 1)
     #trap.init(sys.argv, 2, 0)
 
     # Set up required format to accept any unirec format.

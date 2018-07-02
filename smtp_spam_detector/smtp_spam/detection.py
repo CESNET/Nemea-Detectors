@@ -109,10 +109,10 @@ class SpamDetection(Thread):
         print("Creating report for {0}".format(entity.id))
 
         ip = ()
-        if entity.id.isIP4() is True: ip = tuple("IP4", entity.id)
-        else: ip = tuple("IP6", entity.id)
+        if entity.id.isIP4() is True: ip = ("IP4", entity.id)
+        else: ip = ("IP6", entity.id)
 
-        confidience = get_confidience(entity)
+        confidience = entity.get_confidience()
         
         idea = {
             "Format": "IDEA0",
