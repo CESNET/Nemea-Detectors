@@ -120,15 +120,15 @@ def parse_config():
             blacklists.append(Blacklist(bl_type_name, bl_type_id, bl))
 
 
-def runa(s):
+def run(s):
     # schedule next check immediately
-    s.enter(check_interval, 1, runa, (s,))
+    s.enter(check_interval, 1, run, (s,))
 
     updated_count = 0
 
     for bl in blacklists:
-        # if bl.last_download + 60 * bl.download_interval < time.time():
-        updated_count += bl.download_and_update()
+        if bl.last_download + 60 * bl.download_interval < time.time():
+            updated_count += bl.download_and_update()
 
     if updated_count:
         merge_and_sort()
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     s = sched.scheduler(time.time, time.sleep)
 
-    s.enter(check_interval, 1, runa, (s,))
+    s.enter(check_interval, 1, run, (s,))
     s.run()
 
 
