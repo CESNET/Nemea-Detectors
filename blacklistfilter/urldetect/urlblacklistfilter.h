@@ -58,22 +58,13 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <nemea-common.h>
+#include <nemea-common/nemea-common.h>
+#include <nemea-common/prefix_tree.h>
 
 /**
  * Constant returned if everything is ok.
  */
 #define ALL_OK 0
-
-/**
- * Static mode ID.
- */
-#define BL_STATIC_MODE 1
-
-/**
- * Dynamic mode ID.
- */
-#define BL_DYNAMIC_MODE 2
 
 /**
  * Initial size of the blacklist.
@@ -97,9 +88,6 @@ extern "C" {
 
 
 #define BL_NAME_MAX_LENGTH 100
-unsigned int TIMEOUT_ACTIVE = 300;
-unsigned int TIMEOUT_INACTIVE = 30;
-
 
 const char *URL_REGEX =
    // Protocol
@@ -173,35 +161,23 @@ typedef struct {
     std::string url; /**< URL to update */
     uint64_t bl; /**< Source blacklist of the URL */
     /*@}*/
-} url_blist_t;
+} url_elem_t;
 
+prefix_tree_t * tree;
 
-/**
- * Structure containing information used for configurating
- * blacklist downloader.
- */
-typedef struct __attribute__ ((__packed__)) {
-    char file[256];
-    uint32_t delay;
-    char update_mode[16];
-    uint32_t line_max_len;
-    uint32_t element_max_len;
-    uint32_t element_max_cnt;
-    char *blacklist_arr;
-} downloader_config_struct_t;
-
-
-typedef std::vector<url_blist_t> black_list_t;
+typedef struct {
+    uint64_t bl_id;
+} info_t;
 
 /*
  * Function for loading update files.
  */
-int load_update(black_list_t &add_upd, black_list_t &rm_upd, std::string &file);
+int reload_blacklists(prefix_tree_t * tree, std::string &file);
 
 /*
  * Function for checking records.
  */
-int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
+int check_blacklist(prefix_tree_t *tree, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
 
 #ifdef __cplusplus
 }
