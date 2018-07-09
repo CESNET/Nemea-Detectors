@@ -36,8 +36,7 @@ if advised of the possibility of such damage.
 
 #!/usr/bin/env python
 # Full imports
-import pytrap
-import sys
+import pytrap, sys, os, signal
 from global_def import *
 from threading import Thread, Semaphore
 from flow import Flow, SMTP_Flow
@@ -101,60 +100,48 @@ def data_handling(detector, q):
             detector.add_entity(flow, flow.SRC_IP)
             processed = processed + 1
             if processed % 10000 is 0:
-                print("Fetched {0} flow.s".format(processed))
+                print("data_handling: Fetched {0} flows".format(processed))
             q.task_done()
         except IndexError:
-            sys.stderr.write("No data in queue.\n")
+            sys.stderr.write("data_handling: No data in queue.\n")
     return True
 
 if __name__ == '__main__':
-
     # Datapool used to store information about smtp entities
     data = {}
-
     # Create a new trap context
     trap = pytrap.TrapCtx()
-
     """
     Trap initialization for two input interfaces, and no output interface
     """
-
-    trap.init(["-i", "u:flow_data_source,u:smtp_data_source"], 2, 1)
-    #trap.init(sys.argv, 2, 0)
-
+    trap.init(["-i", "u:flow_data_source,u:smtp_data_source,u:smtp_detector_out"], 2, 1)
+    #trap.init(sys.argv, 2, 1)
     # Set up required format to accept any unirec format.
     trap.setRequiredFmt(BASIC_IF)   # Refers to flows without SMTP headers
     trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
     trap.setVerboseLevel(0)
+    trap.setDataFmt(0, pytrap.FMT_JSON, "smtp_alert")
     detector = SpamDetection(trap)
-
     # Data synchronized queues
     flow_queue = Queue()    # Synchronize input flows
     reports = Queue()       # Synchronize output reports
-
     # Create workers for each receiver
     basic_rcv = Thread(target=fetch_data, args=(trap, BASIC_IF, flow_queue))
     smtp_rcv = Thread(target=fetch_data, args=(trap, SMTP_IF, flow_queue))
-
     # Handle the received data from receivers
     data_handler = Thread(target=data_handling, args=(detector, flow_queue))
-
-    # Run multireciver
+    # Run multi-receiver
     basic_rcv.start()
     smtp_rcv.start()
     data_handler.start()
-
     # Start detector
     detector.start()
-
     # Join the threads
     basic_rcv.join()
     smtp_rcv.join()
-
     # Stop data_handler
     flow_queue.put(None)
     data_handler.join()
-
     # Free allocated memory
     trap.finalize()
 

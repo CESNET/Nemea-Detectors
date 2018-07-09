@@ -46,14 +46,14 @@ This score represents a penalization for a bad configuration or failed attempts
 to send an email, and other information that we can get from SMTP return codes,
 SMTP commands or SMTP flow header attributes.
 
-The penelaization would be applied to the sender identified by
-an IP address. If this value will overcome some thrashold the sender would be
+The penalization would be applied to the sender identified by
+an IP address. If this value will overcome some threshold the sender would be
 flagged as a spammer.
 
 However, not for all smtp entities there's a SMTP flow header extension, if
 there is communication over POP3 or IMAP protocol we have only basic flow header.
-Therefore we have to use a frequecy analysis to determine wich entities are spammers
-and exlude legit mail servers.
+Therefore we have to use a frequecy analysis to determine which entities are spammers
+and excluding legit mail servers.
 
 In this case we have to compute the ratio of incoming and outcoming traffic for
 each entity in timeframe t. If there is huge difference between sent and recived

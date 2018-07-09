@@ -35,23 +35,27 @@ if advised of the possibility of such damage.
 """
 
 #!/usr/bin/env python3
-import pytrap
+import pytrap, copy
+from functools import reduce
 from flow import *
 from global_def import *
+from threading import RLock
+
+def get_proto_by_port(port):
+    for key, value in email_protocols.items():
+        if value == port:
+            return key
 """ ************************ CLASS SMTP_ENTITY ***************************** """
-# A class for storing information about sender or reciever with time window
-# that record a first occourence of sender in traffic and his last interaction
+# A class for storing information about sender or receiver with time window
+# that record a first occurrence of sender in traffic and his last interaction
 # on the network
 class SMTP_ENTITY:
     # SMTP_ENTITY constructor from whole unirec record or just ip from traffic
     def __init__(self, *args):
         self.id = None              # an unique entity identification (it's IP)
         self.sent_history = []      # history of sent msgs from this entity
-        self.time_start = args[0].TIME_FIRST
-        self.time_end = args[0].TIME_LAST
 
-        self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
-
+        self.protocols = set()
         self.smtp_pool = []         # SMTP communication database
         self.basic_pool = []        # POP3/IMAP communication database
 
@@ -63,6 +67,7 @@ class SMTP_ENTITY:
         self.traffic_ratio = 0.0    # ratio of incoming/outgoing traffic
         self.rep =  0.0             # reputation score
 
+        self.__lock = RLock()
         # Set up params based on input data
         # got whole template
         if isinstance(args[0], Flow):
@@ -75,16 +80,25 @@ class SMTP_ENTITY:
             self.id = args[0].SRC_IP
             self.sent_history.append(args[0])
 
+            self.time_start = args[0].TIME_FIRST
+            self.time_end = args[0].TIME_LAST
+
+
         # got only ip address (args[0] is ip and args[1] is time)
         elif isinstance(args[0], pytrap.UnirecIPAddr):
-            self.id = args[0].DST_IP
+            self.id = args[0]
             self.incoming += 1
+            self.time_start = args[1]
+            self.time_end = args[1]
+
+        self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
 
     def __hash__(self):
         return hash(self.id)
 
     def __str__(self):
-        return ("{0},{1},{2},{3},{4},{5}").format(self.id, len(self.sent_history),
+        return ("{0},{1},{2},{3},{4},{5},{6},{7}").format(self.id, len(self.sent_history),
+                                                    len(self.smtp_pool), len(self.basic_pool),
                                                     self.incoming, self.time_start,
                                                     self.time_end, self.time_window)
     # Getter for number of sent mails from this server
@@ -94,17 +108,26 @@ class SMTP_ENTITY:
     # Updates time_end parameter of this entity
     def update_time(self, flow):
         if flow.TIME_LAST > self.time_end:
+            #print("entity: updating time at {0}".format(self))
             self.time_end = flow.TIME_LAST
             self.time_window = self.time_end.getTimeAsFloat() - self.time_start.getTimeAsFloat()
-        else: return None
+        else:
+            return None
 
     # Function that adds flows for server history
     def add_new_flow(self, flow):
+        self.__lock.acquire()
         self.sent_history.append(flow)
+        if type(flow) is Flow:
+            self.basic_pool.append(flow)
+            self.protocols.add(get_proto_by_port(flow.DST_PORT))
+        else:
+            self.smtp_pool.append(flow)
+            self.protocols.add("SMTP")
         self.outgoing += 1
-
+        self.__lock.release()
     # Function writes current statistics for this server such as how many flows
-    # were send and recieved, and last time seen this server in traffic.
+    # were send and received, and last time seen this server in traffic.
     def report_statistics(self, data_report_path):
         # Open file and write new statistics
         with open(data_report_path, 'a') as f:
@@ -122,10 +145,18 @@ class SMTP_ENTITY:
     and compares the ratio between these two parameters, if the outgoing
     traffic ratio is X then function returns positive value, otherwise
     negative one, also it checks for unqie DST_IP's in sent history
+
+    #TODO return value as a confidence value
+    return 0 - 0% not a spam
+    retrun (0 - 1> is a spam with #% confidence
     """
     def is_legit(self):
         # Calculate traffic ratio
         sent = len(self.sent_history)
+
+        if sent < 10:
+            return 1
+
         if sent is not 0:
             traffic_ratio = self.incoming / sent
         else:
@@ -134,11 +165,14 @@ class SMTP_ENTITY:
         # Check for unique DST_IPs
         unique_ips = set()
 
-        for flow in self.sent_history : unique_ips.add(flow.DST_IP)
+        with self.__lock:
+            for flow in self.sent_history:
+                unique_ips.add(flow.DST_IP)
 
-        if len(unique_ips) > MAX_ALLOWED_SERVERS or traffic_ratio < 1.2:
+        if len(unique_ips) > MAX_ALLOWED_SERVERS or traffic_ratio > 1.2:
             return True
-        else: return False
+        else:
+            return False
 
     # Setter for current ratio of traffic on this smtp server
     def set_up_traffic_ratio(self):
@@ -154,14 +188,26 @@ class SMTP_ENTITY:
 
     def get_emails(self):
         emails = list()
-        for host in self.smtp_pool: emails.append(host.SMTP_FIRST_SENDER)
+        with self.__lock:
+            for host in self.smtp_pool:
+                print(host.SMTP_FIRST_SENDER)
+                emails.append(host.SMTP_FIRST_SENDER)
         return emails
 
     def get_hostnames(self):
         hosts = list()
-        for host in self.smtp_pool: hosts.append(host.SMTP_DOMAIN)
+        with self.__lock:
+            for host in self.smtp_pool:
+                hosts.append(host.SMTP_DOMAIN)
         return hosts
 
     def get_confidience(self):
         l = [ email.filter() for email in self.smtp_pool ]
-        base = reduce(lambda x, y: x + y, l) / len(l)
+        try:
+            base = reduce(lambda x, y: x + y, l) / len(l)
+        except Exception as e:
+            sys.stderr.write("ERROR: Filtering failed ('{0}')".format(self))
+
+    def get_proto(self):
+        return self.protocols
+

@@ -47,11 +47,12 @@ from global_def import *
 """ Full imports """
 import pytrap, sys, os, time, logging, json
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                "..", "..", "nemea-framework", "pycommon"))
 
 import argparse
 import report2idea
-
+import datetime
 class SpamDetection(Thread):
     """
     Data is dict of flows from multirecievers
@@ -61,7 +62,7 @@ class SpamDetection(Thread):
         # Storage for both flow types
         self.data = dict()
         self.white_list = dict()
-        self.data_lock = Lock()
+        self.data_lock = RLock()
 
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
@@ -91,106 +92,106 @@ class SpamDetection(Thread):
         flow    Basic or SMTP Flow
         key     entity identifier (SRC_IP / DST_IP)
         """
-        self.data_lock.acquire()
-        if key in self.data.keys():
-            if flow.DST_IP in self.data.keys(): self.data[flow.DST_IP].incoming += 1
-            else: self.data[flow.DST_IP] = SMTP_ENTITY(flow)
-            self.data[key].add_new_flow(flow)
-            self.data[key].update_time(flow)
-        else:
-            self.data[key] = SMTP_ENTITY(flow)
+        with self.data_lock:
+            if key in self.data.keys():
+                # Check for receivers
+                if flow.DST_IP in self.data.keys():
+                    self.data[flow.DST_IP].incoming += 1
+                else:
+                    self.data[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP, flow.TIME_LAST)
 
-        if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
-            self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
-        self.data_lock.release()
+                self.data[key].add_new_flow(flow)
+                self.data[key].update_time(flow)
+            else:
+                self.data[key] = SMTP_ENTITY(flow)
+
+            if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
+                self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
         return True
 
     def create_report(self, entity):
-        print("Creating report for {0}".format(entity.id))
-
+        print("Creating report for {0}".format(entity))
         ip = ()
-        if entity.id.isIPv4() is True: ip = ("IP4", entity.id)
-        else: ip = ("IP6", entity.id)
+        if entity.id.isIPv4() is True:
+            ip = ("IP4", entity.id)
+        else:
+            ip = ("IP6", entity.id)
 
-        confidience = entity.get_confidience()
-        
+        if len(entity.smtp_pool) is 0 and len(entity.basic_pool) is 0:
+            return None
+
+        confidience = 0.1 #entity.get_confidence()
+
         idea = {
             "Format": "IDEA0",
             "ID": report2idea.getRandomId(),
             "DetectTime": self.t_detect,
-            "CreateTime": time.time(),
+            "CreateTime": datetime.datetime.utcnow().isoformat("T") + "Z",
             "EventTime": report2idea.getIDEAtime(entity.time_start),
             "CeaseTime": report2idea.getIDEAtime(entity.time_end),
             "Category": ["Abusive.Spam"],
             "Note": "Testing example",
             "Confidence": confidience,
             "Source": [{
-              "Hostname" : entity.get_hostnames(),
-              "Email" : entity.get_emails(),
-              ip[0] : ip[1],
+              "Hostname" : list(entity.get_hostnames()),
+              "Email" : list(entity.get_emails()),
+              ip[0] : str(ip[1]),
+              "Proto" : list(entity.get_proto()),
             }]
         }
         print("*******************************IDEA*************************************")
-        print(json.dumps(idea, sort_keys=True,
-                 indent=4, separators=(',', ': ')))
-        return idea
+        print(json.dumps(idea, sort_keys=True, indent=4, separators=(',', ': ')))
+        return json.dumps(idea)
+
+    def send_reports(self, reports):
+        rep_cnt = 0
+        for report in reports:
+            if report is not None:
+                self.trap.send(str(report).encode())
+                rep_cnt += 1
+            print("Send reports : {0} / {1}".format(rep_cnt, len(reports)))
 
     def analysis(self):
         """
-        Do frequencual analysis here
+        Do frequency analysis here
         """
         potencial_spammers = set()
         self.t_detect  = time.time()
-        self.data_lock.acquire()
         print("Probing...")
-
-        for entity in self.data:
-            self.data[entity].set_up_traffic_ratio()
-
-            if not self.data[entity].is_legit():
-                potencial_spammers.add(self.data[entity])
-
-        self.data_lock.release()
-
+        with self.data_lock:
+            for entity in self.data:
+                self.checked += 1
+                if not self.data[entity].is_legit():
+                    potencial_spammers.add(self.data[entity])
         # Data analysis
         ps = len(potencial_spammers)
         dl = len(self.data)
-
-        if ps is not 0: part = (float(ps)/float(dl)) * 0.01
-        else: part = 0
-
-        print("Found {0} potencial spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
-        print("Probing done!")
-        print("Creating reports..")
-        reports = [ self.create_report(entity) for entity in potencial_spammers ]
-        print("Reports created.")
-
-        rep_cnt = 0
-
-        for report in reports:           
-            self.trap.send(bytes(report))
-            rep_cnt += 1
-            print("Send reports : {0} / {1}".format(rep_cnt, len(reports)))
-
+        if ps is not 0:
+            part = (float(ps)/float(dl))
+        else:
+            part = 0
+        print("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
+        self.send_reports([ self.create_report(entity) for entity in potencial_spammers ])
         print("Analysis run done!")
-        return None
 
-    def clean_up(self):
+    def clear(self):
         """
         Do clean up here, get rid off old data
         """
         if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
-            print("Cleaning")
             self.data.clear()
-            print("Cleaning done")
             self.t_clean = time.time()
 
     def run(self):
+        workers = []
         while (True):
             if self.t_detect + PROBE_INTERVAL < self.t_cflow:
-                probing = Thread(target=self.analysis, args=())
-                probing.start()
+                worker = Thread(target=self.analysis, args=())
+                worker.start()
+                workers.append(worker)
                 self.t_detect = time.time()
 
             if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
-                self.clean_up()
+                self.clear()
+                [ worker.join() for worker in workers ]
+
