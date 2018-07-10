@@ -98,7 +98,6 @@ UR_FIELDS(
         uint8 TOS,              //IP type of service
         uint8 TTL,              //IP time to live
 //Blacklist items
-        uint8  BLACKLIST_TYPE,   //Index of the blacklist type (coupled with the downloader config)
         uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
         uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
 )
@@ -205,7 +204,7 @@ static void handle_events(int fd)
             event = (const struct inotify_event *) ptr;
 
             if (event->mask & IN_CLOSE_WRITE) {
-                DBG((stderr, "Blacklist watcher setting a flag to reload blacklists\n"));
+                DBG((stderr, "Blacklist blacklist_watcher setting a flag to reload blacklists\n"));
                 pthread_mutex_lock(&BLD_SYNC_MUTEX);
                 BL_RELOAD_FLAG = 1;
                 pthread_mutex_unlock(&BLD_SYNC_MUTEX);
@@ -254,7 +253,7 @@ void * watch_blacklist_files(void *)
 
     /* Wait for events and/or terminal input */
 
-    DBG((stderr, "Blacklist watcher listening for events.\n"));
+    DBG((stderr, "Blacklist blacklist_watcher listening for events.\n"));
 
     while (1) {
         poll_num = poll(fds, nfds, -1);
@@ -342,8 +341,8 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string &file)
 {
     std::ifstream input;
-    std::string line, ip, bl_index_str, bl_type_index_str;
-    uint64_t bl_index, bl_type_index;
+    std::string line, ip, bl_index_str;
+    uint64_t bl_index;
     int line_num = 0;
     ip_blist_t bl_entry; // black list entry associated with ip address
 
@@ -372,26 +371,24 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string 
         }
 
         // Find IP-blacklist index separator
-        size_t comma_pos = line.find_first_of(',');
-        size_t comma_pos2 = line.find_last_of(',');
+        size_t sep = line.find_first_of(',');
 
-        if (comma_pos == std::string::npos || comma_pos2 == std::string::npos) {
+        if (sep == std::string::npos) {
             // Blacklist index delimeter not found (bad format?), skip it
             std::cerr << "WARNING: File '" << file << "' has bad formated line number '" << line_num << "'" << std::endl;
             continue;
         }
 
-        // Parse blacklist type ID and ID
-        bl_type_index = strtoull((line.substr(comma_pos + 1, std::string::npos)).c_str(), NULL, 10);
-        bl_index = strtoull((line.substr(comma_pos2 + 1, std::string::npos)).c_str(), NULL, 10);
+        // Parse blacklist ID
+        bl_index = strtoull((line.substr(sep + 1, std::string::npos)).c_str(), NULL, 10);
 
         // Parse IP
-        ip = line.substr(0, comma_pos);
+        ip = line.substr(0, sep);
 
         // Are we loading prefix?
-        comma_pos = ip.find_first_of('/');
+        sep = ip.find_first_of('/');
 
-        if (comma_pos == std::string::npos) {
+        if (sep == std::string::npos) {
             // IP only
             if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
                 continue;
@@ -403,18 +400,16 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string 
             }
         } else {
             // IP prefix
-            if (!ip_from_str((ip.substr(0, comma_pos)).c_str(), &bl_entry.ip)) {
+            if (!ip_from_str((ip.substr(0, sep)).c_str(), &bl_entry.ip)) {
                 continue;
             }
 
-            ip.erase(0, comma_pos + 1);
+            ip.erase(0, sep + 1);
 
             bl_entry.pref_length = (u_int8_t) strtol(ip.c_str(), NULL, 0);
         }
 
         // Determine blacklist
-        cout << bl_type_index << " " << bl_index << endl;
-        bl_entry.blacklist_type = bl_type_index;
         bl_entry.in_blacklist = bl_index;
 
         // Add entry to vector
@@ -518,7 +513,6 @@ int v4_blacklist_check(ur_template_t* ur_in,
     ip_addr_t ip = ur_get(ur_in, record, F_SRC_IP);
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
         ur_set(ur_det, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
-        ur_set(ur_det, detected, F_BLACKLIST_TYPE, bl[search_result].blacklist_type);
         blacklisted = true;
     } else {
         ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
@@ -528,7 +522,6 @@ int v4_blacklist_check(ur_template_t* ur_in,
     ip = ur_get(ur_in, record, F_DST_IP);
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
         ur_set(ur_det, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
-        ur_set(ur_det, detected, F_BLACKLIST_TYPE, bl[search_result].blacklist_type);
         blacklisted = true;
     } else {
         ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
@@ -653,7 +646,7 @@ int main (int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,BLACKLIST_TYPE,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
+    ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
     if (tmpl_det == NULL) {
         std::cerr << "Error: Invalid UniRec specifier." << std::endl;
         if(errstr != NULL){

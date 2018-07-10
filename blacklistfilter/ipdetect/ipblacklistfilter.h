@@ -111,7 +111,6 @@ typedef struct {
     /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
-    uint8_t blacklist_type; /** Index of the type of blacklist (spam, tor, ..) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
 } ip_blist_t;
