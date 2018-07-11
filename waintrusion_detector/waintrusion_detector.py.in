@@ -50,7 +50,10 @@ import urlparse
 import argparse
 import time
 
-SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+if os.path.isdir("rules/") and os.path.isdir("data/"):
+    WAIDATADIR_PATH = "./"
+else:
+    WAIDATADIR_PATH = "@WAIDETECTORDATADIR@/"
 
 #ModSecurity CRS Rule - HTTP Request Method Enforcement
 #https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/REQUEST-911-METHOD-ENFORCEMENT.conf
@@ -163,7 +166,7 @@ else:
 def prepare_detection_signatures(rules):
     signatures = []
     for rule in rules:
-        ruleFile = SCRIPT_PATH + "/rules/" + rule.replace("_", "-") + ".data"
+        ruleFile = WAIDATADIR_PATH + "/rules/" + rule.replace("_", "-") + ".data"
         if os.path.isfile(ruleFile):
             with open(ruleFile) as f:
                 ruleSignatures = f.read().splitlines()
@@ -175,7 +178,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile(signature), HTTPFields.split(",")])
 
         if rule == REQUEST_METHOD_ENFORCEMENT:
-            dataFile = SCRIPT_PATH + "/data/allowed-http-methods.data"
+            dataFile = WAIDATADIR_PATH + "/data/allowed-http-methods.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -184,7 +187,7 @@ def prepare_detection_signatures(rules):
 
         elif rule == REQUEST_SCANNER_DETECTION:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-user-agents.data
-            dataFile = SCRIPT_PATH + "/data/scanners-user-agents.data"
+            dataFile = WAIDATADIR_PATH + "/data/scanners-user-agents.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -192,7 +195,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)(\\b(" + "|".join(map(re.escape, list(filter(None, data))))+")[/0-9.]*)"), [HTTP_USER_AGENT]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-urls.data
-            dataFile = SCRIPT_PATH + "/data/scanners-urls.data"
+            dataFile = WAIDATADIR_PATH + "/data/scanners-urls.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -200,7 +203,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME, HTTP_URL_ARGS]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-headers.data
-            dataFile = SCRIPT_PATH + "/data/scanners-headers.data"
+            dataFile = WAIDATADIR_PATH + "/data/scanners-headers.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -209,7 +212,7 @@ def prepare_detection_signatures(rules):
 
         elif rule == REQUEST_APPLICATION_ATTACK_LFI:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/restricted-files.data
-            dataFile = SCRIPT_PATH + "/data/restricted-files.data"
+            dataFile = WAIDATADIR_PATH + "/data/restricted-files.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -217,7 +220,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/lfi-os-files.data
-            dataFile = SCRIPT_PATH + "/data/lfi-os-files.data"
+            dataFile = WAIDATADIR_PATH + "/data/lfi-os-files.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -226,7 +229,7 @@ def prepare_detection_signatures(rules):
 
         elif rule == REQUEST_APPLICATION_ATTACK_RCE:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/windows-powershell-commands.data
-            dataFile = SCRIPT_PATH + "/data/windows-powershell-commands.data"
+            dataFile = WAIDATADIR_PATH + "/data/windows-powershell-commands.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -234,7 +237,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/unix-shell.data
-            dataFile = SCRIPT_PATH + "/data/unix-shell.data"
+            dataFile = WAIDATADIR_PATH + "/data/unix-shell.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -243,7 +246,7 @@ def prepare_detection_signatures(rules):
 
         elif rule == REQUEST_APPLICATION_ATTACK_PHP:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-config-directives.data
-            dataFile = SCRIPT_PATH + "/data/php-config-directives.data"
+            dataFile = WAIDATADIR_PATH + "/data/php-config-directives.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -251,7 +254,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-variables.data
-            dataFile = SCRIPT_PATH + "/data/php-variables.data"
+            dataFile = WAIDATADIR_PATH + "/data/php-variables.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
@@ -259,7 +262,7 @@ def prepare_detection_signatures(rules):
                     signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-function-names-933150.data
-            dataFile = SCRIPT_PATH + "/data/php-function-names-933150.data"
+            dataFile = WAIDATADIR_PATH + "/data/php-function-names-933150.data"
             if os.path.isfile(dataFile):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
