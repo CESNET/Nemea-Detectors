@@ -12,7 +12,8 @@ SUBDIRS=amplification_detection \
 	smtp_spam_detector \
 	tunnel_detection \
 	voip_fraud_detection \
-	vportscan_detector
+	vportscan_detector \
+	waintrusion_detector
 
 RPMDIR = RPMBUILD
 
