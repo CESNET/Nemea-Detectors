@@ -1,0 +1,14 @@
+(?i)(?:\b(?:m(?:s(?:ysaccessobjects|ysaces|ysobjects|ysqueries|ysrelationships|ysaccessstorage|ysaccessxml|ysmodules|ysmodules2|db)|aster\.\.sysdatabases|ysql\.db)\b|s(?:ys(?:\.database_name|aux)\b|chema(?:\W*\(|_name\b)|qlite(?:_temp)?_master\b)|d(?:atabas|b_nam)e\W*\(|information_schema\b|pg_(?:catalog|toast)\b|northwind\b|tempdb\b)) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:sleep\((?:\s*?)(?:\d*?)(?:\s*?)\)|benchmark\((?:.*?)\,(?:.*?)\))) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:(?:select|;)\s+(?:benchmark|if|sleep)\s*?\(\s*?\(?\s*?\w+)) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:\s*?(?:exec|execute).*?(?:\W)xp_cmdshell)|(?:[\"'`]\s*?!\s*?[\"'`\w])|(?:from\W+information_schema\W)|(?:(?:(?:current_)?user|database|schema|connection_id)\s*?\([^\)]*?)|(?:[\"'`];?\s*?(?:select|union|having)\b\s*?[^\s])|(?:\wiif\s*?\()|(?:(?:exec|execute)\s+master\.)|(?:union select @)|(?:union[\w(?:\s]*?select)|(?:select.*?\w?user\()|(?:into[\s+]+(?:dump|out)file\s*?[\"'`])) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:^(?:-0000023456|4294967295|4294967296|2147483648|2147483647|0000012345|-2147483648|-2147483649|0000023456|3.0.00738585072007e-308|1e309)$)) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:[\s()]case\s*?\()|(?:\)\s*?like\s*?\()|(?:having\s*?[^\s]+\s*?[^\w\s])|(?:if\s?\([\d\w]\s*?[=<>~])) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:alter\s*?\w+.*?(?:character|char)\s+set\s+\w+)|(?:[\"'`];*?\s*?waitfor\s+(?:time|delay)\s+[\"'`])|(?:[\"'`];.*?:\s*?goto))  ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:merge.*?using\s*?\()|(?:execute\s*?immediate\s*?[\"'`])|(?:match\s*?[\w(),+-]+\s*?against\s*?\()) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:(?:union(?:.*?)select(?:.*?)from))) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:select\s*?pg_sleep)|(?:waitfor\s*?delay\s?[\"'`]+\s?\d)|(?:;\s*?shutdown\s*?(?:;|--|#|\/\*|{))) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:\[\$(?:ne|eq|lte?|gte?|n?in|mod|all|size|exists|type|slice|x?or|div|like|between|and)\])) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:procedure\s+analyse\s*?\()|(?:;\s*?(?:declare|open)\s+[\w-]+)|(?:create\s+(?:procedure|function)\s*?\w+\s*?\(\s*?\)\s*?-)|(?:declare[^\w]+[@#]\s*?\w+)|(?:exec\s*?\(\s*?@)) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:create\s+function\s+.+\s+returns)|(?:;\s*?(?:select|create|rename|truncate|load|alter|delete|update|insert|desc)\s*?[\[(]?\w{2,})) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+(?i)(?:(?:[\d\W]\s+as\s*?[\"'`\w]+\s*?from)|(?:^[\W\d]+\s*?(?:union|select|create|rename|truncate|load|alter|delete|update|insert|desc)\b)|(?:(?:select|create|rename|truncate|load|alter|delete|update|insert|desc)\s+(?:(?:group_)concat|char|load_file)\s?\(?)|(?:end\s*?\);)|(?:[\"'`]\s+regexp\W)|(?:[\s(]load_file\s*?\()) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
