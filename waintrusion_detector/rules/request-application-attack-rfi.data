@@ -1,0 +1,5 @@
+(?i)^(?:file|ftps?|https?)://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} ** HTTP_URL_ARGS
+(?i)(?:(?:\binclude\s*\([^)]*|mosConfig_absolute_path|_CONF\[path\]|_SERVER\[DOCUMENT_ROOT\]|GALLERY_BASEDIR|path\[docroot\]|appserv_root|config\[root_dir\])=(?:file|ftps?|https?):\/\/) ** HTTP_URL_QUERY_STRING
+(?i)^(?:file|ftps?|https?)(?:.*?)\?+$ ** HTTP_URL_ARGS
+
+
