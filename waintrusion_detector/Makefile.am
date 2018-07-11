@@ -1,6 +1,5 @@
-waidir=${datadir}/wai_detector
-wairulesdir=${waidir}/rules
-waidatadir=${waidir}/rules
+wairulesdir=${WAIDETECTORDATADIR}/rules
+waidatadir=${WAIDETECTORDATADIR}/data
 wairules_DATA=rules/request-application-attack-lfi.data \
 	      rules/request-application-attack-php.data \
 	      rules/request-application-attack-rce.data \
@@ -26,4 +25,6 @@ waidata_DATA=data/allowed-http-methods.data \
 	     data/windows-powershell-commands.data
 
 bin_SCRIPTS=waintrusion_detector.py waintrusion_detector2idea.py
+
+EXTRA_DIST=waintrusion_detector2idea.py ${wairules_DATA} ${waidata_DATA}
 
