@@ -1,4 +1,45 @@
 #!/usr/bin/env python
+# -*- mode: python; python-indent-offset: 4; coding: utf-8; -*-
+#
+# Web application intrusion detector.
+# It receives HTTP flows, analyses them and detects malicious activities.
+# It sends an alert for each detected malicious activity.
+#
+# Author: Tomas Duracka <duractom@fit.cvut.cz>
+#
+# Copyright (C) 2018 CESNET
+#
+# LICENSE TERMS
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is'', and any express or implied
+# warranties, INCluding, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, INCidental, special, exemplary, or consequential
+# damages (INCluding, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (INCluding negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
 
 import pytrap
 import sys
@@ -86,7 +127,10 @@ WAI_RULE = "WAI_RULE"
 WAI_MALICIOUS_FIELD = "WAI_MALICIOUS_FIELD"
 WAI_MALICIOUS_VALUE = "WAI_MALICIOUS_VALUE"
 
-#wrapper for all available HTTP information from HTTP Request - rec cannot be extended
+#method mapping for ipfixcol
+HTTPMethodMapping = {1: "GET", 2: "POST", 4: "HEAD", 5: "PUT", 6: "OPTIONS", 7: "DELETE", 8: "TRACE", 9: "CONNECT"}
+
+#wrapper for all available HTTP information from HTTP Request
 HTTPRequest = {
     HTTP_METHOD: "", HTTP_URL: "", HTTP_HOST: "", HTTP_USER_AGENT: "", HTTP_REFERER: "",
     HTTP_METHOD_AND_URL: "", HTTP_URL_RAW: "", HTTP_URL_ARGS: "", HTTP_URL_ARGS_NAMES: "",
@@ -98,7 +142,7 @@ parser.add_argument("-i", "--ifcspec", metavar="IFCSPEC", dest="ifcspec", requir
 group = parser.add_mutually_exclusive_group(required=False)
 group.add_argument("-r", "--rule", metavar="RULE", dest="enabledRules", nargs="*", default=["all"], choices=["all"]+availableRules, help="Enabled detection rules (default: all). Available detection rules are: "+", ".join(availableRules))
 group.add_argument("-nr", "--norule", metavar="RULE", dest="disabledRules", nargs="*", default=None, choices=availableRules, help="Disabled detection rules (default: none). Available detection rules are: "+", ".join(availableRules))
-parser.add_argument("-ursrc", metavar="URSOURCE", dest="ursrc", default="ipfixcol", choices=["ipfixcol", "flow_meter"], help="UniRec message source (default: unirec). Available UniRec sources are: ipfixcol, flow_meter")
+parser.add_argument("-ursrc", metavar="URSOURCE", dest="ursrc", default="ipfixcol", choices=["ipfixcol", "flow_meter"], help="UniRec message source (default: ipfixcol). Available UniRec sources are: ipfixcol, flow_meter")
 parser.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_const", const=True, help="Show Alert Messages")
 args = parser.parse_args()
 
@@ -128,7 +172,7 @@ def prepare_detection_signatures(rules):
 
                     #the delimiter was chosen like this due to its invalidity as regex expression
                     signature, HTTPFields = signature.split(" ** ")
-                    signatures.append([rule, signature, HTTPFields.split(",")])
+                    signatures.append([rule, re.compile(signature), HTTPFields.split(",")])
 
         if rule == REQUEST_METHOD_ENFORCEMENT:
             dataFile = SCRIPT_PATH + "/data/allowed-http-methods.data"
@@ -136,7 +180,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)^(?!(" + "|".join(map(re.escape, list(filter(None, data)))) + ")$)", [HTTP_METHOD]])
+                    signatures.append([rule, re.compile("(?i)^(?!(" + "|".join(map(re.escape, list(filter(None, data)))) + ")$)"), [HTTP_METHOD]])
 
         elif rule == REQUEST_SCANNER_DETECTION:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-user-agents.data
@@ -145,7 +189,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)(\\b(" + "|".join(map(re.escape, list(filter(None, data))))+")[/0-9.]*)", [HTTP_USER_AGENT]])
+                    signatures.append([rule, re.compile("(?i)(\\b(" + "|".join(map(re.escape, list(filter(None, data))))+")[/0-9.]*)"), [HTTP_USER_AGENT]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-urls.data
             dataFile = SCRIPT_PATH + "/data/scanners-urls.data"
@@ -153,7 +197,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_FILENAME, HTTP_URL_ARGS]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME, HTTP_URL_ARGS]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-headers.data
             dataFile = SCRIPT_PATH + "/data/scanners-headers.data"
@@ -161,7 +205,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_HOST, HTTP_USER_AGENT, HTTP_REFERER]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_HOST, HTTP_USER_AGENT, HTTP_REFERER]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_LFI:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/restricted-files.data
@@ -170,7 +214,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_FILENAME]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/lfi-os-files.data
             dataFile = SCRIPT_PATH + "/data/lfi-os-files.data"
@@ -178,7 +222,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_RCE:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/windows-powershell-commands.data
@@ -187,7 +231,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/unix-shell.data
             dataFile = SCRIPT_PATH + "/data/unix-shell.data"
@@ -195,7 +239,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_PHP:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-config-directives.data
@@ -204,7 +248,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-variables.data
             dataFile = SCRIPT_PATH + "/data/php-variables.data"
@@ -212,7 +256,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-function-names-933150.data
             dataFile = SCRIPT_PATH + "/data/php-function-names-933150.data"
@@ -220,7 +264,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, "(?i)" + "|".join(map(re.escape, list(filter(None, data)))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
     return signatures
 
 #prepare detection signatures based on module arguments
@@ -249,10 +293,6 @@ alertspec = "ipaddr SRC_IP,ipaddr DST_IP,uint16 DST_PORT,uint16 SRC_PORT,uint8 P
 trap.setDataFmt(0, pytrap.FMT_UNIREC, alertspec)
 alert = pytrap.UnirecTemplate(alertspec)
 
-# Allocate memory for the alert
-#variable field: WAI_RULE: 64, WAI_MALICIOUS_FIELD: 32, WAI_MALICIOUS_VALUE: 256
-#alert.createMessage(352)
-
 totalAlerts = 0
 def send_alert(rec, maliciousEvent):
     global alert, totalAlerts
@@ -266,28 +306,26 @@ def send_alert(rec, maliciousEvent):
     alert.DST_PORT = rec.DST_PORT
     alert.PROTOCOL = rec.PROTOCOL
     alert.EVENT_TIME = rec.TIME_LAST
+
     #rule that detected the intrusion
     alert.WAI_RULE = str(maliciousEvent[WAI_RULE])
+
     #malicious http request field in which a potential intrusion was detected
     alert.WAI_MALICIOUS_FIELD = str(maliciousEvent[WAI_MALICIOUS_FIELD])
+
     #malicious value detected as potential intrusion
     alert.WAI_MALICIOUS_VALUE = str(maliciousEvent[WAI_MALICIOUS_VALUE])
 
     if args.verbose:    
-        print("--------------------------------------------------------------------------\r\n")
-        print("New Malicious Event Detected: \r\n\r\nDetection Rule: " + str(maliciousEvent[WAI_RULE]) + "\r\nMalicious Field: " + str(maliciousEvent[WAI_MALICIOUS_FIELD]) + "\r\nMalicious Value: " + str(maliciousEvent[WAI_MALICIOUS_VALUE]) + "\r\n")
+        print("--------------------------------------------------------------------------\n")
+        print("New Malicious Event Detected: \n\nDetection Rule: " + str(maliciousEvent[WAI_RULE]) + "\nMalicious Field: " + str(maliciousEvent[WAI_MALICIOUS_FIELD]) + "\nMalicious Value: " + str(maliciousEvent[WAI_MALICIOUS_VALUE]) + "\n")
 
     # send alert
     trap.send(alert.getData(), 0)
     totalAlerts += 1
 
 def do_detection(rec, HTTPRequest):
-    #todo: napsat do diplomky, ze u kazdeho pozadavku hlasim pouze prvni nalezeny utok, nikoli vsechny detekovane
-    #todo: napsat do diplomky, ze pro snizeni poctu false positives doporucuju vypnout protocol enforcement
-    #todo: do diplomky priklad volani: python waintrusion_detector.py -i f:~/Downloads/http-duracka/http_data.00.trapcap,f:~/Documents/diplomka/output.trapcap -nr request_protocol_enforcement
-    #todo: popremyslet o vyhozeni user agenta urlgrabber/3.10 - generuje dost hlaseni
-
-    #HTTP Parameter Pollution Test - generates more false positives than true positives
+    #HTTP Parameter Pollution Test - generates false pasitives due to typos in URLs
     #queryParams = urlparse.parse_qs(HTTPRequest[HTTP_URL_QUERY_STRING])
     #for field, fieldValue in queryParams.items():
     #    if len(fieldValue) > 1:
@@ -302,30 +340,19 @@ def do_detection(rec, HTTPRequest):
             if isinstance(fieldValue, list):
                 fieldValues = fieldValue
                 for fieldValue in fieldValues:
-                    if re.search(signature, fieldValue):
+                    if signature.search(fieldValue):
                         send_alert(rec, {WAI_RULE: rule, WAI_MALICIOUS_FIELD: field, WAI_MALICIOUS_VALUE: fieldValue})
                         return
             else:
-                if re.search(signature, fieldValue):
+                if signature.search(fieldValue):
                     send_alert(rec, {WAI_RULE: rule, WAI_MALICIOUS_FIELD: field, WAI_MALICIOUS_VALUE: fieldValue})
                     return
 
 #time measurement
 start = time.time()
 
-#152.63, 148.56, 156.15, 156.26, 158.71 pri 235193 requestech s odesilanim alertu verbose, bez protocol_enforcement testu se zasilanim alertu do souboru, 788 alertu, odesilani alertu nema na dobu vliv
-#4.47s request_method_enforcement, 0 nalezu
-#14.55s request_scanner_detection, 257 nalezu
-#9.82s request_protocol_attack, 51 nalezu
-#65.05s request_application_attack_lfi, 30 nalezu - zrevidovat, presny ale strasne pomaly
-#6.05s request_application_attack_rfi, 32 nalezu
-#25.74s request_application_attack_rce, 379 nalezu - zrevidovat, vypada na dost false positives
-#23.16s request_application_attack_php, 23 nalezu - zrevidovat, vypada na dost false positives
-#26.86s request_application_attack_xss, 16 nalezu - zrevidovat, vypada na dost false positives
-#16.02s request_application_attack_sqli, 151 nalezu
-#5.04s request_application_attack_session_fixation, 0 nalezu
-
 totalRequests = 0
+detectionTime = 0
 
 # Main loop
 while True:
@@ -361,16 +388,15 @@ while True:
         if rec.HTTP_RESPONSE_STATUS_CODE: continue
         if rec.HTTP_REQUEST_METHOD_ID == 11: continue #unknown method associated with https
 
-    #map http method TODO: je potreba zjistit z flowmon exporteru mapovani method_id na method
     if args.ursrc == "ipfixcol":
-        HTTPMethodMapping = {1: "GET", 2: "HEAD", 4: "POST"}
         HTTPMethodID = getattr(rec, UR_HTTP_METHOD, "")
-        HTTPRequest[HTTP_METHOD] = "GET" if not HTTPMethodID in HTTPMethodMapping.keys() else HTTPMethodMapping[HTTPMethodID]
+        HTTPRequest[HTTP_METHOD] = HTTPMethodMapping.get(HTTPMethodID, "GET")
     else:
         HTTPRequest[HTTP_METHOD] = getattr(rec, HTTP_METHOD, "")
 
     #initialize HTTPRequest fields for analysis - getattr is due to various templates 
     HTTPRequest[HTTP_URL] = getattr(rec, UR_HTTP_URL, "")
+    HTTPRequest[HTTP_URL_RAW] = getattr(rec, UR_HTTP_URL, "")
     HTTPRequest[HTTP_HOST] = getattr(rec, UR_HTTP_HOST, "")
     HTTPRequest[HTTP_USER_AGENT] = getattr(rec, UR_HTTP_USER_AGENT, "")
     HTTPRequest[HTTP_REFERER] = getattr(rec, UR_HTTP_REFERER, "")
@@ -391,22 +417,16 @@ while True:
         queryParamsValues = list(set(queryParamsValues).union(queryParamValues))
     HTTPRequest[HTTP_URL_ARGS] = queryParamsValues
 
-    #unquote and decode all HTTPRequest params
-    #for k, field in HTTPRequest.items():
-    #    if isinstance(field, list):
-    #        for idx, value in enumerate(field):
-    #            HTTPRequest[k][idx] = urllib.unquote(value)
-    #    else:
-    #        HTTPRequest[k] = urllib.unquote(field)
-
-    HTTPRequest[HTTP_URL_RAW] = getattr(rec, UR_HTTP_URL, "")
-
     #detection
+    startDetectionTime = time.time()
     do_detection(rec, HTTPRequest)
+    detectionTime += time.time() - startDetectionTime
+
     totalRequests += 1
 
 if args.verbose:
-    print("Elapsed Time: " + str(time.time() - start))
+    print("Elapsed Time (including waiting for reception and data parsing): " + str(time.time() - start))
+    print("Detection Time: " + str(detectionTime))
     print("Total Requests: " + str(totalRequests))
     print("Total Alerts: " + str(totalAlerts))
 
