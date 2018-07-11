@@ -35,18 +35,19 @@ if advised of the possibility of such damage.
 """
 
 #!/usr/bin/env python
-# Full imports
 import pytrap, sys, os, signal
 from global_def import *
 from threading import Thread, Semaphore
 from flow import Flow, SMTP_Flow
 from smtp_entity import SMTP_ENTITY
 from detection import SpamDetection
+
 try:
     from queue import Queue
 except:
     from Queue import Queue
 import time
+
 # Interfaces definition
 BASIC_IF = 0
 SMTP_IF = 1
@@ -77,8 +78,8 @@ def fetch_data(trap, interface, queue):
                 queue.put(flow)
         else:
             flow = SMTP_Flow(rec)
-            flow.filter()
-            queue.put(flow)
+            if (flow == None): pass
+            else: queue.put(flow)
     return True
 
 def data_handling(detector, q):
@@ -89,18 +90,14 @@ def data_handling(detector, q):
     detector    SpamDetector
     q           queue
     """
-    processed = 0
     ts = time.time()
     while (True):
         try:
             flow = q.get()
             if flow is None:
-                sys.stderr.write("data_handling: Processed {0} flows.\n".format(processed))
+                sys.stderr.write("data_handling: Error with recieving flows.\n")
                 break
             detector.add_entity(flow, flow.SRC_IP)
-            processed = processed + 1
-            if processed % 10000 is 0:
-                print("data_handling: Fetched {0} flows".format(processed))
             q.task_done()
         except IndexError:
             sys.stderr.write("data_handling: No data in queue.\n")
@@ -142,6 +139,7 @@ if __name__ == '__main__':
     # Stop data_handler
     flow_queue.put(None)
     data_handler.join()
+    detector.join()
     # Free allocated memory
     trap.finalize()
 

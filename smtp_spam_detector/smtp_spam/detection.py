@@ -33,26 +33,17 @@ in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
 """
-
 #!/usr/bin/env python
-""" Module imports """
-from cluster import Cluster
+#from cluster import Cluster
 from flow import Flow, SMTP_Flow
 from smtp_entity import *
-""" Partial imports """
-from difflib import SequenceMatcher
 from pytrap import TrapCtx
 from threading import *
 from global_def import *
-""" Full imports """
-import pytrap, sys, os, time, logging, json
+import pytrap, sys, os, time, datetime, logging, json, report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 
-import argparse
-import report2idea
-import datetime
 class SpamDetection(Thread):
     """
     Data is dict of flows from multirecievers
@@ -66,6 +57,9 @@ class SpamDetection(Thread):
 
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
+        # TODO
+        self.whitelist = {}
+        self.blacklist = {}
 
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
@@ -80,7 +74,7 @@ class SpamDetection(Thread):
         self.alerts = 0
 
         # Cluster for clustering spammers, further analysis
-        self.cluster = Cluster()
+        #self.cluster = Cluster()
         self.trap = trap
 
     def add_entity(self, flow, key):
@@ -99,71 +93,79 @@ class SpamDetection(Thread):
                     self.data[flow.DST_IP].incoming += 1
                 else:
                     self.data[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP, flow.TIME_LAST)
-
                 self.data[key].add_new_flow(flow)
-                self.data[key].update_time(flow)
             else:
                 self.data[key] = SMTP_ENTITY(flow)
-
-            if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
+        if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
                 self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
         return True
 
     def create_report(self, entity):
-        print("Creating report for {0}".format(entity))
         ip = ()
         if entity.id.isIPv4() is True:
             ip = ("IP4", entity.id)
         else:
             ip = ("IP6", entity.id)
+        idea = {}
+        first_senders =  list(entity.get_emails())
+        hosts = list(entity.get_hostnames())
+        if (len(first_senders) > 5):
+            first_senders = first_senders[:5]
+        if (len(hosts) > 5):
+            hosts = hosts[:5]
 
-        if len(entity.smtp_pool) is 0 and len(entity.basic_pool) is 0:
-            return None
+        try:
+            idea = {
+                "Format": "IDEA0",
+                "ID": report2idea.getRandomId(),
+                "DetectTime": datetime.datetime.fromtimestamp(self.t_detect).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "CreateTime": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "EventTime": report2idea.getIDEAtime(entity.time_start),
+                "CeaseTime": report2idea.getIDEAtime(entity.time_end),
+                "Category": ["Abusive.Spam"],
+                "Note": "Testing example",
+                "Confidence": entity.conf_lvl,
+                "Source": [{
+                  "Hostname" : hosts,
+                  "Email" : first_senders,
+                  ip[0] : str(ip[1]),
+                  "Proto" : list(entity.get_proto()),
+                }],
+                "ByteCount" : entity.bytes,
+                "FlowCount" : len(entity.sent_history),
+                "PacketCount" : entity.packets,
+                "ConnCount" : entity.conn_cnt
+            }
+        except Exception:
+            sys.stderr.write("Idea creation for {0} failed.\n".format(entity))
+            pass
 
-        confidience = 0.1 #entity.get_confidence()
-
-        idea = {
-            "Format": "IDEA0",
-            "ID": report2idea.getRandomId(),
-            "DetectTime": self.t_detect,
-            "CreateTime": datetime.datetime.utcnow().isoformat("T") + "Z",
-            "EventTime": report2idea.getIDEAtime(entity.time_start),
-            "CeaseTime": report2idea.getIDEAtime(entity.time_end),
-            "Category": ["Abusive.Spam"],
-            "Note": "Testing example",
-            "Confidence": confidience,
-            "Source": [{
-              "Hostname" : list(entity.get_hostnames()),
-              "Email" : list(entity.get_emails()),
-              ip[0] : str(ip[1]),
-              "Proto" : list(entity.get_proto()),
-            }]
-        }
-        print("*******************************IDEA*************************************")
-        print(json.dumps(idea, sort_keys=True, indent=4, separators=(',', ': ')))
         return json.dumps(idea)
 
     def send_reports(self, reports):
         rep_cnt = 0
         for report in reports:
             if report is not None:
-                self.trap.send(str(report).encode())
-                rep_cnt += 1
-            print("Send reports : {0} / {1}".format(rep_cnt, len(reports)))
+                try:
+                    self.trap.send(str(report).encode())
+                    rep_cnt += 1
+                except Exception:
+                    sys.stderr.write("detection: Could not send json through trap interface.\n")
+        print("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
 
     def analysis(self):
         """
         Do frequency analysis here
         """
+        self.t_detect  = self.t_cflow
         potencial_spammers = set()
-        self.t_detect  = time.time()
         print("Probing...")
         with self.data_lock:
             for entity in self.data:
                 self.checked += 1
-                if not self.data[entity].is_legit():
+                if self.data[entity].is_spam() > 0.85:
                     potencial_spammers.add(self.data[entity])
-        # Data analysis
+                #print(self.data[entity])
         ps = len(potencial_spammers)
         dl = len(self.data)
         if ps is not 0:
@@ -183,15 +185,20 @@ class SpamDetection(Thread):
             self.t_clean = time.time()
 
     def run(self):
+        sys.stderr.write("Detection running with probe interval:{0}\n".format(PROBE_INTERVAL))
         workers = []
         while (True):
             if self.t_detect + PROBE_INTERVAL < self.t_cflow:
+                sys.stderr.write("Creating analysis thread {0}.\n".format(len(workers)))
                 worker = Thread(target=self.analysis, args=())
                 worker.start()
                 workers.append(worker)
-                self.t_detect = time.time()
-
+                self.t_detect  = self.t_cflow
+                #self.analysis()
             if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
                 self.clear()
-                [ worker.join() for worker in workers ]
+
+            if len(workers) > MAX_WORKERS:
+                for worker in workers: worker.join()
+                workers.clear()
 

@@ -52,6 +52,7 @@ class Flow(object):
         self.DST_PORT = rec.DST_PORT
         self.SRC_PORT = rec.SRC_PORT
         self.TCP_FLAGS = rec.TCP_FLAGS
+
     def __str__(self):
         return "SRC_IP:" + str(self.SRC_IP) + ",DST_IP:" + str(self.DST_IP) + \
                ",BYTES:" + str(self.BYTES) + ",TIME_FIRST;" + str(self.TIME_FIRST) + \
@@ -75,10 +76,6 @@ class SMTP_Flow(Flow):
         self.SMTP_RCPT_CMD_COUNT = rec.SMTP_RCPT_CMD_COUNT
         self.SMTP_STAT_CODE_FLAGS = rec.SMTP_STAT_CODE_FLAGS
 
-#        self.SMTP_DOMAIN = str(rec.SMTP_DOMAIN)
-#        self.SMTP_FIRST_RECIPIENT = str(rec.SMTP_FIRST_RECIPIENT)
-#        self.SMTP_FIRST_SENDER = str(rec.SMTP_FIRST_SENDER)
-
         try:
             self.SMTP_DOMAIN = rec.SMTP_DOMAIN
             self.SMTP_FIRST_RECIPIENT = rec.SMTP_FIRST_RECIPIENT
@@ -88,6 +85,7 @@ class SMTP_Flow(Flow):
             self.SMTP_DOMAIN = None
             self.SMTP_FIRST_RECIPIENT = None
             self.SMTP_FIRST_SENDER = None
+            return None
 
     def __str__(self):
         return "SMTP_FLOW:\nSRC:" + str(self.SRC_IP) + "\nDST:" + str(self.DST_IP) \
@@ -98,22 +96,22 @@ class SMTP_Flow(Flow):
     def __repr__(self):
         return str(self.SRC_IP) + ":" + str(self.DST_IP) + ":" + str(self.SMTP_COMMAND_FLAGS)
 
-    """
-    Function that detects whether current flow could be a spam
-    based on SMTP FLAGS, it returns positive value on suspicion
-    flow otherwise negative one
-    """
-    def filter(self):
-        rep = 0.0
+    def get_score(self):
+        score = 0
         if int(self.SMTP_STAT_CODE_FLAGS) & int(SC_SPAM) > 0:
-        # It contains a spam key word
-            rep += 0.9
-            #print("Alert(SPAM flag present) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
-        if not self.SMTP_FIRST_SENDER or not self.SMTP_FIRST_RECIPIENT:
-            rep += 0.3
-            #print("Alert(Address not filled) [{0},{1}]".format(self.SRC_IP, str(self.SMTP_FIRST_SENDER)))
+            rep += 5
 
-        cmd_flag = self.SMTP_COMMAND_FLAGS
+        if not self.SMTP_FIRST_SENDER:
+            score += 1
+
+        if not self.SMTP_FIRST_RECIPIENT:
+            score += 1
+
+        for stat_code in SMTP_STATUS_CODES.values():
+            if int(self.SMTP_STAT_CODE_FLAGS) & int(stat_code) > 0:
+                score += 1
+
+        return score
 
     def get_name(self):
         return self.SMTP_FIRST_SENDER.partition("@")[0][1:]
