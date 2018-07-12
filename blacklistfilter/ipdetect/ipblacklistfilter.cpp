@@ -3,9 +3,11 @@
  * \brief Module for detecting blacklisted IP addresses.
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
+ * \author Filip Suster, sustefil@fit.cvut.cz
  * \date 2013
  * \date 2014
  * \date 2015
+ * \date 2018
  */
 
 /*
@@ -59,8 +61,6 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/inotify.h>
-#include <errno.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -79,6 +79,7 @@
 #include "ipblacklistfilter.h"
 #include "patternstrings.h"
 #include "fields.h"
+#include "../blacklist_watcher/blacklist_watcher.h"
 
 UR_FIELDS(
 //BASIC_FLOW
@@ -94,7 +95,7 @@ UR_FIELDS(
         uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
 //COLLECTOR_FLOW
         uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
-        uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+        uint8 DIR_BIT_FIELD,    //Bit field used for determining incoming/outgoing flow
         uint8 TOS,              //IP type of service
         uint8 TTL,              //IP time to live
 //Blacklist items
@@ -108,23 +109,15 @@ trap_module_info_t *module_info = NULL;
   BASIC("ipblacklistfilter", "Module receives the UniRec record and checks if the source address " \
     "or destination address is present in any blacklist that are available. " \
     "If any of the addresses is blacklisted the record is changed by adding " \
-    "a identification number of the list which blacklisted the address for both IP addresses and " \
-    "a number specifying intensity of the communication between those addresses. Unirec records " \
-    "are aggregated by source,destination address and protocol for a given time. After this time " \
-    "aggregated UniRec is sent by output interface. " \
-    "This module uses configurator tool. To specify file with blacklist IP addresses or public " \
-    "blacklists, use XML configuration file for IPBlacklistFilter (userConfigurationFile.xml). " \
+    "an index of the blacklist(s) which blacklisted the address" \
+    "This module uses configurator tool. To specify file with blacklists (prepared by blacklist_downloader)" \
+    "use XML configuration file for IPBlacklistFilter (userConfigurationFile.xml). " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bld_userConfigurationFile.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/ipblacklistfilter/userConfigurationFile.xml]", required_argument, "string") \
-  PARAM('U', "", "Specify user configuration file for blacklist downloader. [Default: " SYSCONFDIR "/ipblacklistfilter/bld_userConfigurationFile.xml]", required_argument, "string") \
-  PARAM('D', "", "Switch to dynamic mode. Use blacklists specified in configuration file.", no_argument, "none") \
-  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
-  PARAM('A', "", "Specify active timeout in seconds. [Default: 300]", required_argument, "uint32") \
-  PARAM('I', "", "Specify inactive timeout in seconds. [Default: 30]", required_argument, "uint32") \
-  PARAM('s', "", "Size of aggregation hash table. [Default: 500000]", required_argument, "uint32")
+  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none")
 
 using namespace std;
 
@@ -132,10 +125,10 @@ using namespace std;
 static int stop = 0;
 
 // Global variable for signaling the program to update blacklists
-static int BL_RELOAD_FLAG = 0;
+int BL_RELOAD_FLAG = 0;
 
 // Reconfiguration flag, set if signal SIGUSR1 received
-static int RECONF_FLAG = 0;
+int RECONF_FLAG = 0;
 
 static bool WATCH_BLACKLISTS_FLAG;
 
@@ -163,115 +156,6 @@ void signal_handler(int signal)
     }
 }
 
-static void handle_events(int fd)
-{
-    /* Some systems cannot read integer variables if they are not
-       properly aligned. On other systems, incorrect alignment may
-       decrease performance. Hence, the buffer used for reading from
-       the inotify file descriptor should have the same alignment as
-       struct inotify_event. */
-
-    char buf[4096]
-            __attribute__ ((aligned(__alignof__(struct inotify_event))));
-
-    const struct inotify_event *event;
-    ssize_t len;
-    char *ptr;
-
-    /* Loop while events can be read from inotify file descriptor. */
-
-    for (;;) {
-        /* Read some events. */
-
-        len = read(fd, buf, sizeof(buf));
-        if (len == -1 && errno != EAGAIN) {
-            perror("read");
-            exit(EXIT_FAILURE);
-        }
-
-        /* If the nonblocking read() found no events to read, then
-           it returns -1 with errno set to EAGAIN. In that case,
-           we exit the loop. */
-
-        if (len <= 0)
-            break;
-
-        /* Loop over all events in the buffer */
-
-        for (ptr = buf; ptr < buf + len;
-             ptr += sizeof(struct inotify_event) + event->len) {
-
-            event = (const struct inotify_event *) ptr;
-
-            if (event->mask & IN_CLOSE_WRITE) {
-                DBG((stderr, "Blacklist blacklist_watcher setting a flag to reload blacklists\n"));
-                pthread_mutex_lock(&BLD_SYNC_MUTEX);
-                BL_RELOAD_FLAG = 1;
-                pthread_mutex_unlock(&BLD_SYNC_MUTEX);
-            }
-        }
-    }
-}
-
-
-/* Watch directory with blacklist files for IN_CLOSE_WRITE event
- * and set appropriate flag if these files change */
-void * watch_blacklist_files(void *)
-{
-    int fd, poll_num;
-    int wd; // TODO: is just one watch descriptor fine?
-    nfds_t nfds;
-    struct pollfd fds[1];
-
-    /* Create the file descriptor for accessing the inotify API */
-
-    fd = inotify_init1(IN_NONBLOCK);
-    if (fd == -1) {
-        perror("inotify_init1");
-        exit(EXIT_FAILURE);
-    }
-
-    /* Mark directories for events
-       - file was opened
-       - file was closed */
-
-    wd = inotify_add_watch(fd, "./bl_records_sorted.txt", IN_CLOSE_WRITE);
-    if (wd == -1) {
-        fprintf(stderr, "Cannot watch '%s'\n", "./bl_records_sorted.txt");
-        perror("inotify_add_watch");
-        exit(EXIT_FAILURE);
-    }
-
-    /* Prepare for polling */
-
-    nfds = 1;
-
-    /* Console input */
-
-    fds[0].fd = fd;
-    fds[0].events = POLLIN;
-
-    /* Wait for events and/or terminal input */
-
-    DBG((stderr, "Blacklist blacklist_watcher listening for events.\n"));
-
-    while (1) {
-        poll_num = poll(fds, nfds, -1);
-        if (poll_num == -1) {
-            if (errno == EINTR)
-                continue;
-            perror("poll");
-            exit(EXIT_FAILURE);
-        }
-
-        if (poll_num > 0) {
-            if (fds[0].revents & POLLIN) {
-                /* Inotify events are available */
-                handle_events(fd);
-            }
-        }
-    }
-}
 
 /**
  * Function for swapping bits in byte.
@@ -329,8 +213,8 @@ void create_v6_mask_map(ipv6_mask_map_t& m)
 }
 
 /**
- * \brief Function for loading updates. It parses file with blacklisted IP
- * addresses (created and preprocessd by blacklist downloader).
+ * \brief Function for loading blacklists. It parses file with blacklisted IP
+ * addresses (created and preprocessed by blacklist downloader).
  * Function also checks validity of line on which the IP address was found. Invalid of bad formated lines
  * are ignored.
  * \param v4_list IPv4 vector to be filled
@@ -486,7 +370,7 @@ int ip_binary_search(ip_addr_t* searched, ipv4_mask_map_t& v4mm, ipv6_mask_map_t
  * \brief Function for checking IPv4 addresses. It extracts both source and
  * destination addresses from the UniRec record and tries to match them to either
  * address or prefix. If the match is positive the field in detection record is filled
- * with the respective blacklist number.
+ * with the respective blacklist(s) number.
  * \param ur_tmp Template of input UniRec record.
  * \param ur_det Template of detection UniRec record.
  * \param record Record being analyzed.
@@ -595,7 +479,6 @@ int main (int argc, char **argv)
 
     // Set default files names
     char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
-    char *bld_userFile = (char*) SYSCONFDIR "/ipblacklistfilter/bld_userConfigFile.xml";
 
     // For use with prefixes
     black_list_t v4_list;
@@ -678,16 +561,13 @@ int main (int argc, char **argv)
     signal(SIGUSR1, signal_handler);
 
     int opt;
-    std::string file, bl_str;
+    std::string bl_file, bl_str;
 
     // ********** Parse arguments **********
-    while ((opt = getopt(argc, argv, "nu:U:")) != -1) {
+    while ((opt = getopt(argc, argv, "nu:")) != -1) {
         switch (opt) {
             case 'u': // user configuration file for IPBlacklistFilter
                 userFile = optarg;
-                break;
-            case 'U': // user configuration file for blacklist downlooader
-                bld_userFile = optarg;
                 break;
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
@@ -703,8 +583,7 @@ int main (int argc, char **argv)
 
     config_t config;
 
-    // TODO: config file name
-    if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, "userConfigFile.xml", &config, CONF_PATTERN_STRING)) {
+    if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         std::cerr << "Error: Could not parse XML configuration." << std::endl;
         ur_free_template(templ);
         ur_free_template(tmpl_det);
@@ -719,16 +598,14 @@ int main (int argc, char **argv)
         WATCH_BLACKLISTS_FLAG = false;
     }
 
-    // cout << config.blacklist_file << endl << WATCH_BLACKLISTS_FLAG << endl;
-
-    file = config.blacklist_file;
+    bl_file = config.blacklist_file;
 
     // Load ip addresses from sources
-    retval = reload_blacklists(v4_list, v6_list, file);
+    retval = reload_blacklists(v4_list, v6_list, bl_file);
 
-    // If update from file could not be processed, return error
+    // If update from bl_file could not be processed, return error
     if (retval == BLIST_FILE_ERROR) {
-        fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
+        fprintf(stderr, "Error: Unable to read bl_file '%s'\n", bl_file.c_str());
         ur_free_template(templ);
         ur_free_template(tmpl_det);
         trap_finalize();
@@ -738,7 +615,7 @@ int main (int argc, char **argv)
 
     pthread_t watcher_thread;
     if (WATCH_BLACKLISTS_FLAG) {
-        pthread_create(&watcher_thread, NULL, watch_blacklist_files, NULL);
+        pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file);
     }
 
     // ***** Main processing loop *****
@@ -781,9 +658,8 @@ int main (int argc, char **argv)
 
         if (BL_RELOAD_FLAG) {
             // Update blacklists
-            std::string upd_path = file;
             DBG((stderr, "Reloading blacklists\n"));
-            retval = reload_blacklists(v4_list, v6_list, upd_path);
+            retval = reload_blacklists(v4_list, v6_list, bl_file);
             if (retval == BLIST_FILE_ERROR) {
                 std::cerr << "ERROR: Unable to load update files. Will use the old tables instead." << std::endl;
                 continue;
@@ -796,14 +672,14 @@ int main (int argc, char **argv)
             pthread_mutex_unlock(&BLD_SYNC_MUTEX);
         }
 
-
+        // TODO: Do we need any reconfiguration at all?
         if (RECONF_FLAG) {
             DBG((stderr, "Reconfiguration..\n"))
 
             v4_list.clear();
             v6_list.clear();
 
-            if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, "userConfigFile.xml", &config, CONF_PATTERN_STRING)) {
+            if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
                 std::cerr << "Error: Could not parse XML configuration." << std::endl;
                 ur_free_template(templ);
                 ur_free_template(tmpl_det);
@@ -818,14 +694,14 @@ int main (int argc, char **argv)
                 WATCH_BLACKLISTS_FLAG = false;
             }
 
-            file = config.blacklist_file;
+            bl_file = config.blacklist_file;
 
             // Load ip addresses from sources
-            retval = reload_blacklists(v4_list, v6_list, file);
+            retval = reload_blacklists(v4_list, v6_list, bl_file);
 
             // If update from file could not be processed, return error
             if (retval == BLIST_FILE_ERROR) {
-                fprintf(stderr, "Error: Unable to read file '%s'\n", file.c_str());
+                fprintf(stderr, "Error: Unable to read bl_file '%s'\n", bl_file.c_str());
                 ur_free_template(templ);
                 ur_free_template(tmpl_det);
                 trap_finalize();

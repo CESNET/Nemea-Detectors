@@ -61,6 +61,12 @@ extern "C" {
 #include <nemea-common/nemea-common.h>
 #include <nemea-common/prefix_tree.h>
 
+
+/**
+* Mutex for synchronization.
+*/
+pthread_mutex_t BLD_SYNC_MUTEX;
+
 /**
  * Constant returned if everything is ok.
  */
@@ -146,12 +152,10 @@ const char *URL_REGEX =
    ;
 */
 
-/*
- * Map for URL blacklist
- */
-typedef std::map<std::string, uint64_t> blacklist_map_t;
-
-
+typedef struct __attribute__ ((__packed__)) {
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
 
 /**
  * Structure of item used in update operations.

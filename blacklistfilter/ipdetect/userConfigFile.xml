@@ -6,7 +6,7 @@
              Blacklists must be preprocessed such that IP addresses and prefixes
              are sorted (numerically) -->
         <element name="blacklist_file">
-            bl_records_sorted.txt
+             /tmp/blacklistfilter/ip.blist
         </element>
         <!-- When set to dynamic, watch the blacklist file(s) for changes (with inotify mechanism)
         and reload them instantly, static means just to load files at startup

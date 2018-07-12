@@ -3,9 +3,11 @@
  * \brief Main module for URLBlackLIstDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \author Erik Sabik, <xsabik02@stud.fit.vutbr.cz>
+ * \author Filip Suster, <sustefil@fit.cvut.cz>
  * \date 2013
  * \date 2014
  * \date 2016
+ * \date 2018
  */
 
 /*
@@ -70,20 +72,20 @@ extern "C" {
 #include <nemea-common/nemea-common.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include "../blacklist_downloader/blacklist_downloader.h"
 #include "fields.h"
+
 #ifdef __cplusplus
 }
 #endif
 
 #include "patternstrings.h"
 #include "urlblacklistfilter.h"
-
+#include "../blacklist_watcher/blacklist_watcher.h"
 
 #ifdef DEBUG
-#define DEBUG_PRINT(...) do { fprintf(stderr, "DEBUG: "  __VA_ARGS__); } while (0)
+#define DBG(x) fprintf x;
 #else
-#define DEBUG_PRINT(...)
+#define DBG(x)
 #endif
 
 
@@ -139,9 +141,6 @@ UR_FIELDS(
   time TIME_FIRST,    //Timestamp of the first packet of a flow
   time TIME_LAST,     //Timestamp of the last packet of a flow
   // HTTP
-  string HTTP_SDM_REQUEST_HOST, // HW acceleration of the Combo card - Software Defined Monitoring
-  string HTTP_SDM_REQUEST_REFERER,
-  string HTTP_SDM_REQUEST_URL,
   string HTTP_HOST,
   string HTTP_REFERER,
   string HTTP_URL,
@@ -154,30 +153,19 @@ using namespace std;
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("URLBlacklistFilter", "Module receives the UniRec record and checks if the HTTP Host field" \
+  BASIC("URLBlacklistFilter", "Module receives the UniRec record and checks if the URL (HTTP Host + HTTP Path) " \
     "is present in any blacklist that are available. " \
-    "If HTTP Host field is present in any blacklist the record is changed by adding " \
-    "a identification number of the list which blacklisted the HTTP Host field and " \
-    "a number specifying intensity of the communication between those addresses. Unirec records " \
-    "are aggregated by source,destination address and protocol for a given time. After this time " \
-    "aggregated UniRec is sent by output interface. " \
-    "This module uses configurator tool. To specify file with blacklist URL addresses or public " \
-    "blacklists, use XML configuration file for IPBlacklistFilter (userConfigurationFile.xml). " \
+    "If the URL is present in any blacklist the record is changed by adding an index of the blacklist. " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bld_userConfigurationFile.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/urlblacklistfilter/userConfigurationFile.xml]", required_argument, "string") \
-  PARAM('U', "", "Specify user configuration file for blacklist downloader. [Default: " SYSCONFDIR "/urlblacklistfilter/bld_userConfigurationFile.xml]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
-  PARAM('S', "", "Switch to SDM version of HTTP fields.", no_argument, "none")
-
 
 static int stop = 0; // global variable for stopping the program
-static int update = 0; // global variable for updating blacklists
-
-static bool sdm_fields_flag = false;
-
+int BL_RELOAD_FLAG = 0;
+static bool WATCH_BLACKLISTS_FLAG;
 
 vector<ur_template_t**> ALLOCATED_UR_TEMPLATES;
 
@@ -191,20 +179,21 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 /**
  * Function for loading source files.
  * Function gets path to the directory with source files and use these to fill the
- * given blacklist with URLs. Since URL can have variable length its hashed first
- * and this hash used in blacklist for all operations.
- *
- * @param blacklist Blacklist table to be filled.
+ * given blacklist with URLs. The URLs are stored in a prefix tree
+ * @param tree Prefix tree to be filled.
  * @param file Path to the file with sources.
  * @return BLIST_LOAD_ERROR if directory cannot be accessed, ALL_OK otherwise.
  */
-int reload_blacklists(prefix_tree_t *tree, string &file)
+int reload_blacklists(prefix_tree_t **tree, string &file)
 {
+    // TODO: ineffective, make it work just with diffs
+    prefix_tree_destroy(*tree);
+    *tree = prefix_tree_initialize(PREFIX, sizeof(info_t), -1, DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
+
     ifstream input; // data input
 
     string line, url, bl_flag_str;
-    char *url_norm;
-    int ret;
+    const char *url_norm;
     uint64_t bl_flag;
     int line_num = 0;
 
@@ -236,9 +225,9 @@ int reload_blacklists(prefix_tree_t *tree, string &file)
         // find URL-blacklist separator
         str_pos = line.find_first_of('\\');
         if (str_pos == string::npos) {
-           // Blacklist index delimeter not found (bad format?), skip it
-           cerr << "WARNING: File '" << file << "' has bad formatted line number '" << line_num << "'" << endl;
-           continue;
+            // Blacklist index delimeter not found (bad format?), skip it
+            cerr << "WARNING: File '" << file << "' has bad formatted line number '" << line_num << "'" << endl;
+            continue;
         }
 
         // Parse blacklist ID
@@ -246,27 +235,26 @@ int reload_blacklists(prefix_tree_t *tree, string &file)
 
         // Parse URL
         url = line.substr(0, str_pos);
+        url_norm = url.c_str();
 
-        // TODO: is this necessary? Preprocessing should be done by downloader probably
-        ret = idna_to_ascii_lz(url.c_str(), &url_norm, 0);
-        if (ret != IDNA_SUCCESS) {
-            cerr << "Unable to normalize URL. Will skip." << endl;
-            continue;
-        }
+        // TODO: is this necessary? Preprocessing should be done by downloader
+//        ret = idna_to_ascii_lz(url.c_str(), &url_norm, 0);
+//        if (ret != IDNA_SUCCESS) {
+//            cerr << "Unable to normalize URL " << url.c_str() << " Will skip." << endl;
+//            continue;
+//        }
 
-        prefix_tree_domain_t *elem = prefix_tree_insert(tree, url_norm, strlen(url_norm));
+        prefix_tree_domain_t *elem = prefix_tree_insert(*tree, url_norm, strlen(url_norm));
 
         if (elem != NULL) {
-            info_t *info = (info_t *)elem->value;
+            info_t *info = (info_t *) elem->value;
             info->bl_id = bl_flag;
-            cout << "Inserted " << url_norm << endl;
-            cout << "ID: " << (int)info->bl_id << endl;
         } else {
-            cerr << "Can't insert element to prefix/suffix tree" << endl;
+            cerr << "WARNING: Can't insert element \'" << url_norm << "\' to the prefix tree" << endl;
         }
-
-        free(url_norm);
     }
+
+    DBG((stderr, "URL Blacklists Reloaded.\n"))
 
     input.close();
 
@@ -277,7 +265,7 @@ int reload_blacklists(prefix_tree_t *tree, string &file)
 /**
  * Function for checking the URL.
  * Function gets the UniRec record with URL to check and tries to find it
- * in the given blacklist. If the function succeedes then the appropriate
+ * in the given blacklist. If the function succeeds then the appropriate
  * field in detection record is filled with the number of blacklist asociated
  * with the URL. If the URL is clean nothing is done.
  *
@@ -292,36 +280,22 @@ int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, 
 {
     string host, host_url;
 
-    // Skip flows with empty HTTP host
-    if (sdm_fields_flag) {
-       if (ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST) == 0) {
-          return URL_CLEAR;
-       }
-    } else {
-       if (ur_get_var_len(in, record, F_HTTP_HOST) == 0) {
-          return URL_CLEAR;
-       }
+    if (ur_get_var_len(in, record, F_HTTP_HOST) == 0) {
+        return URL_CLEAR;
     }
 
-    if (sdm_fields_flag) {
-        host = string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_HOST));
-        host_url = host + string(ur_get_ptr(in, record, F_HTTP_SDM_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_SDM_REQUEST_URL));
-    } else {
-        host = string(ur_get_ptr(in, record, F_HTTP_HOST), ur_get_var_len(in, record, F_HTTP_HOST));
-        host_url = host + string(ur_get_ptr(in, record, F_HTTP_URL), ur_get_var_len(in, record, F_HTTP_URL));
-    }
- 
+    host = string(ur_get_ptr(in, record, F_HTTP_HOST), ur_get_var_len(in, record, F_HTTP_HOST));
+    host_url = host + string(ur_get_ptr(in, record, F_HTTP_URL), ur_get_var_len(in, record, F_HTTP_URL));
+
     // Strip / (slash) from URL if it is last character
-    if (host_url[host_url.length() - 1] == '/') {
+    while (host_url[host_url.length() - 1] == '/') {
         host_url.resize(host_url.length() - 1);
     }
-
-    cout << "Hledam: " << host_url.c_str() << endl;
 
     prefix_tree_domain_t *domain = prefix_tree_search(tree, host_url.c_str(), host_url.length());
 
     if (domain != NULL) {
-        DEBUG_PRINT("Detected blacklisted URL: '%s'\n", host_url.c_str());
+        DBG((stderr, "Detected blacklisted URL: '%s'\n", host_url.c_str()));
         info_t *info = (info_t *) domain->value;
         ur_set(out, detect, F_DST_BLACKLIST, info->bl_id);
         return BLACKLISTED;
@@ -340,15 +314,12 @@ int main (int argc, char** argv)
     int retval = 0;
     int send_terminating_unirec = 1;
 
-    tree = prefix_tree_initialize(PREFIX, sizeof(info_t), -1, DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
-
     // Set default files names
     char *userFile = (char*) SYSCONFDIR "/urlblacklistfilter/userConfigFile.xml";
-    char *bld_userFile = (char*) SYSCONFDIR "/urlblacklistfilter/bld_userConfigFile.xml";
 
     // TODO: Delegate idna functionality to downloader
     // set locale so we can use URL normalization library
-    // setlocale(LC_ALL, "");
+//     setlocale(LC_ALL, "");
 
     // ***** Initialize TRAP *****
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -359,23 +330,16 @@ int main (int argc, char** argv)
 
     // ********** Parse arguments **********
     int opt;
-    string file, bl_str;
-    while ((opt = getopt(argc, argv, "Snu:U:")) != -1) {
+    while ((opt = getopt(argc, argv, "nu:")) != -1) {
         switch (opt) {
             case 'u': // user configuration file for URLBlacklistFilter
                 userFile = optarg;
                 break;
-            case 'U': // user configuration file for blacklist downloader
-                bld_userFile = optarg;
-                break;
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
                 break;
-            case 'S': // Switch to SDM version of HTTP fields
-                sdm_fields_flag = true;
-                break;
             case '?':
-                fprintf (stderr, "ERROR: Unknown option -%c.\n", optopt);
+                fprintf(stderr, "ERROR: Unknown option -%c.\n", optopt);
                 FINALIZE_MODULE();
                 return EXIT_FAILURE;
         }
@@ -386,30 +350,42 @@ int main (int argc, char** argv)
     char *errstr = NULL;
     ur_template_t *templ;
     ur_template_t *det;
-    if (sdm_fields_flag) {
-        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_SDM_REQUEST_HOST,HTTP_SDM_REQUEST_REFERER,HTTP_SDM_REQUEST_URL", &errstr);
-        DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
-        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_SDM_REQUEST_HOST,HTTP_SDM_REQUEST_REFERER,HTTP_SDM_REQUEST_URL,DST_BLACKLIST", &errstr);
-        DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
-    } else {
-        templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL", &errstr);
-        DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
-        det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL,DST_BLACKLIST", &errstr);
-        DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
-    }
+
+    templ = ur_create_input_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL", &errstr);
+    DEFAULT_UR_CREATE_ERROR_HANDLING(templ, errstr, FINALIZE_MODULE())
+    det = ur_create_output_template(0,"DST_IP,SRC_IP,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL,DST_BLACKLIST", &errstr);
+    DEFAULT_UR_CREATE_ERROR_HANDLING(det, errstr, ur_free_template(templ); FINALIZE_MODULE())
 
     void *detection = ur_create_record(det, 2048);
 
+    config_t config;
 
-    // TODO: opsat konfiguraci z ipfilteru
+    if (loadConfiguration((char*)MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
+        std::cerr << "Error: Could not parse XML configuration." << std::endl;
+        ur_free_template(templ);
+        ur_free_template(det);
+        trap_finalize();
+        FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+        return EXIT_FAILURE;
+    }
+
+    if (strcmp(config.watch_blacklists, "true") == 0) {
+        WATCH_BLACKLISTS_FLAG = true;
+    } else {
+        WATCH_BLACKLISTS_FLAG = false;
+    }
 
     // Load URLs from file
-    file = "booter_list.txt";
-    if (reload_blacklists(tree, file) == BLIST_LOAD_ERROR) {
+    string bl_file = config.blacklist_file;
+    if (reload_blacklists(&tree, bl_file) == BLIST_LOAD_ERROR) {
         FINALIZE_MODULE();
         return EXIT_FAILURE;
     }
 
+    pthread_t watcher_thread;
+    if (WATCH_BLACKLISTS_FLAG) {
+        pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file);
+    }
 
     // ***** Main processing loop *****
     while (!stop) {
@@ -441,40 +417,23 @@ int main (int argc, char** argv)
             trap_send(0, detection, ur_rec_size(det, detection));
         }
 
-        // should update?
-        //cout << "Checking update";
-        fflush(stdout);
-        bld_lock_sync();
-//        //cout << "...\n";
-//        if (BLD_SYNC_FLAG) {
-//           cout << "Processing update...\n";
-//            retval = reload_blacklists(add_update, rm_update, file);
-//
-//            if (retval == BLIST_LOAD_ERROR) {
-//                cerr << "WARNING: Unable to load updates. Will use old table instead." << endl;
-//                update = 0;
-//                continue;
-//            }
-//
-//            if (!rm_update.empty()) {
-//                update_remove(blacklist, rm_update);
-//            }
-//            if (!add_update.empty()) {
-//                update_add(blacklist, add_update);
-//            }
-//
-//            rm_update.clear();
-//            add_update.clear();
-//            BLD_SYNC_FLAG = 0;
-//            cout << "Successfully updated\n";
-//        }
-        bld_unlock_sync();
-    }
+        if (BL_RELOAD_FLAG) {
+            // Update blacklists
+            DBG((stderr, "Reloading blacklists\n"));
+            retval = reload_blacklists(&tree, bl_file);
+            if (retval == BLIST_LOAD_ERROR) {
+                std::cerr << "ERROR: Unable to load update files. Will use the old tables instead." << std::endl;
+                continue;
+            }
 
-//    cout << "Terminating\n";
-//    if (bl_mode == BL_DYNAMIC_MODE) {
-//       bld_finalize();
-//    }
+            // this lazy locking is fine, we don't need to reload the blacklists immediately
+            // and locking the mutex in every iteration is ineffective
+            pthread_mutex_lock(&BLD_SYNC_MUTEX);
+            BL_RELOAD_FLAG = 0;
+            pthread_mutex_unlock(&BLD_SYNC_MUTEX);
+        }
+
+    }
 
     // send terminate message
     if (send_terminating_unirec) {
@@ -485,6 +444,9 @@ int main (int argc, char** argv)
     // clean up before termination
     ur_free_record(detection);
     FINALIZE_MODULE();
+
+    if (WATCH_BLACKLISTS_FLAG)
+        pthread_cancel(watcher_thread);
 
     return EXIT_SUCCESS;
 }
