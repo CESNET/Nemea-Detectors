@@ -5,12 +5,12 @@ Goal:	Module recieves the UniRec and checks if the stored source
 	blacklist that are available. If any of the addresses is 
 	blacklisted the record is changed by adding a number of 
 	the list which blacklisted the address. UniRec with this 
-	flag is then sent to the next module.
+	flag is then sent to the next module. Blacklists are downloaded by a separate module
+	bl_downloader.py which saves blacklists to a file (specified in configuration) and detector uses
+	this file to reload blacklists.
 
 Input Interface: UniRec format (<COLLECTOR_FLOW>)
 Output Interface: UniRec format (<COLLECTOR_FLOW>,SRC_BLACKLIST,
 		  DST_BLACKLIST)
 
-Usage:	./ipblacklistfilter -i <trap_interface> <blacklist_folder>
-
-Note:	This module should be controlled by python script "detector.py"	
+Usage:	./ipblacklistfilter -u <config_file> -i <trap_interface>
