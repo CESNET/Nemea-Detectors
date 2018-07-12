@@ -58,33 +58,6 @@
                 <element name="name">TOR exit nodes</element>
                 <element name="download_interval">10</element>
             </struct>
-
-            <struct>
-                <element name="id">6</element>
-                <element name="type">Pokus</element>
-                <element name="method">web</element>
-                <element name="source">http://localhost/blacklist1</element>
-                <element name="name">PokusLokal</element>
-                <element name="download_interval">10</element>
-            </struct>
-
-            <struct>
-                <element name="id">7</element>
-                <element name="type">Pokus</element>
-                <element name="method">web</element>
-                <element name="source">http://localhost/blacklist2</element>
-                <element name="name">PokusLokal</element>
-                <element name="download_interval">10</element>
-            </struct>
-
-            <struct>
-                <element name="id">8</element>
-                <element name="type">Pokus</element>
-                <element name="method">web</element>
-                <element name="source">http://localhost/blacklist3</element>
-                <element name="name">PokusLokal</element>
-                <element name="download_interval">10</element>
-            </struct>
         </array>
 
         <array type="URL">
@@ -146,15 +119,6 @@
                 <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
                 <element name="name">Booters</element>
                 <element name="type">Booters</element>
-                <element name="download_interval">10</element>
-            </struct>
-
-            <struct>
-                <element name="id">7</element>
-                <element name="type">Pokus</element>
-                <element name="method">web</element>
-                <element name="source">http://localhost/blacklist4</element>
-                <element name="name">PokusLokal</element>
                 <element name="download_interval">10</element>
             </struct>
 

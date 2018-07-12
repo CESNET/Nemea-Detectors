@@ -8,7 +8,7 @@ ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
 
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 ipblacklistfilter_CFLAGS=-std=gnu99
-ipblacklistfilter_CXXFLAGS=-std=c++11 -DDEBUG
+ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
 pkgdocdir=${docdir}/ipblacklistfilter
 pkgdoc_DATA=README
 ipblacklistfiltersysconfdir=${sysconfdir}/ipblacklistfilter

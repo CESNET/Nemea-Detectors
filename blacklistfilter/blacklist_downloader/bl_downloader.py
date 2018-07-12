@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 import xml.etree.ElementTree as ET
 import requests
@@ -8,25 +9,29 @@ import time
 import datetime
 import os
 
-fh = logging.FileHandler('bl_downloader.log')
+# TODO: sysconfdir??
+config_file = '/usr/local/etc/blacklist_downloader/bld_userConfigFile.xml'
+
+# TODO: where to log?
+# fh = logging.FileHandler('bl_downloader.log')
 cs = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
 cs.setLevel(logging.DEBUG)
-fh.setLevel(logging.DEBUG)
+# fh.setLevel(logging.DEBUG)
 cs.setFormatter(formatter)
-fh.setFormatter(formatter)
+# fh.setFormatter(formatter)
 
 logger = logging.getLogger(__name__)
-logger.addHandler(fh)
+# logger.addHandler(fh)
 logger.addHandler(cs)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 ip_regex = re.compile('\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b')
 
-# Just very simple regex to eliminate commentaries
+# Just a simple regex to eliminate commentaries
 url_regex = re.compile('^[^#/].*\..+')
 
-check_interval = 1 * 10  # Time period (seconds) to check for blacklist changes
+check_interval = 10 * 60  # Time period (seconds) to check for blacklist changes
 
 blacklists = []
 
@@ -35,10 +40,7 @@ blacklists = []
 # into tuple of IP (A, B, C, D), which is comparable by python (numerically)
 def split_ip(ip):
     # Extract only IP, without the prefix and indexes
-    if '/' in ip:
-        ip = ip.split('/')[0]
-    else:
-        ip = ip.split(',')[0]
+    ip = ip.split('/')[0] if '/' in ip else ip.split(',')[0]
 
     try:
         tuple_ip = tuple(int(part) for part in ip.split('.'))
@@ -84,7 +86,7 @@ class Blacklist:
                     # with open(filename, 'w') as f:
                     #     f.write('\n'.join(self.entities))
 
-                    logger.debug('Updated blacklist {}'.format(self.name))
+                    logger.info('Updated blacklist {}'.format(self.name))
 
             else:
                 logger.warning('Couldnt fetch blacklist: {}\n'
@@ -166,7 +168,7 @@ def create_detector_file(bl_type: Blacklist):
 
 
 def parse_config():
-    tree = ET.parse("bld_userConfigFile.xml")
+    tree = ET.parse(config_file)
     detector_files = tree.getroot().getchildren()[0].getchildren()
     bl_type_array = tree.getroot().getchildren()[1].getchildren()
 
@@ -199,9 +201,9 @@ def run(s):
 
         if updated:
             create_detector_file(bl_type)
-            logger.info('NEW {} Blacklist created'.format(bl_type.__name__))
+            logger.info('NEW {} created: {}'.format(bl_type.__name__, bl_type.detector_file))
         else:
-            logger.info('Check for {} updates done, no changes'.format(bl_type.__name__))
+            logger.debug('Check for {} updates done, no changes'.format(bl_type.__name__))
 
 
 if __name__ == '__main__':

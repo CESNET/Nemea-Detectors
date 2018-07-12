@@ -200,9 +200,8 @@ int reload_blacklists(prefix_tree_t **tree, string &file)
     size_t str_pos;
 
     input.open(file.c_str(), ifstream::in);
-
     if (!input.is_open()) {
-        cerr << "WARNING: File " << file << " cannot be opened!" << endl;
+        std::cerr << "Cannot open file with updates. Is the downloader running?" << std::endl;
         return BLIST_LOAD_ERROR;
     }
 
@@ -378,6 +377,7 @@ int main (int argc, char** argv)
     // Load URLs from file
     string bl_file = config.blacklist_file;
     if (reload_blacklists(&tree, bl_file) == BLIST_LOAD_ERROR) {
+        fprintf(stderr, "Error: Unable to read bl_file '%s'\n", bl_file.c_str());
         FINALIZE_MODULE();
         return EXIT_FAILURE;
     }

@@ -235,7 +235,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, std::string 
 
     input.open(file.c_str(), std::ifstream::in);
     if (!input.is_open()) {
-        std::cerr << "Cannot open file with updates!" << std::endl;
+        std::cerr << "Cannot open file with updates. Is the downloader running?" << std::endl;
         return BLIST_FILE_ERROR;
     }
 
@@ -653,15 +653,14 @@ int main (int argc, char **argv)
         if (retval == BLACKLISTED) {
             ur_copy_fields(tmpl_det, detection, templ, data);
             trap_send(0, detection, ur_rec_fixlen_size(tmpl_det));
-            DBG((stderr, "IP detected on blacklist\n"))
+            DBG((stderr, "IP detected on blacklist\n", ))
         }
 
         if (BL_RELOAD_FLAG) {
-            // Update blacklists
             DBG((stderr, "Reloading blacklists\n"));
             retval = reload_blacklists(v4_list, v6_list, bl_file);
             if (retval == BLIST_FILE_ERROR) {
-                std::cerr << "ERROR: Unable to load update files. Will use the old tables instead." << std::endl;
+                std::cerr << "ERROR: Unable to load update blacklist. Will use the old one instead." << std::endl;
                 continue;
             }
 
