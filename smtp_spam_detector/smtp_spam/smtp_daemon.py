@@ -35,13 +35,12 @@ if advised of the possibility of such damage.
 """
 
 #!/usr/bin/env python
-import pytrap, sys, os, signal
+import pytrap, sys, os, logging
 from global_def import *
 from threading import Thread, Semaphore
 from flow import Flow, SMTP_Flow
 from smtp_entity import SMTP_ENTITY
 from detection import SpamDetection
-
 try:
     from queue import Queue
 except:
@@ -104,6 +103,23 @@ def data_handling(detector, q):
     return True
 
 if __name__ == '__main__':
+    """
+    Initialize logging mechanism
+    """
+    LOGFORMAT = "%(asctime)-15s,%(threadName)s,%(name)s,[%(levelname)s] %(message)s"
+    LOGDATEFORMAT = "%Y-%m-%dT%H:%M:%S"
+    logging.basicConfig(level=logging.INFO, format=LOGFORMAT, datefmt=LOGDATEFORMAT)
+    log = logging.getLogger('smtp_spam')
+    """
+    Initialize file handler for log
+
+    Arguments:
+        DEBUG_LOG_PATH : path to debug log file from config file (global_def.py)
+    """
+    fh = logging.FileHandler(PATH_DEBUG_LOG)
+    fh.setFormatter(logging.Formatter(LOGFORMAT))
+    log.addHandler(fh)
+    log.info("***SMTP SPAM DETECTION Started***")
     # Datapool used to store information about smtp entities
     data = {}
     # Create a new trap context
@@ -118,6 +134,7 @@ if __name__ == '__main__':
     trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
     trap.setVerboseLevel(0)
     trap.setDataFmt(0, pytrap.FMT_JSON, "smtp_alert")
+    log.info("Daemon: Trap initialized.")
     detector = SpamDetection(trap)
     # Data synchronized queues
     flow_queue = Queue()    # Synchronize input flows
@@ -131,6 +148,7 @@ if __name__ == '__main__':
     basic_rcv.start()
     smtp_rcv.start()
     data_handler.start()
+    log.info("Daemon: Multi-receiver started.")
     # Start detector
     detector.start()
     # Join the threads

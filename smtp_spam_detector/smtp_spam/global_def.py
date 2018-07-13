@@ -73,4 +73,5 @@ PATH_CDF_TR = PATH + "smtp_srv_tr.csv"  # Path for CDF of servers traffic report
 PATH_CLUSTER = PATH + "smtp_clustering_"# Path for clustering report
 PATH_P_SPAMMERS = PATH + "potencial_spam.csv"
 PATH_STATS_REPORT = PATH + "smtp_stats_"
+PATH_DEBUG_LOG = "/data/smtp_detector/smtp_spam_detector.log"
 # ******************************************************************************

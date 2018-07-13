@@ -44,6 +44,8 @@ import pytrap, sys, os, time, datetime, logging, json, report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 
+detection_log = logging.getLogger('smtp_spam.detection')
+
 class SpamDetection(Thread):
     """
     Data is dict of flows from multirecievers
@@ -137,9 +139,8 @@ class SpamDetection(Thread):
                 "ConnCount" : entity.conn_cnt
             }
         except Exception:
-            sys.stderr.write("Idea creation for {0} failed.\n".format(entity))
+            detection_log.error("Idea creation for {0} failed.\n".format(entity))
             pass
-
         return json.dumps(idea)
 
     def send_reports(self, reports):
@@ -150,8 +151,8 @@ class SpamDetection(Thread):
                     self.trap.send(str(report).encode())
                     rep_cnt += 1
                 except Exception:
-                    sys.stderr.write("detection: Could not send json through trap interface.\n")
-        print("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
+                    detection_log.error("detection: Could not send json through trap interface.\n")
+        detection_log.info("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
 
     def analysis(self):
         """
@@ -159,7 +160,7 @@ class SpamDetection(Thread):
         """
         self.t_detect  = self.t_cflow
         potencial_spammers = set()
-        print("Probing...")
+        detection_log.info("Started probing entity database")
         with self.data_lock:
             for entity in self.data:
                 self.checked += 1
@@ -172,29 +173,28 @@ class SpamDetection(Thread):
             part = (float(ps)/float(dl))
         else:
             part = 0
-        print("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
+        detection_log.info("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
         self.send_reports([ self.create_report(entity) for entity in potencial_spammers ])
-        print("Analysis run done!")
+        detection_log.info("Analysis run done!")
 
     def clear(self):
         """
         Do clean up here, get rid off old data
         """
-        if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
-            self.data.clear()
-            self.t_clean = time.time()
+        data_len  = len(self.data)
+        self.data.clear()
+        self.t_clean = time.time()
+        detection_log.info("Database dropped. Cleared {0} records of entities.".format(data_len))
 
     def run(self):
-        sys.stderr.write("Detection running with probe interval:{0}\n".format(PROBE_INTERVAL))
+        detection_log.info("Parametrs set to probe interval : {0}, clean interval : {1}".format(PROBE_INTERVAL, CLEAN_INTERVAL))
         workers = []
         while (True):
             if self.t_detect + PROBE_INTERVAL < self.t_cflow:
-                sys.stderr.write("Creating analysis thread {0}.\n".format(len(workers)))
                 worker = Thread(target=self.analysis, args=())
                 worker.start()
                 workers.append(worker)
                 self.t_detect  = self.t_cflow
-                #self.analysis()
             if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
                 self.clear()
 
