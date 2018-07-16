@@ -58,8 +58,8 @@ class SpamDetection(Thread):
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
         # TODO
-        self.whitelist = {}
-        self.blacklist = {}
+        self.whitelist = set()
+        self.blacklist = set()
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
         self.t_detect = 0               # last detection time
@@ -163,8 +163,12 @@ class SpamDetection(Thread):
         self.t_detect  = self.t_cflow
         potencial_spammers = set()
         detection_log.info("Started probing entity database")
+        debug_cnt = 0
         with self.data_lock:
             for entity in self.data:
+                debug_cnt += 1
+                if (debug_cnt%1000 == 0):
+                    detection_log.debug("Probed {0} entities".format(debug_cnt))
                 score = self.data[entity].is_spam()
                 if (score > 0.8):
                     potencial_spammers.add(self.data[entity])
