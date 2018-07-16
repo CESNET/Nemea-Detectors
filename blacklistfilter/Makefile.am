@@ -15,8 +15,8 @@ ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 ipblacklistfilter_CFLAGS=-std=gnu99
 ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
-ipblacklistfiltersysconfdir=${sysconfdir}/ipblacklistfilter
-dist_ipblacklistfiltersysconf_DATA=ipdetect/userConfigFile.xml
+ipblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
+dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 
 
 urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
@@ -28,32 +28,28 @@ urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
 urlblacklistfilter_CFLAGS=-std=gnu99
 urlblacklistfilter_CXXFLAGS=-std=c++11 -Wno-write-strings -Wall -pedantic
-urlblacklistfiltersysconfdir=${sysconfdir}/urlblacklistfilter
-dist_urlblacklistfiltersysconf_DATA=urldetect/userConfigFile.xml
+urlblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
+dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 
-EXTRA_DIST=blacklist_downloader/bl_downloader.py  \
-	   blacklist_downloader/bld_userConfigFile.xml \
+EXTRA_DIST=blacklist_downloader/bl_downloader.py.in  \
+	   blacklist_downloader/bl_downloader_config.xml \
 	   urldetect/patternstrings.h \
 	   urldetect/README \
-	   urldetect/userConfigFile.xml \
-	   urldetect/Makefile.am \
+	   urldetect/urldetect_config.xml \
 	   ipdetect/patternstrings.h \
 	   ipdetect/README \
-	   ipdetect/userConfigFile.xml \
-	   ipdetect/Makefile.am \
-	   dnsdetect/README \
-	   dnsdetect/Makefile.am
+	   ipdetect/ipdetect_config.xml
 
 bin_SCRIPTS=blacklist_downloader/bl_downloader.py
 
-dist_blacklistfilter_DATA=blacklist_downloader/bld_userConfigFile.xml
-urldetectsysconfdir=${sysconfdir}/blacklist_downloader/urldetect
-urldetectsysconf_DATA=urldetect/userConfigFile.xml
-ipdetectsysconfdir=${sysconfdir}/blacklist_downloader/ipdetect
-ipdetectsysconf_DATA=ipdetect/userConfigFile.xml
+dist_blacklistfilter_DATA=blacklist_downloader/bl_downloader_config.xml
+# urldetectsysconfdir=${sysconfdir}/urldetect
+# urldetectsysconf_DATA=urldetect/urldetect_config.xml
+# ipdetectsysconfdir=${sysconfdir}/ipdetect
+# ipdetectsysconf_DATA=ipdetect/ipdetect_config.xml
 
-dnspkgdocdir=${docdir}/dnsblacklistfilter
-dnspkgdoc_DATA=dnsdetect/README
+# dnspkgdocdir=${docdir}/dnsblacklistfilter
+# dnspkgdoc_DATA=dnsdetect/README
 ippkgdocdir=${docdir}/ipblacklistfilter
 ippkgdoc_DATA=ipdetect/README
 urlpkgdocdir=${docdir}/urlblacklistfilter

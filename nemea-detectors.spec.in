@@ -34,7 +34,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/ddos_detector
 %{_bindir}/nemea/dnstunnel_detection
 %{_bindir}/nemea/haddrscan_detector
-%{_bindir}/nemea/ipblacklistfilter
+%{_bindir}/nemea/blacklistfilter
 %{_bindir}/nemea/sip_bf_detector
 %{_bindir}/nemea/vportscan_aggregator.py
 %{_bindir}/nemea/brute_force_detector
@@ -47,8 +47,9 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf
 %config(noreplace) %{_sysconfdir}/nemea/miner_detector/userConfigFile.xml
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf.default
-%config(noreplace) %{_sysconfdir}/nemea/ipblacklistfilter/bld_userConfigFile.xml
-%config(noreplace) %{_sysconfdir}/nemea/ipblacklistfilter/userConfigFile.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/bl_downloader_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
 %config(noreplace) %{_sysconfdir}//nemea/cron.d/booterfilter.cron
 %{_mandir}/man1/*.1.gz
