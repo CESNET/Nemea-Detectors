@@ -15,7 +15,16 @@ SUBDIRS=amplification_detection \
 
 RPMDIR = RPMBUILD
 
-EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md \
+	debian/README.Debian \
+	debian/changelog \
+	debian/compat \
+	debian/control \
+	debian/copyright \
+	debian/patches \
+	debian/rules \
+	debian/source \
+	debian/watch
 
 if MAKE_RPMS
 RPMFILENAME=$(PACKAGE_NAME)-$(VERSION)
@@ -27,7 +36,22 @@ rpm:
 	( cd "$(RPMDIR)/SOURCES/"; tar -z -c -f $(RPMFILENAME)-$(RELEASE).tar.gz $(RPMFILENAME); rm -rf $(RPMFILENAME); )
 	$(RPMBUILD) -ba $(PACKAGE_NAME).spec --define "_topdir `pwd`/$(RPMDIR)";
 
-rpm-clean:
-	rm -rf $(RPMDIR)
 else
 endif
+
+rpm-clean:
+	rm -rf $(RPMDIR)
+
+
+if MAKE_DEB
+.PHONY: deb
+deb:
+	make distdir && cd nemea-detectors-@VERSION@ && debuild -i -us -uc -b
+else
+endif
+	
+deb-clean:
+	rm -rf nemea-detectors_*.build* nemea-detectors_*.changes nemea-detectors*.deb nemea-detectors_*.orig.tar.gz nemea-detectors-*.tar.gz nemea-detectors-@VERSION@
+
+clean-local: rpm-clean deb-clean
+
