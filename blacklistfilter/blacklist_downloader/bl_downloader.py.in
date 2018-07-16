@@ -6,10 +6,9 @@ import logging
 import re
 import sched
 import time
-import datetime
 import os
 
-config_file = '@BLACKLISTFILTERDIR@/bld_userConfigFile.xml'
+config_file = '@BLACKLISTFILTERDIR@/bl_downloader_config.xml'
 
 # TODO: where to log?
 # fh = logging.FileHandler('bl_downloader.log')

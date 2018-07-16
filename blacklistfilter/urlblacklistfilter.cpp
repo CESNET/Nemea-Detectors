@@ -314,7 +314,7 @@ int main (int argc, char** argv)
     int send_terminating_unirec = 1;
 
     // Set default files names
-    char *userFile = (char*) SYSCONFDIR "/urlblacklistfilter/userConfigFile.xml";
+    char *userFile = (char*) SYSCONFDIR "/blacklistfilter/urldetect_config.xml";
 
     // TODO: Delegate idna functionality to downloader
     // set locale so we can use URL normalization library

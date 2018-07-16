@@ -478,7 +478,7 @@ int main (int argc, char **argv)
     int send_terminating_unirec = 1;
 
     // Set default files names
-    char *userFile = (char*) SYSCONFDIR "/ipblacklistfilter/userConfigFile.xml";
+    char *userFile = (char*) SYSCONFDIR "/blacklistfilter/ipdetect_config.xml";
 
     // For use with prefixes
     black_list_t v4_list;

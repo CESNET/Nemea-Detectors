@@ -1,7 +1,3 @@
-//
-// Created by filip on 10.7.18.
-//
-
 #ifndef BLACKLISTFILTER_BLACKLIST_WATCHER_H
 #define BLACKLISTFILTER_BLACKLIST_WATCHER_H
 

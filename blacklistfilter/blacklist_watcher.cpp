@@ -1,22 +1,8 @@
 
 #include <sys/inotify.h>
 #include <string>
-#include <cctype>
-#include <algorithm>
-#include <iostream>
-#include <fstream>
-#include <cstdlib>
-#include <map>
-#include <vector>
-#include <stdint.h>
-#include <signal.h>
-#include <getopt.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <nemea-common/nemea-common.h>
-#include <unirec/unirec.h>
-#include <libtrap/trap.h>
 #include <poll.h>
 
 #include "blacklist_watcher.h"
