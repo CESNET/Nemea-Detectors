@@ -1,0 +1,15 @@
+{
+   "Format": "IDEA0",
+   "ID": "cca3325c-a989-4f8c-998f-5b0e971f6ef0",
+   "DetectTime": "2014-03-05T15:52:22Z",
+   "Category": ["Abusive.Spam"],
+   "Description": "Potencial spammer entity",
+   "Source": [
+      {
+         "Type": ["Botnet", "CC"],
+         "IP4": ["93.184.216.119"],
+         "Proto": ["tcp", "ircu"],
+         "Port": [6667]
+      }
+   ]
+}

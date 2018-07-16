@@ -37,7 +37,7 @@ if advised of the possibility of such damage.
 #!/usr/bin/env python3
 import sys
 
-from global_def import *
+from g import *
 
 # Class for basic flow without SMTP Headers
 class Flow(object):
@@ -81,7 +81,6 @@ class SMTP_Flow(Flow):
             self.SMTP_FIRST_RECIPIENT = rec.SMTP_FIRST_RECIPIENT
             self.SMTP_FIRST_SENDER = rec.SMTP_FIRST_SENDER
         except UnicodeDecodeError:
-            sys.stderr.write("FLOW conversion failed!\n")
             self.SMTP_DOMAIN = None
             self.SMTP_FIRST_RECIPIENT = None
             self.SMTP_FIRST_SENDER = None

@@ -36,33 +36,30 @@ if advised of the possibility of such damage.
 #!/usr/bin/env python
 #from cluster import Cluster
 from flow import Flow, SMTP_Flow
-from smtp_entity import *
+from smtp_entity import SMTP_ENTITY
 from pytrap import TrapCtx
-from threading import *
-from global_def import *
+from threading import Thread, RLock
 import pytrap, sys, os, time, datetime, logging, json, report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
-
+import g
 detection_log = logging.getLogger('smtp_spam.detection')
 
 class SpamDetection(Thread):
     """
     Data is dict of flows from multirecievers
     """
-    def __init__(self, trap):
+    def __init__(self, trap, name="detector"):
         Thread.__init__(self)
         # Storage for both flow types
         self.data = dict()
         self.white_list = dict()
         self.data_lock = RLock()
-
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
         # TODO
         self.whitelist = {}
         self.blacklist = {}
-
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
         self.t_detect = 0               # last detection time
@@ -72,14 +69,13 @@ class SpamDetection(Thread):
         Counters for how many flows has been checked, and how many alerts
         has been generated.
         """
-        self.checked = 0
         self.alerts = 0
 
         # Cluster for clustering spammers, further analysis
         #self.cluster = Cluster()
         self.trap = trap
 
-    def add_entity(self, flow, key):
+    def add_entity(self, flow):
         """
         If record of entity with flow.SRC_IP already exist in database
         then it appends its history, otherwise add new entity to database.
@@ -88,16 +84,22 @@ class SpamDetection(Thread):
         flow    Basic or SMTP Flow
         key     entity identifier (SRC_IP / DST_IP)
         """
+        key = flow.SRC_IP
         with self.data_lock:
-            if key in self.data.keys():
-                # Check for receivers
-                if flow.DST_IP in self.data.keys():
-                    self.data[flow.DST_IP].incoming += 1
+            try:
+                if key in self.data.keys():
+                    # Check for receivers
+                    if flow.DST_IP in self.data.keys():
+                        self.data[flow.DST_IP].incoming += 1
+                    else:
+                        self.data[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP, flow.TIME_LAST)
+                    self.data[key].add_new_flow(flow)
+                    self.data[key].update_time(flow)
                 else:
-                    self.data[flow.DST_IP] = SMTP_ENTITY(flow.DST_IP, flow.TIME_LAST)
-                self.data[key].add_new_flow(flow)
-            else:
-                self.data[key] = SMTP_ENTITY(flow)
+                    self.data[key] = SMTP_ENTITY(flow)
+            except Exception as e:
+                detection_log.error("An error has occurred during entity insertion to database. ({0})".format(e))
+        # Move timeframe according to recieved time from flows
         if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
                 self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
         return True
@@ -150,8 +152,8 @@ class SpamDetection(Thread):
                 try:
                     self.trap.send(str(report).encode())
                     rep_cnt += 1
-                except Exception:
-                    detection_log.error("detection: Could not send json through trap interface.\n")
+                except Exception as e:
+                    detection_log.error("detection: Could not send json through trap interface. ({0})".format(e))
         detection_log.info("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
 
     def analysis(self):
@@ -163,15 +165,18 @@ class SpamDetection(Thread):
         detection_log.info("Started probing entity database")
         with self.data_lock:
             for entity in self.data:
-                self.checked += 1
-                if self.data[entity].is_spam() > 0.85:
+                score = self.data[entity].is_spam()
+                if (score > 0.8):
                     potencial_spammers.add(self.data[entity])
-                #print(self.data[entity])
+                    if (score > 0.9):
+                        self.blacklist.add(self.data[entity])
+                elif (score < 0.5):
+                        self.whitelist.add(self.data[entity])
         ps = len(potencial_spammers)
         dl = len(self.data)
-        if ps is not 0:
-            part = (float(ps)/float(dl))
-        else:
+        try:
+            part = float(ps)/float(dl)
+        except ZeroDivisionError:
             part = 0
         detection_log.info("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
         self.send_reports([ self.create_report(entity) for entity in potencial_spammers ])
@@ -187,18 +192,19 @@ class SpamDetection(Thread):
         detection_log.info("Database dropped. Cleared {0} records of entities.".format(data_len))
 
     def run(self):
-        detection_log.info("Parametrs set to probe interval : {0}, clean interval : {1}".format(PROBE_INTERVAL, CLEAN_INTERVAL))
+        detection_log.info("Parametrs set to probe interval : {0}, clean interval : {1}".format(g.PROBE_INTERVAL, g.CLEAN_INTERVAL))
         workers = []
-        while (True):
-            if self.t_detect + PROBE_INTERVAL < self.t_cflow:
-                worker = Thread(target=self.analysis, args=())
+        while (g.is_running):
+            if self.t_detect + g.PROBE_INTERVAL < self.t_cflow:
+                worker = Thread(name="worker", target=self.analysis, args=())
                 worker.start()
                 workers.append(worker)
                 self.t_detect  = self.t_cflow
-            if self.t_clean + CLEAN_INTERVAL < self.t_cflow:
-                self.clear()
 
-            if len(workers) > MAX_WORKERS:
+            if self.t_clean + g.CLEAN_INTERVAL < self.t_cflow:
+                self.clear()
+            if len(workers) > g.MAX_WORKERS:
                 for worker in workers: worker.join()
                 workers.clear()
+        detection_log.info("***** Finished detection thread, exiting. *****")
 

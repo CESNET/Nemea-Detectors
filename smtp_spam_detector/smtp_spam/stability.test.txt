@@ -1,0 +1,5 @@
+Cleaning
+Cleaning done
+Probing..
+Found 0 potencial spammers in 0 [0.00000%]
+Probing done.

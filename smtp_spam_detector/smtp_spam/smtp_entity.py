@@ -38,7 +38,7 @@ if advised of the possibility of such damage.
 import pytrap, math
 from functools import reduce
 from flow import *
-from global_def import *
+from g import *
 from threading import RLock
 
 def get_proto_by_port(port):

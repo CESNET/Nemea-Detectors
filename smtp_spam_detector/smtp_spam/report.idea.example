@@ -1,0 +1,52 @@
+{
+category": [
+        "Abusive.Spam"
+    ],
+    "CeaseTime": "2017-08-01T13:53:38Z",
+    "Confidence": 0.1,
+    "CreateTime": "2018-07-09T11:03:12.196805Z",
+    "DetectTime": 1531134192.1916378,
+    "EventTime": "2017-08-01T13:53:34Z",
+    "Format": "IDEA0",
+    "ID": "f81300bc-1f29-45e3-96d4-69f8765dd9c4",
+    "Note": "Testing example",
+    "Source": [
+        {
+            "Email": [
+                "<elena.i@realfriendship.net>",
+                "<roza.c@realfriendship.net>",
+                "<bianka.w@realfriendship.net>",
+                "<jackie.t@realfriendship.net>",
+                "<julie.k@realfriendship.net>",
+                "<vivian.g@realfriendship.net>",
+                "<urszula.o@realfriendship.net>",
+                "<roza.c@realfriendship.net>",
+                "<bianka.w@realfriendship.net>",
+                "<bianka.w@realfriendship.net>",
+                "<alice.d@realfriendship.net>",
+                "<jackie.t@realfriendship.net>",
+                "<julie.k@realfriendship.net>"
+            ],
+            "Hostname": [
+                "kolife.hostingcenter.uclv.net",
+                "mx.interia.pl",
+                "kolife.hostingcenter.uclv.net",
+                "kolife.hostingcenter.uclv.net",
+                "mx.interia.pl",
+                "esonant.keyixiaoxue.com",
+                "kolife.hostingcenter.uclv.net",
+                "mx.interia.pl",
+                "mx.interia.pl",
+                "mail.szu.cz",
+                "mx.interia.pl",
+                "kolife.hostingcenter.uclv.net",
+                "mx.interia.pl"
+            ],
+            "IP4": "193.170.2.197",
+            "Proto": [
+                "SMTP"
+            ]
+        }
+    ]
+}
+
