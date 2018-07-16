@@ -77,9 +77,9 @@
 #include <libtrap/trap.h>
 #include <poll.h>
 #include "ipblacklistfilter.h"
-#include "patternstrings.h"
 #include "fields.h"
-#include "../blacklist_watcher/blacklist_watcher.h"
+#include "blacklist_watcher.h"
+#include <ipdetect/patternstrings.h>
 
 UR_FIELDS(
 //BASIC_FLOW

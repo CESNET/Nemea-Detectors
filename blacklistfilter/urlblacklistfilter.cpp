@@ -78,9 +78,9 @@ extern "C" {
 }
 #endif
 
-#include "patternstrings.h"
 #include "urlblacklistfilter.h"
-#include "../blacklist_watcher/blacklist_watcher.h"
+#include "blacklist_watcher.h"
+#include <urldetect/patternstrings.h>
 
 #ifdef DEBUG
 #define DBG(x) fprintf x;
