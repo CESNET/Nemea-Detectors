@@ -37,7 +37,7 @@ if advised of the possibility of such damage.
 #!/usr/bin/env python
 import pytrap, sys, os, signal, logging
 from threading import Thread, Semaphore, Lock
-from flow import Flow, SMTP_Flow
+from flow import Flow, SMTP_Flow, FlowConversionException
 from smtp_entity import SMTP_ENTITY
 from detection import SpamDetection
 try:
@@ -91,7 +91,7 @@ def fetch_data(trap, interface, queue):
     interface   int BASIC_IF/SMTP_IF
     queue       Queue
     """
-    while (True):
+    while (g.is_running):
         if (g.is_running != True):
             break;
         try:
@@ -108,9 +108,14 @@ def fetch_data(trap, interface, queue):
                 flow = Flow(rec)
                 queue.put(flow)
         else:
-            flow = SMTP_Flow(rec)
-            if (flow == None): pass
-            else: queue.put(flow)
+            try: #TODO Flow discarding
+                flow = SMTP_Flow(rec)
+                if (flow == None): pass
+                else: queue.put(flow)
+            except FlowConversionException as e:
+                log.error("{0} Flow discarded.".format(e))
+
+    log.info("Receiver finished! Closing on interface {0}".format(interface))
     return True
 
 def data_handling(detector, q):
@@ -122,9 +127,7 @@ def data_handling(detector, q):
     q           queue
     """
     ts = time.time()
-    while (True):
-        if (g.is_running != True):
-            break
+    while (g.is_running):
         try:
             flow = q.get()
             if flow is None:
@@ -134,6 +137,7 @@ def data_handling(detector, q):
             q.task_done()
         except IndexError:
             sys.stderr.write("data_handling: No data in queue.\n")
+    log.info("Data handler finished! Exiting now.")
     return True
 
 def main():
@@ -157,8 +161,8 @@ def main():
     flow_queue = Queue()    # Synchronize input flows
     reports = Queue()       # Synchronize output reports
     # Create workers for each receiver
-    basic_rcv = Thread(name="basic_reciever", target=fetch_data, args=(trap, BASIC_IF, flow_queue))
-    smtp_rcv = Thread(name="smtp_reciever", target=fetch_data, args=(trap, SMTP_IF, flow_queue))
+    basic_rcv = Thread(name="basic_receiver", target=fetch_data, args=(trap, BASIC_IF, flow_queue))
+    smtp_rcv = Thread(name="smtp_receiver", target=fetch_data, args=(trap, SMTP_IF, flow_queue))
     # Handle the received data from receivers
     data_handler = Thread(name="data_handler", target=data_handling, args=(detector, flow_queue))
     # Run multi-receiver

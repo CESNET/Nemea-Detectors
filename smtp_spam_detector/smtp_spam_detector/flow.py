@@ -38,6 +38,9 @@ if advised of the possibility of such damage.
 import sys
 
 from g import *
+class FlowConversionException(Exception):
+    pass
+
 
 # Class for basic flow without SMTP Headers
 class Flow(object):
@@ -80,11 +83,8 @@ class SMTP_Flow(Flow):
             self.SMTP_DOMAIN = rec.SMTP_DOMAIN
             self.SMTP_FIRST_RECIPIENT = rec.SMTP_FIRST_RECIPIENT
             self.SMTP_FIRST_SENDER = rec.SMTP_FIRST_SENDER
-        except UnicodeDecodeError:
-            self.SMTP_DOMAIN = None
-            self.SMTP_FIRST_RECIPIENT = None
-            self.SMTP_FIRST_SENDER = None
-            return None
+        except UnicodeDecodeError as ue:
+            raise FlowConversionException("Flow conversion failed. ({0})".format(ue))
 
     def __str__(self):
         return "SMTP_FLOW:\nSRC:" + str(self.SRC_IP) + "\nDST:" + str(self.DST_IP) \
