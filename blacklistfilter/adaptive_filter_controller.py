@@ -4,6 +4,8 @@ import pytrap
 import sys
 from threading import Thread
 from queue import Queue
+from adaptive_filter_scenarios import Scenario, ScenarioDoesNotFit
+from contextlib import suppress
 
 IP_IF = 0
 URL_IF = 1
@@ -33,7 +35,7 @@ class Receiver:
     def run(self):
         self.__create_threads__()
 
-        # Run multireciver
+        # Run multireceiver
         self.ip_rcv.start()
         self.url_rcv.start()
 
@@ -59,7 +61,6 @@ class Receiver:
             try:
                 data = self.trap.recv(interface)
             except pytrap.FormatChanged as e:
-                print('koko')
                 fmttype, inputspec = self.trap.getDataFmt(interface)
                 rec = pytrap.UnirecTemplate(inputspec)
                 data = e.data
@@ -68,24 +69,39 @@ class Receiver:
 
             rec.setData(data)
 
-            print(rec.SRC_IP)
-            print(interface)
-            exit(3)
+            self.queue.put({interface: rec.getFieldsDict()})
 
-            if interface is IP_IF:
-                pass
-            else:
-                pass
+
+class Controller:
+    def __init__(self):
+        self.receiver = Receiver(2, 0)
+        self.receiver.run()
+
+        self.detected_scenarios = []
+
+    def run(self):
+        while True:
+            detection_flow = self.receiver.queue.get()
+
+            detected_scenario = None
+            for scenario_class in Scenario.__subclasses__():
+                with suppress(ScenarioDoesNotFit):
+                    detected_scenario = scenario_class(detection_flow)
+
+            if detected_scenario:
+                print('DETECTED scenario')
+                if detected_scenario not in self.detected_scenarios:
+                    # New scenario
+                    # Enrich for additional data (e.g. PassiveDNS), if suitable
+                    detected_scenario.enrich()
+
 
 
 
 
 if __name__ == '__main__':
-    # Create a new trap context
-
-    receiver = Receiver(2, 0)
-    receiver.run()
-    receiver.join_and_quit()
+    controller = Controller()
+    controller.run()
 
     # Handle the received data from receivers
     # data_handler = Thread(target=data_handling, args=(detector, flow_queue))
