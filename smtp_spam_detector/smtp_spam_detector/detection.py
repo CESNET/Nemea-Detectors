@@ -57,9 +57,11 @@ class SpamDetection(Thread):
         self.data_lock = RLock()
         # Blacklisted entites that are probably spammers
         self.potencial_spammers = list()
-        # TODO
+
+        # TODO create whitlist for known legit servers
         self.whitelist = set()
         self.blacklist = set()
+
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
         self.t_detect = 0               # last detection time
@@ -74,6 +76,11 @@ class SpamDetection(Thread):
         # Cluster for clustering spammers, further analysis
         #self.cluster = Cluster()
         self.trap = trap
+
+        self._active = True
+
+    def stop(self):
+        self._active = False
 
     def add_entity(self, flow):
         """
@@ -138,7 +145,8 @@ class SpamDetection(Thread):
                 "ByteCount" : entity.bytes,
                 "FlowCount" : len(entity.sent_history),
                 "PacketCount" : entity.packets,
-                "ConnCount" : entity.conn_cnt
+                "ConnCount" : entity.conn_cnt,
+                "Anonymised" : false
             }
         except Exception:
             detection_log.error("Idea creation for {0} failed.\n".format(entity))
@@ -156,6 +164,7 @@ class SpamDetection(Thread):
                     detection_log.error("detection: Could not send json through trap interface. ({0})".format(e))
         detection_log.info("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
 
+    @profile
     def analysis(self):
         """
         Do frequency analysis here
@@ -195,10 +204,13 @@ class SpamDetection(Thread):
         self.t_clean = time.time()
         detection_log.info("Database dropped. Cleared {0} records of entities.".format(data_len))
 
+    @profile
     def run(self):
         detection_log.info("Parametrs set to probe interval : {0}, clean interval : {1}".format(g.PROBE_INTERVAL, g.CLEAN_INTERVAL))
         workers = []
-        while (g.is_running):
+
+        while (self._active):
+
             if self.t_detect + g.PROBE_INTERVAL < self.t_cflow:
                 worker = Thread(name="worker", target=self.analysis, args=())
                 worker.start()
@@ -207,6 +219,7 @@ class SpamDetection(Thread):
 
             if self.t_clean + g.CLEAN_INTERVAL < self.t_cflow:
                 self.clear()
+
             if len(workers) > g.MAX_WORKERS:
                 for worker in workers: worker.join()
                 workers.clear()

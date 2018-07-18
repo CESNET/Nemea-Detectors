@@ -71,6 +71,7 @@ log.info("***SMTP SPAM DETECTION Started***")
 # Create signal handler for stopping this module
 g.stop_lock = Lock()
 g.stop_lock.acquire()
+g.is_running
 g.is_running = True
 
 # Signal handler releasing the lock on SIGINT or SIGTERM
@@ -91,6 +92,7 @@ def fetch_data(trap, interface, queue):
     interface   int BASIC_IF/SMTP_IF
     queue       Queue
     """
+    g.is_running
     while (g.is_running):
         if (g.is_running != True):
             break;
@@ -127,7 +129,7 @@ def data_handling(detector, q):
     q           queue
     """
     ts = time.time()
-    while (g.is_running):
+    while (g.is_running == True):
         try:
             flow = q.get()
             if flow is None:
@@ -141,7 +143,7 @@ def data_handling(detector, q):
     return True
 
 def main():
-   # Datapool used to store information about smtp entities
+    # Datapool used to store information about smtp entities
     data = {}
     # Create a new trap context
     trap = pytrap.TrapCtx()
@@ -178,7 +180,8 @@ def main():
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGABRT, signal.SIG_DFL)
     log.info("Stopping running components ...")
-    g.running = False
+    g.is_running = False
+    detector.stop()
     # Join the threads
     basic_rcv.join()
     smtp_rcv.join()
@@ -190,7 +193,7 @@ def main():
     trap.finalize()
     log.info("***** Finished, main thread exiting. *****")
     logging.shutdown()
-
+    sys.exit(0)
 
 if __name__ == '__main__':
     main()
