@@ -53,9 +53,9 @@ import pytrap
 eventList = {}
 
 from optparse import OptionParser
-parser = OptionParser(add_help_option=False)
+parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
-      help="TRAP IFC specifier", metavar="IFCSPEC")
+      help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-t", "--time", dest="time",
       help="wait MINUTES before sending aggregated alerts", metavar="MINUTES", default=5)
 
