@@ -71,18 +71,20 @@ log.info("***SMTP SPAM DETECTION Started***")
 # Create signal handler for stopping this module
 g.stop_lock = Lock()
 g.stop_lock.acquire()
-g.is_running
 g.is_running = True
+
+#TODO: Load config file
 
 # Signal handler releasing the lock on SIGINT or SIGTERM
 def sigint_handler(signum, frame):
     log.debug("Signal {} received, stopping daemon".format({signal.SIGINT: "SIGINT", signal.SIGTERM: "SIGTERM"}.get(signum, signum)))
     g.stop_lock.release()
+
 signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGTERM, sigint_handler)
 signal.signal(signal.SIGABRT, sigint_handler)
 
-def fetch_data(trap, interface, queue):
+def fetch_data(trap, rec, interface, queue):
     """
     Fetches data from trap context and puts them to
     queue as a Flow or SMTP_Flow based on interface input
@@ -92,10 +94,7 @@ def fetch_data(trap, interface, queue):
     interface   int BASIC_IF/SMTP_IF
     queue       Queue
     """
-    g.is_running
     while (g.is_running):
-        if (g.is_running != True):
-            break;
         try:
             data = trap.recv(interface)
         except pytrap.FormatChanged as e:
@@ -110,7 +109,7 @@ def fetch_data(trap, interface, queue):
                 flow = Flow(rec)
                 queue.put(flow)
         else:
-            try: #TODO Flow discarding
+            try: #TODO Flow are discarded atm
                 flow = SMTP_Flow(rec)
                 if (flow == None): pass
                 else: queue.put(flow)
@@ -128,7 +127,6 @@ def data_handling(detector, q):
     detector    SpamDetector
     q           queue
     """
-    ts = time.time()
     while (g.is_running == True):
         try:
             flow = q.get()
@@ -145,17 +143,20 @@ def data_handling(detector, q):
 def main():
     # Datapool used to store information about smtp entities
     data = {}
+    basic_spec = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL"
+    smtp_spec = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint32 SMTP_2XX_STAT_CODE_COUNT,uint32 SMTP_3XX_STAT_CODE_COUNT,uint32 SMTP_4XX_STAT_CODE_COUNT,uint32 SMTP_5XX_STAT_CODE_COUNT,uint32 SMTP_COMMAND_FLAGS,uint32 SMTP_MAIL_CMD_COUNT,uint32 SMTP_RCPT_CMD_COUNT,uint32 SMTP_STAT_CODE_FLAGS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL,string SMTP_DOMAIN,string SMTP_FIRST_RECIPIENT,string SMTP_FIRST_SENDER"
+
     # Create a new trap context
     trap = pytrap.TrapCtx()
     """
     Trap initialization for two input interfaces, and no output interface
     """
-    trap.init(["-i", "u:flow_data_source,u:smtp_data_source,u:smtp_detector_out"], 2, 1)
-    #trap.init(sys.argv, 2, 1)
+    trap.init(sys.argv, 2, 1)
     # Set up required format to accept any unirec format.
-    trap.setRequiredFmt(BASIC_IF)   # Refers to flows without SMTP headers
-    trap.setRequiredFmt(SMTP_IF)    # Refers to flows with SMTP headers
-    trap.setVerboseLevel(0)
+    trap.setRequiredFmt(BASIC_IF, pytrap.FMT_UNIREC, basic_spec)    # Refers to flows without SMTP headers
+    trap.setRequiredFmt(SMTP_IF, pytrap.FMT_UNIREC, smtp_spec)       # Refers to flows with SMTP headers
+    basic_rec = pytrap.UnirecTemplate(basic_spec)
+    smtp_rec = pytrap.UnirecTemplate(smtp_spec)
     trap.setDataFmt(0, pytrap.FMT_JSON, "smtp_alert")
     log.info("Daemon: Trap initialized.")
     detector = SpamDetection(trap)
@@ -163,8 +164,8 @@ def main():
     flow_queue = Queue()    # Synchronize input flows
     reports = Queue()       # Synchronize output reports
     # Create workers for each receiver
-    basic_rcv = Thread(name="basic_receiver", target=fetch_data, args=(trap, BASIC_IF, flow_queue))
-    smtp_rcv = Thread(name="smtp_receiver", target=fetch_data, args=(trap, SMTP_IF, flow_queue))
+    basic_rcv = Thread(name="basic_receiver", target=fetch_data, args=(trap, basic_rec, BASIC_IF, flow_queue))
+    smtp_rcv = Thread(name="smtp_receiver", target=fetch_data, args=(trap, smtp_rec, SMTP_IF, flow_queue))
     # Handle the received data from receivers
     data_handler = Thread(name="data_handler", target=data_handling, args=(detector, flow_queue))
     # Run multi-receiver
@@ -174,7 +175,7 @@ def main():
     log.info("Daemon: Multi-receiver started.")
     # Start detector
     detector.start()
-    # Stop the daemon a finish running threads
+    # Wait until the daemon is requested to stop by releasing the lock (by signal hadnler)
     g.stop_lock.acquire()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     signal.signal(signal.SIGTERM, signal.SIG_DFL)

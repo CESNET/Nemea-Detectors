@@ -149,7 +149,7 @@ class SMTP_ENTITY:
             except ValueError:
                 sys.stderr.write("smtp_entity: Math error")
         sent = len(self.sent_history)
-        if sent is not 0:
+        if (sent != 0):
             traffic_ratio = self.incoming / sent
         else:
             traffic_ratio = 0
