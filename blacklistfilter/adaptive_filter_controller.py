@@ -69,7 +69,7 @@ class Receiver:
 
             rec.setData(data)
 
-            self.queue.put({interface: rec.getFieldsDict()})
+            self.queue.put((interface, rec.getFieldsDict()))
 
 
 class Controller:
