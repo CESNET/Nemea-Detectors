@@ -2,6 +2,7 @@
 
 import pytrap
 import sys
+from time import time, sleep
 from threading import Thread
 from queue import Queue
 from adaptive_filter_scenarios import Scenario, ScenarioDoesNotFit
@@ -9,6 +10,17 @@ from contextlib import suppress
 
 IP_IF = 0
 URL_IF = 1
+
+
+# Sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
+# into tuple of IP (A, B, C, D), which is comparable by python (numerically)
+def split_ip(ip):
+    # Extract only IP, without the prefix and indexes
+    ip = ip.split('/')[0] if '/' in ip else ip.split(',')[0]
+    tuple_ip = tuple(int(part) for part in ip.split('.'))
+
+    """Split a IP address given as string into a 4-tuple of integers."""
+    return tuple_ip
 
 
 class Receiver:
@@ -27,13 +39,13 @@ class Receiver:
         # Queue for received flows
         self.queue = Queue()
 
-    def __create_threads__(self):
+    def _create_threads(self):
         # Create workers for each receiver
-        self.ip_rcv = Thread(target=self.__fetch_data__, args=[IP_IF])
-        self.url_rcv = Thread(target=self.__fetch_data__, args=[URL_IF])
+        self.ip_rcv = Thread(target=self._fetch_data, args=[IP_IF])
+        self.url_rcv = Thread(target=self._fetch_data, args=[URL_IF])
 
     def run(self):
-        self.__create_threads__()
+        self._create_threads()
 
         # Run multireceiver
         self.ip_rcv.start()
@@ -48,7 +60,7 @@ class Receiver:
         # Free allocated memory
         self.trap.finalize()
 
-    def __fetch_data__(self, interface):
+    def _fetch_data(self, interface):
         """
         Fetches data from trap context and puts them to
         queue as a IP/URL/DNS flow based on interface input (detector)
@@ -67,36 +79,56 @@ class Receiver:
             if len(data) <= 1:
                 break
 
-            rec.setData(data)
+            # There has to be a copy, otherwise only reference is stored in the queue and rec is rewritten
+            rec_copy = rec.copy()
+            rec_copy.setData(data)
 
-            self.queue.put((interface, rec.getFieldsDict()))
+            self.queue.put((interface, rec_copy))
 
 
 class Controller:
     def __init__(self):
         self.receiver = Receiver(2, 0)
+        self.detected_scenarios = {}
         self.receiver.run()
 
-        self.detected_scenarios = []
+    def create_detector_file(self):
+        all_entities = []
+
+        for detected_scenario in self.detected_scenarios.values():
+            all_entities.extend(detected_scenario.adaptive_entities)
+
+        # Create sorted list of entities and their cumulative indexes
+        all_entities = sorted(all_entities, key=split_ip)
+
+        with open('/tmp/blacklistfilter/adaptive.blist', 'w') as f:
+            f.write('\n'.join(all_entities))
 
     def run(self):
         while True:
-            detection_flow = self.receiver.queue.get()
+            detection_tuple = self.receiver.queue.get()
+            detection_iface = detection_tuple[0]
+            detection_flow = detection_tuple[1]
 
             detected_scenario = None
             for scenario_class in Scenario.__subclasses__():
                 with suppress(ScenarioDoesNotFit):
-                    detected_scenario = scenario_class(detection_flow)
+                    detected_scenario = scenario_class(detection_iface, detection_flow)
 
             if detected_scenario:
-                print('DETECTED scenario')
-                if detected_scenario not in self.detected_scenarios:
-                    # New scenario
-                    # Enrich for additional data (e.g. PassiveDNS), if suitable
-                    detected_scenario.enrich()
+                try:
+                    scenario_event = self.detected_scenarios[detected_scenario.key]
+                    scenario_event.detection_cnt += 1
+                    scenario_event.last_ts = time()
 
+                except KeyError:
+                    # New scenario event
+                    detected_scenario.set_id()
+                    detected_scenario.generate_entities()
 
+                    self.detected_scenarios[detected_scenario.key] = detected_scenario
 
+                    self.create_detector_file()
 
 
 if __name__ == '__main__':
