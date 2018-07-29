@@ -3,9 +3,8 @@
  * \brief  Module for detecting blacklisted IP addresses, header file.
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
- * \date 2015
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
 
 /*
@@ -45,17 +44,12 @@
  *
  */
 
-#include <vector>
-#include <unirec/unirec.h>
-#include <nemea-common/nemea-common.h>
-
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /**
  * Mutex for synchronization.
@@ -99,21 +93,15 @@ pthread_mutex_t BLD_SYNC_MUTEX;
 #define PREFIX_V6_DEFAULT 128
 
 /**
- * Regular expression to parse IP address from blacklist. (only IPv4 for now).
- */
-char BLACKLIST_REG_PATTERN[] = "\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
-
-
-/**
  * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
     /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
-    uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
+    uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
-} ip_blist_t;
+} ip_bl_entry_t;
 
 
 /**
@@ -125,10 +113,10 @@ typedef struct __attribute__ ((__packed__)) {
 } config_t;
 
 /**
- * @typedef std::vector<ip_blist_t> black_list_t;
+ * @typedef vector<ip_bl_entry_t> black_list_t;
  * Vector of blacklisted prefixes.
  */
-typedef std::vector<ip_blist_t> black_list_t;
+typedef std::vector<ip_bl_entry_t> black_list_t;
 
 /**
  * @typedef uint32_t ipv4_mask_map_t[33];
