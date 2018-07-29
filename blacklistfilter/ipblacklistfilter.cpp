@@ -311,7 +311,10 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
  * \param black_list List of prefixes to be compared with.
  * \return IP_NOT_FOUND if the ip address doesn't fit any prefix. Index of the prefix otherwise.
  */
-int ip_binary_search(ip_addr_t *searched, ipv4_mask_map_t &v4mm, ipv6_mask_map_t &v6mm, black_list_t &black_list)
+int ip_binary_search(const ip_addr_t *searched,
+                     const ipv4_mask_map_t &v4mm,
+                     const ipv6_mask_map_t &v6mm,
+                     const black_list_t &black_list)
 {
     int end, begin, mid;
     int mask_result = 1;
@@ -321,14 +324,26 @@ int ip_binary_search(ip_addr_t *searched, ipv4_mask_map_t &v4mm, ipv6_mask_map_t
     end = black_list.size() - 1;
 
     // Binary search
-    // Mask the searched IP with the mask of the mid IP, if it matches the network IP -> found
-    while (begin <= end) {
-        mid = (begin + end) >> 1;
-
-        if (ip_is4(searched)) {
+    if (ip_is4(searched)) {
+        // Searching in IPv4 blacklist
+        // Mask the searched IP with the mask of the mid IP, if it matches the network IP -> found
+        while (begin <= end) {
+            mid = (begin + end) >> 1;
             masked.ui32[2] = searched->ui32[2] & v4mm[black_list[mid].prefix_len];
             mask_result = memcmp(&(black_list[mid].ip.ui32[2]), &(masked.ui32[2]), 4);
-        } else {
+
+            if (mask_result < 0) {
+                begin = mid + 1;
+            } else if (mask_result > 0) {
+                end = mid - 1;
+            } else {
+                break;
+            }
+        }
+    } else {
+        // Searching in IPv6 blacklist
+        while (begin <= end) {
+            mid = (begin + end) >> 1;
             if (black_list[mid].prefix_len <= 64) {
                 masked.ui64[0] = searched->ui64[0] & v6mm[black_list[mid].prefix_len][0];
                 mask_result = memcmp(&(black_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
@@ -336,14 +351,14 @@ int ip_binary_search(ip_addr_t *searched, ipv4_mask_map_t &v4mm, ipv6_mask_map_t
                 masked.ui64[1] = searched->ui64[1] & v6mm[black_list[mid].prefix_len][1];
                 mask_result = memcmp(&(black_list[mid].ip.ui8), &(masked.ui8), 16);
             }
-        }
 
-        if (mask_result < 0) {
-            begin = mid + 1;
-        } else if (mask_result > 0) {
-            end = mid - 1;
-        } else {
-            break;
+            if (mask_result < 0) {
+                begin = mid + 1;
+            } else if (mask_result > 0) {
+                end = mid - 1;
+            } else {
+                break;
+            }
         }
     }
 
@@ -371,15 +386,19 @@ int ip_binary_search(ip_addr_t *searched, ipv4_mask_map_t &v4mm, ipv6_mask_map_t
  * \param net_bl List of prefixes to be compared with.
  * \return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
-int v4_blacklist_check(ur_template_t *ur_in,
+int blacklist_check(ur_template_t *ur_in,
                        ur_template_t *ur_det,
                        const void *record,
                        void *detected,
-                       ipv4_mask_map_t &v4mm,
-                       ipv6_mask_map_t &v6mm,
-                       black_list_t &bl)
+                       const ipv4_mask_map_t &v4mm,
+                       const ipv6_mask_map_t &v6mm,
+                       const black_list_t &v4blacklist,
+                       const black_list_t &v6blacklist)
 {
     bool blacklisted = false;
+
+    //
+    const black_list_t & bl = ip_is4(&(ur_get(ur_in, record, F_SRC_IP))) ? v4blacklist : v6blacklist;
 
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
@@ -408,58 +427,6 @@ int v4_blacklist_check(ur_template_t *ur_in,
 
     return ADDR_CLEAR;
 }
-
-/**
- * \brief Function for checking IPv6 addresses. It extracts both source and
- * destination addresses from the UniRec record and tries to match them to
- * either an address or prefix. If the match is positive the field in detection
- * record is filled with the respective blacklist number.
- * \param ur_tmp Template of input UniRec record.
- * \param ur_det Template of detection UniRec record.
- * \param record Record being analyzed.
- * \param detected Detection record used if any address matches the blacklist.
- * \param v4mm Map of IPv4 masks.
- * \param v6mm Map of IPv6 masks.
- * \param bl List of prefixes to be compared with.
- * \return BLACKLISTED if match was found otherwise ADDR_CLEAR.
- */
-int v6_blacklist_check(ur_template_t *ur_tmp,
-                       ur_template_t *ur_det,
-                       const void *record,
-                       void *detected,
-                       ipv4_mask_map_t &v4mm,
-                       ipv6_mask_map_t &v6mm,
-                       black_list_t &bl)
-{
-    bool blacklisted = false;
-    // index of the prefix the source ip fits in (return value of binary search)
-    int search_result;
-
-    // Check source IP
-    ip_addr_t ip = ur_get(ur_tmp, record, F_SRC_IP);
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
-        blacklisted = true;
-    } else {
-        ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
-    }
-
-    // Check destination IP
-    ip = ur_get(ur_tmp, record, F_DST_IP);
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_tmp, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
-        blacklisted = true;
-    } else {
-        ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
-    }
-
-    if (blacklisted) {
-        return BLACKLISTED;
-    }
-
-    return ADDR_CLEAR;
-}
-
 
 
 int main(int argc, char **argv)
@@ -630,16 +597,7 @@ int main(int argc, char **argv)
         }
 
         // Try to match the IP addresses to blacklist
-        if (ip_is4(&(ur_get(templ, data, F_SRC_IP)))) {
-            // Check blacklisted IPs
-            if (!v4_list.empty()) {
-                retval = v4_blacklist_check(templ, tmpl_det, data, detection, v4_masks, v6_masks, v4_list);
-            }
-        } else {
-            if (!v6_list.empty()) {
-                retval = v6_blacklist_check(templ, tmpl_det, data, detection, v4_masks, v6_masks, v6_list);
-            }
-        }
+        retval = blacklist_check(templ, tmpl_det, data, detection, v4_masks, v6_masks, v4_list, v6_list);
 
         // If IP address was found on blacklist
         if (retval == BLACKLISTED) {
