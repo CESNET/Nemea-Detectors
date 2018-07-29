@@ -397,7 +397,7 @@ int blacklist_check(ur_template_t *ur_in,
 {
     bool blacklisted = false;
 
-    //
+    // determine which blacklist (ipv4/ipv6) we are working with
     const black_list_t & bl = ip_is4(&(ur_get(ur_in, record, F_SRC_IP))) ? v4blacklist : v6blacklist;
 
     // index of the prefix the source ip fits in (return value of binary search)
@@ -448,69 +448,33 @@ int main(int argc, char **argv)
     create_v6_mask_map(v6_masks);
 
     // TRAP initialization
-//    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
-    trap_ifc_spec_t ifc_spec;
-    int ret = trap_parse_params(&argc, argv, &ifc_spec);
-    if (ret != TRAP_E_OK) {
-        if (ret == TRAP_E_HELP) {
-            trap_print_help(module_info);
-            return 0;
-        }
-        trap_free_ifc_spec(ifc_spec);
-        fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-        return 1;
-    }
-    ret = trap_init(module_info, ifc_spec);
-    if (ret != TRAP_E_OK) {
-        trap_free_ifc_spec(ifc_spec);
-        fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-        return 1;
-    }
-
-    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
-    trap_free_ifc_spec(ifc_spec);
+    void *detection = NULL;
+    ur_template_t *tmpl_det = NULL;
+    string bl_file, bl_str;
+    pthread_t watcher_thread;
 
     // UniRec templates for recieving data and reporting blacklisted IPs
-    char *errstr = NULL;
-    ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", &errstr);
-
+    ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
     if (templ == NULL) {
-        cerr << "Error: Invalid UniRec specifier." << endl;
-        if(errstr != NULL){
-            fprintf(stderr, "%s\n", errstr);
-            free(errstr);
-        }
-        trap_finalize();
-        return EXIT_FAILURE;
+        cerr << "Error: Input template could not be created" << endl;
+        goto cleanup;
     }
 
-    ur_template_t *tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", &errstr);
+    tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", NULL);
     if (tmpl_det == NULL) {
-        cerr << "Error: Invalid UniRec specifier." << endl;
-        if(errstr != NULL){
-            fprintf(stderr, "%s\n", errstr);
-            free(errstr);
-        }
-        trap_finalize();
-        ur_free_template(templ);
-        return EXIT_FAILURE;
+        cerr << "Error: Output template could not be created" << endl;
+        goto cleanup;
     }
 
     // Create detection record
-    void *detection = NULL;
     detection = ur_create_record(tmpl_det, 0);
     if (detection == NULL) {
-        cerr << "ERROR: No memory available for detection report. Unable to continue." << endl;
-        ur_free_template(templ);
-        ur_free_template(tmpl_det);
-        return EXIT_FAILURE;
+        cerr << "Error: Memory allocation problem (output record)" << endl;
+        goto cleanup;
     }
-
-
-    // Turn off buffer on output interface
-    //trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0x0);
 
     // Set signal handling for termination
     signal(SIGTERM, signal_handler);
@@ -518,7 +482,6 @@ int main(int argc, char **argv)
     signal(SIGUSR1, signal_handler);
 
     int opt;
-    string bl_file, bl_str;
 
     // ********** Parse arguments **********
     while ((opt = getopt(argc, argv, "nu:")) != -1) {
@@ -530,11 +493,7 @@ int main(int argc, char **argv)
                 send_terminating_unirec = 0;
                 break;
             case '?':
-                ur_free_template(templ);
-                ur_free_template(tmpl_det);
-                trap_finalize();
-                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-                return EXIT_FAILURE;
+                goto cleanup;
         }
     }
 
@@ -542,11 +501,7 @@ int main(int argc, char **argv)
 
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
-        ur_free_template(templ);
-        ur_free_template(tmpl_det);
-        trap_finalize();
-        FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-        return EXIT_FAILURE;
+        goto cleanup;
     }
 
     if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -562,15 +517,10 @@ int main(int argc, char **argv)
 
     // If update from bl_file could not be processed, return error
     if (retval == BLIST_FILE_ERROR) {
-        fprintf(stderr, "Error: Unable to read bl_file '%s'\n", bl_file.c_str());
-        ur_free_template(templ);
-        ur_free_template(tmpl_det);
-        trap_finalize();
-        FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-        return EXIT_FAILURE;
+        cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
+        goto cleanup;
     }
 
-    pthread_t watcher_thread;
     if (WATCH_BLACKLISTS_FLAG) {
         pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file);
     }
@@ -603,7 +553,7 @@ int main(int argc, char **argv)
         if (retval == BLACKLISTED) {
             ur_copy_fields(tmpl_det, detection, templ, data);
             trap_send(0, detection, ur_rec_fixlen_size(tmpl_det));
-            DBG((stderr, "IP detected on blacklist\n"))
+//            DBG((stderr, "IP detected on blacklist\n"))
         }
 
         if (BL_RELOAD_FLAG) {
@@ -630,11 +580,7 @@ int main(int argc, char **argv)
 
             if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
                 cerr << "Error: Could not parse XML configuration." << endl;
-                ur_free_template(templ);
-                ur_free_template(tmpl_det);
-                trap_finalize();
-                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-                return EXIT_FAILURE;
+                goto cleanup;
             }
 
             if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -650,12 +596,8 @@ int main(int argc, char **argv)
 
             // If update from file could not be processed, return error
             if (retval == BLIST_FILE_ERROR) {
-                fprintf(stderr, "Error: Unable to read bl_file '%s'\n", bl_file.c_str());
-                ur_free_template(templ);
-                ur_free_template(tmpl_det);
-                trap_finalize();
-                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-                return EXIT_FAILURE;
+                cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
+                goto cleanup;
             }
 
             RECONF_FLAG = 0;
@@ -668,20 +610,17 @@ int main(int argc, char **argv)
         trap_send(0, "TERMINATE", 1);
     }
 
+cleanup:
     // Clean up before termination
-    if (detection != NULL) {
-        ur_free_record(detection);
-        detection = NULL;
-    }
-
+    ur_free_record(detection);
     ur_free_template(templ);
     ur_free_template(tmpl_det);
+    ur_finalize();
 
     TRAP_DEFAULT_FINALIZATION();
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
     if (WATCH_BLACKLISTS_FLAG) {
-        // TODO: JOIN
         pthread_cancel(watcher_thread);
     }
 
