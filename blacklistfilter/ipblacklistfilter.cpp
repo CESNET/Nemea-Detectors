@@ -132,11 +132,11 @@ void signal_handler(int signal)
         case SIGTERM:
         case SIGINT:
             if (stop) {
-                printf("Another terminating signal caught!\nTerminating without clean up!\n");
+                cerr << "Another terminating signal caught!\nTerminating without clean up!" << endl;
                 exit(EXIT_FAILURE);
             }
             stop = 1;
-            printf("Terminating signal caught...\nPlease wait for clean up.\n");
+            cerr << "Terminating signal caught...\nPlease wait for clean up." << endl;
             break;
         case SIGUSR1:
             RECONF_FLAG = 1;
@@ -204,7 +204,7 @@ void create_v6_mask_map(ipv6_mask_map_t &m)
 
 /**
  * \brief Function for loading blacklists. It parses file with blacklisted IP
- * addresses. The file is preprocessed by blacklist downloader (no redundant whitespaces, forcing lowercase etc.)
+ * addresses. The file shall be preprocessed by blacklist downloader (no redundant whitespaces, forcing lowercase etc.)
  * Function also checks validity of line on which the IP address was found. Invalid of bad formatted lines
  * are ignored.
  * \param v4_list IPv4 vector to be filled
@@ -233,8 +233,8 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
         getline(input, line);
         line_num++;
 
-        if (input.fail()) {
-            cerr << "ERROR: Failed reading blacklist file (getline fail)" << endl;
+        if (input.bad()) {
+            cerr << "ERROR: Failed reading blacklist file (getline badbit)" << endl;
             input.close();
             return BLIST_FILE_ERROR;
         }
@@ -243,6 +243,10 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
         size_t sep = line.find_first_of(',');
 
         if (sep == string::npos) {
+            if (line.empty()) {
+                // probably just newline at the end of file
+                continue;
+            }
             // Blacklist index delimeter not found (bad format?), skip it
             cerr << "WARNING: File '" << file << "' has bad formatted line number '" << line_num << "'" << endl;
             continue;
@@ -308,7 +312,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
  * \param searched IP address that we are checking.
  * \param v4mm Map of IPv4 masks.
  * \param v6mm Map of IPv6 masks.
- * \param black_list List of prefixes to be compared with.
+ * \param black_list List of prefixes to be compared with. Either IPv4 or IPv6
  * \return IP_NOT_FOUND if the ip address doesn't fit any prefix. Index of the prefix otherwise.
  */
 int ip_binary_search(const ip_addr_t *searched,
@@ -363,7 +367,7 @@ int ip_binary_search(const ip_addr_t *searched,
     }
 
     if (mask_result == 0) {
-        // Found an address, return black list index
+        // Address found, return blacklist index
         return mid;
     }
 
@@ -371,29 +375,30 @@ int ip_binary_search(const ip_addr_t *searched,
 }
 
 /**
- * \brief Function for checking blacklisted IPv4 addresses.
+ * \brief Function for checking blacklisted IPv4/IPv6 addresses.
  *
  * It extracts both source and
  * destination addresses from the UniRec record and tries to match them to either
  * address or prefix. If the match is positive the field in detection record is filled
  * with the respective blacklist(s) number.
- * \param ur_tmp Template of input UniRec record.
- * \param ur_det Template of detection UniRec record.
+ * \param ur_in  Template of input UniRec record.
+ * \param ur_out Template of detection UniRec record.
  * \param record Record being analyzed.
  * \param detected Detection record used if any address matches the blacklist.
  * \param v4mm Map of IPv4 masks.
  * \param v6mm Map of IPv6 masks.
- * \param net_bl List of prefixes to be compared with.
+ * \param v4blacklist List of IPv4 prefixes to be compared with.
+ * \param v6blacklist List of IPv6 prefixes to be compared with.
  * \return BLACKLISTED if match was found otherwise ADDR_CLEAR.
  */
 int blacklist_check(ur_template_t *ur_in,
-                       ur_template_t *ur_det,
-                       const void *record,
-                       void *detected,
-                       const ipv4_mask_map_t &v4mm,
-                       const ipv6_mask_map_t &v6mm,
-                       const black_list_t &v4blacklist,
-                       const black_list_t &v6blacklist)
+                    ur_template_t *ur_out,
+                    const void *record,
+                    void *detected,
+                    const ipv4_mask_map_t &v4mm,
+                    const ipv6_mask_map_t &v6mm,
+                    const black_list_t &v4blacklist,
+                    const black_list_t &v6blacklist)
 {
     bool blacklisted = false;
 
@@ -406,19 +411,19 @@ int blacklist_check(ur_template_t *ur_in,
     // Check source IP
     ip_addr_t ip = ur_get(ur_in, record, F_SRC_IP);
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
+        ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
         blacklisted = true;
     } else {
-        ur_set(ur_det, detected, F_SRC_BLACKLIST, 0x0);
+        ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
     }
 
     // Check destination IP
     ip = ur_get(ur_in, record, F_DST_IP);
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_det, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
+        ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
         blacklisted = true;
     } else {
-        ur_set(ur_det, detected, F_DST_BLACKLIST, 0x0);
+        ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
     }
 
     if (blacklisted) {
@@ -431,6 +436,7 @@ int blacklist_check(ur_template_t *ur_in,
 
 int main(int argc, char **argv)
 {
+    int main_retval = 0;
     int retval = 0;
     int send_terminating_unirec = 1;
 
@@ -448,32 +454,33 @@ int main(int argc, char **argv)
     create_v6_mask_map(v6_masks);
 
     // TRAP initialization
-    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
     void *detection = NULL;
-    ur_template_t *tmpl_det = NULL;
+    ur_template_t *ur_output = NULL;
+    ur_template_t *ur_input = NULL;
     string bl_file, bl_str;
-    pthread_t watcher_thread;
+    pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted IPs
-    ur_template_t *templ = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
-    if (templ == NULL) {
+    ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
+    if (ur_input == NULL) {
         cerr << "Error: Input template could not be created" << endl;
-        goto cleanup;
+        main_retval = 1; goto cleanup;
     }
 
-    tmpl_det = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", NULL);
-    if (tmpl_det == NULL) {
+    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", NULL);
+    if (ur_output == NULL) {
         cerr << "Error: Output template could not be created" << endl;
-        goto cleanup;
+        main_retval = 1; goto cleanup;
     }
 
     // Create detection record
-    detection = ur_create_record(tmpl_det, 0);
+    detection = ur_create_record(ur_output, 0);
     if (detection == NULL) {
         cerr << "Error: Memory allocation problem (output record)" << endl;
-        goto cleanup;
+        main_retval = 1; goto cleanup;
     }
 
     // Set signal handling for termination
@@ -493,7 +500,7 @@ int main(int argc, char **argv)
                 send_terminating_unirec = 0;
                 break;
             case '?':
-                goto cleanup;
+                main_retval = 1; goto cleanup;
         }
     }
 
@@ -501,7 +508,7 @@ int main(int argc, char **argv)
 
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
-        goto cleanup;
+        main_retval = 1; goto cleanup;
     }
 
     if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -518,11 +525,14 @@ int main(int argc, char **argv)
     // If update from bl_file could not be processed, return error
     if (retval == BLIST_FILE_ERROR) {
         cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
-        goto cleanup;
+        main_retval = 1; goto cleanup;
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file);
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file) > 0) {
+            cerr << "Error: Couldnt create watcher thread" << endl;
+            main_retval = 1; goto cleanup;
+        }
     }
 
     // ***** Main processing loop *****
@@ -531,28 +541,28 @@ int main(int argc, char **argv)
         uint16_t data_size;
 
         // Retrieve data from sender
-        retval = TRAP_RECEIVE(0, data, data_size, templ);
+        retval = TRAP_RECEIVE(0, data, data_size, ur_input);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
         // Check the data size
-        if (data_size != ur_rec_size(templ, data)) {
+        if (data_size != ur_rec_size(ur_input, data)) {
             if (data_size <= 1) { // end of data
                 break;
             } else { // data corrupted
                 cerr << "ERROR: Corrupted data or wrong data template was specified. ";
-                cerr << "Size computed from record: " << ur_rec_size(templ, data) << " ";
+                cerr << "Size computed from record: " << ur_rec_size(ur_input, data) << " ";
                 cerr << "Size returned from Trap: " << data_size << endl;
                 break;
             }
         }
 
         // Try to match the IP addresses to blacklist
-        retval = blacklist_check(templ, tmpl_det, data, detection, v4_masks, v6_masks, v4_list, v6_list);
+        retval = blacklist_check(ur_input, ur_output, data, detection, v4_masks, v6_masks, v4_list, v6_list);
 
         // If IP address was found on blacklist
         if (retval == BLACKLISTED) {
-            ur_copy_fields(tmpl_det, detection, templ, data);
-            trap_send(0, detection, ur_rec_fixlen_size(tmpl_det));
+            ur_copy_fields(ur_output, detection, ur_input, data);
+            trap_send(0, detection, ur_rec_fixlen_size(ur_output));
 //            DBG((stderr, "IP detected on blacklist\n"))
         }
 
@@ -561,7 +571,6 @@ int main(int argc, char **argv)
             retval = reload_blacklists(v4_list, v6_list, bl_file);
             if (retval == BLIST_FILE_ERROR) {
                 cerr << "ERROR: Unable to load update blacklist. Will use the old one instead." << endl;
-                continue;
             }
 
             // this lazy locking is fine, we don't need to reload the blacklists immediately
@@ -580,7 +589,7 @@ int main(int argc, char **argv)
 
             if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
                 cerr << "Error: Could not parse XML configuration." << endl;
-                goto cleanup;
+                main_retval = 1; goto cleanup;
             }
 
             if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -597,12 +606,11 @@ int main(int argc, char **argv)
             // If update from file could not be processed, return error
             if (retval == BLIST_FILE_ERROR) {
                 cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
-                goto cleanup;
+                main_retval = 1; goto cleanup;
             }
 
             RECONF_FLAG = 0;
         }
-
     }
 
     // If set, send terminating message to modules on output
@@ -613,16 +621,22 @@ int main(int argc, char **argv)
 cleanup:
     // Clean up before termination
     ur_free_record(detection);
-    ur_free_template(templ);
-    ur_free_template(tmpl_det);
+    ur_free_template(ur_input);
+    ur_free_template(ur_output);
     ur_finalize();
 
     TRAP_DEFAULT_FINALIZATION();
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-    if (WATCH_BLACKLISTS_FLAG) {
-        pthread_cancel(watcher_thread);
+    if (WATCH_BLACKLISTS_FLAG && watcher_thread != 0) {
+        // since watcher hangs on poll(), pthread_cancel is fine (poll is a cancelation point)
+        if (pthread_cancel(watcher_thread) == 0) {
+            pthread_join(watcher_thread, NULL);
+            DBG((stderr, "Watcher thread successfully canceled\n"));
+        } else {
+            cerr << "Warning: Failed to cancel watcher thread" << endl;
+        }
     }
 
-    return EXIT_SUCCESS;
+    return main_retval;
 }
