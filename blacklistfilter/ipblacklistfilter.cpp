@@ -464,13 +464,13 @@ int main(int argc, char **argv)
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted IPs
-    ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
+    ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST", NULL);
     if (ur_input == NULL) {
         cerr << "Error: Input template could not be created" << endl;
         main_retval = 1; goto cleanup;
     }
 
-    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL,SRC_BLACKLIST,DST_BLACKLIST", NULL);
+    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,SRC_BLACKLIST,DST_BLACKLIST", NULL);
     if (ur_output == NULL) {
         cerr << "Error: Output template could not be created" << endl;
         main_retval = 1; goto cleanup;
