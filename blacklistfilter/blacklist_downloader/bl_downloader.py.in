@@ -7,8 +7,11 @@ import re
 import sched
 import time
 import os
+from contextlib import suppress
 
 config_file = '@BLACKLISTFILTERDIR@/bl_downloader_config.xml'
+
+SECONDS_IN_MINUTE = 60
 
 # TODO: where to log?
 # fh = logging.FileHandler('bl_downloader.log')
@@ -28,8 +31,6 @@ ip_regex = re.compile('\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5
 
 # Just a simple regex to eliminate commentaries
 url_regex = re.compile('^[^#/].*\..+')
-
-check_interval = 10 * 60  # Time period (seconds) to check for blacklist changes
 
 blacklists = []
 
@@ -51,6 +52,13 @@ def split_ip(ip):
     return tuple_ip
 
 
+class GeneralConfig:
+    def __init__(self, general_config):
+        for elem in general_config:
+            with suppress(ValueError):
+                setattr(self, elem.attrib['name'], int(elem.text))
+
+
 class Blacklist:
     def __init__(self, bl):
         self.entities = []
@@ -67,7 +75,7 @@ class Blacklist:
         updated = False
 
         try:
-            req = requests.get(self.source, timeout=10)
+            req = requests.get(self.source, timeout=g_conf.socket_timeout)
 
             if req.status_code == 200:
                 data = req.content
@@ -161,14 +169,23 @@ def create_detector_file(bl_type: Blacklist):
                            key=bl_type.comparator)
 
     os.makedirs(os.path.dirname(bl_type.detector_file), exist_ok=True)
-    with open(bl_type.detector_file, 'w') as f:
-        f.write('\n'.join(all_entities))
+    try:
+        with open(bl_type.detector_file, 'w') as f:
+            f.write('\n'.join(all_entities))
+    except OSError as e:
+        logger.critical('Failed to create detector file. {}. Exitting downloader'.format(e))
+        exit(1)
 
 
 def parse_config():
     tree = ET.parse(config_file)
-    detector_files = tree.getroot().getchildren()[0].getchildren()
-    bl_type_array = tree.getroot().getchildren()[1].getchildren()
+
+    general_config = tree.getroot().getchildren()[0].getchildren()
+    detector_files = tree.getroot().getchildren()[1].getchildren()
+    bl_type_array = tree.getroot().getchildren()[2].getchildren()
+
+    global g_conf
+    g_conf = GeneralConfig(general_config)
 
     for detector_file in detector_files:
         if detector_file.attrib['name'] == "IP":
@@ -187,14 +204,14 @@ def parse_config():
 
 def run(s):
     # schedule next check immediately
-    s.enter(check_interval, 1, run, (s,))
+    s.enter(g_conf.download_interval * SECONDS_IN_MINUTE, 1, run, (s,))
 
     for bl_type in [IPBlacklist, URLBlacklist]:
         updated = False
 
         for bl in blacklists:
             if isinstance(bl, bl_type):
-                if bl.last_download and bl.last_download + 60 * int(bl.download_interval) < time.time():
+                if bl.last_download and bl.last_download + SECONDS_IN_MINUTE * int(bl.download_interval) < time.time():
                     updated += bl.download_and_update()
 
         if updated:
@@ -211,14 +228,3 @@ if __name__ == '__main__':
 
     s.enter(0, 1, run, (s,))
     s.run()
-
-
-
-
-
-
-
-
-
-
-

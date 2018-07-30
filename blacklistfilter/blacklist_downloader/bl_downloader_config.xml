@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <struct name="general">
+        <!-- Download interval of all blacklists in minutes -->
+        <element name="download_interval">10</element>
+        <!-- Socket timeout for requests.get method in seconds -->
+        <element name="socket_timeout">5</element>
+    </struct>
+
     <struct name="detector_files">
         <element name="IP">/tmp/blacklistfilter/ip.blist</element>
         <element name="URL">/tmp/blacklistfilter/url.blist</element>
