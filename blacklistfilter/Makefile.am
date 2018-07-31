@@ -9,12 +9,12 @@ bin_PROGRAMS=ipblacklistfilter urlblacklistfilter
 ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
 			ipblacklistfilter.h \
 			ipdetect/patternstrings.h \
-			blacklist_watcher.cpp \
+			blacklist_watcher.c \
 			blacklist_watcher.h \
 			fields.c fields.h
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 ipblacklistfilter_CFLAGS=-std=gnu99
-ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
+ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -DDEBUG
 ipblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 
@@ -22,7 +22,7 @@ dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            urlblacklistfilter.h \
                            ipdetect/patternstrings.h \
-                           blacklist_watcher.cpp \
+                           blacklist_watcher.c \
                            blacklist_watcher.h \
                            fields.c fields.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common

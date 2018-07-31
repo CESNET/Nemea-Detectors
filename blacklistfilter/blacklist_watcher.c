@@ -2,7 +2,8 @@
    http://man7.org/linux/man-pages/man7/inotify.7.html */
 
 #include <sys/inotify.h>
-#include <string>
+#include <stdio.h>
+#include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <poll.h>
