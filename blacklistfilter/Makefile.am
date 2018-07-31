@@ -34,10 +34,10 @@ dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 EXTRA_DIST=blacklist_downloader/bl_downloader.py.in  \
 	   blacklist_downloader/bl_downloader_config.xml \
 	   urldetect/patternstrings.h \
-	   urldetect/README \
+	   urldetect/README.md \
 	   urldetect/urldetect_config.xml \
 	   ipdetect/patternstrings.h \
-	   ipdetect/README \
+	   ipdetect/README.md \
 	   ipdetect/ipdetect_config.xml
 
 bin_SCRIPTS=blacklist_downloader/bl_downloader.py
@@ -51,9 +51,9 @@ dist_blacklistfilter_DATA=blacklist_downloader/bl_downloader_config.xml
 # dnspkgdocdir=${docdir}/dnsblacklistfilter
 # dnspkgdoc_DATA=dnsdetect/README
 ippkgdocdir=${docdir}/ipblacklistfilter
-ippkgdoc_DATA=ipdetect/README
+ippkgdoc_DATA=ipdetect/README.md
 urlpkgdocdir=${docdir}/urlblacklistfilter
-urlpkgdoc_DATA=urldetect/README
+urlpkgdoc_DATA=urldetect/README.md
 
 include ../aminclude.am
 
