@@ -111,7 +111,7 @@ trap_module_info_t *module_info = NULL;
 using namespace std;
 
 // Global variable for signaling the program to stop execution
-static int stop = 0;
+int stop = 0;
 
 // Global variable for signaling the program to update blacklists
 int BL_RELOAD_FLAG = 0;
@@ -529,7 +529,7 @@ int main(int argc, char **argv)
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, &bl_file) > 0) {
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) bl_file.c_str()) > 0) {
             cerr << "Error: Couldnt create watcher thread" << endl;
             main_retval = 1; goto cleanup;
         }
@@ -541,6 +541,7 @@ int main(int argc, char **argv)
         uint16_t data_size;
 
         // Retrieve data from sender
+        // TODO: Maybe non-blocking trap receive (when some flags set, it hangs here until trap data are received)
         retval = TRAP_RECEIVE(0, data, data_size, ur_input);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
@@ -563,7 +564,7 @@ int main(int argc, char **argv)
         if (retval == BLACKLISTED) {
             ur_copy_fields(ur_output, detection, ur_input, data);
             trap_send(0, detection, ur_rec_fixlen_size(ur_output));
-//            DBG((stderr, "IP detected on blacklist\n"))
+            DBG((stderr, "IP detected on blacklist\n"))
         }
 
         if (BL_RELOAD_FLAG) {
