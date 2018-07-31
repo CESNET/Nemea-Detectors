@@ -1,11 +1,10 @@
 /**
  * \file urlblacklistfilter.h
- * \brief URL blacklist detector for Nemea -- header file
+ * \brief Module for detecting HTTP access to blacklisted URLs -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
- * \date 2016
+ * \author Filip Suster, <sustefil@fit.cvut.cz>
+ * \date 2013-2018
  */
 
 /*
@@ -48,7 +47,6 @@
 #ifndef URLBLACKLISTFILTER_H
 #define URLBLACKLISTFILTER_H
 
-#include <map>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -58,7 +56,6 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <nemea-common/nemea-common.h>
 #include <nemea-common/prefix_tree.h>
 
 
@@ -71,11 +68,6 @@ pthread_mutex_t BLD_SYNC_MUTEX;
  * Constant returned if everything is ok.
  */
 #define ALL_OK 0
-
-/**
- * Initial size of the blacklist.
- */
-#define BLACKLIST_DEF_SIZE 50000
 
 /**
  * Consatnt returned by loading function if directory cannot be accessed
@@ -92,8 +84,13 @@ pthread_mutex_t BLD_SYNC_MUTEX;
  */
 #define URL_CLEAR 0
 
+/**
+ * Allocation size for variable sized UniRec output template
+ */
+#define DETECTION_ALLOC_LEN 2048
 
-#define BL_NAME_MAX_LENGTH 100
+#define WWW_PREFIX "www."
+
 
 const char *URL_REGEX =
    // Protocol
@@ -176,12 +173,12 @@ typedef struct {
 /*
  * Function for loading update files.
  */
-int reload_blacklists(prefix_tree_t * tree, std::string &file);
+int reload_blacklists(prefix_tree_t *tree, std::string &file);
 
 /*
  * Function for checking records.
  */
-int check_blacklist(prefix_tree_t *tree, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
+int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);
 
 #ifdef __cplusplus
 }
