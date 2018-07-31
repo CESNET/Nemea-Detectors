@@ -107,6 +107,7 @@ trap_module_info_t *module_info = NULL;
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/ipdetect_config.xml]", required_argument, "string") \
+  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none")
 
 using namespace std;
 
@@ -465,14 +466,10 @@ int main(int argc, char **argv)
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST", NULL);
-    if (ur_input == NULL) {
-        cerr << "Error: Input template could not be created" << endl;
-        main_retval = 1; goto cleanup;
-    }
-
     ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,SRC_BLACKLIST,DST_BLACKLIST", NULL);
-    if (ur_output == NULL) {
-        cerr << "Error: Output template could not be created" << endl;
+
+    if (ur_input == NULL || ur_output == NULL) {
+        cerr << "Error: Input or output template could not be created" << endl;
         main_retval = 1; goto cleanup;
     }
 
