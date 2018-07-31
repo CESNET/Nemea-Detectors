@@ -14,7 +14,7 @@ ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
 			fields.c fields.h
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 ipblacklistfilter_CFLAGS=-std=gnu99
-ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -DDEBUG
+ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
 ipblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 
@@ -27,7 +27,7 @@ urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            fields.c fields.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
 urlblacklistfilter_CFLAGS=-std=gnu99
-urlblacklistfilter_CXXFLAGS=-std=c++11 -Wno-write-strings -Wall -pedantic
+urlblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
 urlblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 
