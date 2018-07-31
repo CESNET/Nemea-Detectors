@@ -2,19 +2,19 @@
 
 ## Goal	
 
-Module receives the UniRec HTTP flow records and checks if the HTTP PATH (HTTP_HOST+HTTP_URL) is present in any 
+Module receives the UniRec HTTP flow records and checks if the HTTP PATH (`HTTP_HOST` + `HTTP_URL`) is present in any 
 blacklist that are available. If any of the addresses is 
 blacklisted, the record is changed by adding a number/index of 
 the blacklists that contain this URL. UniRec with this 
 flag is then sent to the output interface. Blacklists are downloaded by a separate module
-bl_downloader.py which saves blacklists to a file (specified in configuration) and blacklistfilter uses
+`bl_downloader.py` which saves blacklists to a file (specified in configuration) and blacklistfilter uses
 this file to reload blacklists.
 
 ## Input/Output
 
-Input Interface: UniRec format (<HTTP_FLOW>)
+Input Interface: UniRec format (`<HTTP_FLOW>`)
 
-Output Interface: UniRec format (<HTTP_FLOW>, BLACKLIST)
+Output Interface: UniRec format (`<HTTP_FLOW>`, `BLACKLIST`)
 
 ## Usage
 
