@@ -99,8 +99,8 @@ trap_module_info_t *module_info = NULL;
   BASIC("ipblacklistfilter", "Module receives the UniRec record and checks if the source address " \
     "or destination address is present in any blacklist that are available. " \
     "If any of the addresses is blacklisted the record is changed by adding " \
-    "an index of the blacklist(s) which blacklisted the address" \
-    "This module uses configurator tool. To specify file with blacklists (prepared by blacklist downloader)" \
+    "an index of the blacklist(s) which blacklisted the address. " \
+    "This module uses configurator tool. To specify file with blacklists (prepared by blacklist downloader) " \
     "use XML configuration file for IPBlacklistFilter (ipdetect_config.xml). " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bl_downloader_config.xml).", 1, 1)
@@ -291,8 +291,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
         // Add entry to vector
         if (ip_is4(&bl_entry.ip)) {
             v4_list_new.push_back(bl_entry);
-        }
-        else {
+        } else {
             v6_list_new.push_back(bl_entry);
         }
     }

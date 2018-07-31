@@ -88,10 +88,6 @@ class Blacklist:
                     self.last_download = time.time()
                     updated = True
 
-                    # filename = 'blacklists/{}_{}.blist_{}'.format(self.type, self.id, str(datetime.datetime.now()))
-                    # with open(filename, 'w') as f:
-                    #     f.write('\n'.join(self.entities))
-
                     logger.info('Updated blacklist {}'.format(self.name))
 
             else:
@@ -180,9 +176,11 @@ def create_detector_file(bl_type: Blacklist):
 def parse_config():
     tree = ET.parse(config_file)
 
-    general_config = tree.getroot().getchildren()[0].getchildren()
-    detector_files = tree.getroot().getchildren()[1].getchildren()
-    bl_type_array = tree.getroot().getchildren()[2].getchildren()
+    r = tree.getroot().getchildren()
+
+    general_config = r[0].getchildren()
+    detector_files = r[1].getchildren()
+    bl_type_array = r[2].getchildren()
 
     global g_conf
     g_conf = GeneralConfig(general_config)
