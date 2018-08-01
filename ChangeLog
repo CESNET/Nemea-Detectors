@@ -1,3 +1,12 @@
+2018-08-01 nemea-detectors-1.4.0
+	* blacklistfilter:
+		Add module blacklistfilter (replaced an old version).
+		Add blacklist downloader.
+	* python modules:
+		Enable -h to show help
+	* improved doc, maintenance:
+		haddrscan_dectector, ddos_detector, vportscan, haddrscan_aggregator
+
 2018-03-20 Nemea-detectors-1.3.10
 	* amplification_detector:
 		change behaviour of -d (log_dir)

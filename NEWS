@@ -1,3 +1,18 @@
+2018-08-01 (Filip Šuster): blacklistfilter: new implementation of IP/URL blacklist filters and downloader (#23)
+2018-07-19 (Tomas Cejka): python modules: enable basic help
+2018-05-08 (Ulrik Haugen): Remove unused global variable in haddrscan_aggregator.
+2018-05-08 (Ulrik Haugen): Tweak help/docs in haddrscan_detector.
+2018-05-08 (Ulrik Haugen): Document aggregator in haddrscan_detector readme.
+2018-05-08 (Ulrik Haugen): Update haddrscan_detector readme.
+2018-05-08 (Ulrik Haugen): Fold long lines in haddrscan_detector readme.
+2018-04-23 (Ulrik Haugen): Replace hard coded constants with params in haddrscan_detector.
+2018-04-19 (Ulrik Haugen): haddrscan_dectector:main: add comment.
+2018-04-19 (Ulrik Haugen): Add coding style info for Emacs in haddrscan_detector.
+2018-04-19 (Ulrik Haugen): ddos_detector: whitespace.
+2018-03-26 (Tomas Cejka): vportscan: add some test data (results)
+2018-03-23 (Ulrik Haugen): haddrscan_aggregator:sendEvents: fix typo.
+2018-03-20 (Tomas Cejka): build: fixed missing rpm-clean target
+2018-03-20 (Tomas Cejka): debian: add metadata to create a package
 Nemea-2.0:
 	* added new modules (see ChangeLog for the list)
 	* replaced "script" by Supervisor to control and monitor Nemea
