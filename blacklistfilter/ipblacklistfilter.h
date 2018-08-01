@@ -47,6 +47,8 @@
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
 
+#include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
