@@ -36,6 +36,12 @@ AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
 
+blacklistfilterdir=${sysconfdir}/blacklistfilter
+BLACKLISTFILTERDIR=$(eval echo $(eval echo ${blacklistfilterdir}))
+AC_SUBST(BLACKLISTFILTERDIR)
+AC_SUBST(blacklistfilterdir)
+AC_DEFINE_DIR(BLACKLISTFILTERDIR, [blacklistfilterdir], [Path to configuration files of blacklistfilter])
+
 # Checks for programs.
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
@@ -113,7 +119,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
-                 blacklistfilter/ipdetect/Makefile
+                 blacklistfilter/blacklist_downloader/bl_downloader.py
                  booterfilter/Makefile
                  brute_force_detector/Makefile
                  ddos_detector/Makefile

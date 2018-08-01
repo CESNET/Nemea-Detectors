@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <struct name="general">
+        <!-- Download interval of all blacklists in minutes -->
+        <element name="download_interval">10</element>
+        <!-- Socket timeout for requests.get method in seconds -->
+        <element name="socket_timeout">5</element>
+    </struct>
+
+    <struct name="detector_files">
+        <element name="IP">/tmp/blacklistfilter/ip.blist</element>
+        <element name="URL">/tmp/blacklistfilter/url.blist</element>
+    </struct>
+
+    <!-- Array with information about public blacklist -->
+    <struct name="blacklist_array">
+        <array type="IP">
+            <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
+                 BEWARE: Could be number from interval <0, 63> in one group/type -->
+            <struct>
+                <element name="id">1</element>
+                <element name="type">Botnet</element>
+                <!-- Method of retrieving blacklist, currently supported is only web via wget tool -->
+                <element name="method">web</element>
+                <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
+                <element name="name">ZeuS tracker</element>
+                <!-- Address from which the blacklist will be downloaded -->
+                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <!--Download interval in minutes-->
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">2</element>
+                <element name="type">Botnet</element>
+                <element name="method">web</element>
+                <element name="source">https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <element name="name">Feodo tracker</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">3</element>
+                <element name="type">Ransomware</element>
+                <element name="method">web</element>
+                <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt</element>
+                <element name="name">Ransomware Tracker</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">4</element>
+                <element name="type">Spam</element>
+                <element name="method">web</element>
+                <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
+                <element name="name">Spamhaus</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">5</element>
+                <element name="type">Tor</element>
+                <element name="method">web</element>
+                <element name="source">https://check.torproject.org/exit-addresses</element>
+                <element name="name">TOR exit nodes</element>
+                <element name="download_interval">10</element>
+            </struct>
+        </array>
+
+        <array type="URL">
+            <struct>
+                <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
+                     BEWARE: Could be number from interval <0, 63> -->
+                <element name="id">1</element>
+                <!-- Method of retrieving blacklist, currently supported is only web via wget tool -->
+                <element name="method">web</element>
+                <!-- Name of the blacklist, modules uses this name to choose which blacklist to use -->
+                <element name="name">Malware Domains</element>
+                <!-- Address from which the blacklist will be downloaded -->
+                <element name="source">http://mirror1.malwaredomains.com/files/justdomains</element>
+                <!-- Type of blacklist, only informational value -->
+                <element name="type">Botnet</element>
+                <!-- Download interval in minutes -->
+                <element name="download_interval">10</element>
+            </struct>
+
+            <!-- TODO: handle CSV-->
+            <!--<struct>-->
+                <!--<element name="id">2</element>-->
+                <!--<element name="method">web</element>-->
+                <!--<element name="source">http://data.phishtank.com/data/online-valid.csv</element>-->
+                <!--<element name="name">PhishTank</element>-->
+                <!--<element name="type">Phishing</element>-->
+            <!--</struct>-->
+
+            <struct>
+                <element name="id">3</element>
+                <element name="method">web</element>
+                <element name="source">https://openphish.com/feed.txt</element>
+                <element name="name">OpenPhish</element>
+                <element name="type">Phishing</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">4</element>
+                <element name="method">web</element>
+                <element name="source">https://www.squidblacklist.org/downloads/dg-malicious.acl</element>
+                <element name="name">SquidBlacklist</element>
+                <element name="type">Malware</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">5</element>
+                <element name="method">web</element>
+                <element name="source">https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt</element>
+                <element name="name">DisconnectMe</element>
+                <element name="type">Malware</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">6</element>
+                <element name="method">web</element>
+                <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
+                <element name="name">Booters</element>
+                <element name="type">Booters</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+        </array>
+
+    </struct>
+</configuration>

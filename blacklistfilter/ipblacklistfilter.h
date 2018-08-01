@@ -3,9 +3,8 @@
  * \brief  Module for detecting blacklisted IP addresses, header file.
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
- * \date 2015
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
 
 /*
@@ -45,16 +44,17 @@
  *
  */
 
-#include <vector>
-#include <unirec/unirec.h>
-#include <nemea-common.h>
-
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Mutex for synchronization.
+ */
+pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
  * Return value for matching function when address is blacklisted.
@@ -93,136 +93,30 @@ extern "C" {
 #define PREFIX_V6_DEFAULT 128
 
 /**
- * Constant returned by update function for prefixes when an existing item was
- * updated.
- */
-#define BL_ENTRY_UPDATED -1
-
-/**
- * Static mode ID.
- */
-#define BL_STATIC_MODE 1
-
-/**
- * Dynamic mode ID.
- */
-#define BL_DYNAMIC_MODE 2
-
-/**
- * Inital size for the hash table of addresses.
- */
-#define BL_HASH_SIZE 100000
-
-/**
- * Time to wait between blacklist updates.
- */
-#define BLACKLIST_UPDATE_DELAY_TIME 300
-
-/**
- * Maximum length of one line to parse from blacklist website.
- */
-#define BLACKLIST_LINE_MAX_LENGTH 1024
-
-/**
- * Maximum length of one element (in this case, it is maximum length of IP address).
- */
-#define BLACKLIST_EL_MAX_LENGTH 64
-
-/**
- * Maximum count of elements in one update (in this case, it is maximum IP addresses per update)
- */
-#define BLACKLIST_EL_MAX_COUNT 100000
-
-/**
- * Blacklist update mode. Do NOT change it unless you know what you are doing.
- */
-#define BLACKLIST_UPDATE_MODE DIFF_UPDATE_MODE
-
-/**
- * Default inactive timeout in seconds.
- */
-#define DEFAULT_TIMEOUT_INACTIVE 30
-
-/**
- * Default active timeout in seconds.
- */
-#define DEFAULT_TIMEOUT_ACTIVE 300
-
-/**
- * Default aggregation hash table size.
- */
-#define DEFAULT_HASH_TABLE_SIZE 500000
-
-/**
- * Max length of blacklist name
- */
-#define BL_NAME_MAX_LENGTH 32
-
-/**
- * Comments character for every blacklist website.
- */
-char *BLACKLIST_COMMENT_AR = (char*)"#####";
-
-/**
- * Regular expression to parse IP address from blacklist. (only IPv4 for now).
- */
-char *BLACKLIST_REG_PATTERN = (char*)"\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b";
-
-
-/**
- * Structure for data aggregation
- */
-typedef struct {
-   /*@{*/
-   uint32_t time_first;/**< Timestamp of creation */
-   uint32_t time_last;/**< Timestamp of last update */
-   char data[1];/**< Buffer for data (BEWARE: dynamically allocated, so no size needed)*/
-   /*@}*/
-} aggr_data_t;
-
-/**
- * Structure for data aggregation key
- */
-typedef struct {
-   /*@{*/
-   ip_addr_t srcip;/**< Source address */
-   ip_addr_t dstip;/**< Destination address */
-   uint8_t proto;/**< Protocol */
-   /*@}*/
-} aggr_data_key_t;
-
-
-/**
  * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
     /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
-    uint8_t pref_length; /**< Length of the prefix. (set to 32/128 if missing) */
+    uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
-} ip_blist_t;
+} ip_bl_entry_t;
+
 
 /**
- * Structure containing information used for configurating
- * blacklist downloader.
+ * Configuration structure.
  */
 typedef struct __attribute__ ((__packed__)) {
-    char file[256];
-    uint32_t delay;
-    char update_mode[16];
-    uint32_t line_max_len;
-    uint32_t element_max_len;
-    uint32_t element_max_cnt;
-    char *blacklist_arr;
-} downloader_config_struct_t;
-
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
 
 /**
- * @typedef std::vector<ip_blist_t> black_list_t;
+ * @typedef vector<ip_bl_entry_t> black_list_t;
  * Vector of blacklisted prefixes.
  */
-typedef std::vector<ip_blist_t> black_list_t;
+typedef std::vector<ip_bl_entry_t> black_list_t;
 
 /**
  * @typedef uint32_t ipv4_mask_map_t[33];

@@ -1,11 +1,10 @@
 /**
  * \file urlblacklistfilter.h
- * \brief URL blacklist detector for Nemea -- header file
+ * \brief Module for detecting HTTP access to blacklisted URLs -- header file
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
- * \date 2016
+ * \author Filip Suster, <sustefil@fit.cvut.cz>
+ * \date 2013-2018
  */
 
 /*
@@ -48,7 +47,6 @@
 #ifndef URLBLACKLISTFILTER_H
 #define URLBLACKLISTFILTER_H
 
-#include <map>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -58,27 +56,18 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <nemea-common.h>
+#include <nemea-common/prefix_tree.h>
+
+
+/**
+* Mutex for synchronization.
+*/
+pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
  * Constant returned if everything is ok.
  */
 #define ALL_OK 0
-
-/**
- * Static mode ID.
- */
-#define BL_STATIC_MODE 1
-
-/**
- * Dynamic mode ID. 
- */
-#define BL_DYNAMIC_MODE 2
-
-/**
- * Initial size of the blacklist.
- */
-#define BLACKLIST_DEF_SIZE 50000
 
 /**
  * Consatnt returned by loading function if directory cannot be accessed
@@ -95,10 +84,12 @@ extern "C" {
  */
 #define URL_CLEAR 0
 
+/**
+ * Allocation size for variable sized UniRec output template
+ */
+#define DETECTION_ALLOC_LEN 2048
 
-#define BL_NAME_MAX_LENGTH 100
-unsigned int TIMEOUT_ACTIVE = 300;
-unsigned int TIMEOUT_INACTIVE = 30;
+#define WWW_PREFIX "www."
 
 
 const char *URL_REGEX =
@@ -158,12 +149,10 @@ const char *URL_REGEX =
    ;
 */
 
-/*
- * Map for URL blacklist
- */
-typedef std::map<std::string, uint64_t> blacklist_map_t;
-
-
+typedef struct __attribute__ ((__packed__)) {
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
 
 /**
  * Structure of item used in update operations.
@@ -173,35 +162,23 @@ typedef struct {
     std::string url; /**< URL to update */
     uint64_t bl; /**< Source blacklist of the URL */
     /*@}*/
-} url_blist_t;
+} url_elem_t;
 
+prefix_tree_t * tree;
 
-/**
- * Structure containing information used for configurating
- * blacklist downloader.
- */
-typedef struct __attribute__ ((__packed__)) {
-    char file[256];
-    uint32_t delay;
-    char update_mode[16];
-    uint32_t line_max_len;
-    uint32_t element_max_len;
-    uint32_t element_max_cnt;
-    char *blacklist_arr;
-} downloader_config_struct_t;
-
-
-typedef std::vector<url_blist_t> black_list_t;
+typedef struct {
+    uint64_t bl_id;
+} info_t;
 
 /*
  * Function for loading update files.
  */
-int load_update(black_list_t &add_upd, black_list_t &rm_upd, std::string &file);
+int reload_blacklists(prefix_tree_t *tree, std::string &file);
 
 /*
  * Function for checking records.
  */
-int check_blacklist(cc_hash_table_t& blacklist, ur_template_t* in, ur_template_t* out, const void* record, void* detect);
+int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);
 
 #ifdef __cplusplus
 }
