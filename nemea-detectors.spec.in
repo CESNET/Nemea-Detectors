@@ -1,3 +1,13 @@
+%if 0%{?el6}
+%global python3_pkgversion 34
+%endif
+
+%if x%{?python3_pkgversion} == x
+%global python3_pkgversion 3
+%endif
+
+
+
 Summary: Package with detection modules of the Nemea system
 Name: nemea-detectors
 Version: @PACKAGE_VERSION@
@@ -9,8 +19,20 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: nemea-framework wget libidn openssl
-BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel libidn-devel openssl-devel
+Requires: nemea-framework
+Requires: wget
+Requires: libidn
+Requires: openssl
+Requires: python-requests
+Requires: python%{python3_pkgversion}-requests
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: doxygen
+BuildRequires: pkgconfig
+BuildRequires: nemea-framework-devel
+BuildRequires: libidn-devel
+BuildRequires: openssl-devel
 Provides: nemea-detectors
 
 %description
