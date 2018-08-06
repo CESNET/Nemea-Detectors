@@ -32,10 +32,18 @@ interruption) however caused and on any theory of liability, whether
 in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
+
+Authors:
+    Ladislav Macoun <ladislavmacoun@gmail.com>
+
 """
 
 #!/usr/bin/env python
-import pytrap, sys, os, signal, logging
+import pytrap
+import sys
+import signal
+import logging
+import argparse
 from threading import Thread, Semaphore, Lock
 from flow import Flow, SMTP_Flow, FlowConversionException
 from smtp_entity import SMTP_ENTITY
@@ -44,7 +52,22 @@ try:
     from queue import Queue
 except:
     from Queue import Queue
-import time
+
+"""
+Parse input parameters
+"""
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', help="trap interface see libtrap manual for more information")
+parser.add_argument('-L', '--log', default="/var/log/smtp_spam_detector.log",
+                    help="--log [path] Specifies path for logger. Default path is set to /var/log/smtp_spam_detector.log")
+parser.add_argument('--debug', default=False, help="--debug [True/False] Set debug level to show debug output.")
+parser.add_argument('-t', '--interval', default=300, help="--interval [integer] Set probing interval to evaluate parameters for each entity in database. Default value = 300")
+
+try:
+    args = parser.parse_args()
+except:
+    parser.print_help()
+    exit(0)
 
 # Interfaces definition
 BASIC_IF = 0
@@ -53,10 +76,18 @@ SMTP_IF = 1
 Initialize logging mechanism
 """
 import g
+g.PATH_DEBUG_LOG = args.log
+g.debug_level = args.debug
+g.PROBE_INTERVAL = int(args.interval)
+
 LOGFORMAT = "%(asctime)-15s,%(threadName)s,%(name)s,[%(levelname)s] %(message)s"
 LOGDATEFORMAT = "%Y-%m-%dT%H:%M:%S"
 logging.basicConfig(level=logging.INFO, format=LOGFORMAT, datefmt=LOGDATEFORMAT)
 log = logging.getLogger('smtp_spam')
+
+if (g.debug_level == "True"):
+    log.setLevel('DEBUG')
+
 """
 Initialize file handler for log
 
@@ -72,8 +103,6 @@ log.info("***SMTP SPAM DETECTION Started***")
 g.stop_lock = Lock()
 g.stop_lock.acquire()
 g.is_running = True
-
-#TODO: Load config file
 
 # Signal handler releasing the lock on SIGINT or SIGTERM
 def sigint_handler(signum, frame):
@@ -111,8 +140,10 @@ def fetch_data(trap, rec, interface, queue):
         else:
             try: #TODO Flow are discarded atm
                 flow = SMTP_Flow(rec)
-                if (flow == None): pass
-                else: queue.put(flow)
+                if (flow == None):
+                    pass
+                else:
+                    queue.put(flow)
             except FlowConversionException as e:
                 log.error("{0} Flow discarded.".format(e))
 
@@ -141,11 +172,9 @@ def data_handling(detector, q):
     return True
 
 def main():
-    # Datapool used to store information about smtp entities
-    data = {}
+    # Select input spec for basic and smtp interface
     basic_spec = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL"
     smtp_spec = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint32 SMTP_2XX_STAT_CODE_COUNT,uint32 SMTP_3XX_STAT_CODE_COUNT,uint32 SMTP_4XX_STAT_CODE_COUNT,uint32 SMTP_5XX_STAT_CODE_COUNT,uint32 SMTP_COMMAND_FLAGS,uint32 SMTP_MAIL_CMD_COUNT,uint32 SMTP_RCPT_CMD_COUNT,uint32 SMTP_STAT_CODE_FLAGS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL,string SMTP_DOMAIN,string SMTP_FIRST_RECIPIENT,string SMTP_FIRST_SENDER"
-
     # Create a new trap context
     trap = pytrap.TrapCtx()
     """
@@ -154,7 +183,7 @@ def main():
     trap.init(sys.argv, 2, 1)
     # Set up required format to accept any unirec format.
     trap.setRequiredFmt(BASIC_IF, pytrap.FMT_UNIREC, basic_spec)    # Refers to flows without SMTP headers
-    trap.setRequiredFmt(SMTP_IF, pytrap.FMT_UNIREC, smtp_spec)       # Refers to flows with SMTP headers
+    trap.setRequiredFmt(SMTP_IF, pytrap.FMT_UNIREC, smtp_spec)      # Refers to flows with SMTP headers
     basic_rec = pytrap.UnirecTemplate(basic_spec)
     smtp_rec = pytrap.UnirecTemplate(smtp_spec)
     trap.setDataFmt(0, pytrap.FMT_JSON, "smtp_alert")
@@ -162,7 +191,6 @@ def main():
     detector = SpamDetection(trap)
     # Data synchronized queues
     flow_queue = Queue()    # Synchronize input flows
-    reports = Queue()       # Synchronize output reports
     # Create workers for each receiver
     basic_rcv = Thread(name="basic_receiver", target=fetch_data, args=(trap, basic_rec, BASIC_IF, flow_queue))
     smtp_rcv = Thread(name="smtp_receiver", target=fetch_data, args=(trap, smtp_rec, SMTP_IF, flow_queue))
@@ -196,5 +224,6 @@ def main():
     logging.shutdown()
     sys.exit(0)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+

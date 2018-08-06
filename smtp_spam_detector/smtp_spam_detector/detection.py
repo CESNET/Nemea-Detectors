@@ -32,6 +32,11 @@ interruption) however caused and on any theory of liability, whether
 in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
+
+Authors:
+    Ladislav Macoun <ladislavmacoun@gmail.com>
+
+
 """
 #!/usr/bin/env python
 #from cluster import Cluster
@@ -39,32 +44,36 @@ from flow import Flow, SMTP_Flow
 from smtp_entity import SMTP_ENTITY
 from pytrap import TrapCtx
 from threading import Thread, RLock
-import pytrap, sys, os, time, datetime, logging, json, report2idea
+
+import pytrap
+import sys
+import os
+import time
+import datetime
+import logging
+import json
+import report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 import g
 detection_log = logging.getLogger('smtp_spam.detection')
 
 class SpamDetection(Thread):
-    """
-    Data is dict of flows from multirecievers
-    """
     def __init__(self, trap, name="detector"):
         Thread.__init__(self)
         # Storage for both flow types
         self.data = dict()
         self.data_lock = RLock()
         # Blacklisted entites that are probably spammers
-        self.potencial_spammers = list()
+        self.potentialspammers = list()
 
-        # TODO create whitlist for known legit servers
-        self.whitelist = set()
-        self.blacklist = set()
+        # TODO create whitelist for known legit servers
+        #self.whitelist = set() #todo creade db for whitelisted and blacklisted addresses
+        #self.blacklist = set()
 
         # Timers and timestamps
         self.t_clean = 0                # last cleaning time
         self.t_detect = 0               # last detection time
-        #self.t_cluster = 0             # last clustering time
         self.t_cflow = 0                # current time in context of processing flows
         """
         Counters for how many flows has been checked, and how many alerts
@@ -78,6 +87,9 @@ class SpamDetection(Thread):
         self._active = True
 
     def stop(self):
+        """
+        Signals to stop the detection
+        """
         self._active = False
 
     def add_entity(self, flow):
@@ -110,15 +122,29 @@ class SpamDetection(Thread):
         return True
 
     def create_report(self, entity):
+        """
+        Creates report for given entity
+
+        Arguments:
+            entity - SMTP_ENTITY
+
+        Returns:
+            Returns an idea message in json format.
+        """
+
         if entity.id.isIPv4():
             ip = ("IP4", entity.id)
         else:
             ip = ("IP6", entity.id)
         idea = {}
+
         first_senders =  list(entity.get_emails())
         hosts = list(entity.get_hostnames())
+        feature_vector = [ '%.4f' % feature for feature in entity.fv ]
+
         if (len(first_senders) > 5):
             first_senders = first_senders[:5]
+
         if (len(hosts) > 5):
             hosts = hosts[:5]
 
@@ -131,8 +157,8 @@ class SpamDetection(Thread):
                 "EventTime": report2idea.getIDEAtime(entity.time_start),
                 "CeaseTime": report2idea.getIDEAtime(entity.time_end),
                 "Category": ["Abusive.Spam"],
-                "Note": "Testing example",
-                "Confidence": entity.conf_lvl,
+                "Note": "Tags : {0}, FV : {1}".format(entity.tags, feature_vector),
+                "Confidence": "{0:.2f}".format(entity.conf_lvl),
                 "Source": [{
                   "Hostname" : hosts,
                   "Email" : first_senders,
@@ -143,10 +169,10 @@ class SpamDetection(Thread):
                 "FlowCount" : len(entity.sent_history),
                 "PacketCount" : entity.packets,
                 "ConnCount" : entity.conn_cnt,
-                "Anonymised" : "false"
+                "Anonymised" : False
             }
-        except Exception:
-            detection_log.error("Idea creation for {0} failed.\n".format(entity))
+        except Exception as e:
+            detection_log.error("Idea creation for {0} failed ({1})\n".format(entity, e))
             pass
         return json.dumps(idea)
 
@@ -160,13 +186,14 @@ class SpamDetection(Thread):
                 except Exception as e:
                     detection_log.error("detection: Could not send json through trap interface. ({0})".format(e))
         detection_log.info("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
+        return None
 
     def analysis(self):
         """
         Do frequency analysis here
         """
         self.t_detect  = self.t_cflow
-        potencial_spammers = set()
+        potentialspammers = set()
         detection_log.info("Started probing entity database")
         debug_cnt = 0
         with self.data_lock:
@@ -175,38 +202,44 @@ class SpamDetection(Thread):
                 if (debug_cnt%1000 == 0):
                     detection_log.debug("Probed {0} entities".format(debug_cnt))
                 score = self.data[entity].is_spam()
-                if (score > 0.8):
-                    potencial_spammers.add(self.data[entity])
-                    if (score > 0.9):
-                        self.blacklist.add(self.data[entity])
-                elif (score < 0.5):
-                        self.whitelist.add(self.data[entity])
-        ps = len(potencial_spammers)
+                if (score > 0.9):
+                    potentialspammers.add(self.data[entity])
+                    #if (score > 0.9):
+                    #    self.blacklist.add(self.data[entity])
+                #elif (score < 0.5):
+                #        self.whitelist.add(self.data[entity])
+        ps = len(potentialspammers)
         dl = len(self.data)
         try:
             part = float(ps)/float(dl)
         except ZeroDivisionError:
             part = 0
         detection_log.info("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
-        self.send_reports([ self.create_report(entity) for entity in potencial_spammers ])
+        self.send_reports([ self.create_report(entity) for entity in potentialspammers ])
         detection_log.info("Analysis run done!")
-        self.is_init = True
+        self.clear()
+        return None
 
     def clear(self):
         """
         Do clean up here, get rid off old data
         """
         data_len  = len(self.data)
+        records_len = 0
         self.data.clear()
+
         self.t_clean = time.time()
         detection_log.info("Database dropped. Cleared {0} records of entities.".format(data_len))
+        return None
 
     def run(self):
         """
-        Starts the detection loop which runs analysis in parallel over current database of entities in given
-        interval PROBE_INTERVAL and cleans data every CLEAN_INTERVAL time.
+        Starts the detection loop which runs analysis in parallel over current
+        database of entities in given interval PROBE_INTERVAL and cleans data
+        every CLEAN_INTERVAL time.
         """
-        detection_log.info("Parametrs set to probe interval : {0}, clean interval : {1}".format(g.PROBE_INTERVAL, g.CLEAN_INTERVAL))
+        detection_log.info("Parameters set to probe interval : {0}, clean interval : {1}".format(g.PROBE_INTERVAL,
+                                                                                                 g.CLEAN_INTERVAL))
         workers = []
 
         while (self._active):
@@ -217,14 +250,16 @@ class SpamDetection(Thread):
                 workers.append(worker)
                 self.t_detect  = self.t_cflow
 
-            if self.t_clean + g.CLEAN_INTERVAL < self.t_cflow and self.is_init:
-                self.clear()
+            #if self.t_clean + g.CLEAN_INTERVAL < self.t_cflow and self.is_init:
+            #    self.clear()
 
             if len(workers) > g.MAX_WORKERS:
-                for worker in workers: worker.join()
+                for worker in workers:
+                    worker.join()
                 workers.clear()
 
-            time.sleep(5)
+            time.sleep(10)
 
         detection_log.info("***** Finished detection thread, exiting. *****")
+        return None
 

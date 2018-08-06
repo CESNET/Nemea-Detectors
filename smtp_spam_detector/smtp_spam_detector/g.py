@@ -58,25 +58,14 @@ email_protocols =  { 'POP3' : 143, 'POP3_SECURE' : 995,
 # ******************************************************************************
 # Global variables
 # ================
-SIMILARITY_INDEX = 0.8
-CLUST_INTERVAL = 30*60         # How often should datepool get clustered
-CLEAN_INTERVAL = 60*60         # How often should datapool get cleaned
-MAX_ALLOWED_SERVERS = 10       # Number of maximum allowded server that mail
+#SIMILARITY_INDEX = 0.8
+CLEAN_INTERVAL = 5*60          # How often should data pool get cleaned
+MAX_ALLOWED_SERVERS = 10       # Number of maximum allowed server that mail
                                # server is able to communicate
 PROBE_INTERVAL = 5*60
 MAX_WORKERS = 2                # Maximum of allowed threads for workers
-
-# Statistics and report paths
-PATH = "/localdata/smtp_reports/"
-PATH_CDF_DST = PATH + "smtp_cdf.csv"    # Path for CDF of DST_IPs report
-PATH_CDF_TR = PATH + "smtp_srv_tr.csv"  # Path for CDF of servers traffic report
-PATH_CLUSTER = PATH + "smtp_clustering_"# Path for clustering report
-PATH_P_SPAMMERS = PATH + "potencial_spam.csv"
-PATH_STATS_REPORT = PATH + "smtp_stats_"
-PATH_DEBUG_LOG = "/data/smtp_detector/smtp_spam_detector.log"
+PATH_DEBUG_LOG = "/var/log/smtp_spam_detector.log"
 # ******************************************************************************
-
-
 # Detector signal handler
 is_running = False
 

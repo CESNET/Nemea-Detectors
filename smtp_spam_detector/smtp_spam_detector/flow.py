@@ -32,6 +32,10 @@ interruption) however caused and on any theory of liability, whether
 in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even
 if advised of the possibility of such damage.
+
+Authors:
+    Ladislav Macoun <ladislavmacoun@gmail.com>
+
 """
 
 #!/usr/bin/env python3
@@ -109,6 +113,10 @@ class SMTP_Flow(Flow):
         for stat_code in SMTP_STATUS_CODES.values():
             if int(self.SMTP_STAT_CODE_FLAGS) & int(stat_code) > 0:
                 score += 1
+
+        # if there is not only SYN flag
+        if self.TCP_FLAGS > 2:
+            score -= 1
 
         return score
 
