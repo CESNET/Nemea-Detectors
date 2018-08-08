@@ -5,9 +5,9 @@ It may have seem that these days, the emails are not as popular as the new moder
 instant messaging apps (IM) or the social networks. However, we still rely on an
 old SMTP protocol, which is the standard protocol for sending e-mails from one
 Message Transfer Agent (MTA) to another. The SMTP stands for “Simple Message Transfer
-Protocol”, and it has been used since the early 90’s, when the first RFC (RFC 821)
+Protocol”, and it has been used since the early 90’s, when the first RFC (RFC [821](https://tools.ietf.org/html/rfc821))
 was created. The creators have made a rock solid protocol which is still used for
-its reliability. Although its simplicity was a tradeoff for a security. The simplicity
+its reliability. Although its simplicity was a trade off for a security. The simplicity
 was abused by the spammers, at that time it was not a big deal as today. With the
 e-commerce boom had came many new businesses, scamming methods, and problems.
 One of them is the spam which we have to face today in enormous quantities.
@@ -23,23 +23,19 @@ header extension and create a clusters of them.
 ## 2.0 Installation and requirements
 ### 2.1 Prerequisites
 This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).
-Additional requirements are:
-  - [python3] (https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz)
-  - logging   pip install logging
-  - argparse  pip install argparse
+Additional requirements are:\
+  - [python3](https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz)
+  - [Nemea-Framework](https://github.com/CESNET/Nemea-Framework)
 
-### 2.2 Prerequisites install using script
-```
-pip install -r /path/to/requirements.txt
-```
-### 2.3 Installing using Nemea package
+### 2.2 Installing using Nemea package
 [See installation of Nemea system.](https://github.com/CESNET/Nemea#installation)
 
 ### 2.3 How to use
-Name:
-   python3 smtp_daemon.py
+Name:\
+   +python3 smtp_daemon.py\
 
-OPTIONS:
+OPTIONS:\
+```
    -i [t, T, u, b, f] : [interface]
       Specifies the input interface for the detector. The detector uses two input interfaces.
       First for basic flow without smtp header, second one for flows with smtp header extension.
@@ -53,7 +49,7 @@ OPTIONS:
 
   --debug [True/False]
       Set the verbose level of the logger to debug while True (For developers). Default value is false.
-
+```
 ### 2.4 Examples
 Run probing every hour with debug output.
 ```
@@ -108,6 +104,17 @@ python3 smtp_daemon.py -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_
     ]
 }
 ```
+
+### 3.2 Idea report feature vector
+   - incoming        number of incoming messages\
+   - outgoing        number of outgoing messages\
+   - bytes           total bytes transfered\
+   - avg_score       average score of the entity\
+   - traffic_ratio   traffic ratio between sent and received\
+   - packets         total packets sent\
+   - conn_cnt        number of communication between unqiue server and this entity\
+   - conf_lvl        confidence level of this entity being a spam\
+
 ## 4.0 How it works
 ### 4.1 Basics
 The detector creates a database of entities which are created from flow records
@@ -116,19 +123,19 @@ own source ip (SRC_IP) address. The detector keeps track of the entity history
 and other features that are used for its score evaluation ([see entity data model](#data-model))
 which will determine whether the entity is a legit mail server or a spammer.
 ### 4.2 Score evaluation
-The evaluation begins with creating a score for communication of the entity acc-
-ording to the best current practices and RFC of Mail communication e.g.
+The evaluation begins with creating a score for communication of the entity
+according to the best current practices and RFC of Mail communication e.g.
 RFC [821](https://tools.ietf.org/html/rfc821), [1034](https://tools.ietf.org/html/rfc1034), [1035](https://tools.ietf.org/html/rfc1035) and mostly [2025](https://tools.ietf.org/html/rfc2505).
 
 #### 4.2.1 Average score
 ```
 [Note that this only applies to flow with smtp header ]
 ```
-Average score is evaluated from communication score of each flow with SMTP head-
-ers. Where for each flow is starting with the smtp status codes (e.g SC_SPAM,
+Average score is evaluated from communication score of each flow with SMTP headers.
+Where for each flow is starting with the smtp status codes (e.g SC_SPAM,
 SMTP_SC_551 etc.) and each suspicious code is penalized. Next it looks if there
-are present email address for SMTP_FIRST_RECIPIENT and SMTP_FIRST_SENDER contin-
-ued with the TCP SYN flags validity check.
+are present email address for SMTP_FIRST_RECIPIENT and SMTP_FIRST_SENDER continued
+with the TCP SYN flags validity check.
 ##### SMTP Status codes
 ###### SMTP_SC 5XX
 It is a permanent error causing transfer termination and return of the mail to\
@@ -150,7 +157,7 @@ the sender.This would be the right return of refusing a spam messege.
 >Although, this would be used in perfected world where spammers follows the
 >smtp rules.
 
-### SMTP_SC 4XX
+###### SMTP_SC 4XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
@@ -160,7 +167,7 @@ reply to any command if the service knows it must shut down]|||
 |451|Requested action aborted: local error in processing|||
 |452|Requested action not taken: insufficient system storage|||
 
-### SMTP_SC 2XX
+###### SMTP_SC 2XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
@@ -172,7 +179,7 @@ particular non-standard command; this reply is useful only to the human user]
 |250|Requested mail action okay, completed|||
 |251|User not local; will forward to <forward-path>|||
 
-## Email configuration
+##### Email configuration
 
 It's a bad practise to not fill a sender or receiver address, therefore it should
 be checked whether sender and receiver address are filled. Also there should be
@@ -184,13 +191,14 @@ checked if there is a server name.
 |SMTP_FIRST_RECIPIENT|Address from first RCPT command|||
 |SMTP_DOMAIN|Domain of the server||
 
-#### 4.2.2 Confidence level
+### 4.3 Confidence level
 The confidence level evaluation happens for each entity every time t (given by
 the parameter --interval) For each entity in the database and determines whether
 the entity is a spammer or not. It uses the average score which is described
 hereupon. Following with the ratio of sent and received messages. This is done
 via the frequency analysis. Considering that the spammers will have more outgoing
 communication instead of the incoming.
+
 ```
   incoming smtp traffic    +-----------+ outgoing smtp traffic
 -------------------------->| SMTP      |-------------------------->
@@ -199,9 +207,8 @@ communication instead of the incoming.
                            |           |
 -------------------------->|           |-------------------------->
                            +-----------+
-```
-### 4.2 MALICIOUS SPAM SERVER
-```
+
+
   incoming smtp traffic    +-----------+ outgoing smtp traffic
                            | SPAM      |-------------------------->
                            | BOT       |-------------------------->
@@ -220,16 +227,15 @@ constant that is computed with the CDF function (TODO dynamically adjust
 the ratio threshold). Then it creates an unique list which is basically
 a connection count value.
 
-The evaluated score is than adjusted with non-linear function so the score resp-
-onds with thepercentage value. The function is described hereunder.
+The evaluated score is than adjusted with non-linear function so the score responds
+with the percentage value. The function is described hereunder.
 ```
                                       1
                                   ----------
                   conf_lvl(x) :=  e^-x/2 + 1
 ```
-        where x is the entity score.
-        Which will result to 99% confidence level at 10 pts and approximately 0%
-        at -5 pts.
+Which will result to 99% confidence level at 10 points and approximately 0%
+at -5 points, where x is the entity score.
 
 ## 5.0 Data model
 ```
@@ -271,11 +277,15 @@ onds with thepercentage value. The function is described hereunder.
 
 ```
 ## 6.0 Authors
-Ladislav Macoun - Initial work <ladislavmacoun@gmail.com>
-Tomas Cejka - Project leader <cejkat@cesnet.cz>
-Vaclav Bartos - Project consultant <bartos@cesnet.cz>
+Ladislav Macoun - Initial work <ladislavmacoun@gmail.com>\
+Tomas Cejka - Project leader <cejkat@cesnet.cz>\
+Vaclav Bartos - Project consultant <bartos@cesnet.cz>\
 
-## 7.0 License
+### 6.1 Contribution and coding style
+This module uses PEP 8 coding style
+
+## 7.0 License and acknowledgments
+### 7.1 License
 ```
 COPYRIGHT AND PERMISSION NOTICE
 
@@ -309,5 +319,5 @@ whether in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 ```
-## 7.0 Acknowledgments
+### 7.2 Acknowledgments
 This was supported by the CTU grant No. SGS17/212/OHK3/3T/18 funded by internal grant of CTU of Prague.
