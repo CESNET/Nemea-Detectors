@@ -22,8 +22,9 @@ header extension and create a clusters of them.
 
 ## 2.0 Installation and requirements
 ### 2.1 Prerequisites
-This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).
-Additional requirements are:\
+This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).\
+
+Additional requirements are:
   - [python3](https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz)
   - [Nemea-Framework](https://github.com/CESNET/Nemea-Framework)
 
@@ -31,10 +32,12 @@ Additional requirements are:\
 [See installation of Nemea system.](https://github.com/CESNET/Nemea#installation)
 
 ### 2.3 How to use
-Name:\
-   +python3 smtp_daemon.py\
+SYNOPSIS:
+```
+   python3 smtp_daemon.py [args] -i [trap ifc in,trap ifc in,trap ifc out]
+```
 
-OPTIONS:\
+OPTIONS:
 ```
    -i [t, T, u, b, f] : [interface]
       Specifies the input interface for the detector. The detector uses two input interfaces.
@@ -237,7 +240,7 @@ with the percentage value. The function is described hereunder.
 Which will result to 99% confidence level at 10 points and approximately 0%
 at -5 points, where x is the entity score.
 
-## 5.0 Data model
+##<a name=data-model><\a> 5.0 Data model
 ```
 +--------------------------------+                   +------------------------------+
 |    SMTP_Flow (SMTP Header)     |                   |        SMTP_ENTITY           |
@@ -279,7 +282,7 @@ at -5 points, where x is the entity score.
 ## 6.0 Authors
 Ladislav Macoun - Initial work <ladislavmacoun@gmail.com>\
 Tomas Cejka - Project leader <cejkat@cesnet.cz>\
-Vaclav Bartos - Project consultant <bartos@cesnet.cz>\
+Vaclav Bartos - Project consultant <bartos@cesnet.cz>
 
 ### 6.1 Contribution and coding style
 This module uses PEP 8 coding style
