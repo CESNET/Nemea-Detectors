@@ -109,14 +109,14 @@ python3 smtp_daemon.py -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_
 ```
 
 ### 3.2 Idea report feature vector
-   - incoming        number of incoming messages\
-   - outgoing        number of outgoing messages\
-   - bytes           total bytes transfered\
-   - avg_score       average score of the entity\
-   - traffic_ratio   traffic ratio between sent and received\
-   - packets         total packets sent\
-   - conn_cnt        number of communication between unqiue server and this entity\
-   - conf_lvl        confidence level of this entity being a spam\
+   - incoming        number of incoming messages
+   - outgoing        number of outgoing messages
+   - bytes           total bytes transfered
+   - avg_score       average score of the entity
+   - traffic_ratio   traffic ratio between sent and received
+   - packets         total packets sent
+   - conn_cnt        number of communication between unqiue server and this entity
+   - conf_lvl        confidence level of this entity being a spam
 
 ## 4.0 How it works
 ### 4.1 Basics
