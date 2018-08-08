@@ -78,9 +78,9 @@ UR_FIELDS(
   time TIME_FIRST,    //Timestamp of the first packet of a flow
   time TIME_LAST,     //Timestamp of the last packet of a flow
   // HTTP
-  string HTTP_HOST,
-  string HTTP_REFERER,
-  string HTTP_URL,
+  string HTTP_REQUEST_HOST,
+  string HTTP_REQUEST_REFERER,
+  string HTTP_REQUEST_URL,
   // detection
   uint64 BLACKLIST,   //ID of blacklist which contains recieved URL
 )
@@ -208,18 +208,18 @@ int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, 
 {
     string host, host_url;
 
-    if (ur_get_var_len(in, record, F_HTTP_HOST) == 0) {
+    if (ur_get_var_len(in, record, F_HTTP_REQUEST_HOST) == 0) {
         return URL_CLEAR;
     }
 
-    host = string(ur_get_ptr(in, record, F_HTTP_HOST), ur_get_var_len(in, record, F_HTTP_HOST));
+    host = string(ur_get_ptr(in, record, F_HTTP_REQUEST_HOST), ur_get_var_len(in, record, F_HTTP_REQUEST_HOST));
 
     // erase WWW prefix
     if (host.find(WWW_PREFIX) == 0) {
         host.erase(0, strlen(WWW_PREFIX));
     }
 
-    host_url = host + string(ur_get_ptr(in, record, F_HTTP_URL), ur_get_var_len(in, record, F_HTTP_URL));
+    host_url = host + string(ur_get_ptr(in, record, F_HTTP_REQUEST_URL), ur_get_var_len(in, record, F_HTTP_REQUEST_URL));
 
     // Strip / (slash) from URL if it is last character
     while (host_url[host_url.length() - 1] == '/') {
@@ -267,8 +267,8 @@ int main (int argc, char** argv)
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted URLs
-    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL", NULL);
-    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_HOST,HTTP_REFERER,HTTP_URL,BLACKLIST", NULL);
+    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", NULL);
+    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,BLACKLIST", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;
