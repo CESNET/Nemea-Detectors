@@ -1,3 +1,6 @@
+2018-08-08 (Filip Šuster): urlblacklistfilter: Fix incompatible UR fields (#27)
+2018-08-02 (Tomas Cejka): rpm: add python3-requests dependency because of blacklist downloader
+
 2018-08-01 (Filip Šuster): blacklistfilter: new implementation of IP/URL blacklist filters and downloader (#23)
 2018-07-19 (Tomas Cejka): python modules: enable basic help
 2018-05-08 (Ulrik Haugen): Remove unused global variable in haddrscan_aggregator.

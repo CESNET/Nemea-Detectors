@@ -1,3 +1,9 @@
+2018-08-08 nemea-detectors-1.4.1
+	* urlblacklistfilter:
+		Fixed incompatible UniRec template in urlblacklistfilter.
+	* rpm:
+		Updated python dependencies for blacklist downloader
+
 2018-08-01 nemea-detectors-1.4.0
 	* blacklistfilter:
 		Add module blacklistfilter (replaced an old version).
