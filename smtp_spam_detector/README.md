@@ -164,8 +164,7 @@ the sender.This would be the right return of refusing a spam messege.
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
-|421|<domain> Service not available, closing transmission channel [This may be a
-reply to any command if the service knows it must shut down]|||
+|421|<domain> Service not available, closing transmission channel [This may be a reply to any command if the service knows it must shut down]|||
 |450|Requested mail action not taken: mailbox unavailable [E.g., mailbox busy]|||
 |451|Requested action aborted: local error in processing|||
 |452|Requested action not taken: insufficient system storage|||
@@ -175,8 +174,7 @@ reply to any command if the service knows it must shut down]|||
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
 |211|System status, or system help reply|||
-|214|Help message [Information on how to use the receiver or the meaning of a
-particular non-standard command; this reply is useful only to the human user]
+|214|Help message [Information on how to use the receiver or the meaning of a particular non-standard command; this reply is useful only to the human user]
 |220|<domain> Service ready|||
 |221|<domain> Service closing transmission channel|||
 |250|Requested mail action okay, completed|||
