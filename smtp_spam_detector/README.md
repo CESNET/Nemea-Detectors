@@ -22,7 +22,7 @@ header extension and create a clusters of them.
 
 ## 2.0 Installation and requirements
 ### 2.1 Prerequisites
-This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).\
+This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).
 
 Additional requirements are:
   - [python3](https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz)
@@ -142,9 +142,7 @@ according to the best current practices and RFC of Mail communication e.g.
 RFC [821](https://tools.ietf.org/html/rfc821), [1034](https://tools.ietf.org/html/rfc1034), [1035](https://tools.ietf.org/html/rfc1035) and mostly [2025](https://tools.ietf.org/html/rfc2505).
 
 #### 4.2.1 Average score
-```
-[Note that this only applies to flow with smtp header ]
-```
+(Note that this only applies to flow with smtp header)
 Average score is evaluated from communication score of each flow with SMTP headers.
 Where for each flow is starting with the smtp status codes (e.g SC_SPAM,
 SMTP_SC_551 etc.) and each suspicious code is penalized. Next it looks if there
