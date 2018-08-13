@@ -40,28 +40,39 @@ SYNOPSIS:
 OPTIONS:
 ```
    -i [t, T, u, b, f] : [interface]
-      Specifies the input interface for the detector. The detector uses two input interfaces.
-      First for basic flow without smtp header, second one for flows with smtp header extension.
-      And third for outpur interface where the output of the dector will be send in json format.
+      Specifies the input interface for the detector. The detector uses two
+      input interfaces. First for basic flow without smtp header, second one
+      for flows with smtp header extension. And third for outpur interface
+      where the output of the dector will be send in json format.
 
    -t, --interval time
-      Defines the probing interval of the entity database. Default value is set to 300 seconds.
+      Defines the probing interval of the entity database. Default value is set
+      to 300 seconds.
+
+   -c, --clean time
+      Defines interval for cleaning entity database. If not set the database is
+      dropped at the end of the probing cycle.
 
    -L, --log /path/to/logging/file
       Defines the path for the logger. Default path is "/var/log/smtp_spam_detector.log".
 
   --debug [True/False]
-      Set the verbose level of the logger to debug while True (For developers). Default value is false.
+      Set the verbose level of the logger to debug while True (For developers).
+      Default value is false.
 ```
 ### 2.4 Examples
-Run probing every hour with debug output.
+Run probing every hour with debug output and custom logging path.
 ```
-python3 smtp_daemon.py --debug True --interval 3600 --log /data/smtp_detector/smtp_spam_detector.log -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
+python3 smtp_daemon.py --debug True --interval 3600 --clean 43200 --log /data/smtp_detector/smtp_spam_detector.log -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
 ```
 Or with default values:
 ```
 python3 smtp_daemon.py -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
 ```
+which will start detector with probing interval of 300 seconds with cleaning at\
+the end and without debug verbose level. Taking input data from the unix socket
+flow_data_source for the basic flows and smtp_data_souce for flows with smtp headers,
+sending output idea messages in json format to smtp_detector_out unix socket.
 
 ## 3.0 Output and feature vector in idea reports
 ### 3.1 Idea report example

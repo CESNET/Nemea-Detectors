@@ -62,6 +62,8 @@ parser.add_argument('-L', '--log', default="/var/log/smtp_spam_detector.log",
                     help="--log [path] Specifies path for logger. Default path is set to /var/log/smtp_spam_detector.log")
 parser.add_argument('--debug', default=False, help="--debug [True/False] Set debug level to show debug output.")
 parser.add_argument('-t', '--interval', default=300, help="--interval [integer] Set probing interval to evaluate parameters for each entity in database. Default value = 300")
+parser.add_argument('-c', '--clean', default=0, help="--clean [integer] Set different time for cleaning instead of cleaning at the end of probing cycle.")
+
 
 try:
     args = parser.parse_args()
@@ -79,7 +81,7 @@ import g
 g.PATH_DEBUG_LOG = args.log
 g.debug_level = args.debug
 g.PROBE_INTERVAL = int(args.interval)
-
+g.CLEAN_INTERVAL = int(args.clean)
 LOGFORMAT = "%(asctime)-15s,%(threadName)s,%(name)s,[%(levelname)s] %(message)s"
 LOGDATEFORMAT = "%Y-%m-%dT%H:%M:%S"
 logging.basicConfig(level=logging.INFO, format=LOGFORMAT, datefmt=LOGDATEFORMAT)

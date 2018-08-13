@@ -107,28 +107,33 @@ class SMTP_ENTITY:
         return hash(self.id)
 
     def __str__(self):
-        return ("SMTP_ENTITY[{0}]\n"
-                "\tpackets sent:{1}\n"
-                "\tbytes sent:{2}\n"
-                "\tconnection count:{3}\n"
-                "\tconfidence level:{4}\n"
-                "\tsent smtp messages:{5}\n"
-                "\tsent basic messages:{6}\n"
-                "\ttotal received:{7}\n"
-                "\ttotal sent:{8}\n".format(self.id, self.packets, self.bytes,
-                                            self.conn_cnt, self.conf_lvl,
-                                            len(self.smtp_pool), len(self.basic_pool),
-                                            self.incoming, self.outgoing)
-                )
+        with self.__lock:
+            return ("SMTP_ENTITY[{0}]\n"
+                    "\tpackets sent:{1}\n"
+                    "\tbytes sent:{2}\n"
+                    "\tconnection count:{3}\n"
+                    "\tconfidence level:{4}\n"
+                    "\tsent smtp messages:{5}\n"
+                    "\tsent basic messages:{6}\n"
+                    "\ttotal received:{7}\n"
+                    "\ttotal sent:{8}\n".format(self.id, self.packets, self.bytes,
+                                                self.conn_cnt, self.conf_lvl,
+                                                len(self.smtp_pool), len(self.basic_pool),
+                                                self.incoming, self.outgoing)
+                    )
 
     def __repr__(self):
-        return ("{0}:{1}:{2}:{3}:{4}:{5}:{6}:{7}:{8}".format(self.id,
-            self.packets, self.bytes, self.conn_cnt, self.conf_lvl,
-            len(self.smtp_pool), len(self.basic_pool),self.incoming, self.outgoing)
-        )
+        with self.__lock:
+            return ("{0}:{1}:{2}:{3}:{4}:{5}:{6}:{7}:{8}:{9}:{10}:{11}".format(self.id,
+                    self.time_start, self.time_end, self.time_window,
+                    self.incoming, self.outgoing, len(self.smtp_pool), len(self.basic_pool),
+                    self.bytes, self.packets, self.avg_score, self.conf_lvl)
+                   )
 
     def update_avg_score(self, score):
-        self.avg_score += score / len(self.sent_history)
+        with self.__lock:
+            self.avg_score += score / len(self.sent_history)
+        return None
 
     # Updates time_end parameter of this entity
     def update_time(self, flow):
@@ -270,11 +275,11 @@ class SMTP_ENTITY:
         """
         Getter for a list of all unique email addresses used by this entity
         """
-        log.debug("{}".format(self))
+        #log.debug("{}".format(self))
         addrs = set()
         for host in self.smtp_pool:
             addrs.add(str(host.SMTP_FIRST_SENDER))
-            log.debug("Added addr to report {}".format(str(host.SMTP_FIRST_SENDER)))
+            #log.debug("Added addr to report {}".format(str(host.SMTP_FIRST_SENDER)))
         return list(addrs)
 
     def get_hostnames(self):

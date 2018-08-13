@@ -56,7 +56,11 @@ import report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 import g
+
 detection_log = logging.getLogger('smtp_spam.detection')
+
+class DetectionErrorException(Exception):
+    pass
 
 class SpamDetection(Thread):
     def __init__(self, trap, name="detector"):
@@ -136,11 +140,14 @@ class SpamDetection(Thread):
             ip = ("IP4", entity.id)
         else:
             ip = ("IP6", entity.id)
-        idea = {}
 
+        idea = {}
         first_senders =  list(entity.get_emails())
         hosts = list(entity.get_hostnames())
         feature_vector = [ '%.4f' % feature for feature in entity.fv ]
+
+        if (len(entity.tags) == 0):
+            raise DetectionErrorException
 
         if (len(first_senders) > 5):
             first_senders = first_senders[:5]
@@ -195,19 +202,14 @@ class SpamDetection(Thread):
         self.t_detect  = self.t_cflow
         potentialspammers = set()
         detection_log.info("Started probing entity database")
-        debug_cnt = 0
         with self.data_lock:
             for entity in self.data:
-                debug_cnt += 1
-                if (debug_cnt%1000 == 0):
-                    detection_log.debug("Probed {0} entities".format(debug_cnt))
                 score = self.data[entity].is_spam()
+                detection_log.debug("Evaluated entity:{!r}".format(self.data[entity]))
+
                 if (score > 0.9):
                     potentialspammers.add(self.data[entity])
-                    #if (score > 0.9):
-                    #    self.blacklist.add(self.data[entity])
-                #elif (score < 0.5):
-                #        self.whitelist.add(self.data[entity])
+
         ps = len(potentialspammers)
         dl = len(self.data)
         try:
@@ -217,13 +219,19 @@ class SpamDetection(Thread):
         detection_log.info("Found {0} potential spammers in {1} [{2:.5%}]".format(ps, dl, float(part)))
         self.send_reports([ self.create_report(entity) for entity in potentialspammers ])
         detection_log.info("Analysis run done!")
-        self.clear()
+
+        if (g.CLEAN_INTERVAL == 0):
+            self.clear()
+
         return None
 
     def clear(self):
         """
         Do clean up here, get rid off old data
         """
+        if self.t_clean + g.CLEAN_INTERVAL >= self.t_cflow:
+            return None
+
         data_len  = len(self.data)
         records_len = 0
         self.data.clear()
@@ -250,8 +258,8 @@ class SpamDetection(Thread):
                 workers.append(worker)
                 self.t_detect  = self.t_cflow
 
-            #if self.t_clean + g.CLEAN_INTERVAL < self.t_cflow and self.is_init:
-            #    self.clear()
+                if (g.CLEAN_INTERVAL != 0):
+                    self.clear()
 
             if len(workers) > g.MAX_WORKERS:
                 for worker in workers:
