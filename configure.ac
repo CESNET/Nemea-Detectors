@@ -123,6 +123,9 @@ AC_CONFIG_FILES([Makefile
                  haddrscan_detector/Makefile
                  miner_detector/Makefile
                  sip_bf_detector/Makefile
+                 smtp_spam_detector/Makefile
+                 smtp_spam_detector/smtp_spam_detector
+                 smtp_spam_detector/smtp_spam_detector_files/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
                  vportscan_detector/Makefile
