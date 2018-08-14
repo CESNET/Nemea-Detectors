@@ -213,13 +213,14 @@ class SMTP_ENTITY:
         Goes through various features of the entity and determines whether
         the entity is a spammer or not. First it computes the ratio of sent
         and received messages. Firstly it gets an average score of the entity
-        flows, the score is based on BCP and RFC filter that evaluate whether
-        the communication is legit or not, also the  communication protocol is
-        used to distinguish a legit server from a spam machine..
+        flows, the score is based on Best Current Practices (BCP) and RFC
+        filter that evaluate whether the communication is legit or not, also
+        the communication protocol is used to distinguish a legit server from
+        a spam machine.
         Then it looks at the communication ratio which is then compared with
-        constant that is computed with the CDF function (TODO dynamically adjust
-        the ratio threshold). Then it creates an unique list which is basically
-        a connection count value.
+        constant that is computed with the Cumulative Distribution Function
+        (CDF) function (TODO dynamically adjust the ratio threshold). Then it
+        creates an unique list which is basically a connection count value.
 
         The evaluation happens in set_conf() function where the score is
         adjusted with non-linear function so the score responds with the
