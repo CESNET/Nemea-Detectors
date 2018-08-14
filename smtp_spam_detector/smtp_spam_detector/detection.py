@@ -52,9 +52,9 @@ import time
 import datetime
 import logging
 import json
-import report2idea
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+import report2idea
 import g
 
 detection_log = logging.getLogger('smtp_spam.detection')
