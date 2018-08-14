@@ -102,7 +102,7 @@ class SMTP_Flow(Flow):
     def get_score(self):
         score = 0
         if int(self.SMTP_STAT_CODE_FLAGS) & int(SC_SPAM) > 0:
-            rep += 5
+            score += 5
 
         if not self.SMTP_FIRST_SENDER:
             score += 1
