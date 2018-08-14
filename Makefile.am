@@ -9,6 +9,7 @@ SUBDIRS=amplification_detection \
 	haddrscan_detector \
 	miner_detector \
 	sip_bf_detector \
+	smtp_spam_detector \
 	tunnel_detection \
 	voip_fraud_detection \
 	vportscan_detector
