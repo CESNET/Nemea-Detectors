@@ -164,7 +164,7 @@ def data_handling(detector, q):
         try:
             flow = q.get()
             if flow is None:
-                sys.stderr.write("data_handling: Error with recieving flows.\n")
+                sys.stderr.write("data_handling: Receiving flows failed.\n")
                 break
             detector.add_entity(flow)
             q.task_done()
@@ -205,7 +205,7 @@ def main():
     log.info("Daemon: Multi-receiver started.")
     # Start detector
     detector.start()
-    # Wait until the daemon is requested to stop by releasing the lock (by signal hadnler)
+    # Wait until the daemon is requested to stop by releasing the lock (by signal handler)
     g.stop_lock.acquire()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     signal.signal(signal.SIGTERM, signal.SIG_DFL)

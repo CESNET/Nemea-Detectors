@@ -68,11 +68,11 @@ class SpamDetection(Thread):
         # Storage for both flow types
         self.data = dict()
         self.data_lock = RLock()
-        # Blacklisted entites that are probably spammers
+        # Blacklisted entities that are probably spammers
         self.potentialspammers = list()
 
         # TODO create whitelist for known legit servers
-        #self.whitelist = set() #todo creade db for whitelisted and blacklisted addresses
+        #self.whitelist = set() # TODO create db for whitelisted and blacklisted addresses
         #self.blacklist = set()
 
         # Timers and timestamps
@@ -120,7 +120,7 @@ class SpamDetection(Thread):
                     self.data[key] = SMTP_ENTITY(flow)
             except Exception as e:
                 detection_log.error("An error has occurred during entity insertion to database. ({0})".format(e))
-        # Move timeframe according to recieved time from flows
+        # Move timeframe according to received time from flows
         if flow.TIME_LAST.getTimeAsFloat() > self.t_cflow:
                 self.t_cflow = flow.TIME_LAST.getTimeAsFloat()
         return True
@@ -133,7 +133,7 @@ class SpamDetection(Thread):
             entity - SMTP_ENTITY
 
         Returns:
-            Returns an idea message in json format.
+            Returns an idea message in JSON format.
         """
 
         if entity.id.isIPv4():
@@ -191,7 +191,7 @@ class SpamDetection(Thread):
                     self.trap.send(str(report).encode())
                     rep_cnt += 1
                 except Exception as e:
-                    detection_log.error("detection: Could not send json through trap interface. ({0})".format(e))
+                    detection_log.error("detection: Could not send JSON through trap interface. ({0})".format(e))
         detection_log.info("Sent {0} / {1} reports".format(rep_cnt, len(reports)))
         return None
 

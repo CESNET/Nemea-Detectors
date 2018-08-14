@@ -65,7 +65,7 @@ class SMTP_ENTITY:
         # traffic counters
         self.incoming = 0           # counter for incoming messages from others
         self.outgoing = 0           # counter for outgoing messages from this entity
-        # entity parameters (feauture vector)
+        # entity parameters (feature vector)
         self.bytes = 0              # counter for volume of sent data
         self.avg_score = 0.0        # average score of communication rules
         self.traffic_ratio = 0.0    # ratio of incoming/outgoing traffic
