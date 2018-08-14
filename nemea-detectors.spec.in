@@ -82,6 +82,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
-%config(noreplace) %{_sysconfdir}//nemea/cron.d/booterfilter.cron
+%config(noreplace) %{_sysconfdir}/nemea/cron.d/booterfilter.cron
 %{_mandir}/man1/*.1.gz
 
