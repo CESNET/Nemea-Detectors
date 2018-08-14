@@ -1,11 +1,12 @@
 # SMTP Spam Detection
 
 ## 1.0 Abstract
+
 It may have seem that these days, the emails are not as popular as the new modern
-instant messaging apps (IM) or the social networks. However, we still rely on an
+Instant Messaging (IM) apps or the social networks. However, we still rely on an
 old SMTP protocol, which is the standard protocol for sending e-mails from one
 Message Transfer Agent (MTA) to another. The SMTP stands for “Simple Message Transfer
-Protocol”, and it has been used since the early 90’s, when the first RFC (RFC [821](https://tools.ietf.org/html/rfc821))
+Protocol”, and it has been used since the early 90’s, when [RFC 821](https://tools.ietf.org/html/rfc821)
 was created. The creators have made a rock solid protocol which is still used for
 its reliability. Although its simplicity was a trade off for a security. The simplicity
 was abused by the spammers, at that time it was not a big deal as today. With the
@@ -21,29 +22,34 @@ which will finds similarity between these potential spammers using a SMTP flow
 header extension and create a clusters of them.
 
 ## 2.0 Installation and requirements
+
 ### 2.1 Prerequisites
+
 This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).
 
 Additional requirements are:
   - [python3](https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tar.xz)
   - [Nemea-Framework](https://github.com/CESNET/Nemea-Framework)
 
-### 2.2 Installing using Nemea package
-[See installation of Nemea system.](https://github.com/CESNET/Nemea#installation)
+### 2.2 Installing using NEMEA package
+
+[See installation of NEMEA system.](https://nemea.liberouter.org/doc/installation/)
 
 ### 2.3 How to use
+
 SYNOPSIS:
+
 ```
-   python3 smtp_daemon.py [args] -i [trap ifc in,trap ifc in,trap ifc out]
+   python3 smtp_daemon.py [args] -i [IFCSPEC]
 ```
 
 OPTIONS:
+
 ```
-   -i [t, T, u, b, f] : [interface]
-      Specifies the input interface for the detector. The detector uses two
-      input interfaces. First for basic flow without smtp header, second one
-      for flows with smtp header extension. And third for outpur interface
-      where the output of the dector will be send in json format.
+   -i [IFCSPEC]
+      The module has 2 input IFCs (1st: basic flow 2nd: SMTP extended flow records)
+      and 1 output IFC.
+      See https://nemea.liberouter.org/trap-ifcspec/ for help.
 
    -t, --interval time
       Defines the probing interval of the entity database. Default value is set
@@ -58,24 +64,32 @@ OPTIONS:
 
   --debug [True/False]
       Set the verbose level of the logger to debug while True (For developers).
-      Default value is false.
+      Default value is False.
 ```
+
 ### 2.4 Examples
+
 Run probing every hour with debug output and custom logging path.
+
 ```
-python3 smtp_daemon.py --debug True --interval 3600 --clean 43200 --log /data/smtp_detector/smtp_spam_detector.log -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
+/usr/bin/nemea/smtp_spam_detector --debug True --interval 3600 --clean 43200 --log /data/smtp_detector/smtp_spam_detector.log -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
 ```
+
 Or with default values:
+
 ```
-python3 smtp_daemon.py -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
+/usr/bin/nemea/smtp_spam_detector -i u:flow_data_source,u:smtp_data_source,u:smtp_detector_out
 ```
+
 which will start detector with probing interval of 300 seconds with cleaning at\
-the end and without debug verbose level. Taking input data from the unix socket
-flow_data_source for the basic flows and smtp_data_souce for flows with smtp headers,
-sending output idea messages in json format to smtp_detector_out unix socket.
+the end and without debug verbose level. Taking input data from the UNIX socket
+`flow_data_source` for the basic flows and `smtp_data_souce` for flows with SMTP headers,
+sending output idea messages in JSON format to `smtp_detector_out` UNIX socket.
 
 ## 3.0 Output and feature vector in idea reports
+
 ### 3.1 Idea report example
+
 ```
 {
     "Anonymised": false,
@@ -120,74 +134,83 @@ sending output idea messages in json format to smtp_detector_out unix socket.
 ```
 
 ### 3.2 Idea report feature vector
-   - incoming        number of incoming messages
-   - outgoing        number of outgoing messages
-   - bytes           total bytes transfered
-   - avg_score       average score of the entity
-   - traffic_ratio   traffic ratio between sent and received
-   - packets         total packets sent
-   - conn_cnt        number of communication between unqiue server and this entity
-   - conf_lvl        confidence level of this entity being a spam
+
+   - `incoming`        number of incoming messages
+   - `outgoing`        number of outgoing messages
+   - `bytes`           total bytes transferred
+   - `avg_score`       average score of the entity
+   - `traffic_ratio`   traffic ratio between sent and received
+   - `packets`         total packets sent
+   - `conn_cnt`        number of communication between unique server and this entity
+   - `conf_lvl`        confidence level of this entity being a spam
 
 ## 4.0 How it works
+
 ### 4.1 Basics
+
 The detector creates a database of entities which are created from flow records
 from the given input interfaces. Every entity is uniquely identified with its
-own source ip (SRC_IP) address. The detector keeps track of the entity history
+own source IP (`SRC_IP`) address. The detector keeps track of the entity history
 and other features that are used for its score evaluation ([see entity data model](#data-model))
 which will determine whether the entity is a legit mail server or a spammer.
+
 ### 4.2 Score evaluation
+
 The evaluation begins with creating a score for communication of the entity
 according to the best current practices and RFC of Mail communication e.g.
 RFC [821](https://tools.ietf.org/html/rfc821), [1034](https://tools.ietf.org/html/rfc1034), [1035](https://tools.ietf.org/html/rfc1035) and mostly [2025](https://tools.ietf.org/html/rfc2505).
 
 #### 4.2.1 Average score
-(Note that this only applies to flow with smtp header)
+
+(Note that this only applies to flow with SMTP header)
 Average score is evaluated from communication score of each flow with SMTP headers.
-Where for each flow is starting with the smtp status codes (e.g SC_SPAM,
-SMTP_SC_551 etc.) and each suspicious code is penalized. Next it looks if there
-are present email address for SMTP_FIRST_RECIPIENT and SMTP_FIRST_SENDER continued
+Where for each flow is starting with the SMTP status codes (e.g, `SC_SPAM`,
+`SMTP_SC_551`) and each suspicious code is penalized. Next it looks if there
+are present email address for `SMTP_FIRST_RECIPIENT` and `SMTP_FIRST_SENDER` continued
 with the TCP SYN flags validity check.
+
 ##### SMTP Status codes
-###### SMTP_SC 5XX
-It is a permanent error causing transfer termination and return of the mail to\
-the sender.This would be the right return of refusing a spam messege.
+
+###### `SMTP_SC` 5XX
+
+It is a permanent error causing transfer termination and return of the mail to
+the sender. This would be the right return of refusing a spam message.
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
-|500|Syntax error, command unreconcnized |||
+|500|Syntax error, command unrecognized |||
 |501|Syntax error in parameters or arguments |||
-|502|Commmand not implemented |||
+|502|Command not implemented |||
 |503|Bad sequence of commands |||
 |504|Requested action not taken: mailbox unavailable|||
-|550|Requested action not taken: mailbox unavailable\[E.g., mailbox not found, no access]|||
-|551|User not local; please try <forward-path>|||
+|550|Requested action not taken: mailbox unavailable (E.g., mailbox not found, no access)|||
+|551|User not local; please try `<forward-path>`|||
 |552|Requested mail action aborted: exceeded storage allocation|||
-|553|Requested action not taken: mailbox name not allowed\[E.g., mailbox syntax incorrect]|||
+|553|Requested action not taken: mailbox name not allowed (e.g., mailbox syntax incorrect)|||
 |554|Transaction failed |||
 
 >Although, this would be used in perfected world where spammers follows the
->smtp rules.
+>SMTP rules.
 
-###### SMTP_SC 4XX
+###### `SMTP_SC` 4XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
-|421|<domain> Service not available, closing transmission channel [This may be a reply to any command if the service knows it must shut down]|||
+|421|`<domain>` Service not available, closing transmission channel (This may be a reply to any command if the service knows it must shut down)|||
 |450|Requested mail action not taken: mailbox unavailable [E.g., mailbox busy]|||
 |451|Requested action aborted: local error in processing|||
 |452|Requested action not taken: insufficient system storage|||
 
-###### SMTP_SC 2XX
+###### `SMTP_SC` 2XX
 
 |Code | Description | Score | Comment |
 | --- | ----------- | ----- | ------- |
 |211|System status, or system help reply|||
 |214|Help message [Information on how to use the receiver or the meaning of a particular non-standard command; this reply is useful only to the human user]
-|220|<domain> Service ready|||
-|221|<domain> Service closing transmission channel|||
+|220|`<domain>` Service ready|||
+|221|`<domain>` Service closing transmission channel|||
 |250|Requested mail action okay, completed|||
-|251|User not local; will forward to <forward-path>|||
+|251|User not local; will forward to `<forward-path>`|||
 
 ##### Email configuration
 
@@ -197,11 +220,12 @@ checked if there is a server name.
 
 | Attribute | Description | Score | Comment |
 | --------- | ----------- | ----- | ------- |
-|SMTP_FIRST_SENDER|Address from first MAIL command|||
-|SMTP_FIRST_RECIPIENT|Address from first RCPT command|||
-|SMTP_DOMAIN|Domain of the server||
+|`SMTP_FIRST_SENDER`|Address from first MAIL command|||
+|`SMTP_FIRST_RECIPIENT`|Address from first RCPT command|||
+|`SMTP_DOMAIN`|Domain of the server||
 
 ### 4.3 Confidence level
+
 The confidence level evaluation happens for each entity every time t (given by
 the parameter --interval) For each entity in the database and determines whether
 the entity is a spammer or not. It uses the average score which is described
@@ -239,15 +263,18 @@ a connection count value.
 
 The evaluated score is than adjusted with non-linear function so the score responds
 with the percentage value. The function is described hereunder.
+
 ```
                                       1
                                   ----------
                   conf_lvl(x) :=  e^-x/2 + 1
 ```
+
 Which will result to 99% confidence level at 10 points and approximately 0%
 at -5 points, where x is the entity score.
 
-##<a name=data-model><\a> 5.0 Data model
+## <a name=data-model><\a> 5.0 Data model
+
 ```
 +--------------------------------+                   +------------------------------+
 |    SMTP_Flow (SMTP Header)     |                   |        SMTP_ENTITY           |
@@ -286,16 +313,21 @@ at -5 points, where x is the entity score.
 +----------------------+
 
 ```
+
 ## 6.0 Authors
-Ladislav Macoun - Initial work <ladislavmacoun@gmail.com>\
-Tomas Cejka - Project leader <cejkat@cesnet.cz>\
-Vaclav Bartos - Project consultant <bartos@cesnet.cz>
+
+* Ladislav Macoun - Initial work `<ladislavmacoun@gmail.com>`
+* Tomas Cejka - Project leader `<cejkat@cesnet.cz>`
+* Vaclav Bartos - Project consultant `<bartos@cesnet.cz>`
 
 ### 6.1 Contribution and coding style
+
 This module uses PEP 8 coding style
 
 ## 7.0 License and acknowledgments
+
 ### 7.1 License
+
 ```
 COPYRIGHT AND PERMISSION NOTICE
 
@@ -329,5 +361,8 @@ whether in contract, strict liability, or tort (including negligence or
 otherwise) arising in any way out of the use of this software, even if
 advised of the possibility of such damage.
 ```
+
 ### 7.2 Acknowledgments
-This was supported by the CTU grant No. SGS17/212/OHK3/3T/18 funded by internal grant of CTU of Prague.
+
+This work was supported by the internal grant of CTU in Prague No. SGS17/212/OHK3/3T/18.
+
