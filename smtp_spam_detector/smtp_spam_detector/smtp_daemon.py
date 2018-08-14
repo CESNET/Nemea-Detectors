@@ -140,7 +140,7 @@ def fetch_data(trap, rec, interface, queue):
                 flow = Flow(rec)
                 queue.put(flow)
         else:
-            try: #TODO Flow are discarded atm
+            try: #TODO Flow are discarded at the moment
                 flow = SMTP_Flow(rec)
                 if (flow == None):
                     pass
