@@ -44,5 +44,5 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 bindir=@bindir@
 
-python3 $bindir/smtp_spam_detector_files/smtp_daemon.py "$@"
+exec python3 $bindir/smtp_spam_detector_files/smtp_daemon.py "$@"
 
