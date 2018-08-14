@@ -1,3 +1,6 @@
+2018-08-14 (Tomas Cejka): RPM: maintenance, removed useless '/' character
+2018-08-14 (Ladislav): smtp_spam_detector: add new detection module (#25)
+
 2018-08-08 (Filip Šuster): urlblacklistfilter: Fix incompatible UR fields (#27)
 2018-08-02 (Tomas Cejka): rpm: add python3-requests dependency because of blacklist downloader
 

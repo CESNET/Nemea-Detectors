@@ -1,3 +1,9 @@
+2018-08-14 nemea-detectors-1.4.2
+	* RPM:
+		Maintenance in the spec file
+	* smtp_spam_detector:
+		Add module smtp_spam_detector.
+
 2018-08-08 nemea-detectors-1.4.1
 	* urlblacklistfilter:
 		Fixed incompatible UniRec template in urlblacklistfilter.
