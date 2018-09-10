@@ -19,6 +19,9 @@ parser.add_option("-t", "--time", dest="time", type="float",
 
 lock = Lock()
 
+# All ports higher than MINSRCPORT are considered as dynamic/private;
+# therefore, let's put lower ports into IDEA messages.
+MINSRCPORT=30000
 
 class RepeatedTimer(object):
     def __init__(self, interval, function):
@@ -90,60 +93,123 @@ def sendEvents():
 
 
 def storeEvent():
+    """
+    There are following cases for aggregation:
+    1) both SRC_IP and DST_IP are on some blacklist:
+        put every flow together and both IPs are Sources,
+        remember which IP was on which blacklist
+    2) SRC_IP is on some blacklist and DST_IP is not:
+        we can aggregate by SRC_IP and protocol,
+        SRC_IP is Source and DST_IP is Target
+    3) DST_IP is on some blacklist and SRC_IP is not:
+        we can aggregate by DST_IP and protocol,
+        DST_IP is Source and SRC_IP is Target
+    """
+
     global UR_Input
 
+    src = UR_Input.SRC_IP
+    dst = UR_Input.DST_IP
+    srclist = UR_Input.SRC_BLACKLIST
+    dstlist = UR_Input.DST_BLACKLIST
+    oneway = True
+    swapips = False
+
     # Set key (blacklisted address and protocol)
-    if UR_Input.SRC_BLACKLIST:
-        key = (UR_Input.SRC_IP, UR_Input.PROTOCOL)
+    if srclist and dstlist:
+        oneway = False
+        if src < dst:
+            key = (src, dst, UR_Input.PROTOCOL)
+        else:
+            key = (dst, src, UR_Input.PROTOCOL)
+            swapips = True
+    elif srclist:
+        key = (src, UR_Input.PROTOCOL)
+    elif dstlist:
+        key = (dst, UR_Input.PROTOCOL)
     else:
-        key = (UR_Input.DST_IP, UR_Input.PROTOCOL)
+        # no IP is on blacklist - strange, non-working blacklistfilter
+        return
 
     if key in eventList:
         # Update the event
         event = eventList[key]
 
         # Update ports of the source (of trouble) and target IPs
-        source_ports = set(event["source_ports"])
-        targets = set(event["targets"])
-        if UR_Input.SRC_BLACKLIST:
-            source_ports.add(UR_Input.SRC_PORT)
-            targets.add(str(UR_Input.DST_IP))
-        else:
-            source_ports.add(UR_Input.DST_PORT)
-            targets.add(str(UR_Input.SRC_IP))
-        event["source_ports"] = list(source_ports)
-        event["targets"] = list(targets)
+        source_ports = set(event.get("source_ports", []))
+        targets = set(event.get("targets", []))
+        sources = set(event.get("sources", []))
 
-        event["ts_first"] = min(event["ts_first"], float(UR_Input.TIME_FIRST))
-        event["ts_last"] = max(event["ts_last"], float(UR_Input.TIME_LAST))
-
-        if UR_Input.SRC_BLACKLIST:
+        # update IPs
+        if srclist and dstlist:
+            if swapips:
+                event["ipa_bl"] |= dstlist
+                event["ipb_bl"] |= srclist
+            else:
+                event["ipa_bl"] |= srclist
+                event["ipb_bl"] |= dstlist
+        elif srclist:
+            #source_ports.add(UR_Input.SRC_PORT)
+            targets.add(str(dst))
             event["src_sent_bytes"] += UR_Input.BYTES
             event["src_sent_flows"] += UR_Input.COUNT
             event["src_sent_packets"] += UR_Input.PACKETS
-        else:
+            event["blacklist_bmp"] |= UR_Input.SRC_BLACKLIST | UR_Input.DST_BLACKLIST
+        elif dstlist:
+            source_ports.add(UR_Input.DST_PORT)
+            targets.add(str(src))
             event["tgt_sent_bytes"] += UR_Input.BYTES
             event["tgt_sent_flows"] += UR_Input.COUNT
             event["tgt_sent_packets"] += UR_Input.PACKETS
+            event["blacklist_bmp"] |= UR_Input.SRC_BLACKLIST | UR_Input.DST_BLACKLIST
 
+        event["source_ports"] = list(source_ports)
+        event["targets"] = list(targets)
+        event["sources"] = list(sources)
+
+        event["ts_first"] = min(event["ts_first"], float(UR_Input.TIME_FIRST))
+        event["ts_last"] = max(event["ts_last"], float(UR_Input.TIME_LAST))
     else:
         # Insert new event
         event = {
             # Every source/src means source of trouble (the blacklisted address)
-            "source": str(UR_Input.SRC_IP) if UR_Input.SRC_BLACKLIST > 0  else str(UR_Input.DST_IP),
-            "targets": [str(UR_Input.SRC_IP)] if UR_Input.SRC_BLACKLIST == 0 else [str(UR_Input.DST_IP)],
-            "source_ports" : [UR_Input.SRC_PORT] if UR_Input.SRC_BLACKLIST > 0 else [UR_Input.DST_PORT],
             "ts_first": float(UR_Input.TIME_FIRST),
             "ts_last": float(UR_Input.TIME_LAST),
             "protocol": UR_Input.PROTOCOL,
-            "src_sent_bytes" : UR_Input.BYTES if UR_Input.SRC_BLACKLIST else 0,
-            "src_sent_flows" : UR_Input.COUNT if UR_Input.SRC_BLACKLIST else 0,
-            "src_sent_packets" : UR_Input.PACKETS if UR_Input.SRC_BLACKLIST else 0,
-            "tgt_sent_bytes" : UR_Input.BYTES if UR_Input.DST_BLACKLIST else 0,
-            "tgt_sent_flows" : UR_Input.COUNT if UR_Input.DST_BLACKLIST else 0,
-            "tgt_sent_packets" : UR_Input.PACKETS if UR_Input.DST_BLACKLIST else 0,
-            "blacklist_bmp": UR_Input.SRC_BLACKLIST if UR_Input.SRC_BLACKLIST else UR_Input.DST_BLACKLIST
+            "source_ports": [],
+            "src_sent_bytes": UR_Input.BYTES if UR_Input.SRC_BLACKLIST else 0,
+            "src_sent_flows": UR_Input.COUNT if UR_Input.SRC_BLACKLIST else 0,
+            "src_sent_packets": UR_Input.PACKETS if UR_Input.SRC_BLACKLIST else 0,
+            "tgt_sent_bytes": UR_Input.BYTES if UR_Input.DST_BLACKLIST else 0,
+            "tgt_sent_flows": UR_Input.COUNT if UR_Input.DST_BLACKLIST else 0,
+            "tgt_sent_packets": UR_Input.PACKETS if UR_Input.DST_BLACKLIST else 0,
         }
+        if oneway:
+            event["blacklist_bmp"] = UR_Input.SRC_BLACKLIST | UR_Input.DST_BLACKLIST
+            if srclist:
+                event["sources"] = [str(src)]
+                event["targets"] = [str(dst)]
+                #if UR_Input.SRC_PORT <= MINSRCPORT:
+                #    event["source_ports"].add(UR_Input.SRC_PORT)
+            elif dstlist:
+                event["sources"] = [str(dst)]
+                event["targets"] = [str(src)]
+                if UR_Input.DST_PORT <= MINSRCPORT:
+                    event["source_ports"].append(UR_Input.DST_PORT)
+        else:
+            event["sources"] = list(set([str(src), str(dst)]))
+            sp = set()
+            #if UR_Input.SRC_PORT <= MINSRCPORT:
+            #    event["source_ports"].add(UR_Input.SRC_PORT)
+            if UR_Input.DST_PORT <= MINSRCPORT:
+                event["source_ports"].append(UR_Input.DST_PORT)
+            event["source_ports"] = list(sp)
+            if swapips:
+                event["ipa_bl"] = dstlist
+                event["ipb_bl"] = srclist
+            else:
+                event["ipa_bl"] = srclist
+                event["ipb_bl"] = dstlist
 
         eventList[key] = event
 
