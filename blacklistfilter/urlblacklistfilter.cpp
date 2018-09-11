@@ -77,6 +77,9 @@ UR_FIELDS(
   uint16 SRC_PORT,    //Source transport-layer port
   time TIME_FIRST,    //Timestamp of the first packet of a flow
   time TIME_LAST,     //Timestamp of the last packet of a flow
+  uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+  uint32 PACKETS,     //Number of packets in a flow or in an interval
+  uint64 BYTES,       //Number of bytes in a flow or in an interval
   // HTTP
   string HTTP_REQUEST_HOST,
   string HTTP_REQUEST_REFERER,
@@ -267,8 +270,10 @@ int main (int argc, char** argv)
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted URLs
-    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", NULL);
-    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,BLACKLIST", NULL);
+    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,"
+                                           "HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", NULL);
+    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,"
+                                             "HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,BLACKLIST", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;
