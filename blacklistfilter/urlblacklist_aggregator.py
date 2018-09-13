@@ -61,8 +61,8 @@ signal.signal(signal.SIGINT, signal_h)
 
 
 # exact output match of urlblacklistfilter
-urfmt = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BLACKLIST,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT," + \
-        "uint16 SRC_PORT,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL"
+urfmt = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BLACKLIST,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS," + \
+        "uint16 DST_PORT,uint16 SRC_PORT,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL"
 
 UR_Input = pytrap.UnirecTemplate(urfmt)
 
@@ -92,8 +92,8 @@ def sendEvents():
 def storeEvent():
     global UR_Input
 
-    # Set key (Host+URL and destination)
-    key = (UR_Input.HTTP_REQUEST_HOST, UR_Input.HTTP_REQUEST_URL, UR_Input.DST_IP)
+    # Set key (Host+URL, destination and L4 protocol)
+    key = (UR_Input.HTTP_REQUEST_HOST, UR_Input.HTTP_REQUEST_URL, UR_Input.DST_IP, UR_Input.PROTOCOL)
 
     if key in eventList:
         # Update the event
@@ -111,6 +111,10 @@ def storeEvent():
 
         event["blacklist_bmp"] |= UR_Input.BLACKLIST
 
+        event["tgt_sent_bytes"] += UR_Input.BYTES
+        event["tgt_sent_flows"] += 1
+        event["tgt_sent_packets"] += UR_Input.PACKETS
+
     else:
         # Insert new event
         event = {
@@ -122,15 +126,13 @@ def storeEvent():
             "source_ports": [UR_Input.DST_PORT],
             "ts_first": float(UR_Input.TIME_FIRST),
             "ts_last": float(UR_Input.TIME_LAST),
-            # TODO: Add these to filter output
-            # "protocol": UR_Input.PROTOCOL,
-            # "src_sent_bytes" : UR_Input.BYTES if UR_Input.SRC_BLACKLIST else 0,
-            # "src_sent_flows" : UR_Input.COUNT if UR_Input.SRC_BLACKLIST else 0,
-            # "src_sent_packets" : UR_Input.PACKETS if UR_Input.SRC_BLACKLIST else 0,
-            # "tgt_sent_bytes" : UR_Input.BYTES if UR_Input.DST_BLACKLIST else 0,
-            # "tgt_sent_flows" : UR_Input.COUNT if UR_Input.DST_BLACKLIST else 0,
-            # "tgt_sent_packets" : UR_Input.PACKETS if UR_Input.DST_BLACKLIST else 0,
-            "blacklist_bmp": UR_Input.BLACKLIST
+            "protocol": UR_Input.PROTOCOL,
+            # The detected flow is a HTTP request to blacklisted URL, so the communication we can observe is from the client
+            "tgt_sent_bytes" : UR_Input.BYTES,
+            "tgt_sent_flows" : 1,
+            "tgt_sent_packets" : UR_Input.PACKETS,
+            "blacklist_bmp": UR_Input.BLACKLIST,
+            "agg_win_minutes": options.time
         }
 
         eventList[key] = event

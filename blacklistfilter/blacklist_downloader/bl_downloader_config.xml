@@ -79,7 +79,7 @@
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">http://mirror1.malwaredomains.com/files/justdomains</element>
                 <!-- Type of blacklist, only informational value -->
-                <element name="type">Botnet</element>
+                <element name="type">Malware</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">10</element>
             </struct>

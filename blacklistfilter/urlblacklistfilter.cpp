@@ -270,9 +270,9 @@ int main (int argc, char** argv)
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted URLs
-    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,"
+    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,PROTOCOL,"
                                            "HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL", NULL);
-    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,"
+    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,DST_PORT,SRC_PORT,TIME_FIRST,TIME_LAST,BYTES,PACKETS,PROTOCOL,"
                                              "HTTP_REQUEST_HOST,HTTP_REQUEST_REFERER,HTTP_REQUEST_URL,BLACKLIST", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
