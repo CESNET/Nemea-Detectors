@@ -145,9 +145,15 @@ def storeEvent():
             if swapips:
                 event["ipa_bl"] |= dstlist
                 event["ipb_bl"] |= srclist
+                event["ipb_sent_bytes"] += UR_Input.BYTES
+                event["ipb_sent_flows"] += UR_Input.COUNT
+                event["ipb_sent_packets"] += UR_Input.PACKETS
             else:
                 event["ipa_bl"] |= srclist
                 event["ipb_bl"] |= dstlist
+                event["ipa_sent_bytes"] += UR_Input.BYTES
+                event["ipa_sent_flows"] += UR_Input.COUNT
+                event["ipa_sent_packets"] += UR_Input.PACKETS
         elif srclist:
             #source_ports.add(UR_Input.SRC_PORT)
             targets.add(str(dst))
@@ -207,9 +213,21 @@ def storeEvent():
             if swapips:
                 event["ipa_bl"] = dstlist
                 event["ipb_bl"] = srclist
+                event["ipa_sent_bytes"] = 0
+                event["ipa_sent_flows"] = 0
+                event["ipa_sent_packets"] = 0
+                event["ipb_sent_bytes"] = UR_Input.BYTES
+                event["ipb_sent_flows"] = UR_Input.COUNT
+                event["ipb_sent_packets"] = UR_Input.PACKETS
             else:
                 event["ipa_bl"] = srclist
                 event["ipb_bl"] = dstlist
+                event["ipa_sent_bytes"] = UR_Input.BYTES
+                event["ipa_sent_flows"] = UR_Input.COUNT
+                event["ipa_sent_packets"] = UR_Input.PACKETS
+                event["ipb_sent_bytes"] = 0
+                event["ipb_sent_flows"] = 0
+                event["ipb_sent_packets"] = 0
 
         eventList[key] = event
 
