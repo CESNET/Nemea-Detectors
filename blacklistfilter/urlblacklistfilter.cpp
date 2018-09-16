@@ -47,6 +47,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <algorithm>
 #include <stdint.h>
 #include <signal.h>
 #include <unistd.h>
@@ -228,6 +229,8 @@ int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, 
     while (host_url[host_url.length() - 1] == '/') {
         host_url.resize(host_url.length() - 1);
     }
+
+    std::transform(host_url.begin(), host_url.end(), host_url.begin(), ::tolower);
 
     prefix_tree_domain_t *domain = prefix_tree_search(tree, host_url.c_str(), host_url.length());
 
