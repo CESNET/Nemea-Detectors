@@ -117,10 +117,18 @@ def storeEvent():
 
     else:
         # Insert new event
+
+        url = str(UR_Input.HTTP_REQUEST_HOST)
+        only_fqdn = True
+
+        if len(str(UR_Input.HTTP_REQUEST_URL)) > 1:
+            url += str(UR_Input.HTTP_REQUEST_URL)
+            only_fqdn = False
+
         event = {
             # Every source/src means source of trouble (the blacklisted address)
             "source_ip": str(UR_Input.DST_IP),
-            "source_url": str(UR_Input.HTTP_REQUEST_HOST) + str(UR_Input.HTTP_REQUEST_URL),
+            "source_url": url,
             "referer": str(UR_Input.HTTP_REQUEST_REFERER),
             "targets": [str(UR_Input.SRC_IP)],
             "source_ports": [UR_Input.DST_PORT],
@@ -132,7 +140,8 @@ def storeEvent():
             "tgt_sent_flows" : 1,
             "tgt_sent_packets" : UR_Input.PACKETS,
             "blacklist_bmp": UR_Input.BLACKLIST,
-            "agg_win_minutes": options.time
+            "agg_win_minutes": options.time,
+            "is_only_fqdn": only_fqdn
         }
 
         eventList[key] = event
