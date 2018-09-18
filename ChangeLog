@@ -1,3 +1,14 @@
+2018-09-18 nemea-detectors-1.5.0
+	* blacklistfilter:
+		Improve downloader to store history of downloaded blacklists
+	* blacklistfilter:
+		Add urlblacklist_aggregator.py module for aggregation of urlblacklistfilter output
+		Commented out TOR and squidblacklist
+		Change hostname to lowercase before checkling listed domains
+	* smtp_spam_detector:
+		Fix wrapper script for smtp_spam_detector to exec instead of fork.
+		Fix flow.py in smtp_spam_detector.
+
 2018-08-14 nemea-detectors-1.4.2
 	* RPM:
 		Maintenance in the spec file
