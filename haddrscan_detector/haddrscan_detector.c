@@ -446,7 +446,7 @@ int main(int argc, char **argv)
             goto cleanup;
          }
 
-         printf("==== PRUNING THE TREE ====\noriginal number of values:  %lu\n", bpt_item_cnt(b_plus_tree));
+         printf("==== PRUNING THE TREE ====\noriginal number of values: %lu\n", bpt_item_cnt(b_plus_tree));
 
          // Get first value from the list. Function returns 1 if there
          // are more values, 0 if there is no value
@@ -473,7 +473,7 @@ int main(int argc, char **argv)
                has_next = bpt_list_item_next(b_plus_tree, b_item);
             }
          }
-         printf("\nnumber of values after pruning:  %lu\n", bpt_item_cnt(b_plus_tree));
+         printf("\nnumber of values after pruning: %lu\n", bpt_item_cnt(b_plus_tree));
          time(&ts_last_pruning);
       }
    }
