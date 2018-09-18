@@ -241,7 +241,7 @@ def commit_to_repo(bl_type):
         logger.info('Commited changes to GIT')
 
     except subprocess.CalledProcessError as e:
-        logger.error("Couldnt add/commit to git repo: {}".format(e))
+        logger.error("Could not add/commit to git repo: {}".format(e))
 
 
 def run(s):
