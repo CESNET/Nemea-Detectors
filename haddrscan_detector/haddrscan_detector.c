@@ -117,7 +117,8 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 
-// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+// Function to handle SIGTERM and SIGINT signals (used to stop the
+// module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 typedef struct item_s item_t;
@@ -186,10 +187,12 @@ int insert_addr(void *p, uint32_t int_dst_ip)
    }
 
    if (info->addr_cnt < STATIC_ADDR_ARR_SIZE) {
-      info->static_addrs[info->addr_cnt] = int_dst_ip; // Insert the new address into first free index
+      // Insert the new address into first free index
+      info->static_addrs[info->addr_cnt] = int_dst_ip;
    } else {
       if (info->addr_cnt == STATIC_ADDR_ARR_SIZE) {
-         // Inserting first address to dynamic array - allocate the array
+         // Inserting first address to dynamic array - allocate the
+         // array
          info->dynamic_addrs = (uint32_t *) calloc((param.numaddrs_threshold - STATIC_ADDR_ARR_SIZE), sizeof(uint32_t));
       }
       info->dynamic_addrs[info->addr_cnt - STATIC_ADDR_ARR_SIZE] = int_dst_ip;
@@ -199,7 +202,7 @@ int insert_addr(void *p, uint32_t int_dst_ip)
    time(&info->ts_modified); // Update the time of table modification
 
    if (info->addr_cnt >= param.numaddrs_threshold) {
-      return 1; // Signalize alert after reaching numaddrs_threshold scanned DST_IP
+      return 1; // Signal alert after reaching numaddrs_threshold scanned DST_IP
    }
 
    return 0;
@@ -254,8 +257,8 @@ int main(int argc, char **argv)
     */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    /*
-    * Let TRAP library parse program arguments, extract its parameters and
-    * initialize module interfaces
+    * Let TRAP library parse program arguments, extract its parameters
+    * and initialize module interfaces
     */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
@@ -345,7 +348,9 @@ int main(int argc, char **argv)
          if (recv_data_size <= 1) {
             break; // End of data (used for testing purposes)
          } else {
-            fprintf(stderr, "ERROR: data with wrong size received (expected size: >= %hu, received size: %hu)\n", ur_rec_fixlen_size(in_tmplt), recv_data_size);
+            fprintf(stderr,
+                    "ERROR: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                    ur_rec_fixlen_size(in_tmplt), recv_data_size);
             fflush(stderr);
             goto cleanup;
          }
@@ -367,7 +372,8 @@ int main(int argc, char **argv)
       int_src_ip = ip_get_v4_as_int(src_ip); // also key to B+ tree
       int_dst_ip = ip_get_v4_as_int(dst_ip);
 
-      // Concatenate ip_v4 SRC_IP and DST_PORT to uint64 (used as a key value in B+ tree)
+      // Concatenate ip_v4 SRC_IP and DST_PORT to uint64 (used as a
+      // key value in B+ tree)
       key_to_tree = (uint64_t) int_src_ip;
       key_to_tree = key_to_tree << 16;
       key_to_tree |= dst_port;
@@ -375,7 +381,8 @@ int main(int argc, char **argv)
       if (packets == MAX_PACKETS && (protocol == TCP_PROTOCOL && (tcp_flags == TCP_FLAGS_SYN))) {
          new_item = bpt_search_or_insert(b_plus_tree, &key_to_tree);
          if (new_item == NULL) {
-            fprintf(stderr, "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
+            fprintf(stderr,
+                    "ERROR: could not allocate port-scan info structure in leaf node of the B+ tree.\n");
             fflush(stderr);
             goto cleanup;
          }
@@ -416,7 +423,8 @@ int main(int argc, char **argv)
             }
             // delete item from tree no matter how successful was trap_send()
             bpt_item_del(b_plus_tree, &key_to_tree);
-            // break on error, do nothing on timeout in order to perform tree pruning
+            // break on error, do nothing on timeout in order to
+            // perform tree pruning
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret_val, (void) 0, break);
          }
 
@@ -440,18 +448,21 @@ int main(int argc, char **argv)
 
          printf("==== PRUNING THE TREE ====\noriginal number of values:  %lu\n", bpt_item_cnt(b_plus_tree));
 
-         // Get first value from the list. Function returns 1 if there are more values, 0 if there is no value
+         // Get first value from the list. Function returns 1 if there
+         // are more values, 0 if there is no value
          has_next = bpt_list_start(b_plus_tree, b_item);
          while (has_next == TRUE) {
             // Get the value from B+ item structure
             value_pt = b_item->value;
             if (value_pt == NULL) {
-               //there is problem in the tree. This case should be unreachable
+               //there is problem in the tree. This case should be
+               //unreachable
                fprintf(stderr, "ERROR during iteration through the tree. Value is NULL\n");
                goto cleanup;
             }
 
-            // Delete the item if it wasn't modified in over idle_threshold
+            // Delete the item if it wasn't modified in over
+            // idle_threshold
             if ((ts_cur_time - value_pt->ts_modified) > param.idle_threshold) {
                // free dynamic array of addresses
                if (value_pt->dynamic_addrs != NULL) {
