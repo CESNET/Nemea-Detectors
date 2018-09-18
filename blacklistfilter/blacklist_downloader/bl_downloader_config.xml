@@ -57,14 +57,15 @@
                 <element name="download_interval">10</element>
             </struct>
 
-            <struct>
+            <!-- We don't want to report TOR nodes at this time -->
+            <!-- <struct>
                 <element name="id">5</element>
                 <element name="type">Tor</element>
                 <element name="method">web</element>
                 <element name="source">https://check.torproject.org/exit-addresses</element>
                 <element name="name">TOR exit nodes</element>
                 <element name="download_interval">10</element>
-            </struct>
+            </struct> -->
         </array>
 
         <array type="URL">
@@ -79,7 +80,7 @@
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">http://mirror1.malwaredomains.com/files/justdomains</element>
                 <!-- Type of blacklist, only informational value -->
-                <element name="type">Botnet</element>
+                <element name="type">Malware</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">10</element>
             </struct>
@@ -102,14 +103,15 @@
                 <element name="download_interval">10</element>
             </struct>
 
-            <struct>
+            <!-- Probably too many false-positives -->
+            <!-- <struct>
                 <element name="id">4</element>
                 <element name="method">web</element>
                 <element name="source">https://www.squidblacklist.org/downloads/dg-malicious.acl</element>
                 <element name="name">SquidBlacklist</element>
                 <element name="type">Malware</element>
                 <element name="download_interval">10</element>
-            </struct>
+            </struct> -->
 
             <struct>
                 <element name="id">5</element>
@@ -126,6 +128,15 @@
                 <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
                 <element name="name">Booters</element>
                 <element name="type">Booters</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">7</element>
+                <element name="method">web</element>
+                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=compromised</element>
+                <element name="name">Zeus Tracker</element>
+                <element name="type">Botnet</element>
                 <element name="download_interval">10</element>
             </struct>
 
