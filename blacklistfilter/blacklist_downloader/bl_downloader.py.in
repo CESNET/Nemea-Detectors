@@ -26,7 +26,7 @@ ip_regex = re.compile('\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5
 # Just a simple regex to eliminate commentaries
 url_regex = re.compile('^[^#/].*\..+')
 
-# A heterogenic list with all types of blacklists
+# A heterogeneous list with all types of blacklists
 blacklists = []
 
 # Git repo used for versioning blacklists
@@ -42,7 +42,7 @@ def split_ip(ip):
     try:
         tuple_ip = tuple(int(part) for part in ip.split('.'))
     except ValueError as e:
-        logger.warning('Couldnt sort this IP addr: {}'.format(ip))
+        logger.warning('Could not sort this IP addr: {}'.format(ip))
         logger.warning(e)
         tuple_ip = (0, 0, 0, 0)
 
@@ -101,11 +101,11 @@ class Blacklist:
                     logger.info('Updated {}: {}'.format(type(self).__name__, self.name))
 
             else:
-                logger.warning('Couldnt fetch blacklist: {}\n'
+                logger.warning('Could not fetch blacklist: {}\n'
                                'Status code: {}'.format(self.source, req.status_code))
 
         except requests.RequestException as e:
-            logger.warning('Couldnt fetch blacklist: {}\n'
+            logger.warning('Could not fetch blacklist: {}\n'
                            '{}'.format(self.source, e))
 
         return updated
@@ -181,7 +181,7 @@ def create_detector_file(bl_type: Blacklist):
         with open(bl_type.detector_file, 'w') as f:
             f.write('\n'.join(all_entities))
     except OSError as e:
-        logger.critical('Failed to create detector file. {}. Exitting downloader'.format(e))
+        logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
         exit(1)
 
 
@@ -214,31 +214,30 @@ def parse_config():
 
 def prepare_repo():
     if not os.path.isdir(repo_path + '/.git'):
-        ret = subprocess.run(['git', 'init', '{}'.format(repo_path)], check=True, stdout=subprocess.PIPE)
+        ret = subprocess.check_output(['git', 'init', '{}'.format(repo_path)])
+
         os.makedirs(repo_path + '/ip', exist_ok=True)
         os.makedirs(repo_path + '/url', exist_ok=True)
 
-        subprocess.run(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                        'config', 'user.name', 'bl_downloader'],
-                       check=True)
+        subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
+                               'config', 'user.name', 'bl_downloader'])
 
-        subprocess.run(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                        'config', 'user.email', 'bl_downloader'],
-                       check=True)
+        subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
+                               'config', 'user.email', 'bl_downloader'], universal_newlines=True)
 
-        logger.info(ret.stdout.decode().strip('\n'))
+        logger.info(ret)
 
 
 def commit_to_repo(bl_type):
     try:
-        subprocess.run(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                        '--work-tree', '{}'.format(repo_path), 'add', '-A'], check=True)
+        subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
+                               '--work-tree', '{}'.format(repo_path), 'add', '-A'],)
 
-        subprocess.run(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                        'commit', '--allow-empty', '-m', '{}s updated'.format(bl_type.__name__)],
-                       check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
+                              'commit', '--allow-empty', '-m', '{}s updated'.format(bl_type.__name__)],
+                              stdout=subprocess.DEVNULL)
 
-        logger.info('Commited changes to GIT')
+        logger.info('Committed changes to GIT')
 
     except subprocess.CalledProcessError as e:
         logger.error("Could not add/commit to git repo: {}".format(e))
@@ -273,7 +272,7 @@ if __name__ == '__main__':
                         default=None)
 
     parser.add_argument('--log-level',
-                        help="Logging level value (from standard Logging library, 10 = DEBUG, 20 = INFO etc.)",
+                        help="Logging level value (from standard Logging library, 10=DEBUG, 20=INFO etc.)",
                         type=int,
                         default=20)
 
