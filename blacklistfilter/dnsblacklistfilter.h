@@ -1,10 +1,11 @@
 /**
- * \file dnsblacklistfilter.h
- * \brief Main module for DNSBlackListDetector -- header file.
+ * \file dnsblacklistfilter.cpp
+ * \brief  Module for detecting blacklisted DNS/FQDN, header file.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
+
 
 /*
  * Copyright (C) 2013,2014 CESNET

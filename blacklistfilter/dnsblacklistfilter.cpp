@@ -2,8 +2,8 @@
  * \file dnsblacklistfilter.cpp
  * \brief Main module for DNSBlackListDetector.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
 
 /*
@@ -88,31 +88,32 @@ UR_FIELDS(
     uint8 TOS,              //IP type of service
     uint8 TTL,              //IP time to live
     //DNS
+    uint16 DNS_ID,
+    uint16 DNS_ANSWERS,
     string DNS_NAME,
     uint16 DNS_QTYPE,
     uint16 DNS_RLENGTH,
-    bytes DNS_RDATA,
-    uint8 DNS_DO,       //DNSSEC OK bit
+    uint8  DNS_RCODE,
+    bytes  DNS_RDATA,
+    uint8  DNS_DO,       //DNSSEC OK bit
     //Blacklist items
-    uint8 DNS_BLACKLIST,    //ID of blacklist which contains suspicious domain name
-    uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
-    uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flo
-    uint8 BLACKLIST_TYPE,   //Type of the used blacklist (spam, C&C, malware, etc.)
+    uint64  DNS_BLACKLIST,   //ID of blacklist which contains suspicious domain name
 )
 
+trap_module_info_t *module_info = NULL;
 
 using namespace std;
 
-trap_module_info_t module_info = {
-    (char *)"DNS blacklist detection module", // Module name
-    // Module description
-    (char *)"Interfaces:\n"
-    "   Inputs: 2 (UniRec record)\n"
-    "   Outputs: 2 (UniRec record)\n",
-    2, // Number of input interfaces
-    2, // Number of output interfaces
-};
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("DNSBlacklistFilter", "Module receives the UniRec record and checks if the domain name (FQDN) " \
+    "is present in any DNS/FQDN blacklist that are available. " \
+    "If the FQDN is present in any blacklist the record is changed by adding an index of the blacklist. " \
+    "To show, edit, add or remove public blacklist information, use XML configuration file for " \
+    "blacklist downloader (bl_downloader_config.xml).", 1, 1)
 
+#define MODULE_PARAMS(PARAM) \
+  PARAM('u', "", "Specify user configuration file for DNSBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/dnsdetect_config.xml]", required_argument, "string") \
+  PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
 
 int stop = 0;
 int update = 0;
