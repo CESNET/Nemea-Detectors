@@ -53,19 +53,17 @@
 #include <cstdlib>
 #include <dirent.h>
 #include <vector>
+#include <dnsdetect/patternstrings.h>
+#include <libtrap/trap.h>
 #include <nemea-common/nemea-common.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <libtrap/trap.h>
-#include "fields.h"
-#ifdef __cplusplus
-}
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
-#include "dnsblacklistfilter.h"
+#include "fields.h"
 #include "blacklist_watcher.h"
+#include "dnsblacklistfilter.h"
 
 #ifdef DEBUG
 #define DBG(x) fprintf x;
