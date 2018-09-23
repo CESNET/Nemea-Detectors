@@ -101,7 +101,7 @@ using namespace std;
     "blacklist downloader (bl_downloader_config.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/urlblacklistfilter/urldetect_config.xml]", required_argument, "string") \
+  PARAM('u', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/urldetect_config.xml]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
 
 int stop = 0; // global variable for stopping the program
