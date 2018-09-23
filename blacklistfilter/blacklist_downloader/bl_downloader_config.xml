@@ -10,6 +10,7 @@
     <struct name="detector_files">
         <element name="IP">/tmp/blacklistfilter/ip.blist</element>
         <element name="URL">/tmp/blacklistfilter/url.blist</element>
+        <element name="DNS">/tmp/blacklistfilter/dns.blist</element>
     </struct>
 
     <!-- Array with information about public blacklist -->
@@ -68,7 +69,7 @@
             </struct> -->
         </array>
 
-        <array type="URL">
+        <array type="URL/DNS">
             <struct>
                 <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
                      BEWARE: Could be number from interval <0, 63> -->
@@ -83,6 +84,8 @@
                 <element name="type">Malware</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">10</element>
+                <!--What detectors should use this blacklist-->
+                <element name="detectors">URL,DNS</element>
             </struct>
 
             <!-- TODO: handle CSV-->
@@ -92,6 +95,7 @@
                 <!--<element name="source">http://data.phishtank.com/data/online-valid.csv</element>-->
                 <!--<element name="name">PhishTank</element>-->
                 <!--<element name="type">Phishing</element>-->
+                <!--<element name="detectors">URL,DNS</element>-->
             <!--</struct>-->
 
             <struct>
@@ -101,6 +105,7 @@
                 <element name="name">OpenPhish</element>
                 <element name="type">Phishing</element>
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
 
             <!-- Probably too many false-positives -->
@@ -111,6 +116,7 @@
                 <element name="name">SquidBlacklist</element>
                 <element name="type">Malware</element>
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct> -->
 
             <struct>
@@ -120,6 +126,7 @@
                 <element name="name">DisconnectMe</element>
                 <element name="type">Malware</element>
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
 
             <struct>
@@ -129,6 +136,7 @@
                 <element name="name">Booters</element>
                 <element name="type">Booters</element>
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
 
             <struct>
@@ -138,6 +146,7 @@
                 <element name="name">Zeus Tracker</element>
                 <element name="type">Botnet</element>
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
 
         </array>

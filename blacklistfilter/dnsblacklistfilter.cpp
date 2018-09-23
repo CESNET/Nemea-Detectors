@@ -99,7 +99,7 @@ UR_FIELDS(
     bytes  DNS_RDATA,
     uint8  DNS_DO,       //DNSSEC OK bit
     //Blacklist items
-    uint64  BLACKLIST,   //ID of blacklist which contains suspicious domain name
+    uint64 BLACKLIST,   //ID of blacklist which contains suspicious domain name
 )
 
 trap_module_info_t *module_info = NULL;
@@ -268,17 +268,12 @@ int main (int argc, char** argv)
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted DNS/FQDN
-    ur_input = ur_create_input_template(0, "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,"
-                                           "time TIME_LAST,uint32 DNS_RR_TTL,uint32 PACKETS,"
-                                           "uint16 DNS_ANSWERS,uint16 DNS_CLASS,uint16 DNS_ID,uint16 DNS_PSIZE,uint16 DNS_QTYPE,"
-                                           "uint16 DNS_RLENGTH,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 DNS_DO,"
-                                           "uint8 DNS_RCODE,uint8 PROTOCOL,string DNS_NAME,bytes DNS_RDATA", NULL);
+    ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,BYTES,TIME_FIRST,TIME_LAST,PACKETS,PROTOCOL,DST_PORT,SRC_PORT,"
+                                           "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO", NULL);
 
-    ur_input = ur_create_input_template(0, "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,"
-                                           "time TIME_LAST,uint32 DNS_RR_TTL,uint32 PACKETS,"
-                                           "uint16 DNS_ANSWERS,uint16 DNS_CLASS,uint16 DNS_ID,uint16 DNS_PSIZE,uint16 DNS_QTYPE,"
-                                           "uint16 DNS_RLENGTH,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 DNS_DO,"
-                                           "uint8 DNS_RCODE,uint8 PROTOCOL,string DNS_NAME,bytes DNS_RDATA, uint64 BLACKLIST", NULL);
+
+    ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,BYTES,TIME_FIRST,TIME_LAST,PACKETS,PROTOCOL,DST_PORT,SRC_PORT,"
+                                            "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO,BLACKLIST", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;
