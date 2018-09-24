@@ -19,6 +19,9 @@ parser.add_option("-t", "--time", dest="time", type="float",
 
 lock = Lock()
 
+# Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
+MAX_DST_IPS_PER_EVENT = 1000
+
 
 class RepeatedTimer(object):
     def __init__(self, interval, function):
@@ -80,6 +83,8 @@ def sendEvents():
     for key in eventList:
         event = eventList[key]
         try:
+            if len(event['targets']) > MAX_DST_IPS_PER_EVENT:
+                event['targets'] = event['targets'][:MAX_DST_IPS_PER_EVENT]
             # Send data to output interface
             trap.send(bytearray(json.dumps(event), "utf-8"))
         except pytrap.Terminated:
