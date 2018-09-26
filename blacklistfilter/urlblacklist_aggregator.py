@@ -83,10 +83,18 @@ def sendEvents():
     for key in eventList:
         event = eventList[key]
         try:
-            if len(event['targets']) > MAX_DST_IPS_PER_EVENT:
-                event['targets'] = event['targets'][:MAX_DST_IPS_PER_EVENT]
-            # Send data to output interface
-            trap.send(bytearray(json.dumps(event), "utf-8"))
+            # To avoid too long messages, split the event if there are more 1000 IPs
+            if len(event["targets"]) > MAX_DST_IPS_PER_EVENT:
+                targets = event["targets"]
+                while targets:
+                    event_copy = event.copy()
+                    event_copy["targets"] = targets[:MAX_DST_IPS_PER_EVENT]
+                    targets = targets[MAX_DST_IPS_PER_EVENT:]
+                    trap.send(bytearray(json.dumps(event_copy), "utf-8"))
+
+            else:
+                # Send data to output interface
+                trap.send(bytearray(json.dumps(event), "utf-8"))
         except pytrap.Terminated:
             print("Terminated TRAP.")
             break
