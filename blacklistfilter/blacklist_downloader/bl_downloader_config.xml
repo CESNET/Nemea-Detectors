@@ -66,6 +66,33 @@
                 <element name="name">TOR exit nodes</element>
                 <element name="download_interval">10</element>
             </struct> -->
+
+            <struct>
+                <element name="id">6</element>
+                <element name="type">Mining</element>
+                <element name="method">web</element>
+                <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
+                <element name="name">Andoniaf Miners</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">7</element>
+                <element name="type">Mining</element>
+                <element name="method">web</element>
+                <element name="source">https://isc.sans.edu/api/threatlist/miner?text</element>
+                <element name="name">SANS Miners</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">8</element>
+                <element name="type">Mining</element>
+                <element name="method">web</element>
+                <element name="source">https://cryptoioc.ch/downloads/csv</element>
+                <element name="name">Cryptoioc Miners</element>
+                <element name="download_interval">10</element>
+            </struct>
         </array>
 
         <array type="URL">

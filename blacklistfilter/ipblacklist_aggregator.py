@@ -23,6 +23,10 @@ lock = Lock()
 # therefore, let's put lower ports into IDEA messages.
 MINSRCPORT=30000
 
+# Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
+MAX_DST_IPS_PER_EVENT = 1000
+
+
 class RepeatedTimer(object):
     def __init__(self, interval, function):
         self._timer     = None
@@ -83,8 +87,18 @@ def sendEvents():
     for key in eventList:
         event = eventList[key]
         try:
-            # Send data to output interface
-            trap.send(bytearray(json.dumps(event), "utf-8"))
+            # To avoid too long messages, split the event if there are more 1000 IPs
+            if len(event["targets"]) > MAX_DST_IPS_PER_EVENT:
+                targets = event["targets"]
+                while targets:
+                    event_copy = event.copy()
+                    event_copy["targets"] = targets[:MAX_DST_IPS_PER_EVENT]
+                    targets = targets[MAX_DST_IPS_PER_EVENT:]
+                    trap.send(bytearray(json.dumps(event_copy), "utf-8"))
+
+            else:
+                # Send data to output interface
+                trap.send(bytearray(json.dumps(event), "utf-8"))
         except pytrap.Terminated:
             print("Terminated TRAP.")
             break
