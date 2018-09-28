@@ -1,8 +1,8 @@
+#!/usr/bin/env python3
 
 from time import time
+from adaptive_filter_controller import logger, blfilter_interfaces
 
-IP_IF = 0
-URL_IF = 1
 
 # Thrown by Scenario subclass' init function when the detection flow doesn't
 # fit the scenario
@@ -34,11 +34,10 @@ class BotnetDetection(Scenario):
         super().__init__(detection_flow)
         self.key = (detection_flow.SRC_IP, detection_flow.DST_IP)
 
-        if detection_iface != IP_IF:
+        if detection_iface != blfilter_interfaces['IP']:
             raise ScenarioDoesNotFit
 
         # TODO: if type == C&C
-
 
     def generate_entities(self):
         # Suffix for the adaptive filter (blacklist_idx, scenario_id)
@@ -55,4 +54,8 @@ class BotnetDetection(Scenario):
 class DNSDetection(Scenario):
     def __init__(self, detection_iface, detection_flow):
         super().__init__(detection_flow)
-        raise ScenarioDoesNotFit
+
+        if detection_iface != blfilter_interfaces['DNS']:
+            raise ScenarioDoesNotFit
+
+        logger.info('DNS scenario details: {}', self.detection_flow)
