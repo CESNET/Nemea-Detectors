@@ -83,6 +83,28 @@ class Blacklist:
         with open(bl_file, 'w') as f:
             f.write('\n'.join(self.entities))
 
+    @classmethod
+    def process_entities(cls):
+        all_entities = dict()
+
+        # Enrich the entities with blacklist index (bitfield way), merge the indexes if the same entity
+        # found on more blacklists
+        for bl in blacklists:
+            if isinstance(bl, cls):
+                bl_idx = 2 ** (int(bl.id) - 1)
+                for entity in bl.entities:
+                    if entity in all_entities.keys() and all_entities[entity] & bl_idx == 0:
+                        all_entities[entity] = all_entities[entity] + bl_idx
+                    else:
+                        all_entities[entity] = bl_idx
+
+        # Create sorted list of entities and their cumulative indexes
+        all_entities = sorted(['{entity}{sep}{idx}'.format(entity=entity, idx=idx, sep=cls.separator)
+                               for entity, idx in all_entities.items()],
+                              key=cls.comparator)
+
+        return all_entities
+
     def download_and_update(self):
         updated = False
 
@@ -118,6 +140,7 @@ class Blacklist:
 class IPBlacklist(Blacklist):
     separator = ','
     comparator = split_ip
+    ip_detector_file = None
 
     def __init__(self, bl):
         super().__init__(bl)
@@ -133,10 +156,28 @@ class IPBlacklist(Blacklist):
 
         return extracted
 
+    @classmethod
+    def create_detector_file(cls):
+        entities = cls.process_entities()
+
+        os.makedirs(os.path.dirname(cls.ip_detector_file), exist_ok=True)
+
+        try:
+            with open(cls.ip_detector_file, 'w') as f:
+                f.write('\n'.join(entities))
+
+            logger.info('New IP detector file created: {}'.format(cls.ip_detector_file))
+
+        except OSError as e:
+                logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
+                exit(1)
+
 
 class URLandDNSBlacklist(Blacklist):
     separator = '\\'
     comparator = str
+    url_detector_file = None
+    dns_detector_file = None
 
     def __init__(self, bl):
         super().__init__(bl)
@@ -160,48 +201,24 @@ class URLandDNSBlacklist(Blacklist):
 
         return extracted
 
+    @classmethod
+    def create_detector_file(cls):
+        entities = cls.process_entities()
 
-#TODO: PROBABLY MAKE A CLASS METHOD
-def create_detector_file(bl_type: Blacklist):
-    all_entities = dict()
+        os.makedirs(os.path.dirname(cls.url_detector_file), exist_ok=True)
+        os.makedirs(os.path.dirname(cls.dns_detector_file), exist_ok=True)
 
-    # Enrich the entities with blacklist index (bitfield way), merge the indexes if the same entity
-    # found on more blacklists
-    for bl in blacklists:
-        if isinstance(bl, bl_type):
-            bl_idx = 2 ** (int(bl.id) - 1)
-            for entity in bl.entities:
-                if entity in all_entities.keys() and all_entities[entity] & bl_idx == 0:
-                    all_entities[entity] = all_entities[entity] + bl_idx
-                else:
-                    all_entities[entity] = bl_idx
-
-    # Create sorted list of entities and their cumulative indexes
-    all_entities = sorted(['{entity}{sep}{idx}'.format(entity=entity, idx=idx, sep=bl_type.separator)
-                          for entity, idx in all_entities.items()],
-                          key=bl_type.comparator)
-
-    if bl_type == URLandDNSBlacklist:
-        os.makedirs(os.path.dirname(bl_type.url_detector_file), exist_ok=True)
-        os.makedirs(os.path.dirname(bl_type.dns_detector_file), exist_ok=True)
-
-        extracted_fqdns = [entity for entity in all_entities if
-                           re.search(fqdn_regex, entity[:entity.find(bl_type.separator)])]
+        extracted_fqdns = [entity for entity in entities if
+                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])]
 
         try:
-            with open(bl_type.url_detector_file, 'w') as url_f, open(bl_type.dns_detector_file, 'w') as dns_f:
-                url_f.write('\n'.join(all_entities))
+            with open(cls.url_detector_file, 'w') as url_f, open(cls.dns_detector_file, 'w') as dns_f:
+                url_f.write('\n'.join(entities))
                 dns_f.write('\n'.join(extracted_fqdns))
-        except OSError as e:
-            logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
-            exit(1)
 
-    elif bl_type == IPBlacklist:
-        os.makedirs(os.path.dirname(bl_type.ip_detector_file), exist_ok=True)
+            logger.info('New URL detector file created: {}'.format(cls.url_detector_file))
+            logger.info('New DNS detector file created: {}'.format(cls.dns_detector_file))
 
-        try:
-            with open(bl_type.ip_detector_file, 'w') as f:
-                f.write('\n'.join(all_entities))
         except OSError as e:
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
             exit(1)
@@ -219,9 +236,9 @@ def parse_config():
     global g_conf
     g_conf = GeneralConfig(general_config)
 
-    Blacklist.ip_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'IP'][0]
-    Blacklist.url_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'URL'][0]
-    Blacklist.dns_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'DNS'][0]
+    IPBlacklist.ip_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'IP'][0]
+    URLandDNSBlacklist.url_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'URL'][0]
+    URLandDNSBlacklist.dns_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'DNS'][0]
 
     for bl_type in bl_type_array:
         type = bl_type.attrib['type']
@@ -245,7 +262,7 @@ def prepare_repo():
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
                                'config', 'user.email', 'bl_downloader'], universal_newlines=True)
 
-        logger.info(ret)
+        logger.info(ret.decode().strip())
 
 
 def commit_to_repo(bl_type):
@@ -278,8 +295,7 @@ def run(s):
         if updated:
             if repo_path:
                 commit_to_repo(bl_type)
-            create_detector_file(bl_type)
-            logger.info('New {} created: {}'.format(bl_type.__name__, "TODO"))
+            bl_type.create_detector_file()
         else:
             logger.debug('Check for {} updates done, no changes'.format(bl_type.__name__))
 
