@@ -1,9 +1,0 @@
-Blacklist Downloader README
-
-   Blacklist Downloader is a python script used to download public blacklists. 
-   It periodically fetches IP/URL blacklists, preprocesses them and stores them in files which can be loaded by the detectors.
-   The files for the detectors are specified in a configuration file (bld_userConfigFile.xml), along with the
-   list of blacklists to download
-
-Usage:
-   Just run the script without arguments

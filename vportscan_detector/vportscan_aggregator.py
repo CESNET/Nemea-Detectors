@@ -57,9 +57,9 @@ import pytrap
 MAX_DST_IPS_PER_EVENT = 1000
 
 from optparse import OptionParser
-parser = OptionParser(add_help_option=False)
+parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
-      help="TRAP IFC specifier", metavar="IFCSPEC")
+      help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-t", "--time", dest="time", type="float",
       help="Length of time interval in which alerts are aggregated.", metavar="MINUTES", default=5)
 parser.add_option("--noblockscans", dest="blockscans", action="store_false", default=True,

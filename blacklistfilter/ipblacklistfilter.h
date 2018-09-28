@@ -1,13 +1,14 @@
 /**
- * \file dnsblacklistfilter.h
- * \brief Main module for DNSBlackListDetector -- header file.
+ * \file ipblacklistfilter.h
+ * \brief  Module for detecting blacklisted IP addresses, header file.
+ * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013, 2014, 2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -43,82 +44,97 @@
  *
  */
 
-#ifndef DNSBLACKLISTFILTER_H
-#define DNSBLACKLISTFILTER_H
+#ifndef BLACKLISTFILTER_H
+#define BLACKLISTFILTER_H
+
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <unirec/unirec.h>
-#include <nemea-common.h>
-
 /**
- * Size of the table with DNS blacklist
+ * Mutex for synchronization.
  */
-#define DNS_TABLE_SIZE 1000000
+pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
- * Size of the table with IP blacklist
+ * Return value for matching function when address is blacklisted.
  */
-#define IP_TABLE_SIZE 1000000
+#define BLACKLISTED 1
 
 /**
- * Number of working threads.
+ * Return value for matching function  when the address is clear.
  */
-#define THR_COUNT 2
+#define ADDR_CLEAR 0
 
 /**
- * Structure of item with update for DNS table.
+ * Return value when file with blacklisted addresses cannot be loaded
+ * due the I/O error, wrong format or anything else.
  */
-typedef struct {
-    /*@{*/
-    char* dns; /**< URL to update */
-    uint8_t bl; /**< Source blacklist of the URL */
-    /*@}*/
-} upd_item_t;
+#define BLIST_FILE_ERROR 1
 
 /**
- * Macro for destroying all datastructures in DNSBlacklist filter.
+ * Return value if everything goes well. :-)
  */
-#define DESTROY_STRUCTURES(ip_table, dns_table, templ_dns_in, templ_dns_out, templ_ip_in, templ_ip_out)\
-    {\
-        ur_free_template(templ_dns_in);\
-        ur_free_template(templ_dns_out);\
-        ur_free_template(templ_ip_in);\
-        ur_free_template(templ_ip_out);\
-        ht_destroy_v2(ip_table);\
-        ht_destroy(dns_table);\
-    }   
+#define ALL_OK 0
 
 /**
- * Parameter structure for DNS checking thread.
+ * Return value for binary search when the item is not found.
  */
-typedef struct {
-    /*@{*/
-    ur_template_t *input; /**< Template of input record */
-    ur_template_t *output; /**< Template of detection record */
-    void *detection; /**< Detection record (will dynamically change) */
-    const char* upd_path; /**< Path to blacklists source folder */
-    cc_hash_table_t *dns_table; /**< Table with blacklisted domain names */
-    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
-    /*@}*/
-} dns_params_t;
+#define IP_NOT_FOUND -1
 
 /**
- * Parameter structure for IP checking thread.
+ * Default prefix length for ip address without prefix specification (IPv4)
+ */
+#define PREFIX_V4_DEFAULT 32
+
+/**
+ * Default prefix length for ip address without prefix specification (IPv6)
+ */
+#define PREFIX_V6_DEFAULT 128
+
+/**
+ * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
     /*@{*/
-    ur_template_t *input; /**< Template of input record */
-    ur_template_t *output; /**< Template of detection record */
-    void *detection; /**< Detection record (will dynamically change) */
-    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
+    ip_addr_t ip; /**< Blacklisted IP or prefix */
+    uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
+    uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     /*@}*/
-} ip_params_t;
+} ip_bl_entry_t;
+
+
+/**
+ * Configuration structure.
+ */
+typedef struct __attribute__ ((__packed__)) {
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
+
+/**
+ * @typedef vector<ip_bl_entry_t> black_list_t;
+ * Vector of blacklisted prefixes.
+ */
+typedef std::vector<ip_bl_entry_t> black_list_t;
+
+/**
+ * @typedef uint32_t ipv4_mask_map_t[33];
+ * Array of IPv4 netmasks.
+ */
+typedef uint32_t ipv4_mask_map_t[33];
+
+/**
+ * @typedef uint64_t ipv6_mask_map_t[129][2];
+ * Array of IPv6 netmasks.
+ */
+typedef uint64_t ipv6_mask_map_t[129][2];
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* DNSBLACKLISTFILTER_H */
+#endif /* BLACKLISTFILTER_H */

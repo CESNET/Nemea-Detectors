@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-detectors], [1.3.9], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.5.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -36,6 +36,12 @@ AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
 
+blacklistfilterdir=${sysconfdir}/blacklistfilter
+BLACKLISTFILTERDIR=$(eval echo $(eval echo ${blacklistfilterdir}))
+AC_SUBST(BLACKLISTFILTERDIR)
+AC_SUBST(blacklistfilterdir)
+AC_DEFINE_DIR(BLACKLISTFILTERDIR, [blacklistfilterdir], [Path to configuration files of blacklistfilter])
+
 # Checks for programs.
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
@@ -49,6 +55,7 @@ AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+AC_CHECK_PROG(DEBUILD, debuild, debuild, [""])
 AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
     CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
@@ -107,12 +114,12 @@ fi
 RPM_RELEASE=1
 AC_SUBST(RPM_RELEASE)
 AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
+AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
-                 blacklistfilter/ipdetect/Makefile
-		 blacklistfilter/urldetect/Makefile
+                 blacklistfilter/blacklist_downloader/bl_downloader.py
                  booterfilter/Makefile
                  brute_force_detector/Makefile
                  ddos_detector/Makefile
@@ -122,6 +129,9 @@ AC_CONFIG_FILES([Makefile
                  haddrscan_detector/Makefile
                  miner_detector/Makefile
                  sip_bf_detector/Makefile
+                 smtp_spam_detector/Makefile
+                 smtp_spam_detector/smtp_spam_detector
+                 smtp_spam_detector/smtp_spam_detector_files/Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
                  vportscan_detector/Makefile

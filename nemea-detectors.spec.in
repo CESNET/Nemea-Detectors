@@ -1,3 +1,13 @@
+%if 0%{?el6}
+%global python3_pkgversion 34
+%endif
+
+%if x%{?python3_pkgversion} == x
+%global python3_pkgversion 3
+%endif
+
+
+
 Summary: Package with detection modules of the Nemea system
 Name: nemea-detectors
 Version: @PACKAGE_VERSION@
@@ -9,8 +19,20 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: nemea-framework wget libidn openssl
-BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel libidn-devel openssl-devel
+Requires: nemea-framework
+Requires: wget
+Requires: libidn
+Requires: openssl
+Requires: python-requests
+Requires: python%{python3_pkgversion}-requests
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: doxygen
+BuildRequires: pkgconfig
+BuildRequires: nemea-framework-devel
+BuildRequires: libidn-devel
+BuildRequires: openssl-devel
 Provides: nemea-detectors
 
 %description
@@ -34,8 +56,19 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/ddos_detector
 %{_bindir}/nemea/dnstunnel_detection
 %{_bindir}/nemea/haddrscan_detector
+%{_bindir}/nemea/bl_downloader.py
 %{_bindir}/nemea/ipblacklistfilter
+%{_bindir}/nemea/ipblacklist_aggregator.py
+%{_bindir}/nemea/urlblacklistfilter
+%{_bindir}/nemea/urlblacklist_aggregator.py
 %{_bindir}/nemea/sip_bf_detector
+%{_bindir}/nemea/smtp_spam_detector
+%{_bindir}/nemea/smtp_spam_detector_files/detection.py
+%{_bindir}/nemea/smtp_spam_detector_files/flow.py
+%{_bindir}/nemea/smtp_spam_detector_files/g.py
+%{_bindir}/nemea/smtp_spam_detector_files/__init__.py
+%{_bindir}/nemea/smtp_spam_detector_files/smtp_daemon.py
+%{_bindir}/nemea/smtp_spam_detector_files/smtp_entity.py
 %{_bindir}/nemea/vportscan_aggregator.py
 %{_bindir}/nemea/brute_force_detector
 %{_bindir}/nemea/haddrscan_aggregator.py
@@ -47,9 +80,10 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf
 %config(noreplace) %{_sysconfdir}/nemea/miner_detector/userConfigFile.xml
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf.default
-%config(noreplace) %{_sysconfdir}/nemea/ipblacklistfilter/bld_userConfigFile.xml
-%config(noreplace) %{_sysconfdir}/nemea/ipblacklistfilter/userConfigFile.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/bl_downloader_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
-%config(noreplace) %{_sysconfdir}//nemea/cron.d/booterfilter.cron
+%config(noreplace) %{_sysconfdir}/nemea/cron.d/booterfilter.cron
 %{_mandir}/man1/*.1.gz
 

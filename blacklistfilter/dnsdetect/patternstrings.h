@@ -43,28 +43,28 @@
  */
 
 
-#ifndef _URLBLACKLISTFILTER_PATTERN_H
-#define _URLBLACKLISTFILTER_PATTERN_H
+#ifndef _DNSBLACKLISTFILTER_PATTERN_H
+#define _DNSBLACKLISTFILTER_PATTERN_H
 
 /**
  * String specifying pattern structure with default values.
  */
 static char const *MODULE_CONFIG_PATTERN_STRING =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<configuration>"
-        "<struct name=\"main struct\">"
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+"<configuration>"
+    "<struct name=\"main struct\">"
         "<element type=\"required\">"
-        "<name>blacklist_file</name>"
-        "<type size=\"256\">string</type>"
-        "<default-value>-</default-value>"
+            "<name>blacklist_file</name>"
+            "<type size=\"256\">string</type>"
+            "<default-value>-</default-value>"
         "</element>"
         "<element type=\"optional\">"
-        "<name>watch_blacklists</name>"
-        "<type size=\"8\">string</type>"
-        "<default-value>true</default-value>"
+            "<name>watch_blacklists</name>"
+            "<type size=\"8\">string</type>"
+            "<default-value>true</default-value>"
         "</element>"
-        "</struct>"
-        "</configuration>";
+    "</struct>"
+"</configuration>";
 
 
 #endif

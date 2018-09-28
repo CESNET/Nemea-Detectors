@@ -49,16 +49,13 @@ from threading import Lock
 import sys, os
 import pytrap
 
-# how many minutes to wait?
-minutes = 5
-
 # Global list of events
 eventList = {}
 
 from optparse import OptionParser
-parser = OptionParser(add_help_option=False)
+parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
-      help="TRAP IFC specifier", metavar="IFCSPEC")
+      help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-t", "--time", dest="time",
       help="wait MINUTES before sending aggregated alerts", metavar="MINUTES", default=5)
 
@@ -195,7 +192,7 @@ while True:
       else:
          # Keep overwriting the last four destination addresses
          UR_Output.DST_IP12 = UR_Input.DST_IP0
-         UR_Output.DST_IP12 = UR_Input.DST_IP1
+         UR_Output.DST_IP13 = UR_Input.DST_IP1
          UR_Output.DST_IP14 = UR_Input.DST_IP2
          UR_Output.DST_IP15 = UR_Input.DST_IP3
       UR_Output.ADDR_CNT += UR_Input.ADDR_CNT

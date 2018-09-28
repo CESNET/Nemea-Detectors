@@ -1,12 +1,14 @@
 /**
- * \file patternstrings.h
- * \brief  Contains pattern string for nemea configurator.
+ * \file dnsblacklistfilter.cpp
+ * \brief  Module for detecting blacklisted DNS/FQDN, header file.
+ * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
  * \author Filip Suster, sustefil@fit.cvut.cz
- * \date 2018
+ * \date 2013-2018
  */
 
+
 /*
- * Copyright (C) 2015 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -42,29 +44,87 @@
  *
  */
 
+#ifndef DNSBLACKLISTFILTER_H
+#define DNSBLACKLISTFILTER_H
 
-#ifndef _URLBLACKLISTFILTER_PATTERN_H
-#define _URLBLACKLISTFILTER_PATTERN_H
+#include <string>
+#include <vector>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <unirec/unirec.h>
+#include <nemea-common/prefix_tree.h>
+
 
 /**
- * String specifying pattern structure with default values.
+* Mutex for synchronization.
+*/
+pthread_mutex_t BLD_SYNC_MUTEX;
+
+/**
+ * Constant returned if everything is ok.
  */
-static char const *MODULE_CONFIG_PATTERN_STRING =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<configuration>"
-        "<struct name=\"main struct\">"
-        "<element type=\"required\">"
-        "<name>blacklist_file</name>"
-        "<type size=\"256\">string</type>"
-        "<default-value>-</default-value>"
-        "</element>"
-        "<element type=\"optional\">"
-        "<name>watch_blacklists</name>"
-        "<type size=\"8\">string</type>"
-        "<default-value>true</default-value>"
-        "</element>"
-        "</struct>"
-        "</configuration>";
+#define ALL_OK 0
+
+/**
+ * Consatnt returned by loading function if directory cannot be accessed
+ */
+#define BLIST_LOAD_ERROR -1
+
+/**
+ * Constant retuned by checking function if DNS is prsent on blacklist.
+ */
+#define BLACKLISTED 1
+
+/**
+ * Constant retuned by checking function if DNS is clear.
+ */
+#define DNS_CLEAR 0
+
+/**
+ * Allocation size for variable sized UniRec output template
+ */
+#define DETECTION_ALLOC_LEN 2048
+
+#define WWW_PREFIX "www."
 
 
+typedef struct __attribute__ ((__packed__)) {
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} config_t;
+
+/**
+ * Structure of item used in update operations.
+ */
+typedef struct {
+    /*@{*/
+    std::string fqdn; /**< FQDN */
+    uint64_t    bl;   /**< Source blacklist of the DNS/FQDN */
+    /*@}*/
+} dns_elem_t;
+
+prefix_tree_t * tree;
+
+typedef struct {
+    uint64_t bl_id;
+} info_t;
+
+/*
+ * Function for loading update files.
+ */
+int reload_blacklists(prefix_tree_t *tree, std::string &file);
+
+/*
+ * Function for checking records.
+ */
+int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* DNSBLACKLISTFILTER_H */
