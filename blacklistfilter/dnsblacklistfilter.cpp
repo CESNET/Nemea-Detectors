@@ -95,8 +95,11 @@ UR_FIELDS(
     string DNS_NAME,
     uint16 DNS_QTYPE,
     uint16 DNS_RLENGTH,
+    uint32 DNS_RR_TTL,
+    uint16 DNS_CLASS,
     uint8  DNS_RCODE,
     bytes  DNS_RDATA,
+    uint16 DNS_PSIZE,
     uint8  DNS_DO,       //DNSSEC OK bit
     //Blacklist items
     uint64 BLACKLIST,   //ID of blacklist which contains suspicious domain name
@@ -269,11 +272,13 @@ int main (int argc, char** argv)
 
     // UniRec templates for recieving data and reporting blacklisted DNS/FQDN
     ur_input = ur_create_input_template(0, "DST_IP,SRC_IP,BYTES,TIME_FIRST,TIME_LAST,PACKETS,PROTOCOL,DST_PORT,SRC_PORT,"
-                                           "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO", NULL);
+                                           "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO,"
+                                           "DNS_CLASS,DNS_PSIZE,DNS_RR_TTL", NULL);
 
 
     ur_output = ur_create_output_template(0, "DST_IP,SRC_IP,BYTES,TIME_FIRST,TIME_LAST,PACKETS,PROTOCOL,DST_PORT,SRC_PORT,"
-                                            "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO,BLACKLIST", NULL);
+                                             "DNS_ID,DNS_ANSWERS,DNS_NAME,DNS_QTYPE,DNS_RLENGTH,DNS_RCODE,DNS_RDATA,DNS_DO,"
+                                             "DNS_CLASS,DNS_PSIZE,DNS_RR_TTL,BLACKLIST", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;

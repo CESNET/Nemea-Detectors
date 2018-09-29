@@ -3,11 +3,17 @@
 import pytrap
 import sys
 import logging
-from time import time, sleep
+from time import time
 from threading import Thread
 from queue import Queue
-from adaptive_filter_scenarios import Scenario, ScenarioDoesNotFit
+from scenarios import Scenario, ScenarioDoesNotFit
 from contextlib import suppress
+#
+# from optparse import OptionParser
+# parser = OptionParser(add_help_option=True)
+# parser.add_option("-i", "--ifcspec", dest="ifcspec",
+#                   help="TRAP IFC specifier", metavar="IFCSPEC")
+
 
 blfilter_interfaces = {'IP': 0,
                        'URL': 1,
@@ -16,8 +22,9 @@ blfilter_interfaces = {'IP': 0,
 cs = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
 cs.setFormatter(formatter)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('Adaptive-filter')
 logger.addHandler(cs)
+logger.setLevel(logging.DEBUG)
 
 
 # Sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
@@ -121,6 +128,8 @@ class Controller:
         with open('/tmp/blacklistfilter/adaptive.blist', 'w') as f:
             f.write('\n'.join(all_entities))
 
+        logger.info('Created new ADAPTIVE detector file')
+
     def run(self):
         while True:
             # Wait until there is a detection event
@@ -138,19 +147,31 @@ class Controller:
                     detected_scenario = scenario_class(detection_iface, detection_flow)
 
             if detected_scenario:
+                # Scenario fits
                 logger.info('Detected scenario: {}'.format(type(detected_scenario).__name__))
                 try:
+                    # Do we know about this specific case of the scenario?
                     scenario_event = self.detected_scenarios[detected_scenario.key]
+
+                    scenario_event.detection_flows.append(detection_flow)
                     scenario_event.detection_cnt += 1
                     scenario_event.last_ts = time()
 
                 except KeyError:
                     # New scenario event
-                    detected_scenario.set_id()
-                    detected_scenario.generate_entities()
-
+                    detected_scenario.set_random_id()
                     self.detected_scenarios[detected_scenario.key] = detected_scenario
+
+                adaptive_entitites = detected_scenario.get_entities()
+                if adaptive_entitites != detected_scenario.adaptive_entities:
+                    detected_scenario.adaptive_entities = adaptive_entitites
                     self.create_detector_file()
+
+            for key, val in self.detected_scenarios.items():
+                print(key)
+                print(val)
+                # if key == 'zstresser.com':
+                #     print(val.detection_flow.SRC_IP)
 
 
 if __name__ == '__main__':
