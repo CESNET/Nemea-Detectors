@@ -1,3 +1,9 @@
+2018-09-26 nemea-detectors-1.5.1
+	* Blacklistfilter:
+		Add maximum number of IPs in IDEA from blacklistfilters.
+		Blacklist downloader does not store empty changes of blacklists.
+		Add new blacklists of cryptominers.
+
 2018-09-18 nemea-detectors-1.5.0
 	* blacklistfilter:
 		Improve downloader to store history of downloaded blacklists

@@ -1,9 +1,13 @@
 # Vportscan detector
 
+## Description
+
 Vportscan detector is a simple, threshold-based detector for vertical
 scans detection. The detection algorithm uses information from basic
 flow records (source and destination IP addresses and ports, protocol,
 #packets, #bytes).
+
+## Algorithm
 
 The detection algorithm is based on analysis of the number of
 destination ports per source address. It is important to remember all
@@ -83,3 +87,24 @@ in Unirec format and it contains the following information:
 | DST_PORT     | last dst port used by the attacker |
 | PROTOCOL     | transport protocol (TCP)           |
 | PORT_CNT     | number of probed destination ports |
+
+# Vportscan aggregator
+
+This module takes input from vportscan_detector and outputs data in JSON
+format (``pytrap.FMT_JSON``).
+[json_dump](https://github.com/cesnet/nemea-modules/json_dump) is
+recommended to read from this aggregator.
+
+## Description
+
+Aggregation of alerts from vportscan_detector. It receives alerts and
+aggregates them into a time window. As a result, it decreases number
+of alerts about the same scanners. Aggregation is done by SRC_IP (or
+SRC_IP,DST_IP pair if --noblockscan is set).
+
+## Parameters
+* `-t` `--time=` *uint32*: Length of time interval in minutes in which
+   alerts are aggregated.
+* `--noblockscans`: Don't aggregate scans of multiple destination IPs to
+   block scans, i.e. use (src_ip,dst_ip)-pair as aggregation key rather
+   than src_ip only.
