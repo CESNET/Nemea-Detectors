@@ -96,13 +96,13 @@ trap = pytrap.TrapCtx()
 trap.init(sys.argv, 1, 1)
 
 # Specifier of UniRec records will be received during libtrap negotiation
-alertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
-                          "time TIME_LAST,uint16 DST_PORT," +\
-                          "uint8 EVENT_TYPE,uint8 PROTOCOL," + \
-                          "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3"
+alertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,uint32 ADDR_THRSD," + \
+                "time TIME_FIRST,time TIME_LAST,uint16 DST_PORT," +\
+                "uint8 EVENT_TYPE,uint8 PROTOCOL," + \
+                "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3"
 
-aggregatedAlertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST," + \
-                          "time TIME_LAST,uint16 DST_PORT," +\
+aggregatedAlertURFormat = "ipaddr SRC_IP,uint32 ADDR_CNT,uint32 ADDR_THRSD," + \
+                          "time TIME_FIRST,time TIME_LAST,uint16 DST_PORT," +\
                           "uint8 EVENT_TYPE,uint8 PROTOCOL," + \
                           "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3," + \
                           "ipaddr DST_IP4,ipaddr DST_IP5,ipaddr DST_IP6,ipaddr DST_IP7," + \

@@ -84,6 +84,7 @@ UR_FIELDS (
    time TIME_FIRST,
    time TIME_LAST,
    uint32 ADDR_CNT,
+   uint32 ADDR_THRSD,
 
    ipaddr DST_IP0,
    ipaddr DST_IP1,
@@ -224,6 +225,7 @@ int send_alert(ur_template_t *out_tmplt, void *out_rec,
    ur_set(out_tmplt, out_rec, F_DST_PORT, key->fields.dst_port);
    ur_set(out_tmplt, out_rec, F_PROTOCOL, TCP_PROTOCOL);
 
+   ur_set(out_tmplt, out_rec, F_ADDR_THRSD, param.numaddrs_threshold);
    ur_set(out_tmplt, out_rec, F_ADDR_CNT, np->addr_cnt);
 
    switch (np->addr_cnt - 1) {
@@ -362,7 +364,8 @@ int main(int argc, char **argv)
 
    out_tmplt = ur_create_output_template(0,
                                          "EVENT_TYPE,TIME_FIRST,TIME_LAST,"
-                                         "SRC_IP,DST_PORT,PROTOCOL,ADDR_CNT,"
+                                         "SRC_IP,DST_PORT,PROTOCOL,"
+                                         "ADDR_CNT,ADDR_THRSD,"
                                          "DST_IP0,DST_IP1,DST_IP2,DST_IP3",
                                          NULL);
    if (out_tmplt == NULL){
