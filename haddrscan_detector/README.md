@@ -85,8 +85,8 @@ shows required flow information together with the field names:
 
 ## Detector output data
 
-Alerts are sent on the output interface, also in Unirec format and
-they contain the following information:
+Alerts are sent on the output interface, also in Unirec format, they
+contain the following information:
 
 | Unirec field | Description                        |
 |:------------:|:----------------------------------:|
@@ -218,3 +218,11 @@ module takes the following parameter:
 
 For more detailed information see above under [aggregator
 algorithm](#aggregator-algorithm).
+
+
+<!--- Local variables: -->
+<!--- mode: markdown; -->
+<!--- mode: auto-fill; -->
+<!--- mode: flyspell; -->
+<!--- ispell-local-dictionary: "british"; -->
+<!--- End: -->
