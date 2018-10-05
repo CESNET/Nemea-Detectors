@@ -146,7 +146,7 @@ while True:
       break
    except pytrap.FormatChanged as e:
       # Get data format from negotiation and set it for output IFC
-      (fmttype, fmtspec) = trap.get_data_fmt(trap.IFC_INPUT, 0)
+      fmttype, fmtspec = trap.getDataFmt(0)
       trap.setDataFmt(0, fmttype, fmtspec)
 
       # Update UniRec template
