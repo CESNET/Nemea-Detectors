@@ -55,7 +55,7 @@
                 <element name="category">Anomaly.Traffic</element>
                 <element name="method">web</element>
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
-                <element name="name">Spamhaus</element>
+                <element name="name">Spamhaus Drop</element>
                 <element name="download_interval">10</element>
             </struct>
 

@@ -25,7 +25,7 @@ parser.add_option("-t", "--time", dest="time", type="float",
 MINSRCPORT=30000
 
 # Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
-MAX_DST_IPS_PER_EVENT = 1000
+MAX_DST_IPS_PER_EVENT = 3000
 
 WWW_PREFIX = 'www.'
 
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     trap.init(sys.argv, 2, 1)
     trap.setDataFmt(0, pytrap.FMT_JSON, template_out)
 
-    rt = RepeatedTimer(10, send_events)
+    rt = RepeatedTimer(int(options.time) * 60, send_events)
     agg = Aggregator()
     agg.run()
     agg.join()
