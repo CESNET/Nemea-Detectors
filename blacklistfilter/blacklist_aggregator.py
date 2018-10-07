@@ -44,6 +44,8 @@ locks = [Lock(), Lock()]
 ip_event_list = {}
 url_event_list = {}
 
+template_out = "aggregated_blacklist"
+
 
 # Send aggregated events by RepeatedTimer
 def send_events():
@@ -51,11 +53,6 @@ def send_events():
     global url_event_list
 
     for event_list in [ip_event_list, url_event_list]:
-        if event_list is ip_event_list:
-            iface_num = IP.iface_num
-        else:
-            iface_num = URL.iface_num
-
         for key in event_list:
             event = event_list[key]
             try:
@@ -66,11 +63,11 @@ def send_events():
                         event_copy = event.copy()
                         event_copy["targets"] = targets[:MAX_DST_IPS_PER_EVENT]
                         targets = targets[MAX_DST_IPS_PER_EVENT:]
-                        trap.send(bytearray(json.dumps(event_copy), "utf-8"), iface_num)
+                        trap.send(bytearray(json.dumps(event_copy), "utf-8"))
 
                 else:
                     # Send data to output interface
-                    trap.send(bytearray(json.dumps(event), "utf-8"), iface_num)
+                    trap.send(bytearray(json.dumps(event), "utf-8"))
             except pytrap.Terminated:
                 print("Terminated TRAP.")
                 break
@@ -117,20 +114,20 @@ class IP:
     # exact output match of pre-aggregated ipblacklistfilter
     template_in = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST," + \
                   "time TIME_FIRST,time TIME_LAST,uint32 COUNT,uint32 PACKETS,uint16 DST_PORT,uint8 PROTOCOL"
-    template_out = "aggregated_ipblacklist"
 
     def __init__(self):
-        IP.ur_input = pytrap.UnirecTemplate(IP.template_in)
+        self.ur_input = pytrap.UnirecTemplate(IP.template_in)
         # Set output format and disable output buffering
-        trap.setDataFmt(IP.iface_num, pytrap.FMT_JSON, IP.template_out)
         trap.ifcctl(IP.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
     def _insert_event(self, key):
-        event = {"ts_first": float(self.ur_input.TIME_FIRST),
+        event = {
+                 "type": "ip",
+                 "ts_first": float(self.ur_input.TIME_FIRST),
                  "ts_last": float(self.ur_input.TIME_LAST),
                  "protocol": self.ur_input.PROTOCOL,
                  "source_ports": [],
-                 "source": str(self.ur_input.SRC_IP) if self.ur_input.SRC_BLACKLIST else str(self.ur_input.DST_BLACKLIST),
+                 "source": str(self.ur_input.SRC_IP) if self.ur_input.SRC_BLACKLIST else str(self.ur_input.DST_IP),
                  "targets": [str(self.ur_input.DST_IP)] if self.ur_input.SRC_BLACKLIST else [str(self.ur_input.SRC_IP)],
                  "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
                  "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
@@ -138,8 +135,9 @@ class IP:
                  "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
                  "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
                  "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
-                 "blacklist_bmp": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST
-                 }
+                 "blacklist_bmp": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
+                 "agg_win_minutes": options.time
+        }
 
         # if self.ur_input.SRC_BLACKLIST and self.ur_input.SRC_PORT <= MINSRCPORT:
         #     event["source_ports"].append(self.ur_input.SRC_PORT)
@@ -158,7 +156,7 @@ class IP:
 
         if self.ur_input.SRC_BLACKLIST:
             # source_ports.add(self.ur_input.SRC_PORT)
-            targets.add(str(self.ur_input.DST_BLACKLIST))
+            targets.add(str(self.ur_input.DST_IP))
             event["src_sent_bytes"] += self.ur_input.BYTES
             event["src_sent_flows"] += self.ur_input.COUNT
             event["src_sent_packets"] += self.ur_input.PACKETS
@@ -208,12 +206,9 @@ class URL:
     template_in = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BLACKLIST,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS," + \
                   "uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL"
 
-    template_out = "aggregated_urlblacklist"
-
     def __init__(self):
-        URL.ur_input = pytrap.UnirecTemplate(URL.template_in)
+        self.ur_input = pytrap.UnirecTemplate(URL.template_in)
         # Set output format and disable output buffering
-        trap.setDataFmt(URL.iface_num, pytrap.FMT_JSON, URL.template_out)
         trap.ifcctl(URL.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
     def _insert_event(self, key):
@@ -225,6 +220,7 @@ class URL:
             only_fqdn = False
 
         event = {
+            "type": "url",
             # Every source/src means source of trouble (the blacklisted address)
             "source_ip": str(self.ur_input.DST_IP),
             "source_url": url,
@@ -349,9 +345,10 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
 
     trap = pytrap.TrapCtx()
-    trap.init(sys.argv, 2, 2)
+    trap.init(sys.argv, 2, 1)
+    trap.setDataFmt(0, pytrap.FMT_JSON, template_out)
 
-    rt = RepeatedTimer(int(options.time) * 60, send_events)
+    rt = RepeatedTimer(10, send_events)
     agg = Aggregator()
     agg.run()
     agg.join()
