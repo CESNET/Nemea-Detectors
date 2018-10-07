@@ -135,7 +135,7 @@ class IP:
                  "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
                  "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
                  "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
-                 "blacklist_bmp": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
+                 "blacklist_id": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
                  "agg_win_minutes": options.time
         }
 
@@ -160,7 +160,6 @@ class IP:
             event["src_sent_bytes"] += self.ur_input.BYTES
             event["src_sent_flows"] += self.ur_input.COUNT
             event["src_sent_packets"] += self.ur_input.PACKETS
-            event["blacklist_bmp"] |= self.ur_input.SRC_BLACKLIST
         else:
             if self.ur_input.DST_PORT <= MINSRCPORT:
                 source_ports.add(self.ur_input.DST_PORT)
@@ -168,7 +167,6 @@ class IP:
             event["tgt_sent_bytes"] += self.ur_input.BYTES
             event["tgt_sent_flows"] += self.ur_input.COUNT
             event["tgt_sent_packets"] += self.ur_input.PACKETS
-            event["blacklist_bmp"] |= self.ur_input.DST_BLACKLIST
 
         event["source_ports"] = list(source_ports)
         event["targets"] = list(targets)
@@ -180,23 +178,30 @@ class IP:
         """
         There are following cases for aggregation:
         1) SRC_IP is on some blacklist:
-            we can aggregate by SRC_IP and protocol,
+            we can aggregate by SRC_IP, its blacklist and protocol,
             SRC_IP is Source and DST_IP is Target
         2) DST_IP is on some blacklist:
-            we can aggregate by DST_IP and protocol,
+            we can aggregate by DST_IP, its blacklist and protocol,
             DST_IP is Source and SRC_IP is Target
         """
 
-        # Set key (blacklisted address and protocol)
-        if self.ur_input.SRC_BLACKLIST:
-            key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL)
-        else:
-            key = (self.ur_input.DST_IP, self.ur_input.PROTOCOL)
+        blists = split_blacklist_bmp(self.ur_input.SRC_BLACKLIST if
+                                     self.ur_input.SRC_BLACKLIST else
+                                     self.ur_input.DST_BLACKLIST)
 
-        if key in ip_event_list:
-            self._update_event(key)
-        else:
-            self._insert_event(key)
+        for blist in blists:
+            if self.ur_input.SRC_BLACKLIST:
+                self.ur_input.SRC_BLACKLIST = blist
+                key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL, self.ur_input.SRC_BLACKLIST)
+            else:
+                self.ur_input.DST_BLACKLIST = blist
+                key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL, self.ur_input.DST_BLACKLIST)
+
+            if key in ip_event_list:
+                self._update_event(key)
+            else:
+                self._insert_event(key)
+
 
 
 class URL:
@@ -234,7 +239,7 @@ class URL:
             "tgt_sent_bytes": self.ur_input.BYTES,
             "tgt_sent_flows": 1,
             "tgt_sent_packets": self.ur_input.PACKETS,
-            "blacklist_bmp": self.ur_input.BLACKLIST,
+            "blacklist_id": self.ur_input.BLACKLIST,
             "agg_win_minutes": options.time,
             "is_only_fqdn": only_fqdn
         }
@@ -254,7 +259,6 @@ class URL:
         event["ts_first"] = min(event["ts_first"], float(self.ur_input.TIME_FIRST))
         event["ts_last"] = max(event["ts_last"], float(self.ur_input.TIME_LAST))
 
-        event["blacklist_bmp"] |= self.ur_input.BLACKLIST
         event["tgt_sent_bytes"] += self.ur_input.BYTES
         event["tgt_sent_flows"] += 1
         event["tgt_sent_packets"] += self.ur_input.PACKETS
@@ -263,17 +267,23 @@ class URL:
         """
         Aggregation is done using blacklisted URL, destination IP and L4 protocol as a key
         """
+        # Split blacklist bitmap, so we aggregate only one blacklist
+        blists = split_blacklist_bmp(self.ur_input.BLACKLIST)
 
-        # Set key (Host+URL, destination and L4 protocol)
-        key = (self.ur_input.HTTP_REQUEST_HOST.strip(WWW_PREFIX),
-               self.ur_input.HTTP_REQUEST_URL,
-               self.ur_input.DST_IP,
-               self.ur_input.PROTOCOL)
+        for blist in blists:
+            self.ur_input.BLACKLIST = blist
+            # Set key (Host+URL, destination and L4 protocol)
+            key = (self.ur_input.HTTP_REQUEST_HOST.strip(WWW_PREFIX),
+                   self.ur_input.HTTP_REQUEST_URL,
+                   self.ur_input.DST_IP,
+                   self.ur_input.PROTOCOL,
+                   self.ur_input.BLACKLIST
+                   )
 
-        if key in url_event_list:
-            self._update_event(key)
-        else:
-            self._insert_event(key)
+            if key in url_event_list:
+                self._update_event(key)
+            else:
+                self._insert_event(key)
 
 
 class Aggregator:
@@ -281,7 +291,6 @@ class Aggregator:
         """
         Trap initialization for input and output interfaces
         """
-
         # Set up required format to accept any unirec format.
         trap.setRequiredFmt(IP.iface_num, pytrap.FMT_UNIREC, IP.template_in)
         trap.setRequiredFmt(URL.iface_num, pytrap.FMT_UNIREC, URL.template_in)
@@ -318,6 +327,9 @@ class Aggregator:
         while True:
             try:
                 data = trap.recv(detector_class.iface_num)
+            except pytrap.FormatMismatch:
+                print("Error: output and input interfaces data format or data specifier mismatch")
+                break
             except pytrap.FormatChanged as e:
                 fmttype, inputspec = trap.getDataFmt(detector_class.iface_num)
                 type(detector_class).ur_input = pytrap.UnirecTemplate(inputspec)
@@ -340,6 +352,15 @@ class Aggregator:
             locks[detector_class.iface_num].release()
 
 
+def split_blacklist_bmp(blacklist_bmp):
+    def bin(s):
+        return str(s) if s <= 1 else bin(s >> 1) + str(s & 1)
+
+    bin_bmp = bin(blacklist_bmp)[::-1]
+
+    return [2 ** i for i, c in enumerate(bin_bmp) if c == '1']
+
+
 if __name__ == '__main__':
     # Parse remaining command-line arguments
     options, args = parser.parse_args()
@@ -349,6 +370,7 @@ if __name__ == '__main__':
     trap.setDataFmt(0, pytrap.FMT_JSON, template_out)
 
     rt = RepeatedTimer(int(options.time) * 60, send_events)
+
     agg = Aggregator()
     agg.run()
     agg.join()
