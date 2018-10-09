@@ -1,3 +1,6 @@
+2018-10-09 (Filip Šuster): blacklistfilter: Universal blacklistfilter aggregation; Downloader improvements (#36)
+2018-10-02 (Jaroslav Hlavac): vportscan_aggregator.py added to README
+
 2018-09-26 (Filip Šuster): Blacklistfilter: improved aggregators, new blacklists, downloader fix (#34)
 2018-09-19 (Tomas Cejka): rpm: add new (blacklistfilter) modules into package
 
