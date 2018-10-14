@@ -9,6 +9,7 @@ import time
 import os
 import subprocess
 import argparse
+import csv
 from contextlib import suppress
 
 config_file = '@BLACKLISTFILTERDIR@/bl_downloader_config.xml'
@@ -83,6 +84,11 @@ class Blacklist:
         with open(bl_file, 'w') as f:
             f.write('\n'.join(self.entities))
 
+    def cut_csv(self, data):
+        col_idx = int(self.csv_col) - 1
+        rdr = csv.reader(data.decode().splitlines())
+        return '\n'.join([row[col_idx] for row in rdr if len(row) > 0]).encode()
+
     @classmethod
     def process_entities(cls):
         all_entities = dict()
@@ -113,6 +119,10 @@ class Blacklist:
 
             if req.status_code == 200:
                 data = req.content
+
+                # If CSV, cut the desired column
+                with suppress(AttributeError):
+                    data = self.cut_csv(data)
 
                 new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
 

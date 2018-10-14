@@ -1,3 +1,12 @@
+2018-10-09 nemea-detectors-1.5.2
+	* vportscan:
+		Updated documentation.
+	* blacklistfilter:
+		Rename ipblacklist and urlblacklist to just backlist.
+		Refactoring blacklist aggregator.
+		Changed format of aggregated data from blacklistfilter.
+		Blacklist downloader creates data file with blacklisted DNS.
+
 2018-09-26 nemea-detectors-1.5.1
 	* Blacklistfilter:
 		Add maximum number of IPs in IDEA from blacklistfilters.
