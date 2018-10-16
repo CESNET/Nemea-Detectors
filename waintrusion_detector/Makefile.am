@@ -28,3 +28,6 @@ bin_SCRIPTS=waintrusion_detector.py waintrusion_detector2idea.py
 
 EXTRA_DIST=waintrusion_detector2idea.py ${wairules_DATA} ${waidata_DATA}
 
+pkgdocdir=${docdir}/waintrusion
+dist_pkgdoc_DATA=README.md
+
