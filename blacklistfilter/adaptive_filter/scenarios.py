@@ -6,13 +6,12 @@ from contextlib import suppress
 from uuid import uuid4
 from time import time
 
+import controller
+
 logger = logging.getLogger('Adaptive-filter')
 
-blfilter_interfaces = {'IP': 0,
-                       'URL': 1,
-                       'DNS': 2}
-
 WWW_PREFIX = 'www.'
+
 
 # Thrown by Scenario subclass' init function when the detection flow doesn't
 # fit the scenario
@@ -45,16 +44,19 @@ class Scenario:
     def __str__(self):
         return str(self.__dict__)
 
+
 class BotnetDetection(Scenario):
     """
     Scenario class for enhanced botnet detection. Since often only C&C servers are blacklisted,
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
     def __init__(self, detection_iface, detection_flow):
-        if detection_iface != blfilter_interfaces['IP']:
+        if detection_iface != controller.IP_URL.iface_num:
             raise ScenarioDoesNotFit
 
         super().__init__(detection_flow)
+        print(detection_flow['targets'])
+
         self.key = (detection_flow.SRC_IP, detection_flow.DST_IP)
 
 
@@ -78,7 +80,7 @@ class DNSDetection(Scenario):
     """
     def __init__(self, detection_iface, detection_flow):
         # We are interested in valid DNS answers
-        if detection_iface != blfilter_interfaces['DNS'] or detection_flow.DNS_ANSWERS < 1:
+        if detection_iface != controller.DNS.iface_num or detection_flow.DNS_ANSWERS < 1:
             raise ScenarioDoesNotFit
 
         # Consider www.domain.com and domain.com the same
