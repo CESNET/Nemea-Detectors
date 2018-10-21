@@ -59,6 +59,11 @@ extern "C" {
 pthread_mutex_t BLD_SYNC_MUTEX;
 
 /**
+ * Special value of a blacklist index indicating adaptive blacklist
+ */
+#define ADAPTIVE_BLACKLIST_INDEX 0
+
+/**
  * Return value for matching function when address is blacklisted.
  */
 #define BLACKLISTED 1
@@ -95,6 +100,11 @@ pthread_mutex_t BLD_SYNC_MUTEX;
 #define PREFIX_V6_DEFAULT 128
 
 /**
+ * Allocation size for variable sized UniRec output template
+ */
+#define DETECTION_ALLOC_LEN 32768
+
+/**
  * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
@@ -102,6 +112,7 @@ typedef struct {
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
+    std::string adaptive_ids; /**< ID or IDs for adaptive filter events
     /*@}*/
 } ip_bl_entry_t;
 

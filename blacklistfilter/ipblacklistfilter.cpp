@@ -91,6 +91,7 @@ UR_FIELDS(
 //Blacklist items
         uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
         uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
+        string ADAPTIVE_ID      // UUID4 of the scenario event, used when working with adaptive blacklist
 )
 
 trap_module_info_t *module_info = NULL;
@@ -241,9 +242,9 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
         }
 
         // Find IP-blacklist index separator
-        size_t sep = line.find_first_of(',');
+        size_t comma_sep = line.find_first_of(',');
 
-        if (sep == string::npos) {
+        if (comma_sep == string::npos) {
             if (line.empty()) {
                 // probably just newline at the end of file
                 continue;
@@ -253,16 +254,13 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
             continue;
         }
 
-        // Parse blacklist ID
-        bl_index = strtoull((line.substr(sep + 1, string::npos)).c_str(), NULL, 10);
-
         // Parse IP
-        ip = line.substr(0, sep);
+        ip = line.substr(0, comma_sep);
 
         // Are we loading prefix?
-        sep = ip.find_first_of('/');
+        size_t slash_sep = ip.find_first_of('/');
 
-        if (sep == string::npos) {
+        if (slash_sep == string::npos) {
             // IP only
             if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
                 cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
@@ -276,17 +274,28 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
 
         } else {
             // IP prefix
-            if (!ip_from_str((ip.substr(0, sep)).c_str(), &bl_entry.ip)) {
+            if (!ip_from_str((ip.substr(0, slash_sep)).c_str(), &bl_entry.ip)) {
                 cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
                 continue;
             }
 
-            ip.erase(0, sep + 1);
+            ip.erase(0, slash_sep + 1);
             bl_entry.prefix_len = (uint8_t) strtol(ip.c_str(), NULL, 0);
         }
 
+        // Parse blacklist ID
+        bl_index = strtoull((line.substr(comma_sep + 1, string::npos)).c_str(), NULL, 10);
+
         // Determine blacklist
         bl_entry.in_blacklist = bl_index;
+
+        // If handling adaptive blacklist, load adaptive IDs in the entity
+        if (bl_index == ADAPTIVE_BLACKLIST_INDEX) {
+            string id_part = line.substr(comma_sep + 1, string::npos);
+            size_t comma_sep2 = id_part.find_first_of(',');
+            id_part = id_part.substr(comma_sep2 + 1, string::npos);
+            bl_entry.adaptive_ids = id_part;
+        }
 
         // Add entry to vector
         if (ip_is4(&bl_entry.ip)) {
@@ -400,8 +409,6 @@ int blacklist_check(ur_template_t *ur_in,
                     const black_list_t &v4blacklist,
                     const black_list_t &v6blacklist)
 {
-    bool blacklisted = false;
-
     // determine which blacklist (ipv4/ipv6) we are working with
     const black_list_t & bl = ip_is4(&(ur_get(ur_in, record, F_SRC_IP))) ? v4blacklist : v6blacklist;
 
@@ -409,24 +416,20 @@ int blacklist_check(ur_template_t *ur_in,
     int search_result;
 
     // Check source IP
-    ip_addr_t ip = ur_get(ur_in, record, F_SRC_IP);
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
         ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
-        blacklisted = true;
-    } else {
-        ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
-    }
-
-    // Check destination IP
-    ip = ur_get(ur_in, record, F_DST_IP);
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
-        blacklisted = true;
-    } else {
         ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
-    }
-
-    if (blacklisted) {
+        if (bl[search_result].in_blacklist == 0) {
+            ur_set_from_string(ur_out, detected, F_ADAPTIVE_ID, bl[search_result].adaptive_ids.c_str());
+        }
+        return BLACKLISTED;
+    // Check destination IP
+    } else if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
+        ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
+        ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
+        if (bl[search_result].in_blacklist == 0) {
+            ur_set_from_string(ur_out, detected, F_ADAPTIVE_ID, bl[search_result].adaptive_ids.c_str());
+        }
         return BLACKLISTED;
     }
 
@@ -472,8 +475,8 @@ int main(int argc, char **argv)
         main_retval = 1; goto cleanup;
     }
 
-    // Create detection record
-    detection = ur_create_record(ur_output, 0);
+    // Create detection record, variable size is used for ADAPTIVE_ID
+    detection = ur_create_record(ur_output, DETECTION_ALLOC_LEN);
     if (detection == NULL) {
         cerr << "Error: Memory allocation problem (output record)" << endl;
         main_retval = 1; goto cleanup;
