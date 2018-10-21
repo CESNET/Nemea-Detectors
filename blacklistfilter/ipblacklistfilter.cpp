@@ -419,16 +419,20 @@ int blacklist_check(ur_template_t *ur_in,
     if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
         ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
         ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
-        if (bl[search_result].in_blacklist == 0) {
-            ur_set_from_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
+        if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
+            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
+        } else {
+            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
         }
         return BLACKLISTED;
     // Check destination IP
     } else if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
         ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
         ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
-        if (bl[search_result].in_blacklist == 0) {
-            ur_set_from_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
+        if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
+            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
+        } else {
+            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
         }
         return BLACKLISTED;
     }
@@ -562,7 +566,7 @@ int main(int argc, char **argv)
         // If IP address was found on blacklist
         if (retval == BLACKLISTED) {
             ur_copy_fields(ur_output, detection, ur_input, data);
-            trap_send(0, detection, ur_rec_fixlen_size(ur_output));
+            trap_send(0, detection, ur_rec_size(ur_output, detection));
             DBG((stderr, "IP detected on blacklist\n"))
         }
 

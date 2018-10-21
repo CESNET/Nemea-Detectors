@@ -61,7 +61,7 @@ pthread_mutex_t BLD_SYNC_MUTEX;
 /**
  * Special value of a blacklist index indicating adaptive blacklist
  */
-#define ADAPTIVE_BLACKLIST_INDEX 0
+#define ADAPTIVE_BLACKLIST_INDEX 999
 
 /**
  * Return value for matching function when address is blacklisted.
