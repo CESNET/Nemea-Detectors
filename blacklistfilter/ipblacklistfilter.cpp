@@ -91,7 +91,7 @@ UR_FIELDS(
 //Blacklist items
         uint64 SRC_BLACKLIST,   //Bit field of blacklists IDs which contains the source address of the flow
         uint64 DST_BLACKLIST,   //Bit field of blacklists IDs which contains the destination address of the flow
-        string ADAPTIVE_ID      // UUID4 of the scenario event, used when working with adaptive blacklist
+        string ADAPTIVE_IDS      // UUID4 of the scenario events, separated by comma, used when working with adaptive blacklist
 )
 
 trap_module_info_t *module_info = NULL;
@@ -420,7 +420,7 @@ int blacklist_check(ur_template_t *ur_in,
         ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
         ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
         if (bl[search_result].in_blacklist == 0) {
-            ur_set_from_string(ur_out, detected, F_ADAPTIVE_ID, bl[search_result].adaptive_ids.c_str());
+            ur_set_from_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
         }
         return BLACKLISTED;
     // Check destination IP
@@ -428,7 +428,7 @@ int blacklist_check(ur_template_t *ur_in,
         ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
         ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
         if (bl[search_result].in_blacklist == 0) {
-            ur_set_from_string(ur_out, detected, F_ADAPTIVE_ID, bl[search_result].adaptive_ids.c_str());
+            ur_set_from_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
         }
         return BLACKLISTED;
     }
@@ -468,7 +468,7 @@ int main(int argc, char **argv)
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST", NULL);
-    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,SRC_BLACKLIST,DST_BLACKLIST", NULL);
+    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,SRC_BLACKLIST,DST_BLACKLIST,ADAPTIVE_IDS", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;
