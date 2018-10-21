@@ -141,13 +141,13 @@ class Controller:
 
         # A dict of detected scenarios, e.g. those which fit some Scenario class
         # The dict key can be different for each scenario
-        self.detected_scenarios = {}
+        self.detected_events = {}
         self.receiver.run()
 
     def create_detector_file(self):
         all_entities = []
 
-        for detected_scenario in self.detected_scenarios.values():
+        for detected_scenario in self.detected_events.values():
             all_entities.extend(detected_scenario.adaptive_entities)
 
         # Create sorted list of entities and their cumulative indexes
@@ -180,7 +180,7 @@ class Controller:
                 logger.info('Detected scenario: {}'.format(type(detected_scenario).__name__))
                 try:
                     # Do we know about this specific case of the scenario?
-                    scenario_event = self.detected_scenarios[detected_scenario.key]
+                    scenario_event = self.detected_events[detected_scenario.key]
 
                     scenario_event.detection_events.append(detection_event)
                     scenario_event.detection_cnt += 1
@@ -189,14 +189,15 @@ class Controller:
                 except KeyError:
                     # New scenario event
                     detected_scenario.set_random_id()
-                    self.detected_scenarios[detected_scenario.key] = detected_scenario
+                    self.detected_events[detected_scenario.key] = detected_scenario
 
+                # TODO: how to handle/update adaptive entities of already detected events
                 adaptive_entitites = detected_scenario.get_entities()
-                if adaptive_entitites != detected_scenario.adaptive_entities:
+                if adaptive_entitites and not detected_scenario.adaptive_entities:
                     detected_scenario.adaptive_entities = adaptive_entitites
                     self.create_detector_file()
 
-            for key, val in self.detected_scenarios.items():
+            for key, val in self.detected_events.items():
                 print(key)
                 print(val)
                 # if key == 'zstresser.com':

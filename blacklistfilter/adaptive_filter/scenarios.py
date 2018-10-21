@@ -7,6 +7,7 @@ from uuid import uuid4
 from time import time
 
 import controller
+import enrichers
 
 logger = logging.getLogger('Adaptive-filter')
 
@@ -22,9 +23,9 @@ class ScenarioDoesNotFit(BaseException):
 
 
 class Scenario:
-    def __init__(self, detection_flow):
-        self.detection_flows = []
-        self.detection_flows.append(detection_flow)
+    def __init__(self, detection_event):
+        self.detection_events = []
+        self.detection_events.append(detection_event)
         self.detection_cnt = 1
         self.id = 0
         self.first_ts = time()
@@ -50,14 +51,14 @@ class BotnetDetection(Scenario):
     Scenario class for enhanced botnet detection. Since often only C&C servers are blacklisted,
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
-    def __init__(self, detection_iface, detection_flow):
+    def __init__(self, detection_iface, detection_event):
         if detection_iface != controller.IP_URL.iface_num:
             raise ScenarioDoesNotFit
 
-        super().__init__(detection_flow)
-        print(detection_flow['targets'])
+        super().__init__(detection_event)
+        print(detection_event['targets'])
 
-        self.key = (detection_flow.SRC_IP, detection_flow.DST_IP)
+        self.key = (detection_event.SRC_IP, detection_event.DST_IP)
 
 
         # TODO: if type == C&C
@@ -78,33 +79,25 @@ class DNSDetection(Scenario):
 
     Detection flows are DNS answers with A, AAAA, CNAME records
     """
-    def __init__(self, detection_iface, detection_flow):
-        # We are interested in valid DNS answers
-        if detection_iface != controller.DNS.iface_num or detection_flow.DNS_ANSWERS < 1:
+    def __init__(self, detection_iface, detection_event):
+        if detection_iface != controller.DNS.iface_num:
             raise ScenarioDoesNotFit
 
         # Consider www.domain.com and domain.com the same
-        detection_flow.DNS_NAME = detection_flow.DNS_NAME.strip(WWW_PREFIX)
+        detection_event.DNS_NAME = detection_event.DNS_NAME.strip(WWW_PREFIX).lower()
 
         # The key is just the domain
-        self.key = detection_flow.DNS_NAME
+        self.key = detection_event.DNS_NAME
 
-        super().__init__(detection_flow)
-
-        # TODO: How to get all data from DNS_RDATA? This only retrieves first record
-        try:
-            # Use the record only if its A record
-            pytrap.UnirecIPAddr(detection_flow.DNS_RDATA.decode())
-        except pytrap.TrapError:
-            raise ScenarioDoesNotFit
+        super().__init__(detection_event)
 
     def get_entities(self):
-        """ Get entities for the adaptive filter, from DNS_RDATA, from PassiveDNS etc."""
+        """ Get entities for the adaptive filter, from DNS, PassiveDNS etc."""
 
         adaptive_entities = set()
-        for detection_flow in self.detection_flows:
-            with suppress(pytrap.TrapError):
-                ip_addr = str(pytrap.UnirecIPAddr(detection_flow.DNS_RDATA.decode()))
-                adaptive_entities.add(ip_addr + self._get_suffix())
+        entities = enrichers.dns_query(self.key)
+
+        for entity in entities:
+            adaptive_entities.add(str(entity) + self._get_suffix())
 
         return adaptive_entities
