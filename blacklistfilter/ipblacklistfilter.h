@@ -48,15 +48,8 @@
 #define BLACKLISTFILTER_H
 
 #include <vector>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * Mutex for synchronization.
- */
-pthread_mutex_t BLD_SYNC_MUTEX;
+#include <string>
+#include <unirec/unirec.h>
 
 /**
  * Special value of a blacklist index indicating adaptive blacklist
@@ -121,7 +114,8 @@ typedef struct {
  * Configuration structure.
  */
 typedef struct __attribute__ ((__packed__)) {
-    char blacklist_file[256];
+    char ipv4_blacklist_file[256];
+    char ipv6_blacklist_file[256];
     char watch_blacklists[8];
 } config_t;
 
@@ -142,10 +136,5 @@ typedef uint32_t ipv4_mask_map_t[33];
  * Array of IPv6 netmasks.
  */
 typedef uint64_t ipv6_mask_map_t[129][2];
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* BLACKLISTFILTER_H */

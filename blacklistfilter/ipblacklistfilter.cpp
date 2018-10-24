@@ -45,6 +45,7 @@
  */
 
 #include <string>
+#include <vector>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -214,7 +215,7 @@ void create_v6_mask_map(ipv6_mask_map_t &m)
  * \param file Blacklist file.
  * \return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
-int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file)
+int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const config_t *config)
 {
     ifstream input;
     string line, ip, bl_index_str;
@@ -225,87 +226,94 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, string &file
     black_list_t v4_list_new;
     black_list_t v6_list_new;
 
-    input.open(file.c_str(), ifstream::in);
-    if (!input.is_open()) {
-        cerr << "ERROR: Cannot open file with updates. Is the downloader running?" << endl;
-        return BLIST_FILE_ERROR;
-    }
+    std::vector<char *> blacklist_files;
+    blacklist_files.push_back(((config_t *) config)->ipv4_blacklist_file);
+    blacklist_files.push_back(((config_t *) config)->ipv6_blacklist_file);
 
-    while (!input.eof()) {
-        getline(input, line);
-        line_num++;
-
-        if (input.bad()) {
-            cerr << "ERROR: Failed reading blacklist file (getline badbit)" << endl;
-            input.close();
+    // Read the blacklist files sequentially
+    for (auto &file: blacklist_files) {
+        input.open(file, ifstream::in);
+        if (!input.is_open()) {
+            cerr << "ERROR: Cannot open file with updates. Is the downloader running?" << endl;
             return BLIST_FILE_ERROR;
         }
 
-        // Find IP-blacklist index separator
-        size_t comma_sep = line.find_first_of(',');
+        while (!input.eof()) {
+            getline(input, line);
+            line_num++;
 
-        if (comma_sep == string::npos) {
-            if (line.empty()) {
-                // probably just newline at the end of file
+            if (input.bad()) {
+                cerr << "ERROR: Failed reading blacklist file (getline badbit)" << endl;
+                input.close();
+                return BLIST_FILE_ERROR;
+            }
+
+            // Find IP-blacklist index separator
+            size_t comma_sep = line.find_first_of(',');
+
+            if (comma_sep == string::npos) {
+                if (line.empty()) {
+                    // probably just newline at the end of file
+                    continue;
+                }
+                // Blacklist index delimeter not found (bad format?), skip it
+                cerr << "WARNING: File '" << file << "' has bad formatted line number '" << line_num << "'" << endl;
                 continue;
             }
-            // Blacklist index delimeter not found (bad format?), skip it
-            cerr << "WARNING: File '" << file << "' has bad formatted line number '" << line_num << "'" << endl;
-            continue;
-        }
 
-        // Parse IP
-        ip = line.substr(0, comma_sep);
+            // Parse IP
+            ip = line.substr(0, comma_sep);
 
-        // Are we loading prefix?
-        size_t slash_sep = ip.find_first_of('/');
+            // Are we loading prefix?
+            size_t slash_sep = ip.find_first_of('/');
 
-        if (slash_sep == string::npos) {
-            // IP only
-            if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
-                cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
-                continue;
-            }
-            if (ip_is4(&bl_entry.ip)) {
-                bl_entry.prefix_len = PREFIX_V4_DEFAULT;
+            if (slash_sep == string::npos) {
+                // IP only
+                if (!ip_from_str(ip.c_str(), &bl_entry.ip)) {
+                    cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
+                    continue;
+                }
+                if (ip_is4(&bl_entry.ip)) {
+                    bl_entry.prefix_len = PREFIX_V4_DEFAULT;
+                } else {
+                    bl_entry.prefix_len = PREFIX_V6_DEFAULT;
+                }
+
             } else {
-                bl_entry.prefix_len = PREFIX_V6_DEFAULT;
+                // IP prefix
+                if (!ip_from_str((ip.substr(0, slash_sep)).c_str(), &bl_entry.ip)) {
+                    cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
+                    continue;
+                }
+
+                ip.erase(0, slash_sep + 1);
+                bl_entry.prefix_len = (uint8_t) strtol(ip.c_str(), NULL, 0);
             }
 
-        } else {
-            // IP prefix
-            if (!ip_from_str((ip.substr(0, slash_sep)).c_str(), &bl_entry.ip)) {
-                cerr << "WARNING: Invalid IP address in file '" << file << "' on line '" << line_num << "'" << endl;
-                continue;
+            // Parse blacklist ID
+            bl_index = strtoull((line.substr(comma_sep + 1, string::npos)).c_str(), NULL, 10);
+
+            // Determine blacklist
+            bl_entry.in_blacklist = bl_index;
+
+            // If handling adaptive blacklist, load adaptive IDs in the entity
+            if (bl_index == ADAPTIVE_BLACKLIST_INDEX) {
+                string id_part = line.substr(comma_sep + 1, string::npos);
+                size_t comma_sep2 = id_part.find_first_of(',');
+                id_part = id_part.substr(comma_sep2 + 1, string::npos);
+                bl_entry.adaptive_ids = id_part;
             }
 
-            ip.erase(0, slash_sep + 1);
-            bl_entry.prefix_len = (uint8_t) strtol(ip.c_str(), NULL, 0);
+            // Add entry to vector
+            if (ip_is4(&bl_entry.ip)) {
+                v4_list_new.push_back(bl_entry);
+            } else {
+                v6_list_new.push_back(bl_entry);
+            }
         }
 
-        // Parse blacklist ID
-        bl_index = strtoull((line.substr(comma_sep + 1, string::npos)).c_str(), NULL, 10);
-
-        // Determine blacklist
-        bl_entry.in_blacklist = bl_index;
-
-        // If handling adaptive blacklist, load adaptive IDs in the entity
-        if (bl_index == ADAPTIVE_BLACKLIST_INDEX) {
-            string id_part = line.substr(comma_sep + 1, string::npos);
-            size_t comma_sep2 = id_part.find_first_of(',');
-            id_part = id_part.substr(comma_sep2 + 1, string::npos);
-            bl_entry.adaptive_ids = id_part;
-        }
-
-        // Add entry to vector
-        if (ip_is4(&bl_entry.ip)) {
-            v4_list_new.push_back(bl_entry);
-        } else {
-            v6_list_new.push_back(bl_entry);
-        }
+        input.close();
     }
-
-    input.close();
 
     v4_list = move(v4_list_new);
     v6_list = move(v6_list_new);
@@ -410,7 +418,7 @@ int blacklist_check(ur_template_t *ur_in,
                     const black_list_t &v6blacklist)
 {
     // determine which blacklist (ipv4/ipv6) we are working with
-    const black_list_t & bl = ip_is4(&(ur_get(ur_in, record, F_SRC_IP))) ? v4blacklist : v6blacklist;
+    const black_list_t &bl = ip_is4(&(ur_get(ur_in, record, F_SRC_IP))) ? v4blacklist : v6blacklist;
 
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
@@ -467,7 +475,6 @@ int main(int argc, char **argv)
     void *detection = NULL;
     ur_template_t *ur_output = NULL;
     ur_template_t *ur_input = NULL;
-    string bl_file, bl_str;
     pthread_t watcher_thread = 0;
 
     // UniRec templates for recieving data and reporting blacklisted IPs
@@ -520,19 +527,17 @@ int main(int argc, char **argv)
         WATCH_BLACKLISTS_FLAG = false;
     }
 
-    bl_file = config.blacklist_file;
-
     // Load ip addresses from sources
-    retval = reload_blacklists(v4_list, v6_list, bl_file);
+    retval = reload_blacklists(v4_list, v6_list, &config);
 
     // If update from bl_file could not be processed, return error
     if (retval == BLIST_FILE_ERROR) {
-        cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
+        cerr << "Error: Unable to read blacklist files" << endl;
         main_retval = 1; goto cleanup;
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) bl_file.c_str()) > 0) {
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) &config) > 0) {
             cerr << "Error: Couldnt create watcher thread" << endl;
             main_retval = 1; goto cleanup;
         }
@@ -572,7 +577,7 @@ int main(int argc, char **argv)
 
         if (BL_RELOAD_FLAG) {
             DBG((stderr, "Reloading blacklists\n"));
-            retval = reload_blacklists(v4_list, v6_list, bl_file);
+            retval = reload_blacklists(v4_list, v6_list, &config);
             if (retval == BLIST_FILE_ERROR) {
                 cerr << "ERROR: Unable to load update blacklist. Will use the old one instead." << endl;
             }
@@ -602,14 +607,12 @@ int main(int argc, char **argv)
                 WATCH_BLACKLISTS_FLAG = false;
             }
 
-            bl_file = config.blacklist_file;
-
             // Load ip addresses from sources
-            retval = reload_blacklists(v4_list, v6_list, bl_file);
+            retval = reload_blacklists(v4_list, v6_list, &config);
 
             // If update from file could not be processed, return error
             if (retval == BLIST_FILE_ERROR) {
-                cerr << "Error: Unable to read bl_file '" << bl_file.c_str() << "'" << endl;
+                cerr << "Error: Unable to read blacklist files" << endl;
                 main_retval = 1; goto cleanup;
             }
 

@@ -5,8 +5,12 @@
              These blacklists are meant to be prepared by blacklist downloader.
              Blacklists must be preprocessed such that IP addresses and prefixes
              are sorted (numerically) -->
-        <element name="blacklist_file">
-             /tmp/blacklistfilter/ip.blist
+        <element name="ipv4_blacklist_file">
+             /tmp/blacklistfilter/ip4.blist
+        </element>
+
+        <element name="ipv6_blacklist_file">
+             /tmp/blacklistfilter/ip6.blist
         </element>
         <!-- When set to dynamic, watch the blacklist file(s) for changes (with inotify mechanism)
         and reload them instantly, static means just to load files at startup
