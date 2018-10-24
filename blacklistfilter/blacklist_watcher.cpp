@@ -91,7 +91,12 @@ void *watch_blacklist_files(void *arg)
     /* Watch the files for IN_CLOSE_WRITE event */
     wd_4 = inotify_add_watch(fd, ipv4_file, IN_CLOSE_WRITE);
     wd_6 = inotify_add_watch(fd, ipv6_file, IN_CLOSE_WRITE);
-    if (wd_4 == -1 || wd_6 == -1) {
+
+    if (wd_6 == -1) {
+        perror("Warning: inotify_add_watch failed for IPv6 file");
+    }
+
+    if (wd_4 == -1) {
         perror("Error: Cannot watch the file, inotify_add_watch failed");
         stop = 1; return NULL;
     }

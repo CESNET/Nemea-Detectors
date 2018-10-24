@@ -230,10 +230,15 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const config
     blacklist_files.push_back(((config_t *) config)->ipv4_blacklist_file);
     blacklist_files.push_back(((config_t *) config)->ipv6_blacklist_file);
 
-    // Read the blacklist files sequentially
+    // Read the blacklist files
     for (auto &file: blacklist_files) {
         input.open(file, ifstream::in);
         if (!input.is_open()) {
+            if (file == ((config_t *) config)->ipv6_blacklist_file) {
+                // Do not terminate the program when IPv6 blacklist not present
+                cerr << "Warning: Did not find IPv6 blacklist, skipping" << endl;
+                continue;
+            }
             cerr << "ERROR: Cannot open file with updates. Is the downloader running?" << endl;
             return BLIST_FILE_ERROR;
         }
