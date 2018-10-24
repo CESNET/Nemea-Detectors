@@ -3,7 +3,7 @@ bin_PROGRAMS=ipblacklistfilter urlblacklistfilter dnsblacklistfilter
 dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            dnsblacklistfilter.h \
                            dnsdetect/patternstrings.h \
-                           blacklist_watcher.c \
+                           blacklist_watcher.cpp \
                            blacklist_watcher.h \
                            fields.c fields.h
 dnsblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
@@ -16,7 +16,7 @@ dist_dnsblacklistfiltersysconf_DATA=dnsdetect/dnsdetect_config.xml
 ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
                           ipblacklistfilter.h \
                           ipdetect/patternstrings.h \
-                          blacklist_watcher.c \
+                          blacklist_watcher.cpp \
                           blacklist_watcher.h \
                           fields.c fields.h
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
@@ -29,7 +29,7 @@ dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            urlblacklistfilter.h \
                            urldetect/patternstrings.h \
-                           blacklist_watcher.c \
+                           blacklist_watcher.cpp \
                            blacklist_watcher.h \
                            fields.c fields.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
