@@ -101,12 +101,10 @@
  * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
-    /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
-    std::string adaptive_ids; /**< ID or IDs for adaptive filter events
-    /*@}*/
+    std::string adaptive_ids; /**< ID or IDs for adaptive filter events */
 } ip_bl_entry_t;
 
 

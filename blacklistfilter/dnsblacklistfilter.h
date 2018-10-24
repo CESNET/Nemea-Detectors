@@ -58,12 +58,6 @@ extern "C" {
 #include <unirec/unirec.h>
 #include <nemea-common/prefix_tree.h>
 
-
-/**
-* Mutex for synchronization.
-*/
-pthread_mutex_t BLD_SYNC_MUTEX;
-
 /**
  * Constant returned if everything is ok.
  */

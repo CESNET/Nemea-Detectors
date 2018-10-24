@@ -60,11 +60,6 @@ extern "C" {
 
 
 /**
-* Mutex for synchronization.
-*/
-pthread_mutex_t BLD_SYNC_MUTEX;
-
-/**
  * Constant returned if everything is ok.
  */
 #define ALL_OK 0
