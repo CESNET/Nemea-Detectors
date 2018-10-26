@@ -371,9 +371,11 @@ int ip_binary_search(const ip_addr_t *searched,
         while (begin <= end) {
             mid = (begin + end) >> 1;
             if (black_list[mid].prefix_len <= 64) {
+                // If the prefix is <= 64, compare only the first 8 bytes, since the other 8 bytes of the network are zeroes
                 masked.ui64[0] = searched->ui64[0] & v6mm[black_list[mid].prefix_len][0];
                 mask_result = memcmp(&(black_list[mid].ip.ui64[0]), &(masked.ui64[0]), 8);
             } else {
+                masked.ui64[0] = searched->ui64[0];
                 masked.ui64[1] = searched->ui64[1] & v6mm[black_list[mid].prefix_len][1];
                 mask_result = memcmp(&(black_list[mid].ip.ui8), &(masked.ui8), 16);
             }
