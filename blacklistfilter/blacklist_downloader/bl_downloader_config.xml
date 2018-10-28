@@ -126,6 +126,55 @@
                 <element name="download_interval">10</element>
                 <element name="ip_version">6</element>
             </struct>
+
+            <struct>
+                <element name="id">9</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
+                <element name="name">CI Army - BadGuys</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">10</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
+                <element name="name">CZ.NIC Honeypot Cowrie</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">11</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
+                <element name="name">CZ.NIC Honeypot Dionaea</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">12</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
+                <element name="name">Malc0de</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+            <struct>
+                <element name="id">13</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">http://www.urlvir.com/export-ip-addresses</element>
+                <element name="name">URLVir</element>
+                <element name="download_interval">10</element>
+            </struct>
+
+
+
+
         </array>
 
         <array type="URL/DNS">
@@ -205,6 +254,16 @@
                 <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=compromised</element>
                 <element name="name">Zeus Tracker</element>
                 <element name="category">Intrusion.Botnet</element>
+                <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
+            </struct>
+
+            <struct>
+                <element name="id">8</element>
+                <element name="method">web</element>
+                <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_DOMBL.txt</element>
+                <element name="name">Ransomware Tracker</element>
+                <element name="category">Malware.Ransomware</element>
                 <element name="download_interval">10</element>
                 <element name="detectors">URL,DNS</element>
             </struct>

@@ -8,6 +8,7 @@
 from threading import Timer
 from threading import Lock
 from threading import Thread
+import queue
 import sys
 import signal
 import json
@@ -29,13 +30,17 @@ MAX_DST_IPS_PER_EVENT = 3000
 
 WWW_PREFIX = 'www.'
 
+stop = 0
+
 
 def signal_h(signal, f):
-    global trap
-    trap.terminate()
+    global stop
+    if stop:
+        print('Caught another SIGINT, exiting immediately..')
+        exit(1)
+    print('Caught SIGINT, exiting gracefully..')
+    stop = 1
 
-
-signal.signal(signal.SIGINT, signal_h)
 
 # Global locks
 locks = [Lock(), Lock()]
@@ -116,6 +121,7 @@ class IP:
                   "time TIME_FIRST,time TIME_LAST,uint32 COUNT,uint32 PACKETS,uint16 DST_PORT,uint8 PROTOCOL"
 
     def __init__(self):
+        self.queue = queue.Queue()
         self.ur_input = pytrap.UnirecTemplate(IP.template_in)
         # Set output format and disable output buffering
         trap.ifcctl(IP.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
@@ -203,7 +209,6 @@ class IP:
                 self._insert_event(key)
 
 
-
 class URL:
     iface_num = 1
 
@@ -212,6 +217,7 @@ class URL:
                   "uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,string HTTP_REQUEST_HOST,string HTTP_REQUEST_REFERER,string HTTP_REQUEST_URL"
 
     def __init__(self):
+        self.queue = queue.Queue()
         self.ur_input = pytrap.UnirecTemplate(URL.template_in)
         # Set output format and disable output buffering
         trap.ifcctl(URL.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
@@ -298,25 +304,41 @@ class Aggregator:
 
     def _create_threads(self):
         # Create workers for each receiver
-        self.ip_rcv = Thread(target=self._fetch_data, args=[IP()])
-        self.url_rcv = Thread(target=self._fetch_data, args=[URL()])
-        # self.dns_rcv = Thread(target=self._fetch_data, args=[blfilter_interfaces['DNS']])
+        ip = IP()
+        url = URL()
+        self.ip_receiver = Thread(target=self._receive_data, args=[ip])
+        self.ip_processor = Thread(target=self._process_data, args=[ip])
+
+        self.url_receiver = Thread(target=self._receive_data, args=[url])
+        self.url_processor = Thread(target=self._process_data, args=[url])
 
     def run(self):
         self._create_threads()
 
         # Run multireceiver
-        self.ip_rcv.start()
-        self.url_rcv.start()
-        # self.dns_rcv.start()
+        self.ip_receiver.start()
+        self.url_receiver.start()
+        self.ip_processor.start()
+        self.url_processor.start()
 
     def join(self):
         # Join the threads
-        self.ip_rcv.join()
-        self.url_rcv.join()
-        # self.dns_rcv.join()
+        self.ip_receiver.join()
+        self.url_receiver.join()
+        self.ip_processor.join()
+        self.url_processor.join()
 
-    def _fetch_data(self, detector_class):
+    @staticmethod
+    def _process_data(detector_class):
+        while not stop:
+            data = detector_class.queue.get()
+            detector_class.ur_input.setData(data)
+            locks[detector_class.iface_num].acquire()
+            detector_class.store_event()
+            locks[detector_class.iface_num].release()
+
+    @staticmethod
+    def _receive_data(detector_class):
         """
         Fetches data from trap context and aggregates them
         Arguments:
@@ -324,7 +346,7 @@ class Aggregator:
         iface_num   int IP/URL/DNS
         queue       Queue
         """
-        while True:
+        while not stop:
             try:
                 data = trap.recv(detector_class.iface_num)
             except pytrap.FormatMismatch:
@@ -343,13 +365,10 @@ class Aggregator:
             if len(data) <= 1:
                 break
 
-            locks[detector_class.iface_num].acquire()
-
-            # Set data for access using attributes
-            detector_class.ur_input.setData(data)
-            detector_class.store_event()
-
-            locks[detector_class.iface_num].release()
+            try:
+                detector_class.queue.put(data)
+            except queue.Full:
+                print("Warning: Can not add received data to the queue (queue Full)")
 
 
 def split_blacklist_bmp(blacklist_bmp):
@@ -364,6 +383,7 @@ def split_blacklist_bmp(blacklist_bmp):
 if __name__ == '__main__':
     # Parse remaining command-line arguments
     options, args = parser.parse_args()
+    signal.signal(signal.SIGINT, signal_h)
 
     trap = pytrap.TrapCtx()
     trap.init(sys.argv, 2, 1)
@@ -378,7 +398,9 @@ if __name__ == '__main__':
     rt.stop()
     send_events()
     trap.sendFlush()
+    trap.terminate()
     trap.finalize()
+
 
 
 
