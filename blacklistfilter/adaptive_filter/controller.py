@@ -4,19 +4,22 @@ import pytrap
 import sys
 import logging
 import json
+import os
 from time import time
 from threading import Thread
 from queue import Queue
 from contextlib import suppress
 
 import scenarios
+import utils
+import g
 
-#
-# from optparse import OptionParser
-# parser = OptionParser(add_help_option=True)
-# parser.add_option("-i", "--ifcspec", dest="ifcspec",
-#                   help="TRAP IFC specifier", metavar="IFCSPEC")
-
+from optparse import OptionParser
+parser = OptionParser(add_help_option=True)
+parser.add_option("-i", "--ifcspec", dest="ifcspec",
+                  help="TRAP IFC specifier", metavar="IFCSPEC")
+parser.add_option('--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml",
+                    default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
 
 cs = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
@@ -60,7 +63,7 @@ class DNS:
     def __init__(self):
         self.ur_input = pytrap.UnirecTemplate(self.template_in)
         # Set output format and disable output buffering
-        trap.ifcctl(self.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
+        # trap.ifcctl(self.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
 
 class Receiver:
@@ -77,6 +80,7 @@ class Receiver:
         self.queue = Queue()
 
     def _create_threads(self):
+        # import pdb; pdb.set_trace()
         # Create workers for each receiver
         self.ip_url_rcv = Thread(target=self._fetch_data, args=[IP_URL()])
         self.dns_rcv = Thread(target=self._fetch_data, args=[DNS()])
@@ -137,6 +141,7 @@ class Receiver:
 
 class Controller:
     def __init__(self):
+        self.detector_file_path = '/tmp/blacklistfilter/adaptive.blist'
         self.receiver = Receiver()
 
         # A dict of detected scenarios, e.g. those which fit some Scenario class
@@ -153,7 +158,8 @@ class Controller:
         # Create sorted list of entities and their cumulative indexes
         all_entities = sorted(all_entities, key=split_ip)
 
-        with open('/tmp/blacklistfilter/adaptive.blist', 'w') as f:
+        os.makedirs(os.path.dirname(self.detector_file_path), exist_ok=True)
+        with open(self.detector_file_path, 'w') as f:
             f.write('\n'.join(all_entities))
 
         logger.info('Created new ADAPTIVE detector file')
@@ -164,9 +170,9 @@ class Controller:
             detection = self.receiver.queue.get()
 
             detection_iface, detection_event = detection
-            logger.debug('Received detection event from iface {}'.format(detection_iface))
+            # logger.debug('Received detection event from iface {}'.format(detection_iface))
 
-            print("{} : {}".format(detection_iface, detection_event))
+            # print("{} : {}".format(detection_iface, detection_event))
 
             detected_scenario = None
 
@@ -197,17 +203,20 @@ class Controller:
                     detected_scenario.adaptive_entities = adaptive_entitites
                     self.create_detector_file()
 
-            for key, val in self.detected_events.items():
-                print(key)
-                print(val)
+            # for key, val in self.detected_events.items():
+            #     print(key)
+            #     print(val)
                 # if key == 'zstresser.com':
                 #     print(val.detection_event.SRC_IP)
 
 
 if __name__ == '__main__':
+    options, args = parser.parse_args()
+    g.blacklists = utils.load_blacklists(options.blacklist_config)
+    g.botnet_blacklist_indexes = utils.get_botnet_blacklist_indexes(g.blacklists)
+
     trap = pytrap.TrapCtx()
     trap.init(sys.argv, 2, 1)
-
     # TODO: set proper output template
     trap.setDataFmt(0, pytrap.FMT_JSON, "TODO")
 

@@ -8,6 +8,7 @@ from time import time
 
 import controller
 import enrichers
+import g
 
 logger = logging.getLogger('Adaptive-filter')
 
@@ -52,23 +53,21 @@ class BotnetDetection(Scenario):
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
     def __init__(self, detection_iface, detection_event):
-        if detection_iface != controller.IP_URL.iface_num:
+        if not (detection_iface == controller.IP_URL.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
             raise ScenarioDoesNotFit
 
         super().__init__(detection_event)
-        print(detection_event['targets'])
 
-        self.key = (detection_event.SRC_IP, detection_event.DST_IP)
-
-
-        # TODO: if type == C&C
+        # The key is only the blacklisted C&C server
+        self.key = detection_event['source']
+        print('Detected BOTNET with CC: {}'.format(self.key), '. ID: {}'.format(self.id))
 
     def get_entities(self):
-        # Add entity which was NOT on the blacklist
-        if self.detection_flow.DST_BLACKLIST:
-            self.adaptive_entities.add(str(self.detection_flow.SRC_IP) + self._get_suffix())
-        else:
-            self.adaptive_entities.add(str(self.detection_flow.DST_IP) + self._get_suffix())
+        # Gather all the targets (bots communicating with the C&C server)
+        adaptive_entities = set()
+        for detection_event in self.detection_events:
+            adaptive_entities.update([target + self._get_suffix() for target in detection_event["targets"]])
+        return adaptive_entities
 
 
 class DNSDetection(Scenario):
