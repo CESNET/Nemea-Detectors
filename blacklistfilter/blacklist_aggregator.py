@@ -34,11 +34,12 @@ stop = 0
 
 
 def signal_h(signal, f):
-    global stop
+    global stop, trap
     if stop:
         print('Caught another SIGINT, exiting immediately..')
         exit(1)
     print('Caught SIGINT, exiting gracefully..')
+    trap.terminate()
     stop = 1
 
 
@@ -398,7 +399,6 @@ if __name__ == '__main__':
     rt.stop()
     send_events()
     trap.sendFlush()
-    trap.terminate()
     trap.finalize()
 
 
