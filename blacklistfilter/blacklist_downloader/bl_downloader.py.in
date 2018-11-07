@@ -207,7 +207,11 @@ class URLandDNSBlacklist(Blacklist):
                 while url[-1] == '/':
                     url = url[:-1]
                 # TODO: Maybe normalize also?
-                extracted.append(url)
+                try:
+                    url.encode('ascii')
+                    extracted.append(url)
+                except UnicodeError:
+                    logger.warning('Skipping non-ascii URL: {}'.format(url))
 
         return extracted
 
