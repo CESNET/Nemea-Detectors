@@ -60,6 +60,17 @@ def send_events():
     for event_list in [ip_event_list, url_event_list]:
         for key in event_list:
             event = event_list[key]
+
+            # Remove duplicate entries, also convert targets from IPAddr objects to str
+            event["targets"] = [str(target) for target in set(event["targets"])]
+            event["source_ports"] = list(set(event["source_ports"]))
+
+            # Convert source/source_ip to str
+            try:
+                event["source"] = str(event["source"])
+            except KeyError:
+                event["source_ip"] = str(event["source_ip"])
+
             try:
                 # To avoid too long messages, split the event if there are more 1000 IPs
                 if len(event["targets"]) > MAX_DST_IPS_PER_EVENT:
@@ -123,8 +134,6 @@ class IP:
     def __init__(self):
         self.queue = queue.Queue()
         self.ur_input = pytrap.UnirecTemplate(IP.template_in)
-        # Set output format and disable output buffering
-        trap.ifcctl(IP.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
     def _insert_event(self, key):
         event = {
@@ -133,8 +142,8 @@ class IP:
                  "ts_last": float(self.ur_input.TIME_LAST),
                  "protocol": self.ur_input.PROTOCOL,
                  "source_ports": [],
-                 "source": str(self.ur_input.SRC_IP) if self.ur_input.SRC_BLACKLIST else str(self.ur_input.DST_IP),
-                 "targets": [str(self.ur_input.DST_IP)] if self.ur_input.SRC_BLACKLIST else [str(self.ur_input.SRC_IP)],
+                 "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
+                 "targets": [self.ur_input.DST_IP] if self.ur_input.SRC_BLACKLIST else [self.ur_input.SRC_IP],
                  "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
                  "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
                  "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
@@ -156,26 +165,19 @@ class IP:
     def _update_event(self, key):
         event = ip_event_list[key]
 
-        # Update ports of the source (of trouble) and target IPs, this way because JSON can't handle set() itself
-        source_ports = set(event["source_ports"])
-        targets = set(event["targets"])
-
         if self.ur_input.SRC_BLACKLIST:
             # source_ports.add(self.ur_input.SRC_PORT)
-            targets.add(str(self.ur_input.DST_IP))
+            event["targets"].append(self.ur_input.DST_IP)
             event["src_sent_bytes"] += self.ur_input.BYTES
             event["src_sent_flows"] += self.ur_input.COUNT
             event["src_sent_packets"] += self.ur_input.PACKETS
         else:
             if self.ur_input.DST_PORT <= MINSRCPORT:
-                source_ports.add(self.ur_input.DST_PORT)
-            targets.add(str(self.ur_input.SRC_IP))
+                event["source_ports"].append(self.ur_input.DST_PORT)
+            event["targets"].append(self.ur_input.SRC_IP)
             event["tgt_sent_bytes"] += self.ur_input.BYTES
             event["tgt_sent_flows"] += self.ur_input.COUNT
             event["tgt_sent_packets"] += self.ur_input.PACKETS
-
-        event["source_ports"] = list(source_ports)
-        event["targets"] = list(targets)
 
         event["ts_first"] = min(event["ts_first"], float(self.ur_input.TIME_FIRST))
         event["ts_last"] = max(event["ts_last"], float(self.ur_input.TIME_LAST))
@@ -219,8 +221,6 @@ class URL:
     def __init__(self):
         self.queue = queue.Queue()
         self.ur_input = pytrap.UnirecTemplate(URL.template_in)
-        # Set output format and disable output buffering
-        trap.ifcctl(URL.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
     def _insert_event(self, key):
         url = str(self.ur_input.HTTP_REQUEST_HOST)
@@ -233,10 +233,10 @@ class URL:
         event = {
             "type": "url",
             # Every source/src means source of trouble (the blacklisted address)
-            "source_ip": str(self.ur_input.DST_IP),
+            "source_ip": self.ur_input.DST_IP,
             "source_url": url,
             "referer": str(self.ur_input.HTTP_REQUEST_REFERER),
-            "targets": [str(self.ur_input.SRC_IP)],
+            "targets": [self.ur_input.SRC_IP],
             "source_ports": [self.ur_input.DST_PORT],
             "ts_first": float(self.ur_input.TIME_FIRST),
             "ts_last": float(self.ur_input.TIME_LAST),
@@ -256,11 +256,8 @@ class URL:
         event = url_event_list[key]
 
         # Update ports of the source (of trouble) and target IPs
-        if self.ur_input.DST_PORT not in event["source_ports"]:
-            event["source_ports"].append(self.ur_input.DST_PORT)
-
-        if str(self.ur_input.SRC_IP) not in event["targets"]:
-            event["targets"].append(str(self.ur_input.SRC_IP))
+        event["source_ports"].append(self.ur_input.DST_PORT)
+        event["targets"].append(self.ur_input.SRC_IP)
 
         event["ts_first"] = min(event["ts_first"], float(self.ur_input.TIME_FIRST))
         event["ts_last"] = max(event["ts_last"], float(self.ur_input.TIME_LAST))
@@ -372,15 +369,12 @@ class Aggregator:
 
 
 def split_blacklist_bmp(blacklist_bmp):
-    def bin(s):
-        return str(s) if s <= 1 else bin(s >> 1) + str(s & 1)
-
-    bin_bmp = bin(blacklist_bmp)[::-1]
-
+    bin_bmp = bin(blacklist_bmp).replace('0b', '')[::-1]
     return [2 ** i for i, c in enumerate(bin_bmp) if c == '1']
 
 
 if __name__ == '__main__':
+
     # Parse remaining command-line arguments
     options, args = parser.parse_args()
     signal.signal(signal.SIGINT, signal_h)
@@ -389,7 +383,7 @@ if __name__ == '__main__':
     trap.init(sys.argv, 2, 1)
     trap.setDataFmt(0, pytrap.FMT_JSON, template_out)
 
-    rt = RepeatedTimer(int(options.time) * 60, send_events)
+    rt = RepeatedTimer(float(options.time) * 60, send_events)
 
     agg = Aggregator()
     agg.run()
@@ -400,7 +394,6 @@ if __name__ == '__main__':
     trap.sendFlush()
     trap.terminate()
     trap.finalize()
-
 
 
 
