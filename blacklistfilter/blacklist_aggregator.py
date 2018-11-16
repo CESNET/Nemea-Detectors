@@ -23,7 +23,7 @@ parser.add_option("-t", "--time", dest="time", type="float",
 
 # All ports higher than MINSRCPORT are considered as dynamic/private;
 # therefore, let's put lower ports into IDEA messages.
-MINSRCPORT=30000
+MINSRCPORT=49152
 
 # Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
 MAX_DST_IPS_PER_EVENT = 3000
@@ -45,25 +45,23 @@ def signal_h(signal, f):
 # Global locks
 locks = [Lock(), Lock()]
 
-# Global list of events
-ip_event_list = {}
-url_event_list = {}
+# Global dicts of events
+ip_events = {}
+url_events = {}
 
 template_out = "aggregated_blacklist"
 
 
 # Send aggregated events by RepeatedTimer
 def send_events():
-    global ip_event_list
-    global url_event_list
+    global ip_events
+    global url_events
 
-    for event_list in [ip_event_list, url_event_list]:
-        for key in event_list:
-            event = event_list[key]
-
-            # Remove duplicate entries, also convert targets from IPAddr objects to str
-            event["targets"] = [str(target) for target in set(event["targets"])]
-            event["source_ports"] = list(set(event["source_ports"]))
+    for events in [ip_events, url_events]:
+        for event in events.values():
+            # Convert targets from IPAddr objects to str
+            event["targets"] = [str(target) for target in event["targets"]]
+            event["source_ports"] = list(event["source_ports"])
 
             # Convert source/source_ip to str
             try:
@@ -88,8 +86,8 @@ def send_events():
                 print("Terminated TRAP.")
                 break
 
-    ip_event_list = {}
-    url_event_list = {}
+    ip_events = {}
+    url_events = {}
 
 
 class RepeatedTimer:
@@ -124,7 +122,7 @@ class RepeatedTimer:
         self.is_running = False
 
 
-class IP:
+class IPProcessor:
     iface_num = 0
 
     # exact output match of pre-aggregated ipblacklistfilter
@@ -133,7 +131,7 @@ class IP:
 
     def __init__(self):
         self.queue = queue.Queue()
-        self.ur_input = pytrap.UnirecTemplate(IP.template_in)
+        self.ur_input = pytrap.UnirecTemplate(IPProcessor.template_in)
 
     def _insert_event(self, key):
         event = {
@@ -141,9 +139,9 @@ class IP:
                  "ts_first": float(self.ur_input.TIME_FIRST),
                  "ts_last": float(self.ur_input.TIME_LAST),
                  "protocol": self.ur_input.PROTOCOL,
-                 "source_ports": [],
+                 "source_ports": set(),
                  "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
-                 "targets": [self.ur_input.DST_IP] if self.ur_input.SRC_BLACKLIST else [self.ur_input.SRC_IP],
+                 "targets": {self.ur_input.DST_IP} if self.ur_input.SRC_BLACKLIST else {self.ur_input.SRC_IP},
                  "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
                  "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
                  "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
@@ -155,26 +153,27 @@ class IP:
         }
 
         # if self.ur_input.SRC_BLACKLIST and self.ur_input.SRC_PORT <= MINSRCPORT:
-        #     event["source_ports"].append(self.ur_input.SRC_PORT)
+        #     event["source_ports"].add(self.ur_input.SRC_PORT)
 
         if self.ur_input.DST_BLACKLIST and self.ur_input.DST_PORT <= MINSRCPORT:
-            event["source_ports"].append(self.ur_input.DST_PORT)
+            event["source_ports"].add(self.ur_input.DST_PORT)
 
-        ip_event_list[key] = event
+        ip_events[key] = event
 
-    def _update_event(self, key):
-        event = ip_event_list[key]
-
+    def _update_event(self, event):
+        """
+        Update already existing event, data is passed implicitly through self.ur_input object
+        """
         if self.ur_input.SRC_BLACKLIST:
             # source_ports.add(self.ur_input.SRC_PORT)
-            event["targets"].append(self.ur_input.DST_IP)
+            event["targets"].add(self.ur_input.DST_IP)
             event["src_sent_bytes"] += self.ur_input.BYTES
             event["src_sent_flows"] += self.ur_input.COUNT
             event["src_sent_packets"] += self.ur_input.PACKETS
         else:
             if self.ur_input.DST_PORT <= MINSRCPORT:
-                event["source_ports"].append(self.ur_input.DST_PORT)
-            event["targets"].append(self.ur_input.SRC_IP)
+                event["source_ports"].add(self.ur_input.DST_PORT)
+            event["targets"].add(self.ur_input.SRC_IP)
             event["tgt_sent_bytes"] += self.ur_input.BYTES
             event["tgt_sent_flows"] += self.ur_input.COUNT
             event["tgt_sent_packets"] += self.ur_input.PACKETS
@@ -200,18 +199,19 @@ class IP:
         for blist in blists:
             if self.ur_input.SRC_BLACKLIST:
                 self.ur_input.SRC_BLACKLIST = blist
-                key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL, self.ur_input.SRC_BLACKLIST)
+                key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL, blist)
             else:
                 self.ur_input.DST_BLACKLIST = blist
-                key = (self.ur_input.SRC_IP, self.ur_input.PROTOCOL, self.ur_input.DST_BLACKLIST)
+                key = (self.ur_input.DST_IP, self.ur_input.PROTOCOL, blist)
 
-            if key in ip_event_list:
-                self._update_event(key)
-            else:
+            event = ip_events.get(key)
+            if event is None:
                 self._insert_event(key)
+            else:
+                self._update_event(event)
 
 
-class URL:
+class URLProcessor:
     iface_num = 1
 
     # exact output match of urlblacklistfilter
@@ -220,7 +220,7 @@ class URL:
 
     def __init__(self):
         self.queue = queue.Queue()
-        self.ur_input = pytrap.UnirecTemplate(URL.template_in)
+        self.ur_input = pytrap.UnirecTemplate(URLProcessor.template_in)
 
     def _insert_event(self, key):
         url = str(self.ur_input.HTTP_REQUEST_HOST)
@@ -236,8 +236,8 @@ class URL:
             "source_ip": self.ur_input.DST_IP,
             "source_url": url,
             "referer": str(self.ur_input.HTTP_REQUEST_REFERER),
-            "targets": [self.ur_input.SRC_IP],
-            "source_ports": [self.ur_input.DST_PORT],
+            "targets": {self.ur_input.SRC_IP},
+            "source_ports": {self.ur_input.DST_PORT},
             "ts_first": float(self.ur_input.TIME_FIRST),
             "ts_last": float(self.ur_input.TIME_LAST),
             "protocol": self.ur_input.PROTOCOL,
@@ -250,14 +250,15 @@ class URL:
             "is_only_fqdn": only_fqdn
         }
 
-        url_event_list[key] = event
+        url_events[key] = event
 
-    def _update_event(self, key):
-        event = url_event_list[key]
-
+    def _update_event(self, event):
+        """
+        Update already existing event, data is passed implicitly through self.ur_input object
+        """
         # Update ports of the source (of trouble) and target IPs
-        event["source_ports"].append(self.ur_input.DST_PORT)
-        event["targets"].append(self.ur_input.SRC_IP)
+        event["source_ports"].add(self.ur_input.DST_PORT)
+        event["targets"].add(self.ur_input.SRC_IP)
 
         event["ts_first"] = min(event["ts_first"], float(self.ur_input.TIME_FIRST))
         event["ts_last"] = max(event["ts_last"], float(self.ur_input.TIME_LAST))
@@ -276,17 +277,18 @@ class URL:
         for blist in blists:
             self.ur_input.BLACKLIST = blist
             # Set key (Host+URL, destination and L4 protocol)
-            key = (self.ur_input.HTTP_REQUEST_HOST.strip(WWW_PREFIX),
+            key = (self.ur_input.HTTP_REQUEST_HOST.lstrip(WWW_PREFIX),
                    self.ur_input.HTTP_REQUEST_URL,
                    self.ur_input.DST_IP,
                    self.ur_input.PROTOCOL,
-                   self.ur_input.BLACKLIST
+                   blist
                    )
 
-            if key in url_event_list:
-                self._update_event(key)
-            else:
+            event = url_events.get(key)
+            if event is None:
                 self._insert_event(key)
+            else:
+                self._update_event(event)
 
 
 class Aggregator:
@@ -295,14 +297,14 @@ class Aggregator:
         Trap initialization for input and output interfaces
         """
         # Set up required format to accept any unirec format.
-        trap.setRequiredFmt(IP.iface_num, pytrap.FMT_UNIREC, IP.template_in)
-        trap.setRequiredFmt(URL.iface_num, pytrap.FMT_UNIREC, URL.template_in)
+        trap.setRequiredFmt(IPProcessor.iface_num, pytrap.FMT_UNIREC, IPProcessor.template_in)
+        trap.setRequiredFmt(URLProcessor.iface_num, pytrap.FMT_UNIREC, URLProcessor.template_in)
         # trap.setRequiredFmt(blfilter_interfaces['DNS'])    # Refers to flows with DNS headers from dnsdetect
 
     def _create_threads(self):
         # Create workers for each receiver
-        ip = IP()
-        url = URL()
+        ip = IPProcessor()
+        url = URLProcessor()
         self.ip_receiver = Thread(target=self._receive_data, args=[ip])
         self.ip_processor = Thread(target=self._process_data, args=[ip])
 
@@ -327,11 +329,14 @@ class Aggregator:
 
     @staticmethod
     def _process_data(detector_class):
+        my_queue = detector_class.queue
+        my_store_event = detector_class.store_event
+
         while not stop:
-            data = detector_class.queue.get()
+            data = my_queue.get()
             detector_class.ur_input.setData(data)
             locks[detector_class.iface_num].acquire()
-            detector_class.store_event()
+            my_store_event()
             locks[detector_class.iface_num].release()
 
     @staticmethod
@@ -343,15 +348,18 @@ class Aggregator:
         iface_num   int IP/URL/DNS
         queue       Queue
         """
+        my_iface_num = detector_class.iface_num
+        my_queue = detector_class.queue
+
         while not stop:
             try:
-                data = trap.recv(detector_class.iface_num)
+                data = trap.recv(my_iface_num)
             except pytrap.FormatMismatch:
                 print("Error: output and input interfaces data format or data specifier mismatch")
                 break
             except pytrap.FormatChanged as e:
-                fmttype, inputspec = trap.getDataFmt(detector_class.iface_num)
-                type(detector_class).ur_input = pytrap.UnirecTemplate(inputspec)
+                fmttype, inputspec = trap.getDataFmt(my_iface_num)
+                detector_class.ur_input = pytrap.UnirecTemplate(inputspec)
                 data = e.data
             except pytrap.Terminated:
                 print("Terminated TRAP.")
@@ -362,10 +370,7 @@ class Aggregator:
             if len(data) <= 1:
                 break
 
-            try:
-                detector_class.queue.put(data)
-            except queue.Full:
-                print("Warning: Can not add received data to the queue (queue Full)")
+            my_queue.put(data)
 
 
 def split_blacklist_bmp(blacklist_bmp):
