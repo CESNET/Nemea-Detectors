@@ -6,7 +6,6 @@
 # Records are being aggregated 1-N in time window, where 1 is the blacklisted entry.
 
 from threading import Timer
-from threading import Lock
 from threading import Thread
 import queue
 import sys
@@ -42,9 +41,6 @@ def signal_h(signal, f):
     stop = 1
 
 
-# Global locks
-locks = [Lock(), Lock()]
-
 # Global dicts of events
 ip_events = {}
 url_events = {}
@@ -57,7 +53,14 @@ def send_events():
     global ip_events
     global url_events
 
-    for events in [ip_events, url_events]:
+    # No need for locking, store reference global lists to local variables and point global lists to new, empty dicts.
+    # The processor threads then write into those new (empty) dicts
+    my_ip_events = ip_events
+    my_url_events = url_events
+    ip_events = {}
+    url_events = {}
+
+    for events in [my_ip_events, my_url_events]:
         for event in events.values():
             # Convert targets from IPAddr objects to str
             event["targets"] = [str(target) for target in event["targets"]]
@@ -86,9 +89,6 @@ def send_events():
                 print("Terminated TRAP.")
                 break
 
-    ip_events = {}
-    url_events = {}
-
 
 class RepeatedTimer:
     def __init__(self, interval, function):
@@ -99,17 +99,9 @@ class RepeatedTimer:
         self.start()
 
     def _run(self):
-        global locks
-
-        for lock in locks:
-            lock.acquire()
-
         self.is_running = False
         self.start()
         self.function()
-
-        for lock in locks:
-            lock.release()
 
     def start(self):
         if not self.is_running:
@@ -335,9 +327,7 @@ class Aggregator:
         while not stop:
             data = my_queue.get()
             detector_class.ur_input.setData(data)
-            locks[detector_class.iface_num].acquire()
             my_store_event()
-            locks[detector_class.iface_num].release()
 
     @staticmethod
     def _receive_data(detector_class):
