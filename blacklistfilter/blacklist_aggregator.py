@@ -182,11 +182,18 @@ class IPProcessor:
         2) DST_IP is on some blacklist:
             we can aggregate by DST_IP, its blacklist and protocol,
             DST_IP is Source and SRC_IP is Target
+
+        If the entity is on more than one blacklist, there will be an event for each blacklist index
         """
 
-        blists = split_blacklist_bmp(self.ur_input.SRC_BLACKLIST if
-                                     self.ur_input.SRC_BLACKLIST else
-                                     self.ur_input.DST_BLACKLIST)
+        bmp = self.ur_input.SRC_BLACKLIST if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_BLACKLIST
+
+        if bmp & (bmp - 1) == 0:
+            # Bitmap is a power of 2, so the entity is only on one blacklist (most of the cases)
+            blists = [bmp]
+        else:
+            # Split blacklist bitmap, so we aggregate only one blacklist
+            blists = split_blacklist_bmp(bmp)
 
         for blist in blists:
             if self.ur_input.SRC_BLACKLIST:
@@ -262,9 +269,18 @@ class URLProcessor:
     def store_event(self):
         """
         Aggregation is done using blacklisted URL, destination IP and L4 protocol as a key
+
+        If the entity is on more than one blacklist, there will be an event for each blacklist index
         """
-        # Split blacklist bitmap, so we aggregate only one blacklist
-        blists = split_blacklist_bmp(self.ur_input.BLACKLIST)
+
+        bmp = self.ur_input.BLACKLIST
+
+        if bmp & (bmp - 1) == 0:
+            # Bitmap is a power of 2, so the entity is only on one blacklist (most of the cases)
+            blists = [bmp]
+        else:
+            # Split blacklist bitmap, so we aggregate only one blacklist
+            blists = split_blacklist_bmp(self.ur_input.BLACKLIST)
 
         for blist in blists:
             self.ur_input.BLACKLIST = blist
