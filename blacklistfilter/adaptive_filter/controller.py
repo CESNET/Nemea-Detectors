@@ -40,7 +40,7 @@ def split_ip(ip):
     return tuple_ip
 
 
-class IP_URL:
+class IP_URL_Interface:
     iface_num = 0
 
     template_type = pytrap.FMT_JSON
@@ -51,7 +51,7 @@ class IP_URL:
         trap.ifcctl(self.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
 
-class DNS:
+class DNS_Interface:
     iface_num = 1
 
     template_type = pytrap.FMT_UNIREC
@@ -73,8 +73,8 @@ class Receiver:
         """
 
         # Set up required format to accept any unirec format.
-        trap.setRequiredFmt(IP_URL.iface_num, IP_URL.template_type, IP_URL.template_in)
-        trap.setRequiredFmt(DNS.iface_num, DNS.template_type, DNS.template_in)
+        trap.setRequiredFmt(IP_URL_Interface.iface_num, IP_URL_Interface.template_type, IP_URL_Interface.template_in)
+        trap.setRequiredFmt(DNS_Interface.iface_num, DNS_Interface.template_type, DNS_Interface.template_in)
 
         # Queue for received flows
         self.queue = Queue()
@@ -82,8 +82,8 @@ class Receiver:
     def _create_threads(self):
         # import pdb; pdb.set_trace()
         # Create workers for each receiver
-        self.ip_url_rcv = Thread(target=self._fetch_data, args=[IP_URL()])
-        self.dns_rcv = Thread(target=self._fetch_data, args=[DNS()])
+        self.ip_url_rcv = Thread(target=self._fetch_data, args=[IP_URL_Interface()])
+        self.dns_rcv = Thread(target=self._fetch_data, args=[DNS_Interface()])
 
     def run(self):
         self._create_threads()
@@ -125,7 +125,7 @@ class Receiver:
             if len(data) <= 1:
                 break
 
-            if isinstance(input_class, DNS):
+            if isinstance(input_class, DNS_Interface):
                 # DNS has Unirec format
                 # There has to be a copy, otherwise only reference is stored in the queue and rec is rewritten
                 rec = input_class.ur_input.copy()

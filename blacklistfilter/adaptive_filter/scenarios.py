@@ -53,7 +53,7 @@ class BotnetDetection(Scenario):
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
     def __init__(self, detection_iface, detection_event):
-        if not (detection_iface == controller.IP_URL.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
+        if not (detection_iface == controller.IP_URL_Interface.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
             raise ScenarioDoesNotFit
 
         super().__init__(detection_event)
@@ -79,7 +79,7 @@ class DNSDetection(Scenario):
     Detection flows are DNS answers with A, AAAA, CNAME records
     """
     def __init__(self, detection_iface, detection_event):
-        if detection_iface != controller.DNS.iface_num:
+        if detection_iface != controller.DNS_Interface.iface_num:
             raise ScenarioDoesNotFit
 
         # Consider www.domain.com and domain.com the same
