@@ -66,6 +66,15 @@ class DNS_Interface:
         # trap.ifcctl(self.iface_num, False, pytrap.CTL_BUFFERSWITCH, 0)
 
 
+class Adaptive_Interface:
+    iface_num = 2
+
+    template_type = pytrap.FMT_UNIREC
+
+    template_in = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST," + \
+                  "time TIME_FIRST,time TIME_LAST,uint32 COUNT,uint32 PACKETS,uint16 DST_PORT,uint8 PROTOCOL,string ADAPTIVE_IDS"
+
+
 class Receiver:
     def __init__(self):
         """
@@ -84,6 +93,7 @@ class Receiver:
         # Create workers for each receiver
         self.ip_url_rcv = Thread(target=self._fetch_data, args=[IP_URL_Interface()])
         self.dns_rcv = Thread(target=self._fetch_data, args=[DNS_Interface()])
+        self.adaptive_rcv = Thread(target=self._fetch_data, args=[Adaptive_Interface()])
 
     def run(self):
         self._create_threads()
@@ -91,11 +101,13 @@ class Receiver:
         # Run multireceiver
         self.ip_url_rcv.start()
         self.dns_rcv.start()
+        self.adaptive_rcv.start()
 
     def join_and_quit(self):
         # Join the threads
         self.ip_url_rcv.join()
         self.dns_rcv.join()
+        self.adaptive_rcv.join()
         self.queue.put(None)
 
     def _fetch_data(self, input_class):
@@ -125,15 +137,14 @@ class Receiver:
             if len(data) <= 1:
                 break
 
-            if isinstance(input_class, DNS_Interface):
-                # DNS has Unirec format
+            if isinstance(input_class, IP_URL_Interface):
+                # IP and URL events are sent in JSON (from aggregator)
+                rec = json.loads(data.decode())
+            else:
+                # DNS and Adaptive have Unirec format
                 # There has to be a copy, otherwise only reference is stored in the queue and rec is rewritten
                 rec = input_class.ur_input.copy()
                 rec.setData(data)
-
-            else:
-                # IP and URL events are sent in JSON (from aggregator)
-                rec = json.loads(data.decode())
 
             # No locking needed, the queue object does it internally
             self.queue.put((input_class.iface_num, rec))
