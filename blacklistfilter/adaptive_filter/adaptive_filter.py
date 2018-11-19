@@ -21,12 +21,14 @@ parser.add_option("-i", "--ifcspec", dest="ifcspec",
 parser.add_option('--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml",
                     default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
 
-cs = logging.StreamHandler()
-formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
-cs.setFormatter(formatter)
-logger = logging.getLogger('Adaptive-filter')
-logger.addHandler(cs)
-logger.setLevel(logging.DEBUG)
+# cs = logging.StreamHandler()
+# formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
+# cs.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO,format='[%(asctime)s] - %(levelname)s - %(message)s')
+# logger.addHandler(cs)
+
+scenario_events = {}
 
 
 # Sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
@@ -42,7 +44,6 @@ def split_ip(ip):
 
 class IP_URL_Interface:
     iface_num = 0
-
     template_type = pytrap.FMT_JSON
     template_in = "aggregated_blacklist"
 
@@ -53,7 +54,6 @@ class IP_URL_Interface:
 
 class DNS_Interface:
     iface_num = 1
-
     template_type = pytrap.FMT_UNIREC
     template_in = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint8 PROTOCOL," \
                   "uint16 DST_PORT,uint16 SRC_PORT,uint16 DNS_ID,uint16 DNS_ANSWERS,string DNS_NAME,uint16 DNS_QTYPE," \
@@ -68,9 +68,7 @@ class DNS_Interface:
 
 class Adaptive_Interface:
     iface_num = 2
-
     template_type = pytrap.FMT_UNIREC
-
     template_in = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST," + \
                   "time TIME_FIRST,time TIME_LAST,uint32 COUNT,uint32 PACKETS,uint16 DST_PORT,uint8 PROTOCOL,string ADAPTIVE_IDS"
 
@@ -84,6 +82,7 @@ class Receiver:
         # Set up required format to accept any unirec format.
         trap.setRequiredFmt(IP_URL_Interface.iface_num, IP_URL_Interface.template_type, IP_URL_Interface.template_in)
         trap.setRequiredFmt(DNS_Interface.iface_num, DNS_Interface.template_type, DNS_Interface.template_in)
+        trap.setRequiredFmt(Adaptive_Interface.iface_num, Adaptive_Interface.template_type, Adaptive_Interface.template_in)
 
         # Queue for received flows
         self.queue = Queue()
@@ -157,7 +156,6 @@ class Controller:
 
         # A dict of detected scenarios, e.g. those which fit some Scenario class
         # The dict key can be different for each scenario
-        self.detected_events = {}
         self.receiver.run()
 
     def create_detector_file(self):
@@ -176,14 +174,19 @@ class Controller:
         logger.info('Created new ADAPTIVE detector file')
 
     def run(self):
+        logger.info('Adaptive controller running..')
         while True:
             # Wait until there is a detection event
-            detection = self.receiver.queue.get()
+            detection_iface, detection_event = self.receiver.queue.get()
 
-            detection_iface, detection_event = detection
             # logger.debug('Received detection event from iface {}'.format(detection_iface))
 
             # print("{} : {}".format(detection_iface, detection_event))
+
+            if detection_iface == Adaptive_Interface.iface_num:
+                # Handle event from adaptive filter
+                self.handle_adaptive_detection(detection_event)
+                continue
 
             detected_scenario = None
 
@@ -193,11 +196,12 @@ class Controller:
                     detected_scenario = scenario_class(detection_iface, detection_event)
 
             if detected_scenario:
-                # Scenario fits
+                # Scenario fits, detected_scenario is an object of this scenario class
                 logger.info('Detected scenario: {}'.format(type(detected_scenario).__name__))
                 try:
+                    # TODO: locking here?
                     # Do we know about this specific case of the scenario?
-                    scenario_event = self.detected_events[detected_scenario.key]
+                    scenario_event = scenario_events[detected_scenario.key]
 
                     scenario_event.detection_events.append(detection_event)
                     scenario_event.detection_cnt += 1
@@ -206,19 +210,25 @@ class Controller:
                 except KeyError:
                     # New scenario event
                     detected_scenario.set_random_id()
-                    self.detected_events[detected_scenario.key] = detected_scenario
+                    scenario_events[detected_scenario.key] = detected_scenario
 
-                # TODO: how to handle/update adaptive entities of already detected events
-                adaptive_entitites = detected_scenario.get_entities()
-                if adaptive_entitites and not detected_scenario.adaptive_entities:
-                    detected_scenario.adaptive_entities = adaptive_entitites
-                    self.create_detector_file()
+                # TODO: Move this code to evaluator
+                # adaptive_entitites = detected_scenario.get_entities()
+                # if adaptive_entitites and not detected_scenario.adaptive_entities:
+                #     detected_scenario.adaptive_entities = adaptive_entitites
+                #     self.create_detector_file()
 
-            # for key, val in self.detected_events.items():
-            #     print(key)
-            #     print(val)
-                # if key == 'zstresser.com':
-                #     print(val.detection_event.SRC_IP)
+            else:
+                # Do not store any event, just bypass it to the reporter
+                self.send_to_reporter(detection_event)
+
+    @staticmethod
+    def send_to_reporter(detection_event):
+        # Send data to output interface
+        trap.send(bytearray(json.dumps(detection_event), "utf-8"))
+
+    def handle_adaptive_detection(self, detection_event):
+        pass
 
 
 if __name__ == '__main__':
@@ -227,9 +237,9 @@ if __name__ == '__main__':
     g.botnet_blacklist_indexes = utils.get_botnet_blacklist_indexes(g.blacklists)
 
     trap = pytrap.TrapCtx()
-    trap.init(sys.argv, 2, 1)
-    # TODO: set proper output template
-    trap.setDataFmt(0, pytrap.FMT_JSON, "TODO")
+    trap.init(sys.argv, 3, 1)
+
+    trap.setDataFmt(0, pytrap.FMT_JSON, "aggregated_blacklist")
 
     controller = Controller()
     controller.run()

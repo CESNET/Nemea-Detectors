@@ -6,11 +6,12 @@ from contextlib import suppress
 from uuid import uuid4
 from time import time
 
-import controller
+import adaptive_filter
 import enrichers
 import g
 
-logger = logging.getLogger('Adaptive-filter')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 WWW_PREFIX = 'www.'
 
@@ -53,14 +54,14 @@ class BotnetDetection(Scenario):
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
     def __init__(self, detection_iface, detection_event):
-        if not (detection_iface == controller.IP_URL_Interface.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
+        if not (detection_iface == adaptive_filter.IP_URL_Interface.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
             raise ScenarioDoesNotFit
 
         super().__init__(detection_event)
 
         # The key is only the blacklisted C&C server
         self.key = detection_event['source']
-        print('Detected BOTNET with CC: {}'.format(self.key), '. ID: {}'.format(self.id))
+        logger.debug('Detected BOTNET with CC: {}. ID: {}'.format(self.key, self.id))
 
     def get_entities(self):
         # Gather all the targets (bots communicating with the C&C server)
@@ -79,7 +80,7 @@ class DNSDetection(Scenario):
     Detection flows are DNS answers with A, AAAA, CNAME records
     """
     def __init__(self, detection_iface, detection_event):
-        if detection_iface != controller.DNS_Interface.iface_num:
+        if detection_iface != adaptive_filter.DNS_Interface.iface_num:
             raise ScenarioDoesNotFit
 
         # Consider www.domain.com and domain.com the same
