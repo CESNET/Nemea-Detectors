@@ -29,6 +29,7 @@ logging.basicConfig(level=logging.INFO,format='[%(asctime)s] - %(levelname)s - %
 # logger.addHandler(cs)
 
 scenario_events = {}
+adaptive_events = {}
 
 
 # Sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
@@ -118,15 +119,18 @@ class Receiver:
         interface   int IP/URL/DNS
         queue       Queue
         """
+        my_iface_num = input_class.iface_num
+        my_ur_input = input_class.ur_input
+
         while True:
             try:
-                data = trap.recv(input_class.iface_num)
+                data = trap.recv(my_iface_num)
             except pytrap.FormatMismatch:
                 print("Error: output and input interfaces data format or data specifier mismatch")
                 break
             except pytrap.FormatChanged as e:
-                fmttype, inputspec = trap.getDataFmt(input_class.iface_num)
-                input_class.ur_input = pytrap.UnirecTemplate(inputspec)
+                fmttype, inputspec = trap.getDataFmt(my_iface_num)
+                my_ur_input = pytrap.UnirecTemplate(inputspec)
                 data = e.data
             except pytrap.Terminated:
                 print("Terminated TRAP.")
@@ -142,11 +146,11 @@ class Receiver:
             else:
                 # DNS and Adaptive have Unirec format
                 # There has to be a copy, otherwise only reference is stored in the queue and rec is rewritten
-                rec = input_class.ur_input.copy()
+                rec = my_ur_input.copy()
                 rec.setData(data)
 
             # No locking needed, the queue object does it internally
-            self.queue.put((input_class.iface_num, rec))
+            self.queue.put((my_iface_num, rec))
 
 
 class Controller:
@@ -227,8 +231,19 @@ class Controller:
         # Send data to output interface
         trap.send(bytearray(json.dumps(detection_event), "utf-8"))
 
-    def handle_adaptive_detection(self, detection_event):
-        pass
+    @staticmethod
+    def handle_adaptive_detection(detection_event):
+        adaptive_ids = detection_event.ADAPTIVE_IDS.split(',')
+
+        for adaptive_id in adaptive_ids:
+            if adaptive_id in adaptive_events.keys():
+                # There is already some detection for this adaptive event
+                adaptive_events[adaptive_id].append(detection_event)
+
+            else:
+                # New adaptive detection for this event
+                adaptive_events[adaptive_id] = []
+                adaptive_events[adaptive_id].append(detection_event)
 
 
 if __name__ == '__main__':
