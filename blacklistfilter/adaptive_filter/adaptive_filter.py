@@ -192,7 +192,7 @@ class Controller:
 
             # Try to fit the detection event to some scenario
             for scenario_class in scenarios.Scenario.__subclasses__():
-                with suppress(scenarios.ScenarioDoesNotFit):
+                if scenario_class.fits(detection_iface, detection_event):
                     detected_scenario = scenario_class(detection_iface, detection_event)
 
             if detected_scenario:
@@ -203,13 +203,13 @@ class Controller:
                     # Do we know about this specific case of the scenario?
                     scenario_event = scenario_events[detected_scenario.key]
 
+                    # Store the detection and update metadata
                     scenario_event.detection_events.append(detection_event)
                     scenario_event.detection_cnt += 1
                     scenario_event.last_ts = time()
 
                 except KeyError:
                     # New scenario event
-                    detected_scenario.set_random_id()
                     scenario_events[detected_scenario.key] = detected_scenario
 
                 # TODO: Move this code to evaluator

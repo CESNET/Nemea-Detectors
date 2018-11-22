@@ -29,13 +29,10 @@ class Scenario:
         self.detection_events = []
         self.detection_events.append(detection_event)
         self.detection_cnt = 1
-        self.id = 0
+        self.id = str(uuid4())
         self.first_ts = time()
         self.last_ts = time()
         self.adaptive_entities = set()
-
-    def set_random_id(self):
-        self.id = str(uuid4())
 
     def _get_suffix(self):
         """ Returns suffix for adaptive blacklist entries"""
@@ -47,6 +44,14 @@ class Scenario:
     def __str__(self):
         return str(self.__dict__)
 
+    @classmethod
+    def fits(cls, detection_iface, detection_event):
+        """
+        Method to determine if the detection fits the current scenario
+        :return: bool
+        """
+        raise NotImplemented
+
 
 class BotnetDetection(Scenario):
     """
@@ -54,14 +59,19 @@ class BotnetDetection(Scenario):
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
     def __init__(self, detection_iface, detection_event):
-        if not (detection_iface == adaptive_filter.IP_URL_Interface.iface_num and detection_event['blacklist_id'] in g.botnet_blacklist_indexes):
-            raise ScenarioDoesNotFit
-
         super().__init__(detection_event)
 
         # The key is only the blacklisted C&C server
         self.key = detection_event['source']
         logger.debug('Detected BOTNET with CC: {}. ID: {}'.format(self.key, self.id))
+
+    @classmethod
+    def fits(cls, detection_iface, detection_event):
+        if detection_iface == adaptive_filter.IP_URL_Interface.iface_num \
+                and detection_event['blacklist_id'] in g.botnet_blacklist_indexes:
+            return True
+        else:
+            return False
 
     def get_entities(self):
         # Gather all the targets (bots communicating with the C&C server)
@@ -80,8 +90,7 @@ class DNSDetection(Scenario):
     Detection flows are DNS answers with A, AAAA, CNAME records
     """
     def __init__(self, detection_iface, detection_event):
-        if detection_iface != adaptive_filter.DNS_Interface.iface_num:
-            raise ScenarioDoesNotFit
+        super().__init__(detection_event)
 
         # Consider www.domain.com and domain.com the same
         detection_event.DNS_NAME = detection_event.DNS_NAME.strip(WWW_PREFIX).lower()
@@ -89,7 +98,12 @@ class DNSDetection(Scenario):
         # The key is just the domain
         self.key = detection_event.DNS_NAME
 
-        super().__init__(detection_event)
+    @classmethod
+    def fits(cls, detection_iface, detection_event):
+        if detection_iface == adaptive_filter.DNS_Interface.iface_num:
+            return True
+        else:
+            return False
 
     def get_entities(self):
         """ Get entities for the adaptive filter, from DNS, PassiveDNS etc."""
