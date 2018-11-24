@@ -30,13 +30,15 @@ class Scenario:
         self.detection_events.append(detection_event)
         self.detection_cnt = 1
         self.id = str(uuid4())
-        self.first_ts = time()
-        self.last_ts = time()
+        self.first_detection_ts = time()
+        self.last_detection_ts = time()
+        self.processed_by_evaluator_ts = 0
         self.adaptive_entities = set()
+        self.adaptive_events = None
 
     def _get_suffix(self):
-        """ Returns suffix for adaptive blacklist entries"""
-        return ',{}'.format(self.id)
+        """ Returns suffix for adaptive blacklist entries, i.e. Adaptive blacklist "magic" index and event ID"""
+        return ',{},{}'.format(adaptive_filter.ADAPTIVE_BLACKLIST_ID, self.id)
 
     def get_entities(self):
         raise NotImplemented
@@ -51,6 +53,9 @@ class Scenario:
         :return: bool
         """
         raise NotImplemented
+
+    # def jsonify(self):
+    #     tmp = self.__dict__
 
 
 class BotnetDetection(Scenario):
@@ -93,7 +98,7 @@ class DNSDetection(Scenario):
         super().__init__(detection_event)
 
         # Consider www.domain.com and domain.com the same
-        detection_event.DNS_NAME = detection_event.DNS_NAME.strip(WWW_PREFIX).lower()
+        detection_event.DNS_NAME = detection_event.DNS_NAME.lstrip(WWW_PREFIX).lower()
 
         # The key is just the domain
         self.key = detection_event.DNS_NAME
@@ -107,11 +112,8 @@ class DNSDetection(Scenario):
 
     def get_entities(self):
         """ Get entities for the adaptive filter, from DNS, PassiveDNS etc."""
-
         adaptive_entities = set()
         entities = enrichers.dns_query(self.key)
-
         for entity in entities:
             adaptive_entities.add(str(entity) + self._get_suffix())
-
         return adaptive_entities
