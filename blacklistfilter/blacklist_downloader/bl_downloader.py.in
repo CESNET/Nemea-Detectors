@@ -14,8 +14,6 @@ import ipaddress
 
 from contextlib import suppress
 
-config_file = '@BLACKLISTFILTERDIR@/bl_downloader_config.xml'
-
 SECONDS_IN_MINUTE = 60
 
 cs = logging.StreamHandler()
@@ -288,7 +286,7 @@ class URLandDNSBlacklist(Blacklist):
             exit(1)
 
 
-def parse_config():
+def parse_config(config_file):
     tree = ET.parse(config_file)
 
     r = tree.getroot().getchildren()
@@ -371,21 +369,25 @@ def run(s):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--repo-path',
-                        help="If set, blacklists will be saved in this directory and versioned using git. "
-                             "Suggested dir: /usr/local/etc/blacklistfilter/blacklist_repo",
+    parser.add_argument('--repo-path', '-r',
+                        help="If set, blacklists will be saved in this directory and versioned using git. ",
                         default=None)
 
-    parser.add_argument('--log-level',
+    parser.add_argument('--log-level', '-l',
                         help="Logging level value (from standard Logging library, 10=DEBUG, 20=INFO etc.)",
                         type=int,
                         default=20)
+
+    parser.add_argument('--config-file', '-c',
+                        help="Configuration file for downloader (blacklists and metadata)",
+                        type=str,
+                        default='@BLACKLISTFILTERDIR@/bl_downloader_config.xml')
 
     args = parser.parse_args()
     repo_path = args.repo_path
     logger.setLevel(args.log_level)
 
-    parse_config()
+    parse_config(args.config_file)
 
     if repo_path:
         prepare_repo()
