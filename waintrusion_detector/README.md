@@ -219,7 +219,7 @@ Available files containing signatures belonging to listed rules:
 
 #### 3.2.2 Hardcoded Signatures
 
-Hardcoded signatures are list-based and the data are stored in files. Hardcoded signatures can be modified just by appendind a value to the end of the file belonging to the signature.
+Hardcoded signatures are list-based and the data are stored in files. Hardcoded signatures can be modified just by appending a value to the end of the file belonging to the signature.
 
 Available data files belonging to hardcoded signatures of listed rules:
 
