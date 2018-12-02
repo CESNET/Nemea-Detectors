@@ -109,6 +109,8 @@ trap_module_info_t *module_info = NULL;
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/ipdetect_config.xml]", required_argument, "string") \
+  PARAM('4', "", "Specify IPv4 blacklist file (overrides config file). [Default: /tmp/blacklistfilter/ip4.blist]", required_argument, "string") \
+  PARAM('6', "", "Specify IPv6 blacklist file (overrides config file). [Default: /tmp/blacklistfilter/ip6.blist]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none")
 
 using namespace std;
@@ -465,6 +467,8 @@ int main(int argc, char **argv)
 
     // Set default files names
     char *userFile = (char *) SYSCONFDIR "/blacklistfilter/ipdetect_config.xml";
+    char *ipv4_file = nullptr;
+    char *ipv6_file = nullptr;
 
     // For use with prefixes
     black_list_t v4_list;
@@ -509,10 +513,16 @@ int main(int argc, char **argv)
     int opt;
 
     // ********** Parse arguments **********
-    while ((opt = getopt(argc, argv, "nu:")) != -1) {
+    while ((opt = getopt(argc, argv, "n4:6:u:")) != -1) {
         switch (opt) {
             case 'u': // user configuration file for IPBlacklistFilter
                 userFile = optarg;
+                break;
+            case '4':
+                ipv4_file = optarg;
+                break;
+            case '6':
+                ipv6_file = optarg;
                 break;
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
@@ -527,6 +537,14 @@ int main(int argc, char **argv)
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
         main_retval = 1; goto cleanup;
+    }
+
+    // If blacklist files given from cli, override config
+    if (ipv4_file != nullptr) {
+        strcpy(config.ipv4_blacklist_file, ipv4_file);
+    }
+    if (ipv6_file != nullptr) {
+        strcpy(config.ipv6_blacklist_file, ipv6_file);
     }
 
     if (strcmp(config.watch_blacklists, "true") == 0) {

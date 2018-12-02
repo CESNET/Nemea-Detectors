@@ -6,10 +6,8 @@ import logging
 import json
 import os
 from time import time
-from threading import Thread
+from threading import Thread, Timer, Lock
 from queue import Queue
-from contextlib import suppress
-from time import sleep
 
 import scenarios
 import utils
@@ -19,23 +17,35 @@ from optparse import OptionParser
 parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
                   help="TRAP IFC specifier", metavar="IFCSPEC")
-parser.add_option('-c', '--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml",
+parser.add_option('-c', '--blacklist-config', help="Set path to config file of blacklist downloader.",
                     default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
 parser.add_option('-e', '--evidence-timeout', help="Timeout in seconds, meaning how much time after detection of a "
-                                                   "scenario event it shall be sent to evidence. Default: 60",
-                  type=int, default=60)
+                                                   "scenario event it shall be sent to evidence.",
+                  type=int, default=600)
+parser.add_option("-p", "--process-interval", type=int,
+                  help="Interval in seconds when captured events are processed", default=30)
+
+parser.add_option('--log-level', '-l',
+                    help="Logging level value (from standard Logging library, 10=DEBUG, 20=INFO etc.)", type=int, default=20)
+
+parser.add_option('--adaptive-blacklist', '-a',
+                  help="Path to adaptive blacklist", type=str, default='/tmp/blacklistfilter/adaptive.blist')
+
+parser.add_option("-u", "--purge-timeout", type=int,
+                  help="Timeout in seconds for deleting scenario events without adaptive events", default=60)
 
 # cs = logging.StreamHandler()
 # formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
 # cs.setFormatter(formatter)
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO,format='[%(asctime)s] - %(levelname)s - %(message)s')
+logger = logging.getLogger('Adaptive filter')
+logging.basicConfig(format='[%(asctime)s] - %(levelname)s - %(message)s')
 # logger.addHandler(cs)
 
 scenario_events = {}
 adaptive_events = {}
 
-EVIDENCE_TIMEOUT = 20
+events_lock = Lock()
+
 ADAPTIVE_BLACKLIST_ID = 999
 
 
@@ -52,15 +62,18 @@ def split_ip(ip):
 
 def send_to_reporter(detection_event):
     # Send data to output interface
-    # TODO: catch exceptions
-    trap.send(bytearray(json.dumps(detection_event), "utf-8"))
+    try:
+        trap.send(bytearray(json.dumps(detection_event), "utf-8"))
+    except pytrap.TrapTimeout:
+        # TODO: handle properly
+        logger.error('TrapTimeout occured when sending to reporter')
 
 
-def send_to_evidence(detection_event):
+def send_to_evidence(event):
+    evidence_event = event.convert_to_evidence_fmt()
     # Send data to output interface
-    # TODO: catch exceptions
-    print('Sending to Evidence')
-    trap.send(bytearray(json.dumps(detection_event, default=lambda x: x.__dict__), "utf-8"), 1)
+    logger.debug('Sending to Evidence')
+    trap.send(bytearray(json.dumps(evidence_event), "utf-8"), 1)
 
 
 class IP_URL_Interface:
@@ -91,6 +104,29 @@ class Adaptive_Interface:
         self.ur_input = pytrap.UnirecTemplate(self.template_in)
 
 
+class RepeatedTimer:
+    def __init__(self, interval, function):
+        self._timer = None
+        self.function = function
+        self.interval = interval
+        self.is_running = False
+
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function()
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False
+
+
 class Receiver:
     def __init__(self):
         """
@@ -106,7 +142,6 @@ class Receiver:
         self.queue = Queue()
 
     def _create_threads(self):
-        # import pdb; pdb.set_trace()
         # Create workers for each receiver
         self.ip_url_rcv = Thread(target=self._fetch_data, args=[IP_URL_Interface()])
         self.dns_rcv = Thread(target=self._fetch_data, args=[DNS_Interface()])
@@ -173,21 +208,29 @@ class Receiver:
             self.queue.put((my_iface_num, rec))
 
 
-class Evaluator:
-    def __init__(self):
-        self.detector_file_path = '/tmp/blacklistfilter/adaptive.blist'
+class Processor:
+    def __init__(self, adaptive_blacklist_path, process_interval, evidence_timeout, purge_timeout):
+        self.detector_file_path = adaptive_blacklist_path
+        self.process_interval = process_interval
+        self.evidence_timeout = evidence_timeout
+        self.purge_timeout = purge_timeout
 
         # Evaluator holds the adaptive current entries, so it can check
         # whether there are new ones and detector file should be created
         self.current_adaptive_entities = set()
 
+        # Set repeater for the given interval
+        self.rt = RepeatedTimer(int(process_interval), self.process_events)
+
     def process_events(self):
         global scenario_events, adaptive_events
         all_adaptive_entities = set()
         event_keys_to_send = set()
+        c = 0
 
-        # TODO: lock the global structures
+        events_lock.acquire()
         for scenario_key, scenario_event in scenario_events.items():
+            c += 1
             if scenario_event.last_detection_ts > scenario_event.processed_by_evaluator_ts:
                 # Event updated since the last processing, get adaptive entities again
                 entities = scenario_event.get_entities()
@@ -199,11 +242,16 @@ class Evaluator:
             # Gather the adaptive entities for all scenario events
             all_adaptive_entities.update(scenario_event.adaptive_entities)
 
-            # TODO: Solve the case when no adaptive entities available for a long time
-            if scenario_event.first_detection_ts + EVIDENCE_TIMEOUT < time() and scenario_event.id in adaptive_events.keys():
-                # Timeout expired, let's export the scenario event along with adaptive detections (if there are any)
-                scenario_event.adaptive_events = adaptive_events[scenario_event.id]
-                event_keys_to_send.add(scenario_key)
+            if scenario_event.first_detection_ts + self.evidence_timeout < time():
+                if scenario_event.id in adaptive_events.keys():
+                    # Evidence timeout expired, let's export the scenario event along with adaptive detections (if there are any)
+                    scenario_event.adaptive_events = adaptive_events[scenario_event.id]
+                    event_keys_to_send.add(scenario_key)
+                else:  # elif scenario_event.first_detection_ts + self.purge_timeout < time():
+                    # Evidence and purge timeouts expired, there are no adaptive events, let's delete the scenario event
+                    # TODO: Or maybe we want to just send the event even without adaptive events, like this?
+                    scenario_event.adaptive_events = []
+                    event_keys_to_send.add(scenario_key)
 
         for event_key_to_send in event_keys_to_send:
             # Fetch the corresponding event
@@ -212,16 +260,18 @@ class Evaluator:
             # Delete the event's adaptive entities, we don't want to track adaptive events of this scenario event anymore
             all_adaptive_entities.difference_update(event.adaptive_entities)
 
-            # TODO: Maybe more ephemeral variables
             # Adaptive entities are not relevant in the alert
             del event.adaptive_entities
             del event.processed_by_evaluator_ts
 
             send_to_evidence(event)
 
-            # TODO: lock adaptive_events
-            # Delete the adaptive events of this scenario event from the global structure
-            del adaptive_events[event.id]
+            try:
+                # Delete the adaptive events of this scenario event from the global structure
+                del adaptive_events[event.id]
+            except KeyError:
+                # Since we are now sending also scenario events without adaptive events, the key can be missing
+                pass
 
             # Delete the sent scenario from the global structure
             del scenario_events[event_key_to_send]
@@ -230,19 +280,13 @@ class Evaluator:
             self.current_adaptive_entities = all_adaptive_entities
             self._create_detector_file()
 
+        events_lock.release()
+
+        logger.debug('Processed {} events'.format(c))
 
     def run(self):
-        print('Evaluator jede..')
-        while True:
-            # for event in scenario_events.values():
-            #     print(event)
-            print(scenario_events)
-            print(adaptive_events)
-
-            sleep(5)
-
-            self.process_events()
-            print('Events processed')
+        self.rt.start()
+        logger.info('Processor is running.. Checking events every {} seconds'.format(self.process_interval))
 
     def _create_detector_file(self):
         # Create sorted list of entities and their cumulative indexes
@@ -269,10 +313,6 @@ class Controller:
             # Wait until there is a detection event
             detection_iface, detection_event = self.receiver.queue.get()
 
-            # logger.debug('Received detection event from iface {}'.format(detection_iface))
-
-            # print("{} : {}".format(detection_iface, detection_event))
-
             if detection_iface == Adaptive_Interface.iface_num:
                 # Handle event from adaptive filter
                 self.handle_adaptive_detection(detection_event)
@@ -283,13 +323,13 @@ class Controller:
             # Try to fit the detection event to some scenario
             for scenario_class in scenarios.Scenario.__subclasses__():
                 if scenario_class.fits(detection_iface, detection_event):
-                    detected_scenario = scenario_class(detection_iface, detection_event)
+                    detected_scenario = scenario_class(detection_event)
 
             if detected_scenario:
                 # Scenario fits, detected_scenario is an object of this scenario class
-                logger.info('Detected scenario: {}'.format(type(detected_scenario).__name__))
+                logger.debug('Detected scenario: {}'.format(type(detected_scenario).__name__))
                 try:
-                    # TODO: locking here?
+                    events_lock.acquire()
                     # Do we know about this specific case of the scenario?
                     scenario_event = scenario_events[detected_scenario.key]
 
@@ -301,6 +341,8 @@ class Controller:
                 except KeyError:
                     # New scenario event
                     scenario_events[detected_scenario.key] = detected_scenario
+                finally:
+                    events_lock.release()
 
                 if isinstance(detected_scenario, scenarios.BotnetDetection):
                     # We also want to send an alert for this scenario
@@ -329,7 +371,7 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
     g.blacklists = utils.load_blacklists(options.blacklist_config)
     g.botnet_blacklist_indexes = utils.get_botnet_blacklist_indexes(g.blacklists)
-    EVIDENCE_TIMEOUT = options.evidence_timeout
+    logger.setLevel(options.log_level)
 
     trap = pytrap.TrapCtx()
     trap.init(sys.argv, 3, 2)
@@ -337,13 +379,14 @@ if __name__ == '__main__':
     trap.setDataFmt(0, pytrap.FMT_JSON, "aggregated_blacklist")
     trap.setDataFmt(1, pytrap.FMT_JSON, "blacklist_evidence")
 
+    processor = Processor(options.adaptive_blacklist,
+                          options.process_interval,
+                          options.evidence_timeout,
+                          options.purge_timeout)
+    processor.run()
+
     controller = Controller()
-    evaluator = Evaluator()
-
-    ctrl_thr = Thread(target=controller.run)
-    ctrl_thr.start()
-
-    evaluator.run()
+    controller.run()
 
     # Free allocated memory
     trap.finalize()

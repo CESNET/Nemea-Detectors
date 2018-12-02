@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-import pytrap
-from contextlib import suppress
 from uuid import uuid4
 from time import time
 
@@ -10,22 +8,14 @@ import adaptive_filter
 import enrichers
 import g
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger('Adaptive filter')
 
 WWW_PREFIX = 'www.'
 
 
-# Thrown by Scenario subclass' init function when the detection flow doesn't
-# fit the scenario
-class ScenarioDoesNotFit(BaseException):
-    def __init__(self, expression=None, message=None):
-        self.expression = expression
-        self.message = message
-
-
 class Scenario:
     def __init__(self, detection_event):
+        self.event_type = type(self).__name__
         self.detection_events = []
         self.detection_events.append(detection_event)
         self.detection_cnt = 1
@@ -44,7 +34,7 @@ class Scenario:
         raise NotImplemented
 
     def __str__(self):
-        return str(self.__dict__)
+        return type(self).__name__
 
     @classmethod
     def fits(cls, detection_iface, detection_event):
@@ -54,8 +44,8 @@ class Scenario:
         """
         raise NotImplemented
 
-    # def jsonify(self):
-    #     tmp = self.__dict__
+    def convert_to_evidence_fmt(self):
+        raise NotImplemented
 
 
 class BotnetDetection(Scenario):
@@ -63,7 +53,7 @@ class BotnetDetection(Scenario):
     Scenario class for enhanced botnet detection. Since often only C&C servers are blacklisted,
     we also want to track the clients/botnet, so we feed these IP addresses to the adaptive filter
     """
-    def __init__(self, detection_iface, detection_event):
+    def __init__(self, detection_event):
         super().__init__(detection_event)
 
         # The key is only the blacklisted C&C server
@@ -85,6 +75,9 @@ class BotnetDetection(Scenario):
             adaptive_entities.update([target + self._get_suffix() for target in detection_event["targets"]])
         return adaptive_entities
 
+    def convert_to_evidence_fmt(self):
+        return self.__dict__
+
 
 class DNSDetection(Scenario):
     """
@@ -94,7 +87,7 @@ class DNSDetection(Scenario):
 
     Detection flows are DNS answers with A, AAAA, CNAME records
     """
-    def __init__(self, detection_iface, detection_event):
+    def __init__(self, detection_event):
         super().__init__(detection_event)
 
         # Consider www.domain.com and domain.com the same
@@ -102,6 +95,7 @@ class DNSDetection(Scenario):
 
         # The key is just the domain
         self.key = detection_event.DNS_NAME
+        logger.debug('Detected blacklisted DNS: {}. ID: {}'.format(self.key, self.id))
 
     @classmethod
     def fits(cls, detection_iface, detection_event):
@@ -117,3 +111,8 @@ class DNSDetection(Scenario):
         for entity in entities:
             adaptive_entities.add(str(entity) + self._get_suffix())
         return adaptive_entities
+
+    def convert_to_evidence_fmt(self):
+        evid_format = self.__dict__
+        evid_format['detection_events'] = [x.strRecord() for x in evid_format['detection_events']]
+        return evid_format
