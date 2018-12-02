@@ -1,3 +1,11 @@
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Optimize usage of split_blacklist_bmp
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Get rid of locking
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Minor optimizations
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Speed up update_event method
+2018-11-19 (Filip Suster): blacklistfilter: downloader: Ignore non-ascii URLs
+2018-10-29 (Filip Šuster): Fix trap.terminate()
+2018-10-28 (Filip Suster): blacklistfilter: Add some blacklists from PROKI
+2018-10-28 (Filip Suster): blacklistfilter: aggregator: Speed up aggregation
 2018-10-09 (Filip Šuster): blacklistfilter: Universal blacklistfilter aggregation; Downloader improvements (#36)
 2018-10-02 (Jaroslav Hlavac): vportscan_aggregator.py added to README
 

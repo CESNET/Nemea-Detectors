@@ -1,3 +1,8 @@
+2018-11-19 nemea-detectors-1.5.3
+	* blacklistfilter:
+		Blacklist downloader encoding fix
+		Add some blacklists from PROKI for blacklistfilter
+		Speed up blacklist aggregation
 2018-10-09 nemea-detectors-1.5.2
 	* vportscan:
 		Updated documentation.

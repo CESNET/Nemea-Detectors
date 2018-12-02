@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-detectors], [1.5.2], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-detectors], [1.5.3], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([hoststatsnemea/src/hoststatserv.cpp])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -33,6 +33,9 @@ pkgdatadir=${datadir}/nemea
 PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
 AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
+waidetectordatadir=${pkgdatadir}/wai_detector
+WAIDETECTORDATADIR=$(eval echo $(eval echo ${waidetectordatadir}))
+AC_SUBST(WAIDETECTORDATADIR)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
 
@@ -135,6 +138,8 @@ AC_CONFIG_FILES([Makefile
                  tunnel_detection/Makefile
                  voip_fraud_detection/Makefile
                  vportscan_detector/Makefile
+                 waintrusion_detector/Makefile
+                 waintrusion_detector/waintrusion_detector.py
                  nemea-detectors.spec
                ])
 

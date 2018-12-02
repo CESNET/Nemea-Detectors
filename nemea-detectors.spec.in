@@ -41,7 +41,7 @@ Provides: nemea-detectors
 %setup
 
 %build
-./configure --disable-silent-rules --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea --disable-repobuild --docdir=%{_docdir}/nemea-detectors;
+./configure --disable-silent-rules --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea --disable-repobuild --docdir=%{_docdir}/nemea-detectors --datadir=%{_datadir};
 make
 
 %install
@@ -75,6 +75,8 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/miner_detector
 %{_bindir}/nemea/voip_fraud_detection
 %{_bindir}/nemea/vportscan_detector
+%{_bindir}/nemea/waintrusion_detector.py
+%{_bindir}/nemea/waintrusion_detector2idea.py
 %{_docdir}/nemea-detectors/*/README*
 %config(noreplace) %{_sysconfdir}/nemea/hoststats.conf
 %config(noreplace) %{_sysconfdir}/nemea/miner_detector/userConfigFile.xml
@@ -84,5 +86,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
 %config(noreplace) %{_sysconfdir}/nemea/cron.d/booterfilter.cron
+%{_datadir}/nemea/wai_detector/*/*
 %{_mandir}/man1/*.1.gz
 

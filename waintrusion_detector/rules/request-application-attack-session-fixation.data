@@ -1,0 +1,2 @@
+(?i)(?:\.cookie\b.*?;\W*?(?:expires|domain)\W*?=|\bhttp-equiv\W+set-cookie\b) ** HTTP_URL_ARGS,HTTP_URL_ARGS_NAMES
+
