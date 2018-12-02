@@ -102,13 +102,13 @@ trap_module_info_t *module_info = NULL;
     "or destination address is present in any blacklist that are available. " \
     "If any of the addresses is blacklisted the record is changed by adding " \
     "an index of the blacklist(s) which blacklisted the address. " \
-    "This module uses configurator tool. To specify file with blacklists (prepared by blacklist downloader) " \
+    "This module uses configurator tool. To specify files with blacklists (prepared by blacklist downloader) " \
     "use XML configuration file for IPBlacklistFilter (ipdetect_config.xml). " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bl_downloader_config.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/ipdetect_config.xml]", required_argument, "string") \
+  PARAM('c', "", "Specify user configuration file for IPBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/ipdetect_config.xml]", required_argument, "string") \
   PARAM('4', "", "Specify IPv4 blacklist file (overrides config file). [Default: /tmp/blacklistfilter/ip4.blist]", required_argument, "string") \
   PARAM('6', "", "Specify IPv6 blacklist file (overrides config file). [Default: /tmp/blacklistfilter/ip6.blist]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none")
@@ -121,36 +121,13 @@ int stop = 0;
 // Global variable for signaling the program to update blacklists
 int BL_RELOAD_FLAG = 0;
 
-// Reconfiguration flag, set if signal SIGUSR1 received
-int RECONF_FLAG = 0;
-
 // Blacklist watcher flag. If set, the inotify based thread for watching blacklists is created
 static bool WATCH_BLACKLISTS_FLAG;
 
 /**
- * \brief Function for handling signals SIGTERM and SIGINT.
- * \param signal Number of received signal.
+ * Procedure for handling signals SIGTERM and SIGINT (Ctrl-C)
  */
-void signal_handler(int signal)
-{
-    switch (signal) {
-        case SIGTERM:
-        case SIGINT:
-            if (stop) {
-                cerr << "Another terminating signal caught!\nTerminating without clean up!" << endl;
-                exit(EXIT_FAILURE);
-            }
-            stop = 1;
-            cerr << "Terminating signal caught...\nPlease wait for clean up." << endl;
-            break;
-        case SIGUSR1:
-            RECONF_FLAG = 1;
-            break;
-        default:
-            break;
-    }
-}
-
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /**
  * Function for swapping bits in byte.
@@ -208,16 +185,17 @@ void create_v6_mask_map(ipv6_mask_map_t &m)
 }
 
 /**
- * \brief Function for loading blacklists. It parses file with blacklisted IP
- * addresses. The file shall be preprocessed by blacklist downloader (no redundant whitespaces, forcing lowercase etc.)
+ * \brief Function for loading blacklists. It parses files with blacklisted IP
+ * addresses (IPv6 blacklist file is optional.). The file shall be preprocessed by blacklist downloader
+ * (no redundant whitespaces, forcing lowercase etc.)
  * Function also checks validity of line on which the IP address was found. Invalid of bad formatted lines
  * are ignored.
  * \param v4_list IPv4 vector to be filled
  * \param v6_list IPv6 vector to be filled
- * \param file Blacklist file.
+ * \param config Configuration with blacklist files.
  * \return ALL_OK if everything goes well, BLIST_FILE_ERROR if file cannot be accessed.
  */
-int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const config_t *config)
+int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_config_t *config)
 {
     ifstream input;
     string line, ip, bl_index_str;
@@ -229,17 +207,18 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const config
     black_list_t v6_list_new;
 
     std::vector<char *> blacklist_files;
-    blacklist_files.push_back(((config_t *) config)->ipv4_blacklist_file);
-    blacklist_files.push_back(((config_t *) config)->ipv6_blacklist_file);
+    blacklist_files.push_back(((ip_config_t *) config)->ipv4_blacklist_file);
+    blacklist_files.push_back(((ip_config_t *) config)->ipv6_blacklist_file);
 
     // Read the blacklist files
     for (auto &file: blacklist_files) {
         line_num = 0;
         input.open(file, ifstream::in);
+
         if (!input.is_open()) {
-            if (file == ((config_t *) config)->ipv6_blacklist_file) {
+            if (file == ((ip_config_t *) config)->ipv6_blacklist_file) {
                 // Do not terminate the program when IPv6 blacklist not present
-                cerr << "Warning: Could not read IPv6 blacklist" << endl;
+                cerr << "Warning: Could not read IPv6 blacklist, not detecting IPv6" << endl;
                 continue;
             }
             cerr << "ERROR: Cannot open blacklist file: " << config->ipv4_blacklist_file << ". Is the downloader running?" << endl;
@@ -406,7 +385,7 @@ int ip_binary_search(const ip_addr_t *searched,
  *
  * It extracts both source and
  * destination addresses from the UniRec record and tries to match them to either
- * address or prefix. If the match is positive the field in detection record is filled
+ * address or prefix. If the match is positive the field in the detection record is filled
  * with the respective blacklist(s) number.
  * \param ur_in  Template of input UniRec record.
  * \param ur_out Template of detection UniRec record.
@@ -438,6 +417,7 @@ int blacklist_check(ur_template_t *ur_in,
         ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
         ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
         if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
+            // Adaptive IP filter mode
             ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
         } else {
             ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
@@ -458,6 +438,15 @@ int blacklist_check(ur_template_t *ur_in,
     return ADDR_CLEAR;
 }
 
+/**
+ * \brief Function for checking if incoming flow has src/dst port 53.
+ */
+bool is_dns_traffic(ur_template_t *ur_in, const void *data)
+{
+    uint16_t src_port = ur_get(ur_in, data, F_SRC_PORT);
+    uint16_t dst_port = ur_get(ur_in, data, F_DST_PORT);
+    return (src_port == 53) || (dst_port == 53);
+}
 
 int main(int argc, char **argv)
 {
@@ -483,6 +472,7 @@ int main(int argc, char **argv)
     // TRAP initialization
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
     void *detection = NULL;
     ur_template_t *ur_output = NULL;
@@ -491,7 +481,8 @@ int main(int argc, char **argv)
 
     // UniRec templates for recieving data and reporting blacklisted IPs
     ur_input = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST", NULL);
-    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,SRC_BLACKLIST,DST_BLACKLIST,ADAPTIVE_IDS", NULL);
+    ur_output = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,"
+                                             "SRC_BLACKLIST,DST_BLACKLIST,ADAPTIVE_IDS", NULL);
 
     if (ur_input == NULL || ur_output == NULL) {
         cerr << "Error: Input or output template could not be created" << endl;
@@ -499,23 +490,18 @@ int main(int argc, char **argv)
     }
 
     // Create detection record, variable size is used for ADAPTIVE_ID
-    detection = ur_create_record(ur_output, DETECTION_ALLOC_LEN);
+    detection = ur_create_record(ur_output, IP_DETECTION_ALLOC_LEN);
     if (detection == NULL) {
         cerr << "Error: Memory allocation problem (output record)" << endl;
         main_retval = 1; goto cleanup;
     }
 
-    // Set signal handling for termination
-    signal(SIGTERM, signal_handler);
-    signal(SIGINT,  signal_handler);
-    signal(SIGUSR1, signal_handler);
-
     int opt;
 
     // ********** Parse arguments **********
-    while ((opt = getopt(argc, argv, "n4:6:u:")) != -1) {
+    while ((opt = getopt(argc, argv, "n4:6:c:")) != -1) {
         switch (opt) {
-            case 'u': // user configuration file for IPBlacklistFilter
+            case 'c': // user configuration file for IPBlacklistFilter
                 userFile = optarg;
                 break;
             case '4':
@@ -532,7 +518,7 @@ int main(int argc, char **argv)
         }
     }
 
-    config_t config;
+    ip_config_t config;
 
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
@@ -563,7 +549,11 @@ int main(int argc, char **argv)
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) &config) > 0) {
+        watcher_wrapper_t watcher_wrapper;
+        watcher_wrapper.detector_type = IP_DETECT_ID;
+        watcher_wrapper.data = (void *) &config;
+
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) &watcher_wrapper) > 0) {
             cerr << "Error: Couldnt create watcher thread" << endl;
             main_retval = 1; goto cleanup;
         }
@@ -575,7 +565,6 @@ int main(int argc, char **argv)
         uint16_t data_size;
 
         // Retrieve data from sender
-        // TODO: Maybe non-blocking trap receive (when some flags set, it hangs here until trap data are received)
         retval = TRAP_RECEIVE(0, data, data_size, ur_input);
         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(retval, continue, break);
 
@@ -589,6 +578,11 @@ int main(int argc, char **argv)
                 cerr << "Size returned from Trap: " << data_size << endl;
                 break;
             }
+        }
+
+        // Ignore DNS queries
+        if (is_dns_traffic(ur_input, data)) {
+            continue;
         }
 
         // Try to match the IP addresses to blacklist
@@ -613,36 +607,6 @@ int main(int argc, char **argv)
             pthread_mutex_lock(&BLD_SYNC_MUTEX);
             BL_RELOAD_FLAG = 0;
             pthread_mutex_unlock(&BLD_SYNC_MUTEX);
-        }
-
-        // TODO: Do we need any reconfiguration at all?
-        if (RECONF_FLAG) {
-            DBG((stderr, "Reconfiguration..\n"))
-
-            v4_list.clear();
-            v6_list.clear();
-
-            if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
-                cerr << "Error: Could not parse XML configuration." << endl;
-                main_retval = 1; goto cleanup;
-            }
-
-            if (strcmp(config.watch_blacklists, "true") == 0) {
-                WATCH_BLACKLISTS_FLAG = true;
-            } else {
-                WATCH_BLACKLISTS_FLAG = false;
-            }
-
-            // Load ip addresses from sources
-            retval = reload_blacklists(v4_list, v6_list, &config);
-
-            // If update from file could not be processed, return error
-            if (retval == BLIST_FILE_ERROR) {
-                cerr << "Error: Unable to read blacklist files" << endl;
-                main_retval = 1; goto cleanup;
-            }
-
-            RECONF_FLAG = 0;
         }
     }
 

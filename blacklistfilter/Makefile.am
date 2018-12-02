@@ -6,7 +6,7 @@ dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            blacklist_watcher.cpp \
                            blacklist_watcher.h \
                            fields.c fields.h
-dnsblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
+dnsblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 dnsblacklistfilter_CFLAGS=-std=gnu99
 dnsblacklistfilter_CXXFLAGS=-std=c++11 -Wno-write-strings
 dnsblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
@@ -49,7 +49,7 @@ EXTRA_DIST=blacklist_aggregator.py \
 	   ipdetect/ipdetect_config.xml \
 	   dnsdetect/patternstrings.h \
        dnsdetect/README.md \
-       dnsdetect/dnsetect_config.xml
+       dnsdetect/dnsdetect_config.xml
 
 bin_SCRIPTS=blacklist_downloader/bl_downloader.py blacklist_aggregator.py
 

@@ -25,6 +25,7 @@ Requires: libidn
 Requires: openssl
 Requires: python-requests
 Requires: python%{python3_pkgversion}-requests
+Requires: python%{python3_pkgversion}-dns
 BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -59,6 +60,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/bl_downloader.py
 %{_bindir}/nemea/ipblacklistfilter
 %{_bindir}/nemea/urlblacklistfilter
+%{_bindir}/nemea/dnsblacklistfilter
 %{_bindir}/nemea/blacklist_aggregator.py
 %{_bindir}/nemea/sip_bf_detector
 %{_bindir}/nemea/smtp_spam_detector
@@ -68,6 +70,12 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/smtp_spam_detector_files/__init__.py
 %{_bindir}/nemea/smtp_spam_detector_files/smtp_daemon.py
 %{_bindir}/nemea/smtp_spam_detector_files/smtp_entity.py
+%{_bindir}/nemea/adaptive_filter
+%{_bindir}/nemea/adaptive_filter_files/__init__.py
+%{_bindir}/nemea/adaptive_filter_files/adaptive_filter.py
+%{_bindir}/nemea/adaptive_filter_files/scenarios.py
+%{_bindir}/nemea/adaptive_filter_files/g.py
+%{_bindir}/nemea/adaptive_filter_files/utils.py
 %{_bindir}/nemea/vportscan_aggregator.py
 %{_bindir}/nemea/brute_force_detector
 %{_bindir}/nemea/haddrscan_aggregator.py
@@ -84,6 +92,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/bl_downloader_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/dnsdetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
 %config(noreplace) %{_sysconfdir}/nemea/cron.d/booterfilter.cron
 %{_datadir}/nemea/wai_detector/*/*

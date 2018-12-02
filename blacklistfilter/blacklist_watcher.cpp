@@ -1,3 +1,48 @@
+/**
+ * \file blacklist_watcher.cpp
+ * \brief  Support file for blacklist detectors.
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2018
+ */
+
+/*
+ * Copyright (C) 2018 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+
 /* This code is highly inspired by this source:
    http://man7.org/linux/man-pages/man7/inotify.7.html */
 
@@ -8,8 +53,12 @@
 #include <pthread.h>
 #include <poll.h>
 
-#include "ipblacklistfilter.h"
 #include "blacklist_watcher.h"
+
+// To know the config structures
+#include "ipblacklistfilter.h"
+#include "urlblacklistfilter.h"
+#include "dnsblacklistfilter.h"
 
 #ifdef DEBUG
 #define DBG(x) fprintf x;
@@ -70,14 +119,27 @@ static void handle_events(int fd)
 /**
  * \brief Watch blacklist files for IN_CLOSE_WRITE event
  * and set appropriate flag if this file changes
- * \param arg File name of the blacklist to watch
+ * \param arg Data passed from the detector
  */
 void *watch_blacklist_files(void *arg)
 {
-    const char *ipv4_file = ((config_t *) arg) -> ipv4_blacklist_file;
-    const char *ipv6_file = ((config_t *) arg) -> ipv6_blacklist_file;
+    const char *detection_file = nullptr;
+    const char *detection_file2 = nullptr;
+
+    watcher_wrapper_t *watcher_wrapper = (watcher_wrapper_t *) arg;
+
+    switch (watcher_wrapper->detector_type) {
+        case 0:
+            detection_file =  ((ip_config_t *) watcher_wrapper->data) -> ipv4_blacklist_file;
+            detection_file2 = ((ip_config_t *) watcher_wrapper->data) -> ipv6_blacklist_file;
+        case 1:
+            detection_file = ((url_config_t *) watcher_wrapper->data) -> blacklist_file;
+        case 2:
+            detection_file = ((dns_config_t *) watcher_wrapper->data) -> blacklist_file;
+    }
+
     int fd, poll_num;
-    int wd_4, wd_6;
+    int wd1, wd2;
     nfds_t nfds;
     struct pollfd fds[1];
 
@@ -89,15 +151,17 @@ void *watch_blacklist_files(void *arg)
     }
 
     /* Watch the files for IN_CLOSE_WRITE event */
-    wd_4 = inotify_add_watch(fd, ipv4_file, IN_CLOSE_WRITE);
-    wd_6 = inotify_add_watch(fd, ipv6_file, IN_CLOSE_WRITE);
+    wd1 = inotify_add_watch(fd, detection_file, IN_CLOSE_WRITE);
 
-    if (wd_6 == -1) {
-        perror("Warning: inotify_add_watch failed for IPv6 file");
+    if (detection_file2 != nullptr) {
+        wd2 = inotify_add_watch(fd, detection_file2, IN_CLOSE_WRITE);
+        if (wd2 == -1) {
+            perror("Warning: inotify_add_watch failed for IPv6 file");
+        }
     }
 
-    if (wd_4 == -1) {
-        perror("Error: Cannot watch the file, inotify_add_watch failed");
+    if (wd1 == -1) {
+        perror("Error: Cannot watch the detector file, inotify_add_watch failed");
         stop = 1; return NULL;
     }
 
@@ -107,7 +171,7 @@ void *watch_blacklist_files(void *arg)
     fds[0].fd = fd;
     fds[0].events = POLLIN;
 
-    DBG((stderr, "Blacklist watcher listening for changes in files %s, %s\n", ipv4_file, ipv6_file));
+    DBG((stderr, "Blacklist watcher listening for changes in files %s, %s\n", detection_file, detection_file2));
 
     while (1) {
         poll_num = poll(fds, nfds, -1);

@@ -90,18 +90,22 @@ UR_FIELDS(
 )
 
 trap_module_info_t *module_info = NULL;
+prefix_tree_t * tree;
 
 using namespace std;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("URLBlacklistFilter", "Module receives the UniRec record and checks if the URL (HTTP Host + HTTP Path) " \
+  BASIC("URLBlacklistFilter", "Module receives the UniRec record and checks if the URL (Host + Path) " \
     "is present in any blacklist that are available. " \
     "If the URL is present in any blacklist the record is changed by adding an index of the blacklist. " \
+    "This module uses configurator tool. To specify files with blacklists (prepared by blacklist downloader) " \
+    "use XML configuration file for URLBlacklistFilter (urldetect_config.xml). " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bl_downloader_config.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/urldetect_config.xml]", required_argument, "string") \
+  PARAM('c', "", "Specify user configuration file for URLBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/urldetect_config.xml]", required_argument, "string") \
+  PARAM('b', "", "Specify URL blacklist file (overrides config file). [Default: /tmp/blacklistfilter/url.blist]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
 
 int stop = 0; // global variable for stopping the program
@@ -118,14 +122,14 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
  * Function gets path to the file and loads the blacklisted URL entities
  * The URLs are stored in a prefix tree
  * @param tree Prefix tree to be filled.
- * @param file Path to the file with sources.
+ * @param file blacklist file
  * @return BLIST_LOAD_ERROR if directory cannot be accessed, ALL_OK otherwise.
  */
 int reload_blacklists(prefix_tree_t **tree, string &file)
 {
-    // TODO: ineffective, make it work just with diffs
+    // recreate the prefix tree with entities
     prefix_tree_destroy(*tree);
-    *tree = prefix_tree_initialize(PREFIX, sizeof(info_t), -1, DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
+    *tree = prefix_tree_initialize(PREFIX, sizeof(url_info_t), -1, DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
 
     ifstream input;
     string line, url, bl_flag_str;
@@ -169,17 +173,10 @@ int reload_blacklists(prefix_tree_t **tree, string &file)
         // Parse URL
         url = line.substr(0, sep);
 
-        // TODO: is this necessary? Preprocessing should be done by downloader
-//        ret = idna_to_ascii_lz(url.c_str(), &url_norm, 0);
-//        if (ret != IDNA_SUCCESS) {
-//            cerr << "Unable to normalize URL " << url.c_str() << " Will skip." << endl;
-//            continue;
-//        }
-
         prefix_tree_domain_t *elem = prefix_tree_insert(*tree, url.c_str(), strlen(url.c_str()));
 
         if (elem != NULL) {
-            info_t *info = (info_t *) elem->value;
+            url_info_t *info = (url_info_t *) elem->value;
             info->bl_id = bl_index;
         } else {
             cerr << "WARNING: Can't insert element \'" << url.c_str() << "\' to the prefix tree" << endl;
@@ -196,7 +193,7 @@ int reload_blacklists(prefix_tree_t **tree, string &file)
 
 /**
  * Function for checking the URL.
- * Function gets the UniRec record with URL to check and tries to find it
+ * Function gets the UniRec record with URL (Host+Path) to check and tries to find it
  * in the given blacklist. If the function succeeds then the appropriate
  * field in detection record is filled with the number of blacklist asociated
  * with the URL. If the URL is clean nothing is done.
@@ -236,7 +233,7 @@ int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, 
 
     if (domain != NULL) {
         DBG((stderr, "Detected blacklisted URL: '%s'\n", host_url.c_str()));
-        info_t *info = (info_t *) domain->value;
+        url_info_t *info = (url_info_t *) domain->value;
         ur_set(out, detect, F_BLACKLIST, info->bl_id);
         return BLACKLISTED;
     }
@@ -257,14 +254,12 @@ int main (int argc, char** argv)
 
     // Set default files names
     char *userFile = (char *) SYSCONFDIR "/blacklistfilter/urldetect_config.xml";
-
-    // TODO: Delegate idna functionality to downloader
-    // set locale so we can use URL normalization library
-    // setlocale(LC_ALL, "");
+    char *blacklist_file = nullptr;
 
     // TRAP initialization
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
     void *detection = NULL;
     ur_template_t *ur_output = NULL;
@@ -292,10 +287,13 @@ int main (int argc, char** argv)
 
     // ********** Parse arguments **********
     int opt;
-    while ((opt = getopt(argc, argv, "nu:")) != -1) {
+    while ((opt = getopt(argc, argv, "nc:b:")) != -1) {
         switch (opt) {
-            case 'u': // user configuration file for URLBlacklistFilter
+            case 'c': // user configuration file for URLBlacklistFilter
                 userFile = optarg;
+                break;
+            case 'b':
+                blacklist_file = optarg;
                 break;
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
@@ -305,11 +303,16 @@ int main (int argc, char** argv)
         }
     }
 
-    config_t config;
+    url_config_t config;
 
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
         main_retval = 1; goto cleanup;
+    }
+
+    // If blacklist files given from cli, override config
+    if (blacklist_file != nullptr) {
+        strcpy(config.blacklist_file, blacklist_file);
     }
 
     if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -326,7 +329,11 @@ int main (int argc, char** argv)
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) bl_file.c_str()) > 0) {
+        watcher_wrapper_t watcher_wrapper;
+        watcher_wrapper.detector_type = URL_DETECT_ID;
+        watcher_wrapper.data = (void *) &config;
+
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) &watcher_wrapper) > 0) {
             cerr << "Error: Couldnt create watcher thread" << endl;
             main_retval = 1; goto cleanup;
         }
@@ -384,6 +391,7 @@ int main (int argc, char** argv)
 
 cleanup:
     // clean up before termination
+    prefix_tree_destroy(tree);
     ur_free_record(detection);
     ur_free_template(ur_input);
     ur_free_template(ur_output);

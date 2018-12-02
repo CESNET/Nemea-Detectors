@@ -147,6 +147,9 @@ class Blacklist:
 
                     logger.info('Updated {}: {}'.format(type(self).__name__, self.name))
 
+                if not new_entities:
+                    logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
+
             else:
                 logger.warning('Could not fetch blacklist: {}\n'
                                'Status code: {}'.format(self.source, req.status_code))
@@ -197,7 +200,6 @@ class IPv6Blacklist(Blacklist):
             exit(1)
 
 
-
 class IPv4Blacklist(Blacklist):
     separator = ','
     comparator = split_ip4
@@ -241,6 +243,19 @@ class URLandDNSBlacklist(Blacklist):
         super().__init__(bl)
 
     @staticmethod
+    def domain_to_idna(url):
+        path = None
+        if '/' in url:
+            path = '/'.join(url.split('/')[1:])
+            domain = url.split('/')[0]
+        else:
+            domain = url
+
+        domain = domain.encode('idna').decode('ascii')
+
+        return domain + '/' + path if path else domain
+
+    @staticmethod
     def extract_entities(data):
         extracted = []
 
@@ -254,12 +269,16 @@ class URLandDNSBlacklist(Blacklist):
                 url = url.lower()
                 while url[-1] == '/':
                     url = url[:-1]
-                # TODO: Maybe normalize also?
+                try:
+                    url = URLandDNSBlacklist.domain_to_idna(url)
+                except UnicodeError:
+                    logger.warning('Could not normalize domain: {}'.format(url))
+
                 try:
                     url.encode('ascii')
                     extracted.append(url)
                 except UnicodeError:
-                    logger.warning('Skipping non-ascii URL: {}'.format(url))
+                    logger.warning('Ignoring URL with non-ascii path: {}'.format(url))
 
         return extracted
 

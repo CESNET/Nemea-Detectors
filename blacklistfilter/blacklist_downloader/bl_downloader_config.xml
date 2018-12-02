@@ -39,7 +39,7 @@
                 <element name="id">2</element>
                 <element name="category">Intrusion.Botnet</element>
                 <element name="method">web</element>
-                <element name="source">https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <element name="name">Feodo Tracker</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
@@ -117,7 +117,7 @@
             </struct>
 
 
-            <struct>
+            <!-- <struct>
                 <element name="id">10</element>
                 <element name="category">Anomaly.Traffic</element>
                 <element name="method">web</element>
@@ -125,7 +125,7 @@
                 <element name="name">IPv6 Full Bogons</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">6</element>
-            </struct>
+            </struct> -->
 
             <struct>
                 <element name="id">9</element>
@@ -134,6 +134,7 @@
                 <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
                 <element name="name">CI Army - BadGuys</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -143,6 +144,7 @@
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
                 <element name="name">CZ.NIC Honeypot Cowrie</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -152,6 +154,7 @@
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
                 <element name="name">CZ.NIC Honeypot Dionaea</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -161,6 +164,7 @@
                 <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
                 <element name="name">Malc0de</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -170,11 +174,8 @@
                 <element name="source">http://www.urlvir.com/export-ip-addresses</element>
                 <element name="name">URLVir</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
-
-
-
-
         </array>
 
         <array type="URL/DNS">

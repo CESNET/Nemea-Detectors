@@ -7,8 +7,10 @@
 
 from threading import Timer
 from threading import Thread
+from datetime import datetime
 import queue
 import sys
+import os
 import signal
 import json
 import pytrap
@@ -25,7 +27,7 @@ parser.add_option("-t", "--time", dest="time", type="float",
 MINSRCPORT=49152
 
 # Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
-MAX_DST_IPS_PER_EVENT = 3000
+MAX_DST_IPS_PER_EVENT = 1000
 
 WWW_PREFIX = 'www.'
 
@@ -35,8 +37,8 @@ stop = 0
 def signal_h(signal, f):
     global stop, trap
     if stop:
-        print('Caught another SIGINT, exiting immediately..')
-        exit(1)
+        print('Caught another SIGINT, exiting forcefully..')
+        os._exit(1)
     print('Caught SIGINT, exiting gracefully..')
     trap.terminate()
     stop = 1
@@ -89,6 +91,9 @@ def send_events():
             except pytrap.Terminated:
                 print("Terminated TRAP.")
                 break
+
+            except pytrap.TimeoutError:
+                print("{}: Warning: dropped event because of TimeoutError".format(datetime.now().strftime("%F-%T")))
 
 
 class RepeatedTimer:
@@ -342,7 +347,10 @@ class Aggregator:
         my_store_event = detector_class.store_event
 
         while not stop:
-            data = my_queue.get()
+            try:
+                data = my_queue.get(timeout=1)
+            except queue.Empty:
+                continue
             detector_class.ur_input.setData(data)
             my_store_event()
 
@@ -372,6 +380,7 @@ class Aggregator:
                 print("Terminated TRAP.")
                 break
             except pytrap.TrapError:
+                print("TrapError.")
                 break
 
             if len(data) <= 1:
@@ -386,7 +395,6 @@ def split_blacklist_bmp(blacklist_bmp):
 
 
 if __name__ == '__main__':
-
     # Parse remaining command-line arguments
     options, args = parser.parse_args()
     signal.signal(signal.SIGINT, signal_h)
@@ -403,8 +411,7 @@ if __name__ == '__main__':
 
     rt.stop()
     send_events()
+
     trap.sendFlush()
     trap.finalize()
-
-
 

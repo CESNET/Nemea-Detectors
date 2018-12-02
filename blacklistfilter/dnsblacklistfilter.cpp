@@ -7,7 +7,7 @@
  */
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013,2014,2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -106,18 +106,22 @@ UR_FIELDS(
 )
 
 trap_module_info_t *module_info = NULL;
+prefix_tree_t * tree;
 
 using namespace std;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("DNSBlacklistFilter", "Module receives the UniRec record and checks if the domain name (FQDN) " \
-    "is present in any DNS/FQDN blacklist that are available. " \
+    "is present in any DNS/FQDN blacklists that are available. " \
     "If the FQDN is present in any blacklist the record is changed by adding an index of the blacklist. " \
+    "This module uses configurator tool. To specify files with blacklists (prepared by blacklist downloader) " \
+    "use XML configuration file for DNSBlacklistFilter (dnsdetect_config.xml). " \
     "To show, edit, add or remove public blacklist information, use XML configuration file for " \
     "blacklist downloader (bl_downloader_config.xml).", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "", "Specify user configuration file for DNSBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/dnsdetect_config.xml]", required_argument, "string") \
+  PARAM('c', "", "Specify user configuration file for DNSBlacklistFilter. [Default: " SYSCONFDIR "/blacklistfilter/dnsdetect_config.xml]", required_argument, "string") \
+  PARAM('b', "", "Specify DNS blacklist file (overrides config file). [Default: /tmp/blacklistfilter/dns.blist]", required_argument, "string") \
   PARAM('n', "", "Do not send terminating Unirec when exiting program.", no_argument, "none") \
 
 int stop = 0; // global variable for stopping the program
@@ -140,9 +144,9 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
  */
 int reload_blacklists(prefix_tree_t **tree, string &file)
 {
-    // TODO: ineffective, make it work just with diffs
+    // recreate the tree with entities
     prefix_tree_destroy(*tree);
-    *tree = prefix_tree_initialize(SUFFIX, sizeof(info_t), '.', DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
+    *tree = prefix_tree_initialize(SUFFIX, sizeof(dns_info_t), '.', DOMAIN_EXTENSION_NO, RELAXATION_AFTER_DELETE_YES);
 
     ifstream input;
     string line, fqdn, bl_flag_str;
@@ -189,7 +193,7 @@ int reload_blacklists(prefix_tree_t **tree, string &file)
         prefix_tree_domain_t *elem = prefix_tree_insert(*tree, fqdn.c_str(), strlen(fqdn.c_str()));
 
         if (elem != NULL) {
-            info_t *info = (info_t *) elem->value;
+            dns_info_t *info = (dns_info_t *) elem->value;
             info->bl_id = bl_index;
         } else {
             cerr << "WARNING: Can't insert element \'" << fqdn.c_str() << "\' to the prefix tree" << endl;
@@ -237,13 +241,16 @@ int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, 
     prefix_tree_domain_t *domain = prefix_tree_search(tree, fqdn.c_str(), fqdn.length());
 
     if (domain != NULL) {
-        DBG((stderr, "Detected blacklisted DNS/FQDN: '%s'\n", fqdn.c_str()));
-        info_t *info = (info_t *) domain->value;
-        ur_set(out, detect, F_BLACKLIST, info->bl_id);
-        return BLACKLISTED;
+        dns_info_t *info = (dns_info_t *) domain->value;
+        // if blacklist index is 0, it is just a prefix/suffix match (not exact match)
+        if (info->bl_id > 0) {
+            DBG((stderr, "Detected blacklisted FQDN: '%s'\n", fqdn.c_str()));
+            ur_set(out, detect, F_BLACKLIST, info->bl_id);
+            return BLACKLISTED;
+        }
     }
 
-    // DNS/FQDN was not found
+    // FQDN was not found
     return DNS_CLEAR;
 }
 
@@ -259,10 +266,12 @@ int main (int argc, char** argv)
 
     // Set default files names
     char *userFile = (char *) SYSCONFDIR "/blacklistfilter/dnsdetect_config.xml";
+    char *blacklist_file = nullptr;
 
     // TRAP initialization
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
     void *detection = NULL;
     ur_template_t *ur_output = NULL;
@@ -294,10 +303,13 @@ int main (int argc, char** argv)
 
     // ********** Parse arguments **********
     int opt;
-    while ((opt = getopt(argc, argv, "nu:")) != -1) {
+    while ((opt = getopt(argc, argv, "nc:b:")) != -1) {
         switch (opt) {
-            case 'u': // user configuration file for DNSBlacklistFilter
+            case 'c': // user configuration file for DNSBlacklistFilter
                 userFile = optarg;
+                break;
+            case 'b':
+                blacklist_file = optarg;
                 break;
             case 'n': // Do not send terminating Unirec
                 send_terminating_unirec = 0;
@@ -307,11 +319,16 @@ int main (int argc, char** argv)
         }
     }
 
-    config_t config;
+    dns_config_t config;
 
     if (loadConfiguration((char *) MODULE_CONFIG_PATTERN_STRING, userFile, &config, CONF_PATTERN_STRING)) {
         cerr << "Error: Could not parse XML configuration." << endl;
         main_retval = 1; goto cleanup;
+    }
+
+    // If blacklist files given from cli, override config
+    if (blacklist_file != nullptr) {
+        strcpy(config.blacklist_file, blacklist_file);
     }
 
     if (strcmp(config.watch_blacklists, "true") == 0) {
@@ -328,7 +345,11 @@ int main (int argc, char** argv)
     }
 
     if (WATCH_BLACKLISTS_FLAG) {
-        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) bl_file.c_str()) > 0) {
+        watcher_wrapper_t watcher_wrapper;
+        watcher_wrapper.detector_type = DNS_DETECT_ID;
+        watcher_wrapper.data = (void *) &config;
+
+        if (pthread_create(&watcher_thread, NULL, watch_blacklist_files, (void *) &watcher_wrapper) > 0) {
             cerr << "Error: Couldnt create watcher thread" << endl;
             main_retval = 1; goto cleanup;
         }

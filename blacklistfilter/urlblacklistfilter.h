@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2013,2014,2016 CESNET
+ * Copyright (C) 2013,2014,2016,2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -86,68 +86,10 @@ extern "C" {
 
 #define WWW_PREFIX "www."
 
-
-const char *URL_REGEX =
-   // Protocol
-   //"((https?)://)?"
-   "(" // Host part
-    // IP
-   "([1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])"
-   "(\\.(1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}"
-   "(\\.([1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))"
-   "|" // OR
-    // Domain name
-   "(([a-z0-9]-*)*[a-z0-9]+)"
-   "(\\.([a-z0-9]-*)*[a-z0-9]+)*"
-   "(\\.([a-z]{2,}))"
-   ")"
-   // URL part
-   "(/|\\w|\\.|\\?|_|=|;|&|-)*"
-   // Strip last slash and/or last comma
-   "[^/,]"
-   ;
-
-
-/*
-   //"^"
-   // protocol identifier
-   "(?:(?:https?|ftp)://)"
-   // user:pass authentication
-   "(?:\\S+(?::\\S*)?@)?" 
-   "(?:"
-   // IP address exclusion
-   // private & local networks
-   "(?!(?:10|127)(?:\\.\\d{1,3}){3})"
-   "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})"
-   "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})"
-   // IP address dotted notation octets
-   // excludes loopback network 0.0.0.0
-   // excludes reserved space >= 224.0.0.0
-   // excludes network & broacast addresses
-   // (first & last IP address of each class)
-   "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])"
-   "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}"
-   "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))"
-   "|"
-   // host name
-   "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)"
-   // domain name
-   "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*"
-   // TLD identifier
-   "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))"
-   ")"
-   // port number
-   "(?::\\d{2,5})?"
-   // resource path
-   "(?:/\\S*)?"
-   //"$"
-   ;
-*/
-
 typedef struct __attribute__ ((__packed__)) {
     char blacklist_file[256];
     char watch_blacklists[8];
-} config_t;
+} url_config_t;
 
 /**
  * Structure of item used in update operations.
@@ -159,18 +101,16 @@ typedef struct {
     /*@}*/
 } url_elem_t;
 
-prefix_tree_t * tree;
-
 typedef struct {
     uint64_t bl_id;
-} info_t;
+} url_info_t;
 
-/*
+/**
  * Function for loading update files.
  */
 int reload_blacklists(prefix_tree_t *tree, std::string &file);
 
-/*
+/**
  * Function for checking records.
  */
 int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);

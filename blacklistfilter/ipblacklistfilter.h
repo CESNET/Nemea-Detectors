@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2013, 2014, 2015 CESNET
+ * Copyright (C) 2013, 2014, 2015, 2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -95,7 +95,7 @@
 /**
  * Allocation size for variable sized UniRec output template
  */
-#define DETECTION_ALLOC_LEN 32768
+#define IP_DETECTION_ALLOC_LEN 32768
 
 /**
  * Structure for blacklisted addresses and prefixes
@@ -104,7 +104,7 @@ typedef struct {
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
-    std::string adaptive_ids; /**< ID or IDs for adaptive filter events */
+    std::string adaptive_ids; /**< IDs for adaptive filter events */
 } ip_bl_entry_t;
 
 
@@ -115,7 +115,7 @@ typedef struct __attribute__ ((__packed__)) {
     char ipv4_blacklist_file[256];
     char ipv6_blacklist_file[256];
     char watch_blacklists[8];
-} config_t;
+} ip_config_t;
 
 /**
  * @typedef vector<ip_bl_entry_t> black_list_t;

@@ -1,17 +1,56 @@
 
 import sys
 import xml.etree.ElementTree as xml
+import dns.resolver
+import requests
+import json
+
+def dns_query(domain, qtype='A'):
+    answers = []
+    try:
+        answers = dns.resolver.query(domain, qtype)
+    except dns.exception.DNSException:
+        pass
+
+    return answers
+
+
+def virus_total_query():
+    pass
+
+def shodan_query():
+    pass
+
+
+def nerd_query(api_key, ip_addr):
+    base_url = 'https://nerd.cesnet.cz/nerd/api/v1'
+    headers = {
+        "Authorization": api_key
+    }
+    try:
+        req = requests.get(base_url + '/ip/{}/full'.format(ip_addr), headers=headers, timeout=3)
+        if req.status_code == 200:
+            return json.loads(req.text)
+
+    except requests.RequestException as e:
+        print('Warning: Failed to get info from NERD\n', e)
+        return None
 
 
 def get_botnet_blacklist_indexes(blacklists: dict):
+    """
+    Fetches the Botnet blacklist indexes from blacklist configuration
+    Args:
+        blacklists: config file dict
+    Returns:
+        set: Botnet blacklist indexes
+    """
     botnet_idxs = set()
     ip_blists = blacklists['ip']
-    print(ip_blists)
     for id, blist in ip_blists.items():
         if blist['category'] == 'Intrusion.Botnet':
             botnet_idxs.add(id)
     return botnet_idxs
-
 
 def load_blacklists(config_file):
     """
@@ -23,7 +62,6 @@ def load_blacklists(config_file):
 
     Args:
         config_file: config file
-
     Returns:
         dict: blacklists
     """

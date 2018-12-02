@@ -8,7 +8,7 @@
 
 
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013,2014,2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -89,7 +89,7 @@ extern "C" {
 typedef struct __attribute__ ((__packed__)) {
     char blacklist_file[256];
     char watch_blacklists[8];
-} config_t;
+} dns_config_t;
 
 /**
  * Structure of item used in update operations.
@@ -101,18 +101,16 @@ typedef struct {
     /*@}*/
 } dns_elem_t;
 
-prefix_tree_t * tree;
-
 typedef struct {
     uint64_t bl_id;
-} info_t;
+} dns_info_t;
 
-/*
+/**
  * Function for loading update files.
  */
 int reload_blacklists(prefix_tree_t *tree, std::string &file);
 
-/*
+/**
  * Function for checking records.
  */
 int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);
