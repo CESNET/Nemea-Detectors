@@ -89,6 +89,16 @@ trap_module_info_t *module_info = NULL;
    PARAM('o', "ok_count", "Number of observed OK responses after crossing alert threshold to consider the alert false and drop the communication. (5 by default)", required_argument, "uint32") \
    PARAM('s', "scan_threshold", "Number of extensions a specific client attempted to register as (on one particular server) which is considered a scan. (5 by default)", required_argument, "uint32")
 
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+      _a > _b ? _a : _b; })
+
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+      _a > _b ? _b : _a; })
+
 static int stop = 0;
 int verbose;
 uint64_t g_alert_threshold = DEFAULT_ALERT_THRESHOLD;
@@ -262,7 +272,7 @@ bool User::init(char *name)
 int User::addCom(const data_t *flow, Client *clt, bf_t *bf)
 {
    if (bf) {
-      bf->m_time_last = flow->time_stamp;
+      bf->m_time_last = max(bf->m_time_last, flow->time_stamp);
       bf->m_attempts++;
       if (bf->m_attempts == g_alert_threshold) {
          return 1;
@@ -464,10 +474,7 @@ void User::getDBFStats(stats_t *stats) const
          stats->m_total_count = bf->m_attempts;
          stats->m_clt = bf->m_source;
       } else {
-         if (stats->m_time_first > bf->m_time_first) {
-            stats->m_time_first = bf->m_time_first;
-         }
-
+         stats->m_time_first = min(stats->m_time_first, bf->m_time_first);
          stats->m_total_count += bf->m_attempts;
       }
    }
@@ -588,10 +595,7 @@ void Client::getScanStats(stats_t *stats) const
          stats->m_time_first = bf->m_time_first;
          stats->m_total_count = bf->m_attempts;
       } else {
-         if (stats->m_time_first > bf->m_time_first) {
-            stats->m_time_first = bf->m_time_first;
-         }
-
+         stats->m_time_first = min(stats->m_time_first, bf->m_time_first);
          stats->m_total_count += bf->m_attempts;
       }
    }
@@ -719,6 +723,10 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
          return;
       }
 
+      if (bf->m_time_last < bf->m_time_first) {
+         fprintf(stderr, "WARNING: CASE BF: Cease time: %" PRIu64 " lesser than Event time: %" PRIu64 ".\n", bf->m_time_last, bf->m_time_first);
+      }
+
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(bf->m_time_first));
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(bf->m_time_first, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, ur_time_from_sec_msec(bf->m_time_breach, 0));
@@ -754,6 +762,10 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
          ur_set(alert_tmplt, alert_rec, F_SBFD_BREACH_TIME, ur_time_from_sec_msec(dbf->m_time_breach, 0));
       }
 
+      if (dbf->m_time_last < stats->m_time_first) {
+         fprintf(stderr, "WARNING: CASE DBF: Cease time: %" PRIu64 " lesser than Event time: %" PRIu64 ".\n", dbf->m_time_last, stats->m_time_first);
+      }
+
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(stats->m_time_first));
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(stats->m_time_first, 0));
       ur_set(alert_tmplt, alert_rec, F_SBFD_CEASE_TIME, ur_time_from_sec_msec(dbf->m_time_last, 0));
@@ -781,6 +793,10 @@ void Server::reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event)
 
       clt->getScanStats(stats);
       scan_t *scan = clt->getScan();
+
+      if (scan->m_time_last < stats->m_time_first) {
+         fprintf(stderr, "WARNING: CASE SCAN: Cease time: %" PRIu64 " lesser than Event time: %" PRIu64 ".\n", scan->m_time_last, stats->m_time_first);
+      }
 
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_ID, createId(stats->m_time_first));
       ur_set(alert_tmplt, alert_rec, F_SBFD_EVENT_TIME, ur_time_from_sec_msec(stats->m_time_first, 0));
@@ -816,7 +832,7 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
       
       if (bf->m_time_breach != 0) {
          bf->m_ok_count++;
-         bf->m_time_last = flow->time_stamp;
+         bf->m_time_last = max(bf->m_time_last, flow->time_stamp);
          if (bf->m_ok_count > g_ok_limit) {
             usr->removeCom(bf);
             clt->removeCom(bf);
@@ -825,7 +841,7 @@ bool Server::insertSourceAndTarget(const data_t *flow, User *usr, Client *clt)
       } else if (bf->m_attempts >= g_alert_threshold) {
          bf->m_attempts++;
          bf->m_time_breach = flow->time_stamp;
-         bf->m_time_last = flow->time_stamp;
+         bf->m_time_last = max(bf->m_time_last, flow->time_stamp);
          bf->m_ok_count++;
          /*	alertTimeMachine(flow->ip_dst);	*/
       } else {
@@ -932,14 +948,14 @@ void Server::updateDBF(const data_t *flow, Client *clt, User *usr)
    } else {
       bf_t *bf = usr->findCom(clt);
       if (bf) {
-         bf->m_time_last = flow->time_stamp;
+         bf->m_time_last = max(bf->m_time_last, flow->time_stamp);
          bf->m_attempts++;            
       } else {
          dbf->m_other_attempts++;
       }
    }
 
-   dbf->m_time_last = flow->time_stamp;
+   dbf->m_time_last = max(dbf->m_time_last, flow->time_stamp);
 }
 
 void Server::updateScan(const data_t *flow, Client *clt, User *usr)
@@ -965,14 +981,14 @@ void Server::updateScan(const data_t *flow, Client *clt, User *usr)
             bf->m_time_breach = flow->time_stamp;
          }
 
-         bf->m_time_last = flow->time_stamp;
+         bf->m_time_last = max(bf->m_time_last, flow->time_stamp);
          bf->m_attempts++;            
       } else {
          scan->m_other_attempts++;
       }
    }
 
-   scan->m_time_last = flow->time_stamp;
+   scan->m_time_last = max(scan->m_time_last, flow->time_stamp);
 }
 
 Client* Server::createClientNode(void *tree_key, ip_addr_t *ip, uint16_t port)
