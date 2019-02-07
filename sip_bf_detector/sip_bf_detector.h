@@ -107,7 +107,7 @@ enum event_type_t {
 };
 
 struct stats_t {
-   ur_time_t m_time_first;
+   uint32_t m_time_first;
    uint8_t m_protocol;
    uint8_t m_link_bit_field;
    uint32_t m_avg_count;
@@ -124,7 +124,7 @@ struct data_t {
    uint8_t protocol;					  ///< sip protocol used for data transfer
    uint16_t server_port;
    uint16_t client_port;
-   ur_time_t time_stamp;                  ///< time when the message was received
+   uint32_t time_stamp;                   ///< time when the message was received
    ip_addr_t *ip_src;                     ///< IP address of the server
    ip_addr_t *ip_dst;                     ///< IP address of the attacker
 };
@@ -133,7 +133,7 @@ struct scan_t {
    scan_t(const data_t *flow);
    uint32_t m_other_attempts;
    uint8_t m_ok_count;
-   ur_time_t m_time_last;
+   uint32_t m_time_last;
    bool m_destroy;
 };
 
@@ -142,8 +142,8 @@ struct dbf_t {
    ~dbf_t();
    bool addBreacher(const ip_addr_t *breacher);
    ip_addr_t *m_breacher;
-   ur_time_t m_time_breach;
-   ur_time_t m_time_last;
+   uint32_t m_time_breach;
+   uint32_t m_time_last;
    uint32_t m_other_attempts;
    uint8_t m_ok_count;
    bool m_destroy;
@@ -155,9 +155,9 @@ struct bf_t {
    Client *m_source;
    User *m_target;
    uint32_t m_attempts;
-   ur_time_t m_time_first;
-   ur_time_t m_time_last;
-   ur_time_t m_time_breach;
+   uint32_t m_time_first;
+   uint32_t m_time_last;
+   uint32_t m_time_breach;
    uint8_t m_protocol;
    uint8_t m_link_bit_field;
    uint8_t m_ok_count;
@@ -172,7 +172,7 @@ public:
    dbf_t* getDBF() const;
    bf_t* findCom(const Client *clt) const;
    void getDBFStats(stats_t *stats) const;
-   int evaluateFlows(ur_time_t current_time, Server *srv);
+   int evaluateFlows(uint32_t current_time, Server *srv);
 
    char *m_name;
 private:
@@ -210,7 +210,7 @@ public:
    bool init(const data_t *flow);
    bool insertFlow(const data_t *flow);
    bool isEmpty() const;
-   bool evaluateFlows(const ur_time_t current_time);
+   bool evaluateFlows(const uint32_t current_time);
    void reportAlert(bf_t *bf, User *usr, Client *clt, event_type_t event);
    void alertTimeMachine(const ip_addr_t *source);
 
@@ -222,7 +222,7 @@ private:
    bool insertSourceAndTarget(const data_t *flow, User *user, Client *clt);
    void updateScan(const data_t *flow, Client *clt, User *usr);
    void updateDBF(const data_t *flow, Client *clt, User *usr);
-   uint64_t createId(ur_time_t time_first);
+   uint64_t createId(uint32_t time_first);
    bool m_ipv4;
    char *m_name_suffix;
    bpt_t *m_users;
@@ -234,7 +234,7 @@ public:
    void destroy();
    bool init();
    bool insertFlow(const data_t *flow);
-   bool evaluateFlows(const ur_time_t current_time);
+   bool evaluateFlows(const uint32_t current_time);
 private:
    bpt_t *m_ipv4tree;
    bpt_t *m_ipv6tree;
