@@ -80,7 +80,8 @@ def convert_to_idea(rec, opts=None):
     setAddr(idea["Target"][0], rec.DST_IP)
     setAddr(idea["Source"][0], rec.SRC_IP)
 
-    idea['Description'] = "Detection Rule: " + str(rec.WAI_RULE) + ", HTTP request Field: " + str(rec.WAI_MALICIOUS_FIELD) + ", HTTP request field contained value: " + str(rec.WAI_MALICIOUS_VALUE)
+    idea['Description'] = "HTTP traffic containing suspicious data that looks like vulnerability test."
+    idea['Note'] = "Detection Rule: " + str(rec.WAI_RULE) + ", HTTP request Field: " + str(rec.WAI_MALICIOUS_FIELD) + ", HTTP request field contained value: " + str(rec.WAI_MALICIOUS_VALUE)
     return idea
 
 # Run the module
