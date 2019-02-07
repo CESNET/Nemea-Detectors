@@ -1,3 +1,17 @@
+2019-02-07 nemea-detectors-1.6.0
+	* wai_detection:
+		Add web application injection detector (wai_detector).
+	* booterfilter:
+		Remove booterfilter because its functionality is in new
+		blacklistfilter.
+	* blacklistfilter:
+		Add blacklist watcher.
+		Reworked blacklistfilter modules.
+		Add adaptive filter for blacklistfilters.
+		Add evaluator for adaptive filter.
+	* sip_bf_detector:
+		Bugfix in sip_bf_detector related to timestamps.
+
 2018-11-19 nemea-detectors-1.5.3
 	* blacklistfilter:
 		Blacklist downloader encoding fix

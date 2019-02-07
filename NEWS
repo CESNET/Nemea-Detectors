@@ -1,3 +1,17 @@
+2019-02-07 (Tomas Cejka): wai_detection: changed Description and move variable info into Note
+2019-02-07 (Tomas Duracka): wai_detection: update of reporter module
+2019-02-07 (Tomas Cejka): booterfilter: removed, the functionality is provided by blacklistfilter
+2019-02-07 (Filip Šuster): blacklistfilter: New suite including Adaptive filter and Evaluator (#40)
+2018-12-11 (Tomas Jansky): sip_bf_detector: substituted ur_time_t with uint32_t since ur_time_get_sec() returns uint32_t
+2018-12-09 (Tomas Jansky): sip_bf_detector: fixed problem with cease time being less than event time
+2018-11-30 (Jaroslav Hlavac): waintrusion_detector: fixed typo in README.md
+2018-11-30 (Tomas Cejka): waintrusion: add README into dist package
+2018-11-30 (Tomas Duracka): waintrusion: add README
+2018-11-30 (Tomas Cejka): waintrusion: dist & rpm
+2018-11-30 (Tomas Cejka): waintrusion: add Makefile
+2018-11-30 (Tomas Cejka): waintrusion: optimization, source code maintenance
+2018-11-30 (Tomas Duracka): waintrusion: New detector: web app intrusion or exploitation
+
 2018-11-19 (Filip Suster): blacklistfilter: aggregator: Optimize usage of split_blacklist_bmp
 2018-11-19 (Filip Suster): blacklistfilter: aggregator: Get rid of locking
 2018-11-19 (Filip Suster): blacklistfilter: aggregator: Minor optimizations
