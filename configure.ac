@@ -126,7 +126,6 @@ AC_CONFIG_FILES([Makefile
                  blacklistfilter/adaptive_filter/Makefile
                  blacklistfilter/adaptive_filter/adaptive_filter
                  blacklistfilter/adaptive_filter/adaptive_filter_files/Makefile
-                 booterfilter/Makefile
                  brute_force_detector/Makefile
                  ddos_detector/Makefile
                  amplification_detection/Makefile

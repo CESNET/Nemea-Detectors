@@ -52,8 +52,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/nemea/amplification_detection
-%{_bindir}/nemea/booterfilter2idea.py
-%{_bindir}/nemea/booterfilter-update.sh
 %{_bindir}/nemea/ddos_detector
 %{_bindir}/nemea/dnstunnel_detection
 %{_bindir}/nemea/haddrscan_detector
@@ -93,8 +91,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/dnsdetect_config.xml
-%config(noreplace) %{_sysconfdir}/nemea/available-sup/booterfilter.sup
-%config(noreplace) %{_sysconfdir}/nemea/cron.d/booterfilter.cron
 %{_datadir}/nemea/wai_detector/*/*
 %{_mandir}/man1/*.1.gz
 
