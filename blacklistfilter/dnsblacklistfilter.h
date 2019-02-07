@@ -1,13 +1,14 @@
 /**
- * \file dnsblacklistfilter.h
- * \brief Main module for DNSBlackListDetector -- header file.
+ * \file dnsblacklistfilter.cpp
+ * \brief  Module for detecting blacklisted DNS/FQDN, header file.
  * \author Roman Vrana, xvrana20@stud.fit.vutbr.cz
- * \date 2013
- * \date 2014
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2013-2018
  */
 
+
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013,2014,2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -46,76 +47,73 @@
 #ifndef DNSBLACKLISTFILTER_H
 #define DNSBLACKLISTFILTER_H
 
+#include <string>
+#include <vector>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <nemea-common.h>
+#include <nemea-common/prefix_tree.h>
 
 /**
- * Size of the table with DNS blacklist
+ * Constant returned if everything is ok.
  */
-#define DNS_TABLE_SIZE 1000000
+#define ALL_OK 0
 
 /**
- * Size of the table with IP blacklist
+ * Consatnt returned by loading function if directory cannot be accessed
  */
-#define IP_TABLE_SIZE 1000000
+#define BLIST_LOAD_ERROR -1
 
 /**
- * Number of working threads.
+ * Constant retuned by checking function if DNS is prsent on blacklist.
  */
-#define THR_COUNT 2
+#define BLACKLISTED 1
 
 /**
- * Structure of item with update for DNS table.
+ * Constant retuned by checking function if DNS is clear.
  */
-typedef struct {
-    /*@{*/
-    char* dns; /**< URL to update */
-    uint8_t bl; /**< Source blacklist of the URL */
-    /*@}*/
-} upd_item_t;
+#define DNS_CLEAR 0
 
 /**
- * Macro for destroying all datastructures in DNSBlacklist filter.
+ * Allocation size for variable sized UniRec output template
  */
-#define DESTROY_STRUCTURES(ip_table, dns_table, templ_dns_in, templ_dns_out, templ_ip_in, templ_ip_out)\
-    {\
-        ur_free_template(templ_dns_in);\
-        ur_free_template(templ_dns_out);\
-        ur_free_template(templ_ip_in);\
-        ur_free_template(templ_ip_out);\
-        ht_destroy_v2(ip_table);\
-        ht_destroy(dns_table);\
-    }   
+#define DETECTION_ALLOC_LEN 2048
+
+#define WWW_PREFIX "www."
+
+
+typedef struct __attribute__ ((__packed__)) {
+    char blacklist_file[256];
+    char watch_blacklists[8];
+} dns_config_t;
 
 /**
- * Parameter structure for DNS checking thread.
+ * Structure of item used in update operations.
  */
 typedef struct {
     /*@{*/
-    ur_template_t *input; /**< Template of input record */
-    ur_template_t *output; /**< Template of detection record */
-    void *detection; /**< Detection record (will dynamically change) */
-    const char* upd_path; /**< Path to blacklists source folder */
-    cc_hash_table_t *dns_table; /**< Table with blacklisted domain names */
-    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
+    std::string fqdn; /**< FQDN */
+    uint64_t    bl;   /**< Source blacklist of the DNS/FQDN */
     /*@}*/
-} dns_params_t;
+} dns_elem_t;
+
+typedef struct {
+    uint64_t bl_id;
+} dns_info_t;
 
 /**
- * Parameter structure for IP checking thread.
+ * Function for loading update files.
  */
-typedef struct {
-    /*@{*/
-    ur_template_t *input; /**< Template of input record */
-    ur_template_t *output; /**< Template of detection record */
-    void *detection; /**< Detection record (will dynamically change) */
-    cc_hash_table_v2_t *ip_table; /**< Table with blacklisted IPs gained from DNS thread */
-    /*@}*/
-} ip_params_t;
+int reload_blacklists(prefix_tree_t *tree, std::string &file);
+
+/**
+ * Function for checking records.
+ */
+int check_blacklist(prefix_tree_t *tree, ur_template_t *in, ur_template_t *out, const void *record, void *detect);
 
 #ifdef __cplusplus
 }

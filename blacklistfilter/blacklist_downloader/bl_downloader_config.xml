@@ -8,7 +8,8 @@
     </struct>
 
     <struct name="detector_files">
-        <element name="IP">/tmp/blacklistfilter/ip.blist</element>
+        <element name="IP4">/tmp/blacklistfilter/ip4.blist</element>
+        <element name="IP6">/tmp/blacklistfilter/ip6.blist</element>
         <element name="URL">/tmp/blacklistfilter/url.blist</element>
         <element name="DNS">/tmp/blacklistfilter/dns.blist</element>
     </struct>
@@ -30,15 +31,18 @@
                 <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
                 <!--Download interval in minutes-->
                 <element name="download_interval">10</element>
+                <!--Are the blacklist entries IPv4 or IPv6-->
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
                 <element name="id">2</element>
                 <element name="category">Intrusion.Botnet</element>
                 <element name="method">web</element>
-                <element name="source">https://feodotracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <element name="name">Feodo Tracker</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -48,6 +52,7 @@
                 <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt</element>
                 <element name="name">Ransomware Tracker</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -57,6 +62,7 @@
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
                 <element name="name">Spamhaus Drop</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <!-- We don't want to report TOR nodes at this time -->
@@ -67,6 +73,7 @@
                 <element name="source">https://check.torproject.org/exit-addresses</element>
                 <element name="name">TOR exit nodes</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct> -->
 
             <struct>
@@ -76,6 +83,7 @@
                 <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
                 <element name="name">Andoniaf Miners</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -85,6 +93,7 @@
                 <element name="source">https://isc.sans.edu/api/threatlist/miner?text</element>
                 <element name="name">SANS Miners</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -94,7 +103,29 @@
                 <element name="source">https://cryptoioc.ch/downloads/csv</element>
                 <element name="name">Cryptoioc Miners</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
+
+            <struct>
+                <element name="id">9</element>
+                <element name="category">Anomaly.Traffic</element>
+                <element name="method">web</element>
+                <element name="source">https://www.spamhaus.org/drop/dropv6.txt</element>
+                <element name="name">Spamhaus Drop</element>
+                <element name="download_interval">10</element>
+                <element name="ip_version">6</element>
+            </struct>
+
+
+            <!-- <struct>
+                <element name="id">10</element>
+                <element name="category">Anomaly.Traffic</element>
+                <element name="method">web</element>
+                <element name="source">https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt</element>
+                <element name="name">IPv6 Full Bogons</element>
+                <element name="download_interval">10</element>
+                <element name="ip_version">6</element>
+            </struct> -->
 
             <struct>
                 <element name="id">9</element>
@@ -103,6 +134,7 @@
                 <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
                 <element name="name">CI Army - BadGuys</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -112,6 +144,7 @@
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
                 <element name="name">CZ.NIC Honeypot Cowrie</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -121,6 +154,7 @@
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
                 <element name="name">CZ.NIC Honeypot Dionaea</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -130,6 +164,7 @@
                 <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
                 <element name="name">Malc0de</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
 
             <struct>
@@ -139,11 +174,8 @@
                 <element name="source">http://www.urlvir.com/export-ip-addresses</element>
                 <element name="name">URLVir</element>
                 <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
             </struct>
-
-
-
-
         </array>
 
         <array type="URL/DNS">

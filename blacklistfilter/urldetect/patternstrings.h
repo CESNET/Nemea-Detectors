@@ -1,8 +1,8 @@
 /**
  * \file patternstrings.h
  * \brief  Contains pattern string for nemea configurator.
- * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
- * \date 2015
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2018
  */
 
 /*
@@ -43,8 +43,8 @@
  */
 
 
-#ifndef _IPBLACKLISTFILTER_PATTERN_H
-#define _IPBLACKLISTFILTER_PATTERN_H
+#ifndef _URLBLACKLISTFILTER_PATTERN_H
+#define _URLBLACKLISTFILTER_PATTERN_H
 
 /**
  * String specifying pattern structure with default values.

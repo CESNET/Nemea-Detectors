@@ -1,8 +1,8 @@
 /**
  * \file patternstrings.h
  * \brief  Contains pattern string for nemea configurator.
- * \author Erik Sabik, xsabik02@stud.fit.vutbr.cz
- * \date 2015
+ * \author Filip Suster, sustefil@fit.cvut.cz
+ * \date 2018
  */
 
 /*
@@ -43,8 +43,8 @@
  */
 
 
-#ifndef _IPBLACKLISTFILTER_PATTERN_H
-#define _IPBLACKLISTFILTER_PATTERN_H
+#ifndef _DNSBLACKLISTFILTER_PATTERN_H
+#define _DNSBLACKLISTFILTER_PATTERN_H
 
 /**
  * String specifying pattern structure with default values.
@@ -54,14 +54,9 @@ static char const *MODULE_CONFIG_PATTERN_STRING =
 "<configuration>"
     "<struct name=\"main struct\">"
         "<element type=\"required\">"
-            "<name>ipv4_blacklist_file</name>"
+            "<name>blacklist_file</name>"
             "<type size=\"256\">string</type>"
             "<default-value>-</default-value>"
-        "</element>"
-        "<element type=\"required\">"
-        "<name>ipv6_blacklist_file</name>"
-        "<type size=\"256\">string</type>"
-        "<default-value>-</default-value>"
         "</element>"
         "<element type=\"optional\">"
             "<name>watch_blacklists</name>"

@@ -123,6 +123,9 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/blacklist_downloader/bl_downloader.py
+                 blacklistfilter/adaptive_filter/Makefile
+                 blacklistfilter/adaptive_filter/adaptive_filter
+                 blacklistfilter/adaptive_filter/adaptive_filter_files/Makefile
                  booterfilter/Makefile
                  brute_force_detector/Makefile
                  ddos_detector/Makefile

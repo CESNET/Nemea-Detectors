@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2013, 2014, 2015 CESNET
+ * Copyright (C) 2013, 2014, 2015, 2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -48,15 +48,13 @@
 #define BLACKLISTFILTER_H
 
 #include <vector>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
+#include <unirec/unirec.h>
 
 /**
- * Mutex for synchronization.
+ * Special value of a blacklist index indicating adaptive blacklist
  */
-pthread_mutex_t BLD_SYNC_MUTEX;
+#define ADAPTIVE_BLACKLIST_INDEX 999
 
 /**
  * Return value for matching function when address is blacklisted.
@@ -95,14 +93,18 @@ pthread_mutex_t BLD_SYNC_MUTEX;
 #define PREFIX_V6_DEFAULT 128
 
 /**
+ * Allocation size for variable sized UniRec output template
+ */
+#define IP_DETECTION_ALLOC_LEN 32768
+
+/**
  * Structure for blacklisted addresses and prefixes
  */
 typedef struct {
-    /*@{*/
     ip_addr_t ip; /**< Blacklisted IP or prefix */
     uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
-    /*@}*/
+    std::string adaptive_ids; /**< IDs for adaptive filter events */
 } ip_bl_entry_t;
 
 
@@ -110,9 +112,10 @@ typedef struct {
  * Configuration structure.
  */
 typedef struct __attribute__ ((__packed__)) {
-    char blacklist_file[256];
+    char ipv4_blacklist_file[256];
+    char ipv6_blacklist_file[256];
     char watch_blacklists[8];
-} config_t;
+} ip_config_t;
 
 /**
  * @typedef vector<ip_bl_entry_t> black_list_t;
@@ -131,10 +134,5 @@ typedef uint32_t ipv4_mask_map_t[33];
  * Array of IPv6 netmasks.
  */
 typedef uint64_t ipv6_mask_map_t[129][2];
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* BLACKLISTFILTER_H */
