@@ -1,6 +1,6 @@
 # IP blacklistfilter
 
-This module is a part of the blacklistfilter suite. For information about other modules, see the main readme here (TODO).
+This module is a part of the blacklistfilter suite. For information about other modules, see the main [README](../README.md)
 
 ## Goal
 
@@ -94,6 +94,9 @@ Upon detection, the input data are sent to the output, enriched with these value
 
 - `DST_BLACKLIST` (uint64): indexes of the blacklists (bitmap) which blacklisted `DST_IP`, zero if not blacklisted
 - `SRC_BLACKLIST` (uint64): indexes of the blacklists (bitmap) which blacklisted `SRC_IP`, zero if not blacklisted
+
+For example, when the `DST_BLACKLIST` field contains number 9, it means the DST_IP is present on 
+blacklists with ID 1 and 4 (in binary: 1001)
 
 The very rare situation, when both addresses are present on some blacklist, is not handled. There is always just one
 non-zero value for `{DST,SRC}_BLACKLIST` (either DST or SRC is blacklisted, not both).
