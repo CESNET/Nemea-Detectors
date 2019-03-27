@@ -107,3 +107,11 @@ This module requires compilation with `-std=c++11`, because of the usage of *std
 
 For linking add `-ltrap -lunirec -lnemea-common`
 (the module must be compiled as a part of [NEMEA](https://github.com/CESNET/Nemea) repository or using installed libtrap-devel and unirec packages).
+
+## Example detection
+```
+ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint8 PROTOCOL
+192.168.1.1,192.168.1.2,123,0,8,2017-08-18T14:16:08.256,2017-08-18T14:16:13.177,3,1433,6
+192.168.1.1,192.168.1.2,41,0,8,2017-08-18T14:16:13.405,2017-08-18T14:16:13.405,1,1433,6
+192.168.1.1,192.168.1.2,404,8,0,2017-08-18T14:16:10.106,2017-08-18T14:16:25.100,8,25,6
+```

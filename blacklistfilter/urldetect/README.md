@@ -15,8 +15,8 @@ this file to reload blacklists.
 ## Input/Output
 
 ```
-Input Interface:  UniRec format (<HTTP_FLOW>)
-Output Interface: UniRec format (<HTTP_FLOW>,BLACKLIST)
+Input Interface:  UniRec format (<BASIC_FLOW>,<HTTP_FLOW>)
+Output Interface: UniRec format (<BASIC_FLOW>,<HTTP_FLOW>,BLACKLIST)
 ```
 
 ## Usage
@@ -48,7 +48,7 @@ Is done via configuration file (command-line options override config file)
 </configuration>
 ```
 
-- `blacklist_file`: An URL file created by Blacklist downloader, containing (sorted) entries from all blacklists
+- `blacklist_file`: An URL file created by Blacklist downloader, containing (sorted) entries (FQDNs and URLs) from all blacklists
 
 - `watch_blacklists`: A flag indicating whether the blacklist file is being reloaded everytime the file changes. When set to false, 
 the blacklists are loaded only once at the startup of the module
