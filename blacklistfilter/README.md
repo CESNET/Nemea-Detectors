@@ -9,5 +9,10 @@ Below you can see a diagram of all the modules.
 
 ![Big picture](doc/big_picture.png)
 
-READMEs of the other modules:
-- [IP blacklistfilter](ipdetect/README.md)
+READMEs of the specific modules:
+- [IP blacklistfilter (aka IP detector)](ipdetect/README.md)
+- [URL blacklistfilter (aka URL detector)](urldetect/README.md)
+- [DNS blacklistfilter (aka DNS detector)](dnsdetect/README.md)
+- [Blacklist downloader](blacklist_downloader/README.md)
+- [Blacklist aggregator](blacklist_aggregator/README.md)
+- [Adaptive filter](adaptive_filter/README.md)
