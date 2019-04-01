@@ -16,3 +16,15 @@ READMEs of the specific modules:
 - [Blacklist downloader](blacklist_downloader/README.md)
 - [Blacklist aggregator](blacklist_aggregator/README.md)
 - [Adaptive filter](adaptive_filter/README.md)
+
+## Operation
+- The blacklist downloader periodically fetches public blacklists
+- Detectors read the blacklist entries and detect communication with them
+- Aggregators aggregate the traffic
+- Adaptive filter decides whether to report the event, or further analyze clients' traffic
+- Reporter reports to Warden
+
+## Configuration
+Each module has its configuration parameters or configuratio files (see the READMEs).
+When changing the blacklist configuration, it is necessary to restart Adaptive filter, Reporter and Downloader 
+(since all read the blacklist config file).

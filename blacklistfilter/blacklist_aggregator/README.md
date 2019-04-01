@@ -47,6 +47,14 @@ there is an aggregated event for each)
 - **referer**: HTTP Referer
 - **is_only_fqdn**: boolean whether its only FQDN or the entire URL (with HTTP_PATH)
 
+
+## Pre-aggregation
+The data from IP detector are preaggregated with the universal aggregator. This is mainly because of performance.
+The pre-aggregation of the IP traffic is done using these params:
+- key: SRC_IP, DST_IP, PROTOCOL, DST_PORT
+- sum: BYTES, PACKETS,
+- or: SRC_BLACKLIST, DST_BLACKLIST
+
 ## IP Example input
 
 IP addresses are anonymized.
