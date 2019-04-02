@@ -8,3 +8,9 @@ dist_bin_SCRIPTS=adaptive_filter
 # Install dependency for dns queries when installing locally
 # install-exec-local:
 #	pip3 install dnspython
+#
+
+bin_PROGRAMS=split_evidence
+split_evidence_SOURCES=split_evidence.c
+
+include ../../aminclude.am
