@@ -56,7 +56,9 @@ extern "C" {
 #endif
 
 #include <unirec/unirec.h>
-#include <nemea-common/prefix_tree.h>
+
+/* include from nemea-common */
+#include <prefix_tree.h>
 
 /**
  * Constant returned if everything is ok.

@@ -67,7 +67,8 @@
 #define DBG(x)
 #endif
 
-#include <nemea-common/nemea-common.h>
+/* include from nemea-common */
+#include <nemea-common.h>
 #include "ipblacklistfilter.h"
 #include "fields.h"
 #include "blacklist_watcher.h"
