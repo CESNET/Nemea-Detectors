@@ -55,7 +55,8 @@
 #include <vector>
 #include <dnsdetect/patternstrings.h>
 #include <libtrap/trap.h>
-#include <nemea-common/nemea-common.h>
+/* include from nemea-common */
+#include <nemea-common.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
