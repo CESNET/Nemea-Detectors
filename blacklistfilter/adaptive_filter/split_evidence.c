@@ -23,6 +23,7 @@
 #include <getopt.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <unirec/unirec2csv.h>
 #include "fields.h"
 
 trap_module_info_t *module_info = NULL;
@@ -53,38 +54,41 @@ static int stop = 0;
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
-struct hello_msg_header_s {
-   uint8_t data_type;
-   uint32_t data_fmt_spec_size;
-} hello_msg_header;
+urcsv_t *csv = NULL;
+ur_template_t *in_tmplt = NULL;
 
-const char *data_fmt_spec = NULL;
-size_t data_fmt_spec_len = 0;
-
-void write_into_file(const char *path, const void *in_rec, uint16_t in_rec_size, char *field_ptr, uint16_t key_size)
+/**
+ * Write UniRec message into file (in CSV format)
+ *
+ * \param[in] path   Output directory
+ * \param[in] in_rec Pointer to UniRec message
+ * \param[in] key_str    Value of a key field that will be used in the name of file
+ * \param[in] key_size   Size of the key field value (stored in key_str)
+ */
+void write_into_file(const char *path, const void *in_rec, char *key_str, uint16_t key_size)
 {
    struct stat stat_struct;
    FILE *f = NULL;
    char *name = NULL;
+   char *cl = NULL;
 
-   if (asprintf(&name, "%s/%*s.trapcap", path, key_size, field_ptr) == -1) {
+   if (asprintf(&name, "%s/%*s.csv", path, key_size, key_str) == -1) {
       return;
    }
    if (stat(name, &stat_struct) != 0) {
-      f = fopen(name, "wb");
-      fwrite(&hello_msg_header, sizeof(hello_msg_header), 1, f);
-      fwrite(data_fmt_spec, data_fmt_spec_len, 1, f);
+      f = fopen(name, "w");
+      /* write header */
+      cl = urcsv_header(csv);
+      fprintf(f, "%s\n", cl);
+      free(cl);
    } else {
-      f = fopen(name, "ab");
+      f = fopen(name, "a");
    }
    free(name);
 
-   uint32_t buffersize = htonl(in_rec_size + 2);
-   uint16_t messagesize = htons(in_rec_size);
-
-   while (fwrite(&buffersize, sizeof(buffersize), 1, f) != 1) { /* repeat */ }
-   while (fwrite(&messagesize, sizeof(messagesize), 1, f) != 1) { /* repeat */ }
-   while (fwrite(in_rec, in_rec_size, 1, f) != 1) { /* repeat */ }
+   cl = urcsv_record(csv, in_rec);
+   fprintf(f, "%s\n", cl);
+   free(cl);
 
    fclose(f);
 }
@@ -93,7 +97,6 @@ int main(int argc, char **argv)
 {
    int ret;
    signed char opt;
-   ur_template_t *in_tmplt = NULL;
    const char *field_name = NULL;
    const char *output_path = NULL;
 
@@ -142,7 +145,6 @@ int main(int argc, char **argv)
 
    /* **** Main processing loop **** */
 
-   char *field_ptr = NULL;
    int field_id = UR_E_INVALID_NAME;
    // Read data from input, process them and write to output
    while (!stop) {
@@ -152,6 +154,14 @@ int main(int argc, char **argv)
       // Receive data from input interface 0.
       // Block if data are not available immediately (unless a timeout is set using trap_ifcctl)
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
+      if (ret == TRAP_E_FORMAT_CHANGED) {
+         free(csv);
+         csv = urcsv_init(in_tmplt, ',');
+         if (csv == NULL) {
+            fprintf(stderr, "Failed to initialize UniRec2CSV converter.\n");
+            break;
+         }
+      }
       // Handle possible errors
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
@@ -162,14 +172,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error: field %s was not found in the input template.\n", field_name);
             break;
          }
-         if (trap_ctx_get_data_fmt(trap_get_global_ctx(), TRAPIFC_INPUT, 0, &hello_msg_header.data_type, &data_fmt_spec) != TRAP_E_OK) {
-            fprintf(stderr, "Data format was not loaded.\n");\
-         }
-         data_fmt_spec_len = strlen(data_fmt_spec);
-         hello_msg_header.data_fmt_spec_size = htonl(data_fmt_spec_len);
       }
-
-      field_ptr = ur_get_ptr_by_id(in_tmplt, in_rec, field_id);
 
       // Check size of received data
       if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
@@ -182,8 +185,19 @@ int main(int argc, char **argv)
          }
       }
 
+      char keystr[100];
+      uint32_t keysize = urcsv_field(keystr, 99, in_rec, field_id, in_tmplt);
+      keystr[keysize] = 0;
+
+      char *r;
+      while ((r = strchr(keystr, '/')) != NULL) {
+         *r = '_';
+      }
+      if (keysize == 0) {
+         strcpy(keystr, "UNKNOWN");
+      }
       // PROCESS THE DATA
-      write_into_file(output_path, in_rec, in_rec_size, field_ptr, ur_get_len(in_tmplt, in_rec, field_id));
+      write_into_file(output_path, in_rec, keystr, keysize);
 
    }
 
