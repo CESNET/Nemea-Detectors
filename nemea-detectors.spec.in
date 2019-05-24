@@ -1,12 +1,6 @@
-%if 0%{?el6}
-%global python3_pkgversion 34
-%endif
-
 %if x%{?python3_pkgversion} == x
 %global python3_pkgversion 3
 %endif
-
-
 
 Summary: Package with detection modules of the Nemea system
 Name: nemea-detectors
