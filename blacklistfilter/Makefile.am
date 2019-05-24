@@ -38,7 +38,7 @@ urlblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
 urlblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 
-EXTRA_DIST=blacklist_aggregator.py \
+EXTRA_DIST=blacklist_aggregator/blacklist_aggregator.py \
 	   blacklist_downloader/bl_downloader.py.in  \
 	   blacklist_downloader/bl_downloader_config.xml \
 	   urldetect/patternstrings.h \
@@ -51,7 +51,7 @@ EXTRA_DIST=blacklist_aggregator.py \
        dnsdetect/README.md \
        dnsdetect/dnsdetect_config.xml
 
-bin_SCRIPTS=blacklist_downloader/bl_downloader.py blacklist_aggregator.py
+bin_SCRIPTS=blacklist_downloader/bl_downloader.py blacklist_aggregator/blacklist_aggregator.py
 
 dist_blacklistfilter_DATA=blacklist_downloader/bl_downloader_config.xml
 
