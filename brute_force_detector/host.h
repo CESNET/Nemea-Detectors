@@ -78,7 +78,7 @@ public:
 
     inline ip_addr_t getHostIp() { return hostIp; }
     inline ur_time_t getTimeOfLastReport() { return timeOfLastReport; }
-    inline bool isReported() { if(timeOfLastReport == 0) return false; else return true; }
+    inline bool isReported() { return timeOfLastReport != 0; }
     inline void setReportTime(ur_time_t actualTime) { timeOfLastReport = actualTime; }
     inline void setNotReported()
     {
@@ -164,10 +164,7 @@ public:
 protected:
     bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
     {
-        if(flowTime + timer <= actualTime)
-            return true;
-        else
-            return false;
+		return flowTime + timer <= actualTime;
     }
 
     bool scanned;
@@ -242,8 +239,8 @@ protected:
         typename Container::iterator it = c->begin();
         while(it != c->end())
         {
-            if(it->second)
-                delete it->second;
+            //if(it->second)
+			delete it->second;
             it++;
 
         }
@@ -273,8 +270,8 @@ protected:
 class SSHHostMap : public IHostMap {
 
 public:
-    SSHHostMap() {}
-    ~SSHHostMap() {}
+    SSHHostMap() = default;
+    ~SSHHostMap() = default;
 
     virtual void clear()
     {
@@ -296,8 +293,8 @@ private:
 class RDPHostMap: public IHostMap {
 
 public:
-    RDPHostMap() {}
-    ~RDPHostMap() {}
+    RDPHostMap() = default;
+    ~RDPHostMap() = default;
 
     virtual void clear()
     {
@@ -321,8 +318,8 @@ private:
 class TELNETHostMap: public IHostMap {
 
 public:
-    TELNETHostMap() {}
-    ~TELNETHostMap() {}
+    TELNETHostMap() = default;
+    ~TELNETHostMap() = default;
 
     virtual void clear()
     {
