@@ -142,15 +142,12 @@ void signalHandler(int signal)
 
 bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
 {
-    if(oldTime + timer <= actualTime)
-        return true;
-    else
-        return false;
+	return oldTime + timer <= actualTime;
 }
 
 void printFlowPercent(uint64_t b, uint64_t p)
 {
-    if (b && p && b * p) {
+    if (b && p) {
         ios::fmtflags f(cout.flags());
         cout << " ("
             << std::fixed << std::setprecision(2)
@@ -172,7 +169,7 @@ int main(int argc, char **argv)
 
     // ***** Capturing signals *****
 #ifdef HAVE_SIGACTION
-    struct sigaction sigAction;
+    struct sigaction sigAction{};
 
     sigAction.sa_handler = signalHandler;
     sigemptyset (&sigAction.sa_mask);
@@ -283,7 +280,7 @@ int main(int argc, char **argv)
     // ***** Init UniRec template for sender *****
 
     bool senderState;
-    Sender *sender = new Sender(&senderState);
+    auto sender = new Sender(&senderState);
     if(!senderState)
     {
         cerr << "Error: Invalid output UniRec specifier. Check sender.cpp file.\n";
@@ -376,16 +373,17 @@ int main(int argc, char **argv)
         ur_time_t flowFirstSeen = ur_get(tmplt, data, F_TIME_FIRST);
         ur_time_t flowLastSeen  = ur_get(tmplt, data, F_TIME_LAST);
 
-        IRecord::MatchStructure structure;
-        structure.flags   = tcpFlags;
-        structure.packets = packets;
-        structure.bytes   = bytes;
-        structure.srcIp   = srcIp;
-        structure.flowFirstSeen = flowFirstSeen;
-        structure.flowLastSeen  = flowLastSeen;
-        structure.dstIp   = dstIp;
-        structure.srcPort = srcPort;
-        structure.dstPort = dstPort;
+        IRecord::MatchStructure structure{
+				.flags = tcpFlags,
+				.packets = packets,
+				.bytes   = bytes,
+				.srcIp   = srcIp,
+				.dstIp   = dstIp,
+				.srcPort = srcPort,
+				.dstPort = dstPort,
+				.flowFirstSeen = flowFirstSeen,
+				.flowLastSeen  = flowLastSeen,
+		};
 
         ret = 0;
 
