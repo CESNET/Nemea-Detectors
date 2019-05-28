@@ -57,7 +57,8 @@ Config::Config()
 
     //SSH
     SSH_LIST_SIZE = 1000;
-    SSH_LIST_SIZE_BOTTOM_TRESHOLD = 50; // There are two types of tresholds, first means how many records are in list [50/1000] and based on this value is set up TRESHOLD which detects if host is attacker or not
+    SSH_LIST_SIZE_BOTTOM_TRESHOLD = 50; // There are two types of tresholds, first means how many records are in list [50/1000]
+    									// and based on this value is set up TRESHOLD which detects if host is attacker or not
     SSH_LIST_THRESHOLD = 30;
     SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(1800, 0);
     SSH_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
@@ -227,202 +228,202 @@ bool Config::initFromFile(string path)
         value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
 
 		// GENERAL
-        if(keyword.compare(kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT) == 0)
+        if(keyword == kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             GENERAL_CHECK_FOR_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT) == 0)
+        else if(keyword == kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             GENERAL_CHECK_FOR_DELETE_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT) == 0)
+        else if(keyword == kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT)
         {
             GENERAL_ATTACK_MIN_EVENTS_TO_REPORT = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST) == 0)
+        else if(keyword == kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST)
         {
             GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST = atof(value.c_str());
         }
-        else if(keyword.compare(kw_GENERAL_IGNORE_FIRST_SEND) == 0)
+        else if(keyword == kw_GENERAL_IGNORE_FIRST_SEND)
         {
             GENERAL_IGNORE_FIRST_SEND = strtoul(value.c_str(), NULL, 10);
         }        
         // *********************
         // ******* SSH *********
         // *********************
-        else if(keyword.compare(kw_SSH_LIST_SIZE) == 0)
+        else if(keyword == kw_SSH_LIST_SIZE)
         {
             SSH_LIST_SIZE = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_LIST_THRESHOLD) == 0)
+        else if(keyword == kw_SSH_LIST_THRESHOLD)
         {
             SSH_LIST_THRESHOLD = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_ATTACK_TIMEOUT) == 0)
+        else if(keyword == kw_SSH_ATTACK_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             SSH_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_SSH_RECORD_TIMEOUT) == 0)
+        else if(keyword == kw_SSH_RECORD_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_SSH_HOST_TIMEOUT) == 0)
+        else if(keyword == kw_SSH_HOST_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             SSH_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_SSH_REPORT_TIMEOUT) == 0)
+        else if(keyword == kw_SSH_REPORT_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             SSH_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
         // SSH INCOMING DIRECTION (ATTACKER -> VICTIM)
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_INC_MIN_PACKETS) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_INC_MIN_PACKETS)
         {
             SSH_BRUTEFORCE_INC_MIN_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_INC_MAX_PACKETS) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_INC_MAX_PACKETS)
         {
             SSH_BRUTEFORCE_INC_MAX_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_INC_MIN_BYTES) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_INC_MIN_BYTES)
         {
             SSH_BRUTEFORCE_INC_MIN_BYTES = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_INC_MAX_BYTES) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_INC_MAX_BYTES)
         {
             SSH_BRUTEFORCE_INC_MAX_BYTES = strtoul(value.c_str(), NULL, 10);
         }
         // SSH OUTGOING DIRECTION (VICTIM -> ATTACKER)
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_OUT_MIN_PACKETS) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MIN_PACKETS)
         {
             SSH_BRUTEFORCE_OUT_MIN_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_OUT_MAX_PACKETS) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MAX_PACKETS)
         {
             SSH_BRUTEFORCE_OUT_MAX_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_OUT_MIN_BYTES) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MIN_BYTES)
         {
             SSH_BRUTEFORCE_OUT_MIN_BYTES = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_SSH_BRUTEFORCE_OUT_MAX_BYTES) == 0)
+        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MAX_BYTES)
         {
             SSH_BRUTEFORCE_OUT_MAX_BYTES = strtoul(value.c_str(), NULL, 10);
         }        
         // *********************
         // ******* RDP *********
         // *********************
-        else if(keyword.compare(kw_RDP_LIST_SIZE) == 0)
+        else if(keyword == kw_RDP_LIST_SIZE)
         {
             RDP_LIST_SIZE = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_LIST_THRESHOLD) == 0)
+        else if(keyword == kw_RDP_LIST_THRESHOLD)
         {
             RDP_LIST_THRESHOLD = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_ATTACK_TIMEOUT) == 0)
+        else if(keyword == kw_RDP_ATTACK_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             RDP_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_RDP_RECORD_TIMEOUT) == 0)
+        else if(keyword == kw_RDP_RECORD_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             RDP_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_RDP_HOST_TIMEOUT) == 0)
+        else if(keyword == kw_RDP_HOST_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             RDP_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_RDP_REPORT_TIMEOUT) == 0)
+        else if(keyword == kw_RDP_REPORT_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             RDP_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
         // RDP INCOMING DIRECTION (ATTACKER -> VICTIM)
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_INC_MIN_PACKETS) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_INC_MIN_PACKETS)
         {
             RDP_BRUTEFORCE_INC_MIN_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_INC_MAX_PACKETS) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_INC_MAX_PACKETS)
         {
             RDP_BRUTEFORCE_INC_MAX_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_INC_MIN_BYTES) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_INC_MIN_BYTES)
         {
             RDP_BRUTEFORCE_INC_MIN_BYTES = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_INC_MAX_BYTES) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_INC_MAX_BYTES)
         {
             RDP_BRUTEFORCE_INC_MAX_BYTES = strtoul(value.c_str(), NULL, 10);
         }
         // RDP OUTGOING DIRECTION (VICTIM -> ATTACKER)
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_OUT_MIN_PACKETS) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MIN_PACKETS)
         {
             RDP_BRUTEFORCE_OUT_MIN_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_OUT_MAX_PACKETS) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MAX_PACKETS)
         {
             RDP_BRUTEFORCE_OUT_MAX_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_OUT_MIN_BYTES) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MIN_BYTES)
         {
             RDP_BRUTEFORCE_OUT_MIN_BYTES = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_RDP_BRUTEFORCE_OUT_MAX_BYTES) == 0)
+        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MAX_BYTES)
         {
             RDP_BRUTEFORCE_OUT_MAX_BYTES = strtoul(value.c_str(), NULL, 10);
         }        
         // *********************
         // ****** TELNET *******
         // *********************
-        else if(keyword.compare(kw_TELNET_LIST_SIZE) == 0)
+        else if(keyword == kw_TELNET_LIST_SIZE)
         {
             TELNET_LIST_SIZE = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_TELNET_LIST_THRESHOLD) == 0)
+        else if(keyword == kw_TELNET_LIST_THRESHOLD)
         {
             TELNET_LIST_THRESHOLD = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_TELNET_ATTACK_TIMEOUT) == 0)
+        else if(keyword == kw_TELNET_ATTACK_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             TELNET_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_TELNET_RECORD_TIMEOUT) == 0)
+        else if(keyword == kw_TELNET_RECORD_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             TELNET_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_TELNET_HOST_TIMEOUT) == 0)
+        else if(keyword == kw_TELNET_HOST_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             TELNET_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_TELNET_REPORT_TIMEOUT) == 0)
+        else if(keyword == kw_TELNET_REPORT_TIMEOUT)
         {
             uint32_t sec = strtoul(value.c_str(), NULL, 10);
             TELNET_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword.compare(kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS) == 0)
+        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS)
         {
             TELNET_BRUTEFORCE_INC_MIN_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS) == 0)
+        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS)
         {
             TELNET_BRUTEFORCE_INC_MAX_PACKETS = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_TELNET_BRUTEFORCE_INC_MIN_BYTES) == 0)
+        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MIN_BYTES)
         {
             TELNET_BRUTEFORCE_INC_MIN_BYTES = strtoul(value.c_str(), NULL, 10);
         }
-        else if(keyword.compare(kw_TELNET_BRUTEFORCE_INC_MAX_BYTES) == 0)
+        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MAX_BYTES)
         {
             TELNET_BRUTEFORCE_INC_MAX_BYTES = strtoul(value.c_str(), NULL, 10);
         }
