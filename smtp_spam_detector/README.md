@@ -2,7 +2,7 @@
 
 ## 1.0 Abstract
 
-It may have seem that these days, the emails are not as popular as the new modern
+It may seem that these days, emails are not as popular as the new modern
 Instant Messaging (IM) apps or the social networks. However, we still rely on an
 old SMTP protocol, which is the standard protocol for sending e-mails from one
 Message Transfer Agent (MTA) to another. The SMTP stands for “Simple Message Transfer
@@ -13,7 +13,7 @@ was abused by the spammers, at that time it was not a big deal as today. With th
 e-commerce boom had came many new businesses, scamming methods, and problems.
 One of them is the spam which we have to face today in enormous quantities.
 
-The main goal of this project is not to detect spam such as its, but to detect
+The main goal of this project is not to detect spam itself, but to detect
 entities and clusters that are sending it. All this with just a flow data analysis
 without interfering a network user privacy. This system contains two modules.
 First a static module that will autonomously decide whether the entity is a sender,
@@ -331,7 +331,7 @@ This module uses PEP 8 coding style
 ```
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright (C) 2016-2018 CESNET, z.s.p.o.
+Copyright (C) 2016-2019 CESNET, z.s.p.o.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
