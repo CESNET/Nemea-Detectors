@@ -120,9 +120,9 @@ TelnetServerProfile * TelnetServerProfileMap::createProfile(ip_addr_t ip, ur_tim
 
 TelnetServerProfile * TelnetServerProfileMap::findProfile(ip_addr_t & hostIp) const
 {
-    std::map<ip_addr_t, TelnetServerProfile*, cmpByIpAddr>::const_iterator it = TSPMap.find(hostIp);
+    auto it = TSPMap.find(hostIp);
     if(it == TSPMap.end())
-        return NULL;
+        return nullptr;
     
     return it->second;
 }

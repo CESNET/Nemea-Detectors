@@ -177,14 +177,11 @@ private:
     std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
-    char str[46];
+    char str[46]; // TODO annotate
 
     bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
     {
-        if(flowTime + timer <= actualTime)
-            return true;
-        else
-            return false;
+		return flowTime + timer <= actualTime;
     }
 };
 

@@ -71,7 +71,7 @@ public:
         scanned = false;
     }
 
-    virtual ~IHost() {}
+    virtual ~IHost() = default;
 
     enum ATTACK_STATE { NO_ATTACK, NEW_ATTACK, ATTACK_REPORT_WAIT, ATTACK,
 	                    ATTACK_MIN_EVENTS_WAIT, END_OF_ATTACK, REPORT_END_OF_ATTACK};
@@ -79,14 +79,14 @@ public:
     inline ip_addr_t getHostIp() { return hostIp; }
     inline ur_time_t getTimeOfLastReport() { return timeOfLastReport; }
     inline bool isReported() { return timeOfLastReport != 0; }
-    inline void setReportTime(ur_time_t actualTime) { timeOfLastReport = actualTime; }
+    inline void setReportTime(ur_time_t actualTime) {  timeOfLastReport = actualTime; }
     inline void setNotReported()
     {
         timeOfLastReport = 0;
         recordListIncoming.clearNumOfTotalTargetsSinceAttack();
         recordListOutgoing.clearNumOfTotalTargetsSinceAttack();
     }
-	
+
     inline bool getHostScannedNetwork() { return scanned; }
 
     virtual bool addRecord(T record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION)
@@ -145,7 +145,7 @@ public:
 
     virtual void clearAllRecords() { recordListIncoming.clearAllRecords(); recordListOutgoing.clearAllRecords();}
 
-    bool isFlowScan(uint32_t *packets, uint8_t *flags)
+    bool isFlowScan(const uint32_t *packets, const uint8_t *flags)
     {
         if((*packets == 1 && *flags == 0b00000010) //SYN
                 || (*packets == 2 && *flags == 0b00000010) //SYN
@@ -183,11 +183,11 @@ class SSHHost : public IHost<SSHRecord*> {
 public:
     SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord*> (hostIp,  firstSeen) {}
 
-	virtual bool addRecord(SSHRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-	virtual ATTACK_STATE checkForAttack(ur_time_t actualTime);
-	virtual ur_time_t getHostDeleteTimeout() { return Config::getInstance().getSSHHostTimeout(); }
-    virtual ur_time_t getHostReportTimeout() { return Config::getInstance().getSSHReportTimeout(); }
-    virtual ur_time_t getHostAttackTimeout() { return Config::getInstance().getSSHAttackTimeout(); } 
+	bool addRecord(SSHRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getSSHHostTimeout(); }
+    ur_time_t getHostReportTimeout() override { return Config::getInstance().getSSHReportTimeout(); }
+    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getSSHAttackTimeout(); }
 };
 
 class RDPHost : public IHost<RDPRecord*> {
@@ -195,11 +195,11 @@ class RDPHost : public IHost<RDPRecord*> {
 public:
     RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord*> (hostIp,  firstSeen) {}
 
-	virtual bool addRecord(RDPRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-	virtual ATTACK_STATE checkForAttack(ur_time_t actualTime);
-	virtual ur_time_t getHostDeleteTimeout() { return Config::getInstance().getRDPHostTimeout(); }
-    virtual ur_time_t getHostReportTimeout() { return Config::getInstance().getRDPReportTimeout(); }
-    virtual ur_time_t getHostAttackTimeout() { return Config::getInstance().getRDPAttackTimeout(); } 
+	bool addRecord(RDPRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getRDPHostTimeout(); }
+    ur_time_t getHostReportTimeout() override { return Config::getInstance().getRDPReportTimeout(); }
+    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getRDPAttackTimeout(); }
 };
 
 class TELNETHost : public IHost<TELNETRecord*> {
@@ -207,11 +207,11 @@ class TELNETHost : public IHost<TELNETRecord*> {
 public:
     TELNETHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<TELNETRecord*> (hostIp,  firstSeen) {}
 
-	virtual bool addRecord(TELNETRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-	virtual ATTACK_STATE checkForAttack(ur_time_t actualTime);
-	virtual ur_time_t getHostDeleteTimeout() { return Config::getInstance().getTELNETHostTimeout(); }
-	virtual ur_time_t getHostReportTimeout() { return Config::getInstance().getTELNETReportTimeout(); }
-    virtual ur_time_t getHostAttackTimeout() { return Config::getInstance().getTELNETAttackTimeout(); } 	
+	bool addRecord(TELNETRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getTELNETHostTimeout(); }
+	ur_time_t getHostReportTimeout() override { return Config::getInstance().getTELNETReportTimeout(); }
+    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getTELNETAttackTimeout(); }
 };
 
 
@@ -222,8 +222,8 @@ public:
 class IHostMap {
 
 public:
-    IHostMap() {}
-	~IHostMap() {}
+    IHostMap() = default;
+	~IHostMap() = default;
 
 	virtual void clear() = 0;
 	virtual inline uint16_t size() = 0;
@@ -273,18 +273,18 @@ public:
     SSHHostMap() = default;
     ~SSHHostMap() = default;
 
-    virtual void clear()
+    void clear() override
     {
         IHostMap::clearMap(&hostMap);
     }
-    virtual inline uint16_t size()
+    inline uint16_t size() override
     {
         return hostMap.size();
     }
 
     SSHHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-    virtual void deleteOldRecordAndHosts(ur_time_t actualTime);
-    virtual void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
+    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
 
 private:
     map<ip_addr_t, SSHHost*, cmpByIpAddr> hostMap;
@@ -296,19 +296,19 @@ public:
     RDPHostMap() = default;
     ~RDPHostMap() = default;
 
-    virtual void clear()
+    void clear() override
     {
         IHostMap::clearMap(&hostMap);
     }
     
-    virtual inline uint16_t size()
+    inline uint16_t size() override
     {
         return hostMap.size();
     }
 
     RDPHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-    virtual void deleteOldRecordAndHosts(ur_time_t actualTime);
-    virtual void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
+    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
 
 private:
     map<ip_addr_t, RDPHost*, cmpByIpAddr> hostMap;
@@ -321,19 +321,19 @@ public:
     TELNETHostMap() = default;
     ~TELNETHostMap() = default;
 
-    virtual void clear()
+    void clear() override
     {
         IHostMap::clearMap(&hostMap);
     }
     
-    virtual inline uint16_t size()
+    inline uint16_t size() override
     {
         return hostMap.size();
     }
 
     TELNETHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
-    virtual void deleteOldRecordAndHosts(ur_time_t actualTime);
-    virtual void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
+    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
 
 private:
     map<ip_addr_t, TELNETHost*, cmpByIpAddr> hostMap;

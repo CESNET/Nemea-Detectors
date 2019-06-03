@@ -71,7 +71,7 @@ using namespace std;
 class Sender
 {
 public:
-    Sender(bool *success);
+    explicit Sender(bool *success);
     ~Sender();
 
     template <class Host>
@@ -113,7 +113,7 @@ private:
     ur_template_t *outTemplate;
 
     template <class Host>
-    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false, string stringNote = string())
+    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false, const string& stringNote = string())
     {
         vector<string> incIpsVictims = host->getPointerToIncomingRecordList()->getIpsOfVictims();
         vector<string> outIpsVictims = host->getPointerToOutgoingRecordList()->getIpsOfVictims();
@@ -127,15 +127,15 @@ private:
 
         //Incoming
         note.append("I:");
-        for (unsigned int i = 0; i < incIpsVictims.size(); i++) {
-            note.append(incIpsVictims.at(i));
+        for (const auto & incIpsVictim : incIpsVictims) {
+            note.append(incIpsVictim);
             note.append(",");
         }
 
         //Outgoing
         note.append("O:");
-        for (unsigned int i = 0; i < outIpsVictims.size(); i++) {
-            note.append(outIpsVictims.at(i));
+        for (const auto & outIpsVictim : outIpsVictims) {
+            note.append(outIpsVictim);
             note.append(",");
         }
         note.erase(note.length(),1);

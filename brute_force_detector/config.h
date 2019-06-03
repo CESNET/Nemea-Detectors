@@ -56,7 +56,7 @@
 class Config {
 
 public:
-    bool initFromFile(std::string path);
+    bool initFromFile(const std::string& path);
 
 	inline ur_time_t getGlobalTimerForReportCheck() const {return GENERAL_CHECK_FOR_REPORT_TIMEOUT;}
 	inline ur_time_t getGlobalTimerForDeleteCheck() const {return GENERAL_CHECK_FOR_DELETE_TIMEOUT;}
@@ -64,10 +64,11 @@ public:
     inline double    getGlobalAttackMinRatioToKeepTrackingHost() const {return GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST;}
 
     inline int       getGlobalIgnoreFirstSend() const {return GENERAL_IGNORE_FIRST_SEND;}
-    
+    inline double    getGlobalMatchedFlowRatio() const {return GENERAL_MATCHED_FLOW_RATIO;}
+
 	//SSH  
 	inline uint16_t  getSSHMaxListSize()       const {return SSH_LIST_SIZE;}  
-    inline uint16_t  getSSHListBottomSize()    const {return SSH_LIST_SIZE_BOTTOM_TRESHOLD;}
+    inline uint16_t  getSSHListBottomSize()    const {return SSH_LIST_SIZE_BOTTOM_THRESHOLD;}
 
 	inline uint16_t  getSSHListThreshold()     const {return SSH_LIST_THRESHOLD;}
 	inline ur_time_t getSSHRecordTimeout()     const {return SSH_RECORD_TIMEOUT;}
@@ -88,7 +89,7 @@ public:
     inline uint16_t getSSHBFOutMaxBytes()      const  {return SSH_BRUTEFORCE_OUT_MAX_BYTES;}	
 	
 	//RDP
-    inline uint16_t  getRDPListBottomSize()    const {return RDP_LIST_SIZE_BOTTOM_TRESHOLD;}
+    inline uint16_t  getRDPListBottomSize()    const {return RDP_LIST_SIZE_BOTTOM_THRESHOLD;}
 	inline uint16_t  getRDPMaxListSize()       const {return RDP_LIST_SIZE;}
 	inline uint16_t  getRDPListThreshold()     const {return RDP_LIST_THRESHOLD;}
 	inline ur_time_t getRDPRecordTimeout()     const {return RDP_RECORD_TIMEOUT;}
@@ -109,7 +110,7 @@ public:
     inline uint32_t getRDPBFOutMaxBytes()      const  {return RDP_BRUTEFORCE_OUT_MAX_BYTES;}
 
 	//TELNET
-    inline uint16_t  getTELNETListBottomSize() const {return TELNET_LIST_SIZE_BOTTOM_TRESHOLD;}
+    inline uint16_t  getTELNETListBottomSize() const {return TELNET_LIST_SIZE_BOTTOM_THRESHOLD;}
 	inline uint16_t  getTELNETMaxListSize()    const {return TELNET_LIST_SIZE;}
 	inline uint16_t  getTELNETListThreshold()  const {return TELNET_LIST_THRESHOLD;}
 	inline ur_time_t getTELNETRecordTimeout()  const {return TELNET_RECORD_TIMEOUT;}
@@ -140,17 +141,19 @@ private:
     uint16_t  GENERAL_ATTACK_MIN_EVENTS_TO_REPORT;
     double    GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST;
     uint8_t   GENERAL_IGNORE_FIRST_SEND;
+    float	  GENERAL_MATCHED_FLOW_RATIO;
     
     std::string kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT;
     std::string kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT;
     std::string kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT;
     std::string kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST;
     std::string kw_GENERAL_IGNORE_FIRST_SEND;
+    std::string kw_GENERAL_MATCHED_FLOW_RATIO;
 
     //SSH
     uint16_t  SSH_LIST_SIZE;
     uint16_t  SSH_LIST_THRESHOLD;
-    uint16_t  SSH_LIST_SIZE_BOTTOM_TRESHOLD;
+    uint16_t  SSH_LIST_SIZE_BOTTOM_THRESHOLD;
 
     ur_time_t SSH_RECORD_TIMEOUT;
     ur_time_t SSH_HOST_TIMEOUT;
@@ -170,6 +173,7 @@ private:
     //SSH keywords
     std::string kw_SSH_LIST_SIZE;
     std::string kw_SSH_LIST_THRESHOLD;
+    std::string kw_SSH_LIST_SIZE_BOTTOM_THRESHOLD;
     std::string kw_SSH_RECORD_TIMEOUT;
     std::string kw_SSH_HOST_TIMEOUT;
     std::string kw_SSH_BRUTEFORCE_INC_MIN_PACKETS;
@@ -184,35 +188,9 @@ private:
     std::string kw_SSH_ATTACK_TIMEOUT;
 
 
-	//TELNET
-    uint16_t  TELNET_LIST_SIZE;
-    uint16_t  TELNET_LIST_SIZE_BOTTOM_TRESHOLD;
-    uint16_t  TELNET_LIST_THRESHOLD;
-    ur_time_t TELNET_RECORD_TIMEOUT;
-    ur_time_t TELNET_HOST_TIMEOUT;
-    ur_time_t TELNET_REPORT_TIMEOUT;
-    ur_time_t TELNET_ATTACK_TIMEOUT;
-
-    uint16_t TELNET_BRUTEFORCE_INC_MIN_PACKETS;
-    uint16_t TELNET_BRUTEFORCE_INC_MAX_PACKETS;
-    uint16_t TELNET_BRUTEFORCE_INC_MIN_BYTES;
-    uint16_t TELNET_BRUTEFORCE_INC_MAX_BYTES;
-
-    //TELNET keywords
-    std::string kw_TELNET_LIST_SIZE;
-    std::string kw_TELNET_LIST_THRESHOLD;
-    std::string kw_TELNET_RECORD_TIMEOUT;
-    std::string kw_TELNET_HOST_TIMEOUT;
-    std::string kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS;
-    std::string kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS;
-    std::string kw_TELNET_BRUTEFORCE_INC_MIN_BYTES;
-    std::string kw_TELNET_BRUTEFORCE_INC_MAX_BYTES;
-    std::string kw_TELNET_REPORT_TIMEOUT;
-    std::string kw_TELNET_ATTACK_TIMEOUT;
-
     //RDP
     uint16_t  RDP_LIST_SIZE;
-    uint16_t  RDP_LIST_SIZE_BOTTOM_TRESHOLD;
+    uint16_t  RDP_LIST_SIZE_BOTTOM_THRESHOLD;
     uint16_t  RDP_LIST_THRESHOLD;
     ur_time_t RDP_RECORD_TIMEOUT;
     ur_time_t RDP_HOST_TIMEOUT;
@@ -232,6 +210,7 @@ private:
     //RDP keywords
     std::string kw_RDP_LIST_SIZE;
     std::string kw_RDP_LIST_THRESHOLD;
+    std::string kw_RDP_LIST_SIZE_BOTTOM_THRESHOLD;
     std::string kw_RDP_RECORD_TIMEOUT;
     std::string kw_RDP_HOST_TIMEOUT;
     std::string kw_RDP_BRUTEFORCE_INC_MIN_PACKETS;
@@ -244,6 +223,36 @@ private:
     std::string kw_RDP_BRUTEFORCE_OUT_MAX_BYTES;
     std::string kw_RDP_REPORT_TIMEOUT;
     std::string kw_RDP_ATTACK_TIMEOUT;
+
+
+	//TELNET
+	uint16_t  TELNET_LIST_SIZE;
+	uint16_t  TELNET_LIST_SIZE_BOTTOM_THRESHOLD;
+	uint16_t  TELNET_LIST_THRESHOLD;
+	ur_time_t TELNET_RECORD_TIMEOUT;
+	ur_time_t TELNET_HOST_TIMEOUT;
+	ur_time_t TELNET_REPORT_TIMEOUT;
+	ur_time_t TELNET_ATTACK_TIMEOUT;
+
+	uint16_t TELNET_BRUTEFORCE_INC_MIN_PACKETS;
+	uint16_t TELNET_BRUTEFORCE_INC_MAX_PACKETS;
+	uint16_t TELNET_BRUTEFORCE_INC_MIN_BYTES;
+	uint16_t TELNET_BRUTEFORCE_INC_MAX_BYTES;
+
+	//TELNET keywords
+	std::string kw_TELNET_LIST_SIZE;
+	std::string kw_TELNET_LIST_THRESHOLD;
+	std::string kw_TELNET_LIST_SIZE_BOTTOM_THRESHOLD;
+
+	std::string kw_TELNET_RECORD_TIMEOUT;
+	std::string kw_TELNET_HOST_TIMEOUT;
+	std::string kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS;
+	std::string kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS;
+	std::string kw_TELNET_BRUTEFORCE_INC_MIN_BYTES;
+	std::string kw_TELNET_BRUTEFORCE_INC_MAX_BYTES;
+	std::string kw_TELNET_REPORT_TIMEOUT;
+	std::string kw_TELNET_ATTACK_TIMEOUT;
+
 };
 
 #endif

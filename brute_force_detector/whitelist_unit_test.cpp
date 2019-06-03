@@ -49,12 +49,12 @@ using namespace std;
 
 //init and delete WL for new test instance
 #define WL() {								\
-    if(wl!=NULL)							\
+    if(wl!=nullptr)							\
     {										\
 	    delete wl;							\
-		wl = NULL;							\
+		wl = nullptr;							\
     }										\
-    if(wl == NULL)							\
+    if(wl == nullptr)							\
         wl = new Whitelist();				\
     parser = wl->getPointerToParser();		\
 }
@@ -67,7 +67,7 @@ uint16_t getRandomPort(){return rand() % 65536;}
 
 int failCounter = 0;
 
-void subTestRes(int testNum, string state)
+void subTestRes(int testNum, const string& state)
 {
     //cout <<"Subtest "<< testNum <<": "<< state << endl;
     if (state == "fail") failCounter++;
@@ -76,7 +76,7 @@ void subTestRes(int testNum, string state)
 
 int main()
 {
-    Whitelist *wl = NULL;
+    Whitelist *wl = nullptr;
     WhitelistParser *parser;
 
     srand(0);

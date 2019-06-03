@@ -71,28 +71,21 @@ bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction)
 
 SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 {
-    uint16_t numOfCurrentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
-    uint16_t numOfCurrentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
+    uint16_t currentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
+    uint16_t currentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
 
     if(!isReported())
     { //no attack yet
         uint16_t actualListSizeInc = recordListIncoming.getActualNumOfListSize();
         uint16_t actualListSizeOut = recordListOutgoing.getActualNumOfListSize();
-        /*
-        if (actualListSizeInc > 50 || actualListSizeOut > 50) {
-            cout << "First Seen " << std::endl;
-            cout << "Actual list size incoming: " << actualListSizeInc << std::endl;
-            cout << "Actual list size outgoing: " << actualListSizeOut << std::endl;
-            cout << "Number of matched incoming flows: " << numOfCurrentIncomingMF << std::endl;
-            cout << "Number of matched outgoing flows: " << numOfCurrentOutgoingMF << std::endl;
-        }*/
 
-        //Number of records in list is lower than BottomSize, 50 ussually
+
+        //Number of records in list is lower than BottomSize (set to 50 by default)
         if ( actualListSizeInc <= Config::getInstance().getSSHListBottomSize() ||
              actualListSizeOut <= Config::getInstance().getSSHListBottomSize()) {  
 
-            if( numOfCurrentIncomingMF >= Config::getInstance().getSSHListThreshold() ||
-                numOfCurrentOutgoingMF >= Config::getInstance().getSSHListThreshold()) {
+            if( currentIncomingMF >= Config::getInstance().getSSHListThreshold() ||
+                currentOutgoingMF >= Config::getInstance().getSSHListThreshold()) {
             
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -104,25 +97,11 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
         //Number of records is between bottom size and max size
         } else {
-            uint16_t SSH_LIST_TOP_TRESHOLD = 0;
 
-            if (actualListSizeInc > actualListSizeOut) {
-                if (actualListSizeInc < 100) {
-                    double tmpRatio = ( actualListSizeInc % 100 ) * 0.9;
-                    SSH_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    SSH_LIST_TOP_TRESHOLD = (actualListSizeInc / 100) * 90;
-                }
-            } else {
-                if (actualListSizeOut < 100) {
-                    double tmpRatio = ( actualListSizeOut % 100 ) * 0.9;
-                    SSH_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    SSH_LIST_TOP_TRESHOLD = (actualListSizeOut / 100) * 90;
-                }
-            }
+            auto SSH_LIST_TOP_THRESHOLD = (uint16_t) (std::max(actualListSizeInc, actualListSizeOut) *
+					Config::getInstance().getGlobalMatchedFlowRatio());
 
-            if(numOfCurrentIncomingMF >= SSH_LIST_TOP_TRESHOLD || numOfCurrentOutgoingMF >= SSH_LIST_TOP_TRESHOLD) {
+            if(currentIncomingMF >= SSH_LIST_TOP_THRESHOLD || currentOutgoingMF >= SSH_LIST_TOP_THRESHOLD) {
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
@@ -134,9 +113,9 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         }        
     }
     else
-    { //host is attacking, check for report timeout
+    { //host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
-            //timeout nevyprsel, report pripadne pozdeji
+            
             return SSHHost::ATTACK_REPORT_WAIT; 
         else
         {
@@ -146,8 +125,8 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 			uint32_t outgoingAttackScale = recordListOutgoing.getNumOfMatchedFlowsSinceLastReport();
 			uint32_t outgoingTotalFlows  = recordListOutgoing.getNumOfTotalFlowsSinceLastReport();
 
-			if(numOfCurrentIncomingMF == 0 && incomingAttackScale == 0 && 
-               numOfCurrentOutgoingMF == 0 && outgoingAttackScale == 0)
+			if(currentIncomingMF == 0 && incomingAttackScale == 0 &&
+               currentOutgoingMF == 0 && outgoingAttackScale == 0)
                 return SSHHost::END_OF_ATTACK;
 
 			double configRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
@@ -201,8 +180,8 @@ bool RDPHost::addRecord(RDPRecord *record, void *structure, uint8_t direction)
 
 RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 {
-    uint16_t numOfCurrentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
-    uint16_t numOfCurrentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
+    uint16_t currentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
+    uint16_t currentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
 
     if(!isReported())
     { //no attack yet
@@ -212,8 +191,8 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
         if (actualListSizeInc <= Config::getInstance().getRDPListBottomSize() ||
             actualListSizeOut <= Config::getInstance().getRDPListBottomSize()) {
 
-            if(numOfCurrentIncomingMF >= Config::getInstance().getRDPListThreshold() ||
-               numOfCurrentOutgoingMF >= Config::getInstance().getRDPListThreshold()) {
+            if(currentIncomingMF >= Config::getInstance().getRDPListThreshold() ||
+               currentOutgoingMF >= Config::getInstance().getRDPListThreshold()) {
                 
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -224,25 +203,10 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
             }
         //Number of records is between bottom size and max size
         } else {
-            uint16_t RDP_LIST_TOP_TRESHOLD = 0;
+			auto RDP_LIST_TOP_THRESHOLD = (uint16_t) (std::max(actualListSizeInc, actualListSizeOut) *
+					Config::getInstance().getGlobalMatchedFlowRatio());
 
-            if (actualListSizeInc > actualListSizeOut) {
-                if (actualListSizeInc < 100) {
-                    double tmpRatio = ( actualListSizeInc % 100 ) * 0.9;
-                    RDP_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    RDP_LIST_TOP_TRESHOLD = (actualListSizeInc / 100) * 90;
-                }
-            } else {
-                if (actualListSizeOut < 100) {
-                    double tmpRatio = ( actualListSizeOut % 100 ) * 0.9;
-                    RDP_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    RDP_LIST_TOP_TRESHOLD = (actualListSizeOut / 100) * 90;
-                }
-            }
-
-            if (numOfCurrentIncomingMF >= RDP_LIST_TOP_TRESHOLD || numOfCurrentOutgoingMF >= RDP_LIST_TOP_TRESHOLD) {
+            if (currentIncomingMF >= RDP_LIST_TOP_THRESHOLD || currentOutgoingMF >= RDP_LIST_TOP_THRESHOLD) {
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
@@ -253,9 +217,9 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
         }     
     }
     else
-    { //host is attacking, check for report timeout
+    { //host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
-            //timeout nevyprsel, report pripadne pozdeji
+            
             return RDPHost::ATTACK_REPORT_WAIT;
         else
         {
@@ -265,8 +229,8 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
             uint32_t outgoingAttackScale = recordListOutgoing.getNumOfMatchedFlowsSinceLastReport();
             uint32_t outgoingTotalFlows  = recordListOutgoing.getNumOfTotalFlowsSinceLastReport();
 
-            if(numOfCurrentIncomingMF == 0 && incomingAttackScale == 0 && 
-               numOfCurrentOutgoingMF == 0 && outgoingAttackScale == 0)
+            if(currentIncomingMF == 0 && incomingAttackScale == 0 && 
+               currentOutgoingMF == 0 && outgoingAttackScale == 0)
                 return RDPHost::END_OF_ATTACK;
 
             double configRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
@@ -320,8 +284,8 @@ bool TELNETHost::addRecord(TELNETRecord *record, void *structure, uint8_t direct
 
 TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 {
-    uint16_t numOfCurrentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
-    uint16_t numOfCurrentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
+    uint16_t currentIncomingMF = recordListIncoming.getActualNumOfMatchedFlows();
+    uint16_t currentOutgoingMF = recordListOutgoing.getActualNumOfMatchedFlows();
 
     if(!isReported())
     { //no attack yet
@@ -331,8 +295,8 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
         if (actualListSizeInc <= Config::getInstance().getTELNETListBottomSize() ||
             actualListSizeOut <= Config::getInstance().getTELNETListBottomSize()) {
 
-            if(numOfCurrentIncomingMF >= Config::getInstance().getTELNETListThreshold() ||
-               numOfCurrentOutgoingMF >= Config::getInstance().getTELNETListThreshold()) {
+            if(currentIncomingMF >= Config::getInstance().getTELNETListThreshold() ||
+               currentOutgoingMF >= Config::getInstance().getTELNETListThreshold()) {
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
@@ -342,25 +306,11 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
             }
         //Number of records is between bottom size and max size
         } else {
-            uint16_t TELNET_LIST_TOP_TRESHOLD = 0;
 
-            if (actualListSizeInc > actualListSizeOut) {
-                if (actualListSizeInc < 100) {
-                    double tmpRatio = ( actualListSizeInc % 100 ) * 0.9;
-                    TELNET_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    TELNET_LIST_TOP_TRESHOLD = (actualListSizeInc / 100) * 90;
-                }
-            } else {
-                if (actualListSizeOut < 100) {
-                    double tmpRatio = ( actualListSizeOut % 100 ) * 0.9;
-                    TELNET_LIST_TOP_TRESHOLD = tmpRatio;
-                } else {
-                    TELNET_LIST_TOP_TRESHOLD = (actualListSizeOut / 100) * 90;
-                }
-            }
+			auto TELNET_LIST_TOP_THRESHOLD = (uint16_t) (std::max(actualListSizeInc, actualListSizeOut) *
+					Config::getInstance().getGlobalMatchedFlowRatio());
 
-            if(numOfCurrentIncomingMF >= TELNET_LIST_TOP_TRESHOLD || numOfCurrentOutgoingMF >= TELNET_LIST_TOP_TRESHOLD) {
+            if(currentIncomingMF >= TELNET_LIST_TOP_THRESHOLD || currentOutgoingMF >= TELNET_LIST_TOP_THRESHOLD) {
                 //crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
@@ -371,9 +321,9 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
         } 
     }
     else
-    { //host is attacking, check for report timeout
+    { //host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
-            //timeout nevyprsel, report pripadne pozdeji
+            
             return TELNETHost::ATTACK_REPORT_WAIT;
         else
         {
@@ -383,18 +333,18 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
             uint32_t outgoingAttackScale = recordListOutgoing.getNumOfMatchedFlowsSinceLastReport();
             uint32_t outgoingTotalFlows  = recordListOutgoing.getNumOfTotalFlowsSinceLastReport();
 
-            if(numOfCurrentIncomingMF == 0 && incomingAttackScale == 0 && 
-               numOfCurrentOutgoingMF == 0 && outgoingAttackScale == 0)
+            if(currentIncomingMF == 0 && incomingAttackScale == 0 && 
+               currentOutgoingMF == 0 && outgoingAttackScale == 0)
                 return TELNETHost::END_OF_ATTACK;
 
             double configRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
             
             double incomingPer = 0.0;  
-            if(incomingTotalFlows > 0.0)
+            if(incomingTotalFlows > 0)
                 incomingPer = (100.0 / incomingTotalFlows) * incomingAttackScale;
             
             double outgoingPer = 0.0; 
-            if(outgoingTotalFlows > 0.0)            
+            if(outgoingTotalFlows > 0)
                 outgoingPer = (100.0 / outgoingTotalFlows) * outgoingAttackScale;
             
             if (incomingPer < configRatio && outgoingPer < configRatio)
@@ -427,7 +377,7 @@ SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
     else
         ip = structure->dstIp; //attacker is now destination address
 
-    std::map<ip_addr_t, SSHHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
+    auto it = hostMap.find(ip);
 
     SSHHost *host;
 
@@ -444,9 +394,9 @@ SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
 
 void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 {
-    for (std::map<ip_addr_t, SSHHost*, cmpByIpAddr>::iterator it = hostMap.begin(); it != hostMap.end(); it++)
+    for (const auto & it : hostMap)
     {
-        SSHHost *host = it->second;
+        SSHHost *host = it.second;
         if(host->isReported() && host->checkForAttackTimeout(actualTime))
         {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getNumOfMatchedFlowsSinceLastReport();
@@ -477,7 +427,7 @@ RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
     else
         ip = structure->dstIp; //attacker is now destination address
     
-    std::map<ip_addr_t, RDPHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
+    auto it = hostMap.find(ip);
 
     RDPHost *host;
 
@@ -494,9 +444,9 @@ RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
 
 void RDPHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 {
-    for(std::map<ip_addr_t, RDPHost*, cmpByIpAddr>::iterator it = hostMap.begin(); it != hostMap.end(); it++)
+    for(const auto & it : hostMap)
     {
-        RDPHost *host = it->second;
+        RDPHost *host = it.second;
         if(host->isReported() && host->checkForAttackTimeout(actualTime))
         {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getNumOfMatchedFlowsSinceLastReport();
@@ -527,7 +477,7 @@ TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t 
     else
         ip = structure->dstIp; //attacker is now destination address
 
-    std::map<ip_addr_t, TELNETHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
+    auto it = hostMap.find(ip);
 
     TELNETHost *host;
 
@@ -544,9 +494,9 @@ TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t 
 
 void TELNETHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 {
-    for(std::map<ip_addr_t, TELNETHost*, cmpByIpAddr>::iterator it = hostMap.begin(); it != hostMap.end(); it++)
+    for(const auto & it : hostMap)
     {
-        TELNETHost *host = it->second;
+        TELNETHost *host = it.second;
         if(host->isReported() && host->checkForAttackTimeout(actualTime))
         {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getNumOfMatchedFlowsSinceLastReport();

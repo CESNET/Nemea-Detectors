@@ -1,3 +1,5 @@
+#include <utility>
+
 /**
  * \file brute_force_detector.h
  * \author Vaclav Pacholik <xpacho03@stud.fit.vutbr.cz || vaclavpacholik@gmail.com>
@@ -55,6 +57,7 @@ const static uint16_t TCP_RDP_PORT     = 3389;
 const static uint8_t FLOW_INCOMING_DIRECTION = 1;
 const static uint8_t FLOW_OUTGOING_DIRECTION = 2;
 
+void printFlowPercent(uint64_t b, uint64_t p);
 
 //ip address comparison for std::map and std::set
 struct cmpByIpAddr {
@@ -65,10 +68,55 @@ struct cmpByIpAddr {
 
 struct thousandsSeparator : std::numpunct<char> {
    // use dot as separator
-   char do_thousands_sep() const { return '.'; }
+   char do_thousands_sep() const override { return '.'; }
 
    // digits are grouped by 3 digits each
-   std::string do_grouping() const { return "\3"; }
+   std::string do_grouping() const override { return "\3"; }
+};
+
+
+class logInfo {
+public:
+
+	explicit logInfo(std::string _protocolName) : 	protocolName(std::move(_protocolName)),
+													flows(0),
+													incomingFlows(0),
+													outgoingFlows(0),
+													matchedFlows(0),
+													matchedIncomingFlows(0),
+													matchedOutgoingFlows(0)
+													{};
+
+	void printLogInfo(){
+		std::cout << this->protocolName << std::endl;
+		std::cout.imbue(std::locale(std::locale(), new thousandsSeparator));  // TODO move elsewhere
+		std::cout << "  Total Flows: " << this->flows << std::endl;
+		std::cout << "  Incoming Flows: " << this->incomingFlows;
+		printFlowPercent(this->flows, this->incomingFlows);
+		std::cout << std::endl;
+		std::cout << "  Outgoing Flows: " << this->outgoingFlows;
+		printFlowPercent(this->flows, this->outgoingFlows);
+		std::cout << std::endl;
+		std::cout << "  Matched Flows: " << this->matchedFlows;
+		printFlowPercent(this->flows, this->matchedFlows);
+		std::cout << std::endl;
+		std::cout << "  Matched Incoming Flows: " << this->matchedIncomingFlows;
+		printFlowPercent(this->matchedFlows, this->matchedIncomingFlows);
+		printFlowPercent(this->flows, this->matchedIncomingFlows);
+		std::cout << std::endl;
+		std::cout << "  Matched Outgoing Flows: " << this->matchedOutgoingFlows;
+		printFlowPercent(this->matchedFlows, this->matchedOutgoingFlows);
+		printFlowPercent(this->flows, this->matchedOutgoingFlows);
+		std::cout << std::endl;
+	}
+
+	std::string protocolName;
+	uint64_t flows;
+	uint64_t incomingFlows;
+	uint64_t outgoingFlows;
+	uint64_t matchedFlows ;
+	uint64_t matchedIncomingFlows;
+	uint64_t matchedOutgoingFlows;
 };
 
 #endif

@@ -59,8 +59,8 @@ Sender::Sender(bool *success)
 {
     std::string unirecSpecifier = "DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,NOTE";
 
-    outTemplate = ur_create_output_template(0, unirecSpecifier.c_str(), NULL);
-    if(outTemplate == NULL)
+    outTemplate = ur_create_output_template(0, unirecSpecifier.c_str(), nullptr);
+    if(outTemplate == nullptr)
     {
         *success = false;
         return;
@@ -70,7 +70,7 @@ Sender::Sender(bool *success)
 
 Sender::~Sender()
 {
-    if(outTemplate != NULL)
+    if(outTemplate != nullptr)
         ur_free_template (outTemplate);
 }
 
