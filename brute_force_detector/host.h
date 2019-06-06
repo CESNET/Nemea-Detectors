@@ -83,8 +83,8 @@ public:
     inline void setNotReported()
     {
         timeOfLastReport = 0;
-        recordListIncoming.clearNumOfTotalTargetsSinceAttack();
-        recordListOutgoing.clearNumOfTotalTargetsSinceAttack();
+		recordListIncoming.clearTotalTargetsSinceAttack();
+		recordListOutgoing.clearTotalTargetsSinceAttack();
     }
 
     inline bool getHostScannedNetwork() { return scanned; }
@@ -236,7 +236,7 @@ protected:
     template<typename Container>
     void clearMap(Container *c)
     {
-        typename Container::iterator it = c->begin();
+		auto it = c->begin();
         while(it != c->end())
         {
             //if(it->second)

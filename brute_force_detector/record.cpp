@@ -295,7 +295,7 @@ bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
         return false;
     
     TelnetServerProfile * TSPProfile = TSPMap.findProfile(st.srcIp);
-    if(TSPProfile == NULL)
+    if(TSPProfile == nullptr)
         TSPProfile = TSPMap.createProfile(st.srcIp, st.flowFirstSeen);
     
     TSPProfile->profileWithNewData(packets, bytes);

@@ -91,22 +91,22 @@ public:
     template <class Host>
     int continuingReport(Host *host, uint16_t dstPort, ur_time_t actualTime, bool endOfAttack = false)
     {
-        uint32_t incomingAttackScale = host->getPointerToIncomingRecordList()->getNumOfMatchedFlowsSinceLastReport();
-        uint32_t outgoingAttackScale = host->getPointerToOutgoingRecordList()->getNumOfMatchedFlowsSinceLastReport();
+        uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
+        uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
         string sNote;
+%
+        host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearTotalFlowsSinceLastReport();
 
-        host->getPointerToIncomingRecordList()->clearNumOfTargetsSinceLastReport();
-        host->getPointerToIncomingRecordList()->clearNumOfMatchedFlowsSinceLastReport();
-        host->getPointerToIncomingRecordList()->clearNumOTotalFlowsSinceLastReport();
-
-        host->getPointerToOutgoingRecordList()->clearNumOfTargetsSinceLastReport();
-        host->getPointerToOutgoingRecordList()->clearNumOfMatchedFlowsSinceLastReport();
-        host->getPointerToOutgoingRecordList()->clearNumOTotalFlowsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
 
 
 
-        return send(host, dstPort, actualTime, incomingAttackScale > outgoingAttackScale ? incomingAttackScale : outgoingAttackScale, endOfAttack, sNote);
+        return send(host, dstPort, actualTime, incomingMatched > outgoingMatched ? incomingMatched : outgoingMatched, endOfAttack, sNote);
     }
 
 private:

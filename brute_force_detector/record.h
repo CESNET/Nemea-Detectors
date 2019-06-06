@@ -70,7 +70,7 @@ class IRecord {
 	
 public:
     IRecord () : signatureMatched(false) {}
-    virtual ~IRecord() {}
+    virtual ~IRecord() = default;
     virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl) = 0;
     virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl) = 0;
 	
@@ -98,11 +98,11 @@ class SSHRecord : public IRecord {
 	
 public:
     SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getSSHRecordTimeout(); }
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
 	
-    ip_addr_t dstIp;
+    ip_addr_t dstIp{};
     ur_time_t flowLastSeen;
 };
 
@@ -110,11 +110,11 @@ class RDPRecord : public IRecord {
 
 public:
     RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getRDPRecordTimeout(); }
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
-    ip_addr_t dstIp;
+    ip_addr_t dstIp{};
     ur_time_t flowLastSeen;
 };
 
@@ -122,11 +122,11 @@ class TELNETRecord : public IRecord {
 
 public:
     TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getTELNETRecordTimeout(); }
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    ur_time_t getRecordTimeout() override { return Config::getInstance().getTELNETRecordTimeout(); }
 
-    ip_addr_t dstIp;
+    ip_addr_t dstIp{};
     ur_time_t flowLastSeen;
 
 private:
@@ -146,20 +146,20 @@ public:
     void clearAllRecords();
     ur_time_t getTimeOfLastRecord();
 	
-    inline uint16_t getActualNumOfListSize() { return actualListSize; };
-    inline uint16_t getActualNumOfMatchedFlows() { return actualListMatchedFlows; }
-    inline uint32_t getNumOfMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
-    inline uint32_t getNumOfTotalFlowsSinceLastReport() { return totalFlowsSinceLastReport; }
-    inline void clearNumOfMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
-    inline void clearNumOTotalFlowsSinceLastReport() { totalFlowsSinceLastReport = 0; }
+    inline uint16_t getActualListSize() { return actualListSize; };
+    inline uint16_t getActualMatchedFlows() { return actualListMatchedFlows; }
+    inline uint32_t getMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
+    inline uint32_t getTotalFlowsSinceLastReport() { return totalFlowsSinceLastReport; }
+    inline void clearMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
+    inline void clearTotalFlowsSinceLastReport() { totalFlowsSinceLastReport = 0; }
 
-    inline uint16_t getNumOfTargetsSinceLastReport() { return hashedDstIPSet.size(); }
-    inline void clearNumOfTargetsSinceLastReport() { hashedDstIPSet.clear(); }
+    inline uint16_t getTargetsSinceLastReport() { return hashedDstIPSet.size(); }
+    inline void clearTargetsSinceLastReport() { hashedDstIPSet.clear(); }
 
-    inline uint16_t getNumOfCurrentTargets();
+    inline uint16_t getCurrentTargets(); // TODO does this need implementation?
 
-    inline uint32_t getNumOfTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
-    inline void clearNumOfTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
+    inline uint32_t getTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
+    inline void clearTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
     inline void initTotalTargetsSet();
     std::vector<std::string> getIpsOfVictims();
 
@@ -177,7 +177,7 @@ private:
     std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
-    char str[46]; // TODO annotate
+    char victimIP[46];
 
     bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
     {
@@ -238,7 +238,7 @@ void RecordList<T>::clearAllRecords()
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
 
-    clearNumOfTargetsSinceLastReport();
+	clearTargetsSinceLastReport();
 }
 
 
@@ -344,15 +344,14 @@ ur_time_t RecordList<T>::getTimeOfLastRecord()
 }
 
 template<class T>
-uint16_t RecordList<T>::getNumOfCurrentTargets()
+uint16_t RecordList<T>::getCurrentTargets()
 {
     std::set<ip_addr_t, cmpByIpAddr> dstIpSet;
-    for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
+    for(auto it : list)
     {
-        if((*it)->isMatched())
+		if(it->isMatched())
         {
-            ip_addr_t dstIp = (*it)->dstIp;
-            dstIpSet.insert(dstIp);
+            dstIpSet.insert(it->dstIp);
         }
     }
     return dstIpSet.size();
@@ -361,13 +360,11 @@ uint16_t RecordList<T>::getNumOfCurrentTargets()
 template<class T>
 void RecordList<T>::initTotalTargetsSet()
 {
-    for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
+    for(auto it : list)
     {
-        if((*it)->isMatched())
+		if(it->isMatched())
         {
-            ip_addr_t dstIp = (*it)->dstIp;
-
-            hashedDstTotalIPSet.insert(dstIp);
+            hashedDstTotalIPSet.insert(it->dstIp);
         }
     }
 }
@@ -377,14 +374,13 @@ std::vector<std::string> RecordList<T>::getIpsOfVictims()
 {
     std::vector<std::string> tmpIpsOfVictims;
 
-    for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
+    for(auto& it : list)
     {
-        if((*it)->isMatched())
+        if(it->isMatched())
         {
-            ip_addr_t dstIp = (*it)->dstIp;
-            ip_to_str(&dstIp, str);
+            ip_to_str(&(it->dstIp), victimIP);
 
-            tmpIpsOfVictims.push_back(std::string(str));
+            tmpIpsOfVictims.push_back(std::string(victimIP));
         }
     }
 
