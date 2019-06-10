@@ -105,6 +105,7 @@ public:
 	
     virtual bool canDeleteHost(ur_time_t actualTime)
     {
+    	// TODO investigate this
         /*
          ur_time_t timeOfLastIncomingRecord = recordListIncoming.getTimeOfLastRecord();
          ur_time_t timeOfLastOutgoingRecord = recordListOutgoing.getTimeOfLastRecord();
@@ -116,10 +117,9 @@ public:
          ur_time_t timeOfLastRecord = timeOfLastIncomingRecord > timeOfLastOutgoingRecord ? timeOfLastIncomingRecord : timeOfLastOutgoingRecord;
          */
         ur_time_t timer = getHostDeleteTimeout();
-        //return checkForTimeout(timeOfLastRecord, timer, actualTime);
+        // return checkForTimeout(timeOfLastRecord, timer, actualTime);
 
         return checkForTimeout(timeOfLastReceivedRecord, timer, actualTime);
-
     }
 
     virtual ur_time_t getHostReportTimeout() = 0;
@@ -140,8 +140,8 @@ public:
 
     virtual ATTACK_STATE checkForAttack(ur_time_t actualTime) = 0;
 
-    RecordList<T>* getPointerToIncomingRecordList() {return &recordListIncoming; }
-    RecordList<T>* getPointerToOutgoingRecordList() {return &recordListOutgoing; }
+    RecordList<T>* getPointerToIncomingRecordList() { return &recordListIncoming; }
+    RecordList<T>* getPointerToOutgoingRecordList() { return &recordListOutgoing; }
 
     virtual void clearAllRecords() { recordListIncoming.clearAllRecords(); recordListOutgoing.clearAllRecords();}
 
@@ -158,7 +158,9 @@ public:
             return true;
         }
         else
-            return false;
+		{
+        	return false;
+		}
     }
 
 protected:
@@ -173,7 +175,7 @@ protected:
     ur_time_t firstSeen;
     ur_time_t timeOfLastReport;
     ur_time_t timeOfLastReceivedRecord;
-    RecordList<T> recordListIncoming; //incoming direction to victim (attacker -> victim)
+    RecordList<T> recordListIncoming; // direction to victim (attacker -> victim)
     RecordList<T> recordListOutgoing;
 };
 
@@ -181,7 +183,7 @@ protected:
 class SSHHost : public IHost<SSHRecord*> {
 
 public:
-    SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord*> (hostIp,  firstSeen) {}
+    SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord*> (hostIp, firstSeen) {}
 
 	bool addRecord(SSHRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
@@ -193,7 +195,7 @@ public:
 class RDPHost : public IHost<RDPRecord*> {
 
 public:
-    RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord*> (hostIp,  firstSeen) {}
+    RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord*> (hostIp, firstSeen) {}
 
 	bool addRecord(RDPRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;

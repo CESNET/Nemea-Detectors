@@ -46,23 +46,24 @@
 #define RECORD_H
 
 #include <iostream>
-//class TelnetServerProfileMap;
-#include "telnet_server_profile.h"
-
-#include <unirec/ipaddr.h> //ip_addr_t
-#include <unirec/unirec.h> //ur_time_t
 #include <typeinfo>
 #include <set>
+#include <list>
+#include <cassert>
+
+#include <nemea-common.h>
+#include <unirec/ipaddr.h> //ip_addr_t
+#include <unirec/unirec.h> //ur_time_t
 #include "brute_force_detector.h"
 #include "whitelist.h"
-#include <nemea-common.h>
-#include <cassert>
-#include <list>
 #include "config.h"
 
+// class TelnetServerProfileMap;
+#include "telnet_server_profile.h"
+
 // TODO Is this relevant?
-//If we don't have a lot of memory use hash
-//#define USE_HASH
+// If we don't have a lot of memory use hash
+// #define USE_HASH
 
 
 /**
@@ -109,7 +110,7 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
 
-    const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
+    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 
 
 };
@@ -122,9 +123,9 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
-    const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; //SYN + ACK + PSH + RST
-    const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + PSH
-    const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH
+    const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
+    const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; // SYN + ACK + PSH
+    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 
 
 
@@ -138,8 +139,8 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getTELNETRecordTimeout(); }
 
-	const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
-	const static uint8_t signatureFlagsFin = 0b00011011; //SYN + ACK + PSH set + FIN
+	const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
+	const static uint8_t signatureFlagsFin = 0b00011011; // SYN + ACK + PSH + FIN
 
 
 private:
@@ -160,7 +161,7 @@ public:
     ur_time_t getTimeOfLastRecord();
 	
     inline uint16_t getActualListSize() { return actualListSize; };
-    inline uint16_t getActualMatchedFlows() { return actualListMatchedFlows; }
+    inline uint16_t getActualMatchedFlows() { return actualMatchedFlows; }
     inline uint32_t getMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
     inline uint32_t getTotalFlowsSinceLastReport() { return totalFlowsSinceLastReport; }
     inline void clearMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
@@ -180,7 +181,7 @@ private:
     std::list<T> list;
     uint16_t maxListSize;
     uint16_t actualListSize;
-    uint16_t actualListMatchedFlows;
+    uint16_t actualMatchedFlows;
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
 	
@@ -202,7 +203,7 @@ template <class T>
 RecordList<T>::RecordList()
 {
     actualListSize = 0;
-    actualListMatchedFlows = 0;
+    actualMatchedFlows = 0;
     flowCounter = 0;
     flowMatchedCounter = 0;
 
@@ -210,14 +211,20 @@ RecordList<T>::RecordList()
     totalFlowsSinceLastReport = 0;
 
     if(typeid(T) == typeid(SSHRecord*))
-        maxListSize = Config::getInstance().getSSHMaxListSize();
+	{
+    	maxListSize = Config::getInstance().getSSHMaxListSize();
+	}
     else if(typeid(T) == typeid(RDPRecord*))
-        maxListSize = Config::getInstance().getRDPMaxListSize();
+	{
+    	maxListSize = Config::getInstance().getRDPMaxListSize();
+	}
     else if(typeid(T) == typeid(TELNETRecord*))
-        maxListSize = Config::getInstance().getTELNETMaxListSize();
+	{
+    	maxListSize = Config::getInstance().getTELNETMaxListSize();
+	}
     else     
     {    
-        std::cerr<<"Error record.h: Max list size for class "<<typeid(T).name()<<" is not defined!\n";    
+        std::cerr << "Error record.h: Max list size for class " << typeid(T).name() << " is not defined!\n";
         std::terminate();
     }
 }
@@ -244,7 +251,7 @@ void RecordList<T>::clearAllRecords()
     }
 
     actualListSize = 0;
-    actualListMatchedFlows = 0;
+    actualMatchedFlows = 0;
     flowCounter = 0;
     flowMatchedCounter = 0;
 
@@ -265,7 +272,7 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
         //delete first record
         if((*list.begin())->isMatched())
 		{
-        	actualListMatchedFlows--;
+        	actualMatchedFlows--;
 		}
         T recToDelete = list.front();
         delete recToDelete;
@@ -276,7 +283,7 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
     if(record->isMatched())
     {
         flowMatchedCounter++;
-        actualListMatchedFlows++; 
+        actualMatchedFlows++;
     }
 	
     if(isHostReported)
@@ -308,7 +315,7 @@ void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
             T recToDelete = list.front();
 
             if (recToDelete->isMatched())
-                actualListMatchedFlows--;
+                actualMatchedFlows--;
 
             delete recToDelete;
             list.pop_front();
@@ -336,7 +343,7 @@ void RecordList<T>::clearOldRecords(ur_time_t actualTime)
         {
             if ((*it)->isMatched())
             {
-                actualListMatchedFlows--;
+                actualMatchedFlows--;
             }
 
             actualListSize--;

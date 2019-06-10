@@ -164,16 +164,22 @@ bool RDPHost::addRecord(RDPRecord *record, void *structure, uint8_t direction)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
 
-    //scan => SKIP!!!
+    // ignore port-scans
     if(isFlowScan(&st.packets, &st.flags))
-        return false;
+	{
+    	return false;
+	}
     else
     {
         timeOfLastReceivedRecord = st.flowLastSeen;
         if(direction == FLOW_INCOMING_DIRECTION)
-            recordListIncoming.addRecord(record, isReported());
+		{
+        	recordListIncoming.addRecord(record, isReported());
+		}
         else
-            recordListOutgoing.addRecord(record, isReported());
+		{
+        	recordListOutgoing.addRecord(record, isReported());
+		}
         return true;
     }
 }
