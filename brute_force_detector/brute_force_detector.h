@@ -57,7 +57,7 @@ const static uint16_t TCP_RDP_PORT     = 3389;
 const static uint8_t FLOW_INCOMING_DIRECTION = 1;
 const static uint8_t FLOW_OUTGOING_DIRECTION = 2;
 
-void printFlowPercent(uint64_t b, uint64_t p);
+void printFlowPercent(uint64_t b, uint64_t p, std::string comment = "");
 
 //ip address comparison for std::map and std::set
 struct cmpByIpAddr {
@@ -101,12 +101,12 @@ public:
 		printFlowPercent(this->flows, this->matchedFlows);
 		std::cout << std::endl;
 		std::cout << "  Matched Incoming Flows: " << this->matchedIncomingFlows;
-		printFlowPercent(this->matchedFlows, this->matchedIncomingFlows);
-		printFlowPercent(this->flows, this->matchedIncomingFlows);
+		printFlowPercent(this->matchedFlows, this->matchedIncomingFlows, " from matched");
+		printFlowPercent(this->flows, this->matchedIncomingFlows, " from all flows");
 		std::cout << std::endl;
 		std::cout << "  Matched Outgoing Flows: " << this->matchedOutgoingFlows;
-		printFlowPercent(this->matchedFlows, this->matchedOutgoingFlows);
-		printFlowPercent(this->flows, this->matchedOutgoingFlows);
+		printFlowPercent(this->matchedFlows, this->matchedOutgoingFlows, " from matched");
+		printFlowPercent(this->flows, this->matchedOutgoingFlows, " from all flows");
 		std::cout << std::endl;
 	}
 

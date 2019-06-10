@@ -95,7 +95,7 @@ public:
         uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
         string sNote;
-%
+
         host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
         host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToIncomingRecordList()->clearTotalFlowsSinceLastReport();

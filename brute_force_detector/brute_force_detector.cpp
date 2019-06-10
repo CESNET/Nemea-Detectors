@@ -148,14 +148,14 @@ bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
 }
 
 
-void printFlowPercent(uint64_t b, uint64_t p)
+void printFlowPercent(uint64_t b, uint64_t p, std::string comment /* optional, implicitly set to "" */)
 {
 	if (b && p) {
 		ios::fmtflags f(cout.flags());
 		cout << " ("
 			 << std::fixed << std::setprecision(2)
 			 << 100.0 / b * p
-			 << "%)";
+			 << "%" << comment << ")";
 		cout.flags(f);
 	}
 	/*
