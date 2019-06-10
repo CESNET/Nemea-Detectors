@@ -57,7 +57,7 @@ const static uint16_t TCP_RDP_PORT     = 3389;
 const static uint8_t FLOW_INCOMING_DIRECTION = 1;
 const static uint8_t FLOW_OUTGOING_DIRECTION = 2;
 
-void printFlowPercent(uint64_t b, uint64_t p, std::string comment = "");
+void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment = "");
 
 //ip address comparison for std::map and std::set
 struct cmpByIpAddr {

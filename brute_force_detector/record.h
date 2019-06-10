@@ -90,6 +90,11 @@ public:
         ur_time_t flowLastSeen;
     };
 
+    // TODO Why is it even here?
+	ip_addr_t dstIp{};
+	ur_time_t flowLastSeen{};
+
+
 protected:
     bool signatureMatched;
 };
@@ -101,9 +106,7 @@ public:
     bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
-	
-    ip_addr_t dstIp{};
-    ur_time_t flowLastSeen;
+
 };
 
 class RDPRecord : public IRecord {
@@ -114,8 +117,6 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
-    ip_addr_t dstIp{};
-    ur_time_t flowLastSeen;
 };
 
 class TELNETRecord : public IRecord {
@@ -126,8 +127,6 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getTELNETRecordTimeout(); }
 
-    ip_addr_t dstIp{};
-    ur_time_t flowLastSeen;
 
 private:
     static TelnetServerProfileMap TSPMap;
@@ -177,7 +176,7 @@ private:
     std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
-    char victimIP[46];
+    char victimIP[46]{};
 
     bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
     {
@@ -251,7 +250,9 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
     {   //list is full
         //delete first record
         if((*list.begin())->isMatched())
-            actualListMatchedFlows--;
+		{
+        	actualListMatchedFlows--;
+		}
         T recToDelete = list.front();
         delete recToDelete;
         list.pop_front();
@@ -338,9 +339,13 @@ template <class T>
 ur_time_t RecordList<T>::getTimeOfLastRecord()
 {
     if(!list.empty())
-        return list.back()->flowLastSeen;
+	{
+    	return list.back()->flowLastSeen;
+	}
     else
-        return 0;
+	{
+    	return 0;
+	}
 }
 
 template<class T>

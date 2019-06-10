@@ -57,21 +57,25 @@ SSHRecord::SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen)
 bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
 
     uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
 
     signatureMatched = false;
 
-    if((flags & signatureFlags) != signatureFlags)
-        return false;
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
+    	return false;
+	}
 
-    if(packets > Config::getInstance().getSSHBFIncMaxPackets() || packets < Config::getInstance().getSSHBFIncMinPackets())
-        return false;
-    if(bytes > Config::getInstance().getSSHBFIncMaxBytes() || bytes < Config::getInstance().getSSHBFIncMinBytes())
-        return false;
+    if(st.packets > Config::getInstance().getSSHBFIncMaxPackets() || st.packets < Config::getInstance().getSSHBFIncMinPackets())
+	{
+    	return false;
+	}
+
+    if(st.bytes > Config::getInstance().getSSHBFIncMaxBytes() || st.bytes < Config::getInstance().getSSHBFIncMinBytes())
+	{
+    	return false;
+	}
 
     if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
     {
@@ -85,21 +89,25 @@ bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
 
     uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
     
-    if((flags & signatureFlags) != signatureFlags)
-        return false;
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
+    	return false;
+	}
     
-    if(packets > Config::getInstance().getSSHBFOutMaxPackets() || packets < Config::getInstance().getSSHBFOutMinPackets())
-        return false;
-    if(bytes > Config::getInstance().getSSHBFOutMaxBytes() || bytes < Config::getInstance().getSSHBFOutMinBytes())
-        return false;
+    if(st.packets > Config::getInstance().getSSHBFOutMaxPackets() || st.packets < Config::getInstance().getSSHBFOutMinPackets())
+	{
+    	return false;
+	}
 
-    if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swap src/dst ip/port
+    if(st.bytes > Config::getInstance().getSSHBFOutMaxBytes() || st.bytes < Config::getInstance().getSSHBFOutMinBytes())
+	{
+    	return false;
+	}
+
+    if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
     {
         return false;
     }
@@ -122,19 +130,16 @@ RDPRecord::RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen)
 bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
 
     signatureMatched = false;
 	
     //win8 manual input
     uint8_t signatureFlagsWin8ManualCon = 0b00011110; //SYN + ACK + PSH + RST
-    if((flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
+    if((st.flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
     {   // s port, d port, packets, bytes, flags
         //  42315,   3389,       8,  1691,  30
         //  42345,   3389,       9,  1747,  30
-        if(packets >= 7 && packets <= 11 && bytes >= 1500 && bytes <= 2000)
+        if(st.packets >= 7 && st.packets <= 11 && st.bytes >= 1500 && st.bytes <= 2000)
         {
             if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
             {
@@ -147,10 +152,10 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 	
     //Ncrack/thc hydra to win8 unsuccessful connection
     uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + PSH
-    if((flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
+    if((st.flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
     {   // s port, d port, packets, bytes, flags
         //  37501,   3389,       3,   165,  26
-        if(packets == 3 && ( bytes >= 100 && bytes <= 200))
+        if(st.packets == 3 && ( st.bytes >= 100 && st.bytes <= 200))
         {
             if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
             {
@@ -163,13 +168,19 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 
     uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH	
 
-    if((flags & signatureFlags) != signatureFlags)
-        return false;
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
+    	return false;
+	}
 
-    if(packets > Config::getInstance().getRDPBFIncMaxPackets() || packets < Config::getInstance().getRDPBFIncMinPackets())
-        return false;
-    if(bytes > Config::getInstance().getRDPBFIncMaxBytes() || bytes < Config::getInstance().getRDPBFIncMinBytes())
-        return false;
+    if(st.packets > Config::getInstance().getRDPBFIncMaxPackets() || st.packets < Config::getInstance().getRDPBFIncMinPackets())
+	{
+    	return false;
+	}
+    if(st.bytes > Config::getInstance().getRDPBFIncMaxBytes() || st.bytes < Config::getInstance().getRDPBFIncMinBytes())
+	{
+    	return false;
+	}
 
     if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
     {
@@ -183,21 +194,18 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
     
     signatureMatched = false;
     
     //win8 manual input
     uint8_t signatureFlagsWin8ManualCon = 0b00011010; //SYN + ACK + PSH
-    if((flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
+    if((st.flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
     {   // s port, d port, packets, bytes, flags
         //   3389,  42320,       7,  1882,  26
         //   3389,  42303,       7,  1951,  26
-        if(packets == 7 && bytes >= 1700 && bytes <= 2200)
+        if(st.packets == 7 && st.bytes >= 1700 && st.bytes <= 2200)
         {
-            if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swap src/dst ip/port
+            if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
             {
                 return false;
             }
@@ -208,12 +216,12 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     
     //Ncrack/thc hydra to win8 unsuccessful connection
     uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + RST
-    if((flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
+    if((st.flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
     {   // s port, d port, packets, bytes, flags
         //   3389,  37639,       2,    92,  22
-        if(packets == 2 && ( bytes > 80 && bytes < 120))
+        if(st.packets == 2 && ( st.bytes > 80 && st.bytes < 120))
         {
-            if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swap src/dst ip/port
+            if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
             {
                 return false;
             }
@@ -223,16 +231,22 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     }
       
     uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH + RST   
-    if((flags & signatureFlags) != signatureFlags)
-        return false;
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
+    	return false;
+	}
     
-    if(packets > Config::getInstance().getRDPBFOutMaxPackets()  || packets < Config::getInstance().getRDPBFOutMinPackets())
-        return false;
-    if(bytes > Config::getInstance().getRDPBFOutMaxBytes() || bytes < Config::getInstance().getRDPBFOutMinBytes())
-        return false;
+    if(st.packets > Config::getInstance().getRDPBFOutMaxPackets()  || st.packets < Config::getInstance().getRDPBFOutMinPackets())
+	{
+    	return false;
+	}
+    if(st.bytes > Config::getInstance().getRDPBFOutMaxBytes() || st.bytes < Config::getInstance().getRDPBFOutMinBytes())
+	{
+    	return false;
+	}
     
     
-    if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swap src/dst ip/port
+    if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
     {
         return false;
     }
@@ -255,21 +269,24 @@ TELNETRecord::TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen)
 bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
 
     uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
 
     signatureMatched = false;
 
-    if((flags & signatureFlags) != signatureFlags)
-        return false;
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
+    	return false;
+	}
 
-    if(packets > Config::getInstance().getTELNETBFIncMaxPackets() || packets < Config::getInstance().getTELNETBFIncMinPackets())
-        return false;
-    if(bytes > Config::getInstance().getTELNETBFIncMaxBytes() || bytes < Config::getInstance().getTELNETBFIncMinBytes())
-	    return false;
+    if(st.packets > Config::getInstance().getTELNETBFIncMaxPackets() || st.packets < Config::getInstance().getTELNETBFIncMinPackets())
+	{
+    	return false;
+	}
+    if(st.bytes > Config::getInstance().getTELNETBFIncMaxBytes() || st.bytes < Config::getInstance().getTELNETBFIncMinBytes())
+	{
+    	return false;
+	}
 
     if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
     {
@@ -283,35 +300,42 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    uint32_t packets = st.packets;
-    uint64_t bytes   = st.bytes;
-    uint8_t  flags   = st.flags;
-    
+
     uint8_t signatureFlags = 0b00011011; //SYN + ACK + PSH set + FIN
 
     signatureMatched = false;
 
-    if((flags & signatureFlags) != signatureFlags)
+    if((st.flags & signatureFlags) != signatureFlags)
+	{
         return false;
-    
+	}
+
     TelnetServerProfile * TSPProfile = TSPMap.findProfile(st.srcIp);
     if(TSPProfile == nullptr)
+	{
         TSPProfile = TSPMap.createProfile(st.srcIp, st.flowFirstSeen);
+	}
+
+    TSPProfile->profileWithNewData(st.packets, st.bytes);
     
-    TSPProfile->profileWithNewData(packets, bytes);
-    
-    if(packets < 6)
+    if(st.packets < 6)
+    {
         return false;
+	}
     
     //for max range only
     if(TSPProfile->isProfiled())
     {
-        if(packets > TSPProfile->getMaxPackets() || bytes > TSPProfile->getMaxBytes())
+        if(st.packets > TSPProfile->getMaxPackets() || st.bytes > TSPProfile->getMaxBytes())
+		{
             return false;
+		}
     }
     else
+	{
         return false;
-    
+	}
+
     signatureMatched = true;
     return true;       
 }

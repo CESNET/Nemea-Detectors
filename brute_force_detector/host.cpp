@@ -374,7 +374,7 @@ SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
     if(direction == FLOW_INCOMING_DIRECTION)
         ip = structure->srcIp;
     else
-        ip = structure->dstIp; //attacker is now destination address
+        ip = structure->dstIp; //
 
     auto it = hostMap.find(ip);
 

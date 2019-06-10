@@ -148,7 +148,7 @@ bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
 }
 
 
-void printFlowPercent(uint64_t b, uint64_t p, std::string comment /* optional, implicitly set to "" */)
+void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment /* optional, implicitly set to "" (see .h) */)
 {
 	if (b && p) {
 		ios::fmtflags f(cout.flags());
@@ -398,6 +398,7 @@ int main(int argc, char **argv)
                 ssh.matchedFlows++;
             ssh.flows++;
 
+            // host is the source of current flow/connection
             SSHHost *host = sshHostMap.findHost(&structure, direction);
 
             is_matched = host->addRecord(record, &structure, direction);
