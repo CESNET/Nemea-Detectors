@@ -58,11 +58,9 @@ bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
 
-    uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
-
     signatureMatched = false;
 
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags)
 	{
     	return false;
 	}
@@ -90,9 +88,7 @@ bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
 
-    uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
-    
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags)
 	{
     	return false;
 	}
@@ -133,12 +129,14 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 
     signatureMatched = false;
 	
-    //win8 manual input
-    uint8_t signatureFlagsWin8ManualCon = 0b00011110; //SYN + ACK + PSH + RST
-    if((st.flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
-    {   // s port, d port, packets, bytes, flags
+    // Win8 manual input
+
+    if((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon)
+    {
+    	// s port, d port, packets, bytes, flags
         //  42315,   3389,       8,  1691,  30
         //  42345,   3389,       9,  1747,  30
+
         if(st.packets >= 7 && st.packets <= 11 && st.bytes >= 1500 && st.bytes <= 2000)
         {
             if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
@@ -150,11 +148,13 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
         }
     }	
 	
-    //Ncrack/thc hydra to win8 unsuccessful connection
-    uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + PSH
-    if((st.flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
-    {   // s port, d port, packets, bytes, flags
+    // Ncrack/thc hydra to win8 unsuccessful connection
+
+    if((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon)
+    {
+    	// s port, d port, packets, bytes, flags
         //  37501,   3389,       3,   165,  26
+
         if(st.packets == 3 && ( st.bytes >= 100 && st.bytes <= 200))
         {
             if(wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort))
@@ -166,9 +166,8 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
         }
     }
 
-    uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH	
 
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags)
 	{
     	return false;
 	}
@@ -197,12 +196,14 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     
     signatureMatched = false;
     
-    //win8 manual input
-    uint8_t signatureFlagsWin8ManualCon = 0b00011010; //SYN + ACK + PSH
-    if((st.flags & signatureFlagsWin8ManualCon) == signatureFlagsWin8ManualCon)
-    {   // s port, d port, packets, bytes, flags
+    // Win8 manual input
+
+    if((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon)
+    {
+    	// s port, d port, packets, bytes, flags
         //   3389,  42320,       7,  1882,  26
         //   3389,  42303,       7,  1951,  26
+
         if(st.packets == 7 && st.bytes >= 1700 && st.bytes <= 2200)
         {
             if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
@@ -214,11 +215,13 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
         }
     }   
     
-    //Ncrack/thc hydra to win8 unsuccessful connection
-    uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + RST
-    if((st.flags & signatureFlagsWin8FailedCon) == signatureFlagsWin8FailedCon)
-    {   // s port, d port, packets, bytes, flags
+    // Ncrack/thc hydra to win8 unsuccessful connection
+
+    if((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon)
+    {
+    	// s port, d port, packets, bytes, flags
         //   3389,  37639,       2,    92,  22
+
         if(st.packets == 2 && ( st.bytes > 80 && st.bytes < 120))
         {
             if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
@@ -230,8 +233,7 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
         }
     }
       
-    uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH + RST   
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags)
 	{
     	return false;
 	}
@@ -270,11 +272,9 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
 
-    uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
-
     signatureMatched = false;
 
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & TELNETRecord::signatureFlags) != TELNETRecord::signatureFlags)
 	{
     	return false;
 	}
@@ -301,11 +301,9 @@ bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
 
-    uint8_t signatureFlags = 0b00011011; //SYN + ACK + PSH set + FIN
-
     signatureMatched = false;
 
-    if((st.flags & signatureFlags) != signatureFlags)
+    if((st.flags & TELNETRecord::signatureFlagsFin) != TELNETRecord::signatureFlagsFin)
 	{
         return false;
 	}

@@ -386,7 +386,7 @@ int main(int argc, char **argv)
                 ssh.incomingFlows++;
             }
             else
-            { // FLOW_OUTGOING_DIRECTIONstructu
+            { 	// FLOW_OUTGOING_DIRECTION
                 record = new SSHRecord(structure.srcIp, structure.flowLastSeen);
                 is_matched = record->matchWithOutgoingSignature(&structure, &whitelist);
                 if(is_matched)

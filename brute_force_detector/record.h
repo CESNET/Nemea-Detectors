@@ -60,8 +60,10 @@
 #include <list>
 #include "config.h"
 
+// TODO Is this relevant?
 //If we don't have a lot of memory use hash
-//#define USE_HASH 
+//#define USE_HASH
+
 
 /**
  * Interface for record
@@ -107,6 +109,9 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
 
+    const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
+
+
 };
 
 class RDPRecord : public IRecord {
@@ -117,6 +122,12 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
+    const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; //SYN + ACK + PSH + RST
+    const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; //SYN + ACK + PSH
+    const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH
+
+
+
 };
 
 class TELNETRecord : public IRecord {
@@ -126,6 +137,9 @@ public:
     bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getTELNETRecordTimeout(); }
+
+	const static uint8_t signatureFlags = 0b00011010; //SYN + ACK + PSH set
+	const static uint8_t signatureFlagsFin = 0b00011011; //SYN + ACK + PSH set + FIN
 
 
 private:
@@ -331,7 +345,9 @@ void RecordList<T>::clearOldRecords(ur_time_t actualTime)
             list.erase(it++);
         }
         else
-            break;
+		{
+        	break;
+		}
     }
 }
 
