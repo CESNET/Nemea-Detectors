@@ -52,10 +52,12 @@ using namespace std;
     if(wl!=nullptr)							\
     {										\
 	    delete wl;							\
-		wl = nullptr;							\
+		wl = nullptr;						\
     }										\
-    if(wl == nullptr)							\
-        wl = new Whitelist();				\
+    if(wl == nullptr)						\
+	{										\
+    	wl = new Whitelist();				\
+	}										\
     parser = wl->getPointerToParser();		\
 }
 //parser->setVerbose();
@@ -70,7 +72,8 @@ int failCounter = 0;
 void subTestRes(int testNum, const string& state)
 {
     //cout <<"Subtest "<< testNum <<": "<< state << endl;
-    if (state == "fail") failCounter++;
+    if (state == "fail")
+    	failCounter++;
 }
 
 
@@ -79,7 +82,7 @@ int main()
     Whitelist *wl = nullptr;
     WhitelistParser *parser;
 
-    srand(0);
+    srand(0); // TODO constant value as random seed
 
     //add rules using:
     //parser->addSelectedPortRule(ip_addr_t, direction, prefix, string ports);

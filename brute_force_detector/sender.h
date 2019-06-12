@@ -62,7 +62,7 @@ extern "C" {
 #include <unirec/unirec.h>
 using namespace std;
 
-//WARDEN_TYPE
+// WARDEN_TYPE
 #define WT_BRUTEFORCE      2
 
 /**
@@ -78,7 +78,7 @@ public:
     int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold)
     {
         if(Config::getInstance().getGlobalIgnoreFirstSend())
-        {   ///Ignore first report
+        {   // /Ignore first report
             host->setReportTime(actualTime);
             return TRAP_E_OK;
         }
@@ -125,14 +125,14 @@ private:
         sort(outIpsVictims.begin(), outIpsVictims.end());
         outIpsVictims.erase(unique(outIpsVictims.begin(), outIpsVictims.end()), outIpsVictims.end());
 
-        //Incoming
+        // Incoming
         note.append("I:");
         for (const auto & incIpsVictim : incIpsVictims) {
             note.append(incIpsVictim);
             note.append(",");
         }
 
-        //Outgoing
+        // Outgoing
         note.append("O:");
         for (const auto & outIpsVictim : outIpsVictims) {
             note.append(outIpsVictim);
@@ -140,14 +140,14 @@ private:
         }
         note.erase(note.length(),1);
 
-		//get size of note
-        uint16_t noteSize = note.size() + 1; //plus '\0'
+		// get size of note
+        uint16_t noteSize = note.size() + 1; // plus '\0'
 
         void *rec = ur_create_record(outTemplate, noteSize);
 
-        //@WARDEN_REPORT=DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,
-        //               NOTE (IP addresses of victims)
-        //set fields
+        // @WARDEN_REPORT=DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,
+        //                NOTE (IP addresses of victims)
+        // set fields
         ur_set(outTemplate, rec, F_DETECTION_TIME, actualTime);
         ur_set(outTemplate, rec, F_WARDEN_TYPE, WT_BRUTEFORCE);
         ur_set(outTemplate, rec, F_SRC_IP, host->getHostIp());
@@ -155,10 +155,10 @@ private:
         ur_set(outTemplate, rec, F_PROTOCOL, TCP_PROTOCOL_NUM);
         ur_set(outTemplate, rec, F_EVENT_SCALE, intensity);
 
-        //set dynamic field
+        // set dynamic field
         ur_set_string(outTemplate, rec, F_NOTE, note.c_str());
 
-        //send
+        // send
         int sendState = trap_send(0, rec, ur_rec_size(outTemplate, rec));
 
         host->setReportTime(actualTime);

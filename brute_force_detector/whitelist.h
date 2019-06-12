@@ -263,4 +263,4 @@ private:
    char *wlFileName;
 };
 
-#endif
+#endif // WHITELIST_H
