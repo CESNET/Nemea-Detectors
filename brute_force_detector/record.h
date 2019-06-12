@@ -52,8 +52,8 @@
 #include <cassert>
 
 #include <nemea-common.h>
-#include <unirec/ipaddr.h> //ip_addr_t
-#include <unirec/unirec.h> //ur_time_t
+#include <unirec/ipaddr.h> // ip_addr_t
+#include <unirec/unirec.h> // ur_time_t
 #include "brute_force_detector.h"
 #include "whitelist.h"
 #include "config.h"
@@ -188,12 +188,12 @@ private:
     uint32_t flowCounter;
     uint32_t flowMatchedCounter;
 
-    std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
-    std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
+    std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet; // TODO WHAT ARE THOSE?
+    std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet; // AND WHY ARE NEITHER EVER USED ANYWHERE ELSE?
 
     char victimIP[46]{};
 
-    bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
+    static inline bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
     {
 		return flowTime + timer <= actualTime;
     }
@@ -267,15 +267,18 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
 {	
     flowCounter++;
     actualListSize++;
+
     if(actualListSize > maxListSize)
-    {   //list is full
-        //delete first record
+    {   
+    	// list is full
+        // delete first record
         if((*list.begin())->isMatched())
 		{
         	actualMatchedFlows--;
 		}
         T recToDelete = list.front();
         delete recToDelete;
+
         list.pop_front();
         actualListSize--;
     }
@@ -299,7 +302,7 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
         }
     }
 
-    list.push_back(record); //finally push record to a list
+    list.push_back(record); // finally push record to a list
 }
 
 template <class T>
@@ -311,7 +314,7 @@ void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
     {
         while (actualListSize > newMaxListSize)
         {
-            //delete first record
+            // delete first record
             T recToDelete = list.front();
 
             if (recToDelete->isMatched())

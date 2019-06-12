@@ -65,12 +65,13 @@ bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getSSHBFIncMaxPackets() || st.packets < Config::getInstance().getSSHBFIncMinPackets())
+    if(st.packets > Config::getInstance().getSSHIncMaxPackets() || st.packets <
+																			 Config::getInstance().getSSHIncMinPackets())
 	{
     	return false;
 	}
 
-    if(st.bytes > Config::getInstance().getSSHBFIncMaxBytes() || st.bytes < Config::getInstance().getSSHBFIncMinBytes())
+    if(st.bytes > Config::getInstance().getSSHIncMaxBytes() || st.bytes < Config::getInstance().getSSHIncMinBytes())
 	{
     	return false;
 	}
@@ -93,12 +94,13 @@ bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
     
-    if(st.packets > Config::getInstance().getSSHBFOutMaxPackets() || st.packets < Config::getInstance().getSSHBFOutMinPackets())
+    if(st.packets > Config::getInstance().getSSHOutMaxPackets() || st.packets <
+																			 Config::getInstance().getSSHOutMinPackets())
 	{
     	return false;
 	}
 
-    if(st.bytes > Config::getInstance().getSSHBFOutMaxBytes() || st.bytes < Config::getInstance().getSSHBFOutMinBytes())
+    if(st.bytes > Config::getInstance().getSSHOutMaxBytes() || st.bytes < Config::getInstance().getSSHOutMinBytes())
 	{
     	return false;
 	}
@@ -172,11 +174,12 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getRDPBFIncMaxPackets() || st.packets < Config::getInstance().getRDPBFIncMinPackets())
+    if(st.packets > Config::getInstance().getRDPIncMaxPackets() || st.packets <
+																			 Config::getInstance().getRDPIncMinPackets())
 	{
     	return false;
 	}
-    if(st.bytes > Config::getInstance().getRDPBFIncMaxBytes() || st.bytes < Config::getInstance().getRDPBFIncMinBytes())
+    if(st.bytes > Config::getInstance().getRDPIncMaxBytes() || st.bytes < Config::getInstance().getRDPIncMinBytes())
 	{
     	return false;
 	}
@@ -238,11 +241,12 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
     
-    if(st.packets > Config::getInstance().getRDPBFOutMaxPackets()  || st.packets < Config::getInstance().getRDPBFOutMinPackets())
+    if(st.packets > Config::getInstance().getRDPOutMaxPackets()  || st.packets <
+																			  Config::getInstance().getRDPOutMinPackets())
 	{
     	return false;
 	}
-    if(st.bytes > Config::getInstance().getRDPBFOutMaxBytes() || st.bytes < Config::getInstance().getRDPBFOutMinBytes())
+    if(st.bytes > Config::getInstance().getRDPOutMaxBytes() || st.bytes < Config::getInstance().getRDPOutMinBytes())
 	{
     	return false;
 	}
@@ -279,11 +283,13 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getTELNETBFIncMaxPackets() || st.packets < Config::getInstance().getTELNETBFIncMinPackets())
+    if(st.packets > Config::getInstance().getTELNETIncMaxPackets() || st.packets <
+																				Config::getInstance().getTELNETIncMinPackets())
 	{
     	return false;
 	}
-    if(st.bytes > Config::getInstance().getTELNETBFIncMaxBytes() || st.bytes < Config::getInstance().getTELNETBFIncMinBytes())
+    if(st.bytes > Config::getInstance().getTELNETIncMaxBytes() || st.bytes <
+																			Config::getInstance().getTELNETIncMinBytes())
 	{
     	return false;
 	}

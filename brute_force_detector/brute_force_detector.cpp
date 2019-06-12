@@ -667,7 +667,7 @@ int main(int argc, char **argv)
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     return 0;
 }
-
+/*
 void printHosts(IHostMap& obj)
 {
 	auto hostMap = obj.hostMap;
@@ -676,4 +676,4 @@ void printHosts(IHostMap& obj)
 		cout << item.value << ", ";
 	}
 }
-
+*/

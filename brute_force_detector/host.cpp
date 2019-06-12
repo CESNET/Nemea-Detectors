@@ -92,14 +92,13 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
 
         // Number of records in list is lower than BottomSize (set to 50 by default)
-        if ( std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
+        if (std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
         {
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
-                
                 return SSHHost::NEW_ATTACK;
             }
             else

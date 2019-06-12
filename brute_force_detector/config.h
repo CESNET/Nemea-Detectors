@@ -77,16 +77,16 @@ public:
 	inline ur_time_t getSSHAttackTimeout()     const {return SSH_ATTACK_TIMEOUT;}
 
     // SSH INCOMING DIRECTION (ATTACKER -> VICTIM)
-    inline uint16_t getSSHBFIncMinPackets()    const  {return SSH_BRUTEFORCE_INC_MIN_PACKETS;}
-    inline uint16_t getSSHBFIncMaxPackets()    const  {return SSH_BRUTEFORCE_INC_MAX_PACKETS;}
-    inline uint16_t getSSHBFIncMinBytes()      const  {return SSH_BRUTEFORCE_INC_MIN_BYTES;}
-    inline uint16_t getSSHBFIncMaxBytes()      const  {return SSH_BRUTEFORCE_INC_MAX_BYTES;}
+    inline uint16_t getSSHIncMinPackets()    const  {return SSH_BRUTEFORCE_INC_MIN_PACKETS;}
+    inline uint16_t getSSHIncMaxPackets()    const  {return SSH_BRUTEFORCE_INC_MAX_PACKETS;}
+    inline uint16_t getSSHIncMinBytes()      const  {return SSH_BRUTEFORCE_INC_MIN_BYTES;}
+    inline uint16_t getSSHIncMaxBytes()      const  {return SSH_BRUTEFORCE_INC_MAX_BYTES;}
 	
     // SSH OUTGOING DIRECTION (VICTIM -> ATTACKER)
-    inline uint16_t getSSHBFOutMinPackets()    const  {return SSH_BRUTEFORCE_OUT_MIN_PACKETS;}
-    inline uint16_t getSSHBFOutMaxPackets()    const  {return SSH_BRUTEFORCE_OUT_MAX_PACKETS;}
-    inline uint16_t getSSHBFOutMinBytes()      const  {return SSH_BRUTEFORCE_OUT_MIN_BYTES;}
-    inline uint16_t getSSHBFOutMaxBytes()      const  {return SSH_BRUTEFORCE_OUT_MAX_BYTES;}	
+    inline uint16_t getSSHOutMinPackets()    const  {return SSH_BRUTEFORCE_OUT_MIN_PACKETS;}
+    inline uint16_t getSSHOutMaxPackets()    const  {return SSH_BRUTEFORCE_OUT_MAX_PACKETS;}
+    inline uint16_t getSSHOutMinBytes()      const  {return SSH_BRUTEFORCE_OUT_MIN_BYTES;}
+    inline uint16_t getSSHOutMaxBytes()      const  {return SSH_BRUTEFORCE_OUT_MAX_BYTES;}
 	
 	//RDP
     inline uint16_t  getRDPListBottomSize()    const {return RDP_LIST_SIZE_BOTTOM_THRESHOLD;}
@@ -98,16 +98,16 @@ public:
 	inline ur_time_t getRDPAttackTimeout()     const {return RDP_ATTACK_TIMEOUT;}
 
     // RDP INCOMING DIRECTION (ATTACKER -> VICTIM)
-    inline uint16_t getRDPBFIncMinPackets()    const  {return RDP_BRUTEFORCE_INC_MIN_PACKETS;}
-    inline uint16_t getRDPBFIncMaxPackets()    const  {return RDP_BRUTEFORCE_INC_MAX_PACKETS;}
-    inline uint16_t getRDPBFIncMinBytes()      const  {return RDP_BRUTEFORCE_INC_MIN_BYTES;}
-    inline uint16_t getRDPBFIncMaxBytes()      const  {return RDP_BRUTEFORCE_INC_MAX_BYTES;}
+    inline uint16_t getRDPIncMinPackets()    const  {return RDP_BRUTEFORCE_INC_MIN_PACKETS;}
+    inline uint16_t getRDPIncMaxPackets()    const  {return RDP_BRUTEFORCE_INC_MAX_PACKETS;}
+    inline uint16_t getRDPIncMinBytes()      const  {return RDP_BRUTEFORCE_INC_MIN_BYTES;}
+    inline uint16_t getRDPIncMaxBytes()      const  {return RDP_BRUTEFORCE_INC_MAX_BYTES;}
 	
 	// RDP OUTGOING DIRECTION (VICTIM -> ATTACKER)
-    inline uint16_t getRDPBFOutMinPackets()    const  {return RDP_BRUTEFORCE_OUT_MIN_PACKETS;}
-    inline uint16_t getRDPBFOutMaxPackets()    const  {return RDP_BRUTEFORCE_OUT_MAX_PACKETS;}
-    inline uint16_t getRDPBFOutMinBytes()      const  {return RDP_BRUTEFORCE_OUT_MIN_BYTES;}
-    inline uint32_t getRDPBFOutMaxBytes()      const  {return RDP_BRUTEFORCE_OUT_MAX_BYTES;}
+    inline uint16_t getRDPOutMinPackets()    const  {return RDP_BRUTEFORCE_OUT_MIN_PACKETS;}
+    inline uint16_t getRDPOutMaxPackets()    const  {return RDP_BRUTEFORCE_OUT_MAX_PACKETS;}
+    inline uint16_t getRDPOutMinBytes()      const  {return RDP_BRUTEFORCE_OUT_MIN_BYTES;}
+    inline uint32_t getRDPOutMaxBytes()      const  {return RDP_BRUTEFORCE_OUT_MAX_BYTES;}
 
 	//TELNET
     inline uint16_t  getTELNETListBottomSize() const {return TELNET_LIST_SIZE_BOTTOM_THRESHOLD;}
@@ -118,10 +118,10 @@ public:
 	inline ur_time_t getTELNETReportTimeout()  const {return TELNET_REPORT_TIMEOUT;}
     inline ur_time_t getTELNETAttackTimeout()  const {return TELNET_ATTACK_TIMEOUT;}
 
-    inline uint16_t getTELNETBFIncMinPackets() const  {return TELNET_BRUTEFORCE_INC_MIN_PACKETS;}
-    inline uint16_t getTELNETBFIncMaxPackets() const  {return TELNET_BRUTEFORCE_INC_MAX_PACKETS;}
-    inline uint16_t getTELNETBFIncMinBytes()   const  {return TELNET_BRUTEFORCE_INC_MIN_BYTES;}
-    inline uint16_t getTELNETBFIncMaxBytes()   const  {return TELNET_BRUTEFORCE_INC_MAX_BYTES;}
+    inline uint16_t getTELNETIncMinPackets() const  {return TELNET_BRUTEFORCE_INC_MIN_PACKETS;}
+    inline uint16_t getTELNETIncMaxPackets() const  {return TELNET_BRUTEFORCE_INC_MAX_PACKETS;}
+    inline uint16_t getTELNETIncMinBytes()   const  {return TELNET_BRUTEFORCE_INC_MIN_BYTES;}
+    inline uint16_t getTELNETIncMaxBytes()   const  {return TELNET_BRUTEFORCE_INC_MAX_BYTES;}
 
     static Config& getInstance()
     {
