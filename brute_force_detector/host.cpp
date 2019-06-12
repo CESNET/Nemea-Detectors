@@ -79,6 +79,7 @@ bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction)
     }
 }
 
+
 SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 {
     uint16_t incomingMatched = recordListIncoming.getActualMatchedFlows();
@@ -93,6 +94,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
         // Number of records in list is lower than BottomSize (set to 50 by default)
         if (std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
+        ///	possible bug: lot of flows in one direction (50%), few flows in opposite direction -> passes as attack FIXME
         {
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold())
             {
@@ -109,12 +111,11 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         }
         else
 		{
-			// Number of records is between bottom size and max size
+			// Number of records is between bottom size and max size TODO What max size -max list size?
 
-			auto SSH_LIST_TOP_THRESHOLD = (uint16_t) (std::max(incomingListSize, outgoingListSize) *
-					Config::getInstance().getGlobalMatchedFlowRatio());
+			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-            if(std::max(incomingMatched, outgoingMatched) >= SSH_LIST_TOP_THRESHOLD)
+            if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -128,7 +129,8 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         }        
     }
     else
-    { // host is attacking, wait for timeout to report again
+    {
+    	// host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
 		{
         	return SSHHost::ATTACK_REPORT_WAIT;
@@ -150,13 +152,13 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 			double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
 			
             double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0.0)
+            if(incomingTotalNew > 0)
 			{
             	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
 			}
             
             double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0.0)
+            if(outgoingTotalNew > 0)
 			{
             	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
 			}
@@ -231,6 +233,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
+
                 return RDPHost::NEW_ATTACK;
             }
             else
@@ -242,13 +245,14 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 		{
         	// Number of records is between bottom size and max size
 
-        	auto RDP_LIST_TOP_THRESHOLD = (uint16_t) (std::max(incomingListSize, outgoingListSize) *
-					Config::getInstance().getGlobalMatchedFlowRatio());
+			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-            if (std::max(incomingMatched, outgoingMatched) >= RDP_LIST_TOP_THRESHOLD) {
+			if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
+            {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
+
                 return RDPHost::NEW_ATTACK;
             }
             else
@@ -274,18 +278,20 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 
             if(incomingMatched == 0 && incomingMatchedNew == 0 &&
                outgoingMatched == 0 && outgoingMatchedNew == 0)
-                return RDPHost::END_OF_ATTACK;
+			{
+            	return RDPHost::END_OF_ATTACK;
+			}
 
             double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
             
             double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0.0)
+            if(incomingTotalNew > 0)
 			{
             	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
 			}
             
             double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0.0)
+            if(outgoingTotalNew > 0)
 			{
             	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
 			}
@@ -371,10 +377,9 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 		{
         	// Number of records is between bottom size and max size
 
-			auto TELNET_LIST_TOP_THRESHOLD = (uint16_t) (std::max(incomingListSize, outgoingListSize) *
-					Config::getInstance().getGlobalMatchedFlowRatio());
+			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-            if(incomingMatched >= TELNET_LIST_TOP_THRESHOLD || outgoingMatched >= TELNET_LIST_TOP_THRESHOLD)
+			if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -411,13 +416,13 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
             double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
             
             double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0.0)
+            if(incomingTotalNew > 0)
 			{
             	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
 			}
             
             double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0.0)
+            if(outgoingTotalNew > 0)
 			{
             	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
 			}
