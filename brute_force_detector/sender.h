@@ -45,20 +45,24 @@
 #ifndef SENDER_H
 #define SENDER_H
 
-#include <libtrap/trap.h>
-
-#include <cstring>
-#include "brute_force_detector.h"
 #include <iostream>
 #include <vector>
+#include <cstring>
+
+#include <libtrap/trap.h>
+#include "brute_force_detector.h"
 #include "config.h"
+
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
+
 #include "fields.h"
+
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
+
 #include <unirec/unirec.h>
 using namespace std;
 
@@ -78,7 +82,8 @@ public:
     int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold)
     {
         if(Config::getInstance().getGlobalIgnoreFirstSend())
-        {   // /Ignore first report
+        {
+        	// Ignore first report
             host->setReportTime(actualTime);
             return TRAP_E_OK;
         }
@@ -103,8 +108,6 @@ public:
         host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
-
-
 
         return send(host, dstPort, actualTime, incomingMatched > outgoingMatched ? incomingMatched : outgoingMatched, endOfAttack, sNote);
     }
@@ -168,4 +171,4 @@ private:
     }
 };
 
-#endif
+#endif // SENDER_H

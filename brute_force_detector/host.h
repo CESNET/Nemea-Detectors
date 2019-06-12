@@ -147,12 +147,12 @@ public:
 
     bool isFlowScan(const uint32_t *packets, const uint8_t *flags)
     {
-        if((*packets == 1 && *flags == 0b00000010) //SYN
-                || (*packets == 2 && *flags == 0b00000010) //SYN
-                || (*packets == 2 && *flags == 0b00000110) //SYN + RST
-                || (*packets == 1 && *flags == 0b00010010) //SYN + ACK
-                || (*packets == 1 && *flags == 0b00010100) //RST + ACK
-                || (*packets == 3 && *flags == 0b00000010))//3-syn packets
+        if((*packets == 1 && *flags == 0b00000010) // SYN
+                || (*packets == 2 && *flags == 0b00000010)  // SYN
+                || (*packets == 2 && *flags == 0b00000110)  // SYN + RST
+                || (*packets == 1 && *flags == 0b00010010)  // SYN + ACK
+                || (*packets == 1 && *flags == 0b00010100)  // RST + ACK
+                || (*packets == 3 && *flags == 0b00000010)) // 3 SYN packets
         {
             scanned = true;
             return true;
@@ -172,7 +172,7 @@ protected:
     bool scanned;
 
     ip_addr_t hostIp;
-    ur_time_t firstSeen;
+    ur_time_t firstSeen; // TODO purpose?
     ur_time_t timeOfLastReport;
     ur_time_t timeOfLastReceivedRecord;
     RecordList<T> recordListIncoming; // direction to victim (attacker -> victim)
@@ -191,6 +191,7 @@ public:
     ur_time_t getHostReportTimeout() override { return Config::getInstance().getSSHReportTimeout(); }
     ur_time_t getHostAttackTimeout() override { return Config::getInstance().getSSHAttackTimeout(); }
 };
+
 
 class RDPHost : public IHost<RDPRecord*> {
 
@@ -216,7 +217,6 @@ public:
     ur_time_t getHostAttackTimeout() override { return Config::getInstance().getTELNETAttackTimeout(); }
 };
 
-
 //////////////////////////////////////////////////////////////////////////////////////
 /************************************************************************************/
 //////////////////////////////////////////////////////////////////////////////////////
@@ -241,7 +241,7 @@ protected:
 		auto it = c->begin();
         while(it != c->end())
         {
-            //if(it->second)
+            // if(it->second)
 			delete it->second;
             it++;
 
@@ -250,7 +250,7 @@ protected:
     }
 
     template<typename Container>
-    void clearOldRecAHost(Container *c, ur_time_t actualTime)
+    void clearOldRecAndHost(Container *c, ur_time_t actualTime)
     {
         typename Container::iterator it = c->begin();
         while(it != c->end())
@@ -264,7 +264,9 @@ protected:
                 c->erase(it++);
             }
             else
-                it++;
+			{
+            	it++;
+			}
         }
     }
 };
@@ -341,4 +343,4 @@ private:
     map<ip_addr_t, TELNETHost*, cmpByIpAddr> hostMap;
 };
 
-#endif
+#endif // HOST_H
