@@ -45,13 +45,13 @@
 #include "sender.h"
 
 UR_FIELDS(
-    time DETECTION_TIME,    //Timestamp of the detection of some event
-    uint8 WARDEN_TYPE,      //Type of event (see Warden README for more information)
-    ipaddr SRC_IP,          //Source address of a flow
-    uint8 PROTOCOL,         //L4 protocol (TCP, UDP, ICMP, etc.)
-    uint16 DST_PORT,        //Destination transport-layer port
-    uint32 EVENT_SCALE,     //Attack intensity
-    string NOTE,            //Generic string note
+    time DETECTION_TIME,    // Timestamp of the detection of some event
+    uint8 WARDEN_TYPE,      // Type of event (see Warden README for more information)
+    ipaddr SRC_IP,          // Source address of a flow
+    uint8 PROTOCOL,         // L4 protocol (TCP, UDP, ICMP, etc.)
+    uint16 DST_PORT,        // Destination transport-layer port
+    uint32 EVENT_SCALE,     // Attack intensity
+    string NOTE,            // Generic string note
 )
 
 
@@ -71,7 +71,9 @@ Sender::Sender(bool *success)
 Sender::~Sender()
 {
     if(outTemplate != nullptr)
-        ur_free_template (outTemplate);
+	{
+    	ur_free_template (outTemplate);
+	}
 }
 
 

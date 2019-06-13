@@ -65,8 +65,7 @@ bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getSSHIncMaxPackets() || st.packets <
-																			 Config::getInstance().getSSHIncMinPackets())
+    if(st.packets > Config::getInstance().getSSHIncMaxPackets() || st.packets < Config::getInstance().getSSHIncMinPackets())
 	{
     	return false;
 	}
@@ -94,8 +93,7 @@ bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
     
-    if(st.packets > Config::getInstance().getSSHOutMaxPackets() || st.packets <
-																			 Config::getInstance().getSSHOutMinPackets())
+    if(st.packets > Config::getInstance().getSSHOutMaxPackets() || st.packets < Config::getInstance().getSSHOutMinPackets())
 	{
     	return false;
 	}
@@ -174,8 +172,7 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getRDPIncMaxPackets() || st.packets <
-																			 Config::getInstance().getRDPIncMinPackets())
+    if(st.packets > Config::getInstance().getRDPIncMaxPackets() || st.packets < Config::getInstance().getRDPIncMinPackets())
 	{
     	return false;
 	}
@@ -241,8 +238,7 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
     
-    if(st.packets > Config::getInstance().getRDPOutMaxPackets()  || st.packets <
-																			  Config::getInstance().getRDPOutMinPackets())
+    if(st.packets > Config::getInstance().getRDPOutMaxPackets()  || st.packets < Config::getInstance().getRDPOutMinPackets())
 	{
     	return false;
 	}
@@ -283,13 +279,11 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     	return false;
 	}
 
-    if(st.packets > Config::getInstance().getTELNETIncMaxPackets() || st.packets <
-																				Config::getInstance().getTELNETIncMinPackets())
+    if(st.packets > Config::getInstance().getTELNETIncMaxPackets() || st.packets < Config::getInstance().getTELNETIncMinPackets())
 	{
     	return false;
 	}
-    if(st.bytes > Config::getInstance().getTELNETIncMaxBytes() || st.bytes <
-																			Config::getInstance().getTELNETIncMinBytes())
+    if(st.bytes > Config::getInstance().getTELNETIncMaxBytes() || st.bytes < Config::getInstance().getTELNETIncMinBytes())
 	{
     	return false;
 	}

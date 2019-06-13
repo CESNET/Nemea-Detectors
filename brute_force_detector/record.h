@@ -93,7 +93,7 @@ public:
         ur_time_t flowLastSeen;
     };
 
-    // TODO Why is it even here?
+    // May seem unused, actually are passed to reporting functions
 	ip_addr_t dstIp{};
 	ur_time_t flowLastSeen{};
 
@@ -111,8 +111,6 @@ public:
     ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
 
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
-
-
 };
 
 class RDPRecord : public IRecord {
@@ -126,10 +124,8 @@ public:
     const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
     const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; // SYN + ACK + PSH
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
-
-
-
 };
+
 
 class TELNETRecord : public IRecord {
 
@@ -141,7 +137,6 @@ public:
 
 	const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 	const static uint8_t signatureFlagsFin = 0b00011011; // SYN + ACK + PSH + FIN
-
 
 private:
     static TelnetServerProfileMap TSPMap;
@@ -301,7 +296,6 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
             hashedDstTotalIPSet.insert(record->dstIp);
         }
     }
-
     list.push_back(record); // finally push record to a list
 }
 
@@ -395,6 +389,7 @@ void RecordList<T>::initTotalTargetsSet()
     {
 		if(it->isMatched())
         {
+			// TODO Why is TotalIPSet filled with matched flows only?
             hashedDstTotalIPSet.insert(it->dstIp);
         }
     }

@@ -400,7 +400,9 @@ int main(int argc, char **argv)
             }
 
             if(is_matched)
-                ssh.matchedFlows++;
+			{
+            	ssh.matchedFlows++;
+			}
             ssh.flows++;
 
             // host is the source of current flow/connection
