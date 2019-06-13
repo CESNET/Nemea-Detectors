@@ -214,10 +214,14 @@ bool Config::initFromFile(const string& path)
         getline(configFile, line);
 
         if(line.empty())
-            continue; //skip empty line
+		{
+        	continue; //skip empty line
+		}
 
         if(line[0] == '#')
-            continue; //skip comment line
+		{
+        	continue; //skip comment line
+		}
 
         size_t pos = line.find('='); // = delimiter
         if(pos == std::string::npos)

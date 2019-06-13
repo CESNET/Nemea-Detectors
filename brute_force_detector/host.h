@@ -187,7 +187,7 @@ public:
 
 	bool addRecord(SSHRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
-	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getSSHHostTimeout(); }
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getSSHHostDeleteTimeout(); }
     ur_time_t getHostReportTimeout() override { return Config::getInstance().getSSHReportTimeout(); }
     ur_time_t getHostAttackTimeout() override { return Config::getInstance().getSSHAttackTimeout(); }
 };
@@ -200,7 +200,7 @@ public:
 
 	bool addRecord(RDPRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
-	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getRDPHostTimeout(); }
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getRDPHostDeleteTimeout(); }
     ur_time_t getHostReportTimeout() override { return Config::getInstance().getRDPReportTimeout(); }
     ur_time_t getHostAttackTimeout() override { return Config::getInstance().getRDPAttackTimeout(); }
 };
@@ -212,7 +212,7 @@ public:
 
 	bool addRecord(TELNETRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
-	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getTELNETHostTimeout(); }
+	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getTELNETHostDeleteTimeout(); }
 	ur_time_t getHostReportTimeout() override { return Config::getInstance().getTELNETReportTimeout(); }
     ur_time_t getHostAttackTimeout() override { return Config::getInstance().getTELNETAttackTimeout(); }
 };

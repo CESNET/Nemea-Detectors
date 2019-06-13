@@ -72,7 +72,7 @@ public:
 
 	inline uint16_t  getSSHListThreshold()     const {return SSH_LIST_THRESHOLD;}
 	inline ur_time_t getSSHRecordTimeout()     const {return SSH_RECORD_TIMEOUT;}
-	inline ur_time_t getSSHHostTimeout()       const {return SSH_HOST_TIMEOUT;}
+	inline ur_time_t getSSHHostDeleteTimeout()       const {return SSH_HOST_TIMEOUT;}
 	inline ur_time_t getSSHReportTimeout()     const {return SSH_REPORT_TIMEOUT;}
 	inline ur_time_t getSSHAttackTimeout()     const {return SSH_ATTACK_TIMEOUT;}
 
@@ -93,7 +93,7 @@ public:
 	inline uint16_t  getRDPMaxListSize()       const {return RDP_LIST_SIZE;}
 	inline uint16_t  getRDPListThreshold()     const {return RDP_LIST_THRESHOLD;}
 	inline ur_time_t getRDPRecordTimeout()     const {return RDP_RECORD_TIMEOUT;}
-	inline ur_time_t getRDPHostTimeout()       const {return RDP_HOST_TIMEOUT;}
+	inline ur_time_t getRDPHostDeleteTimeout()       const {return RDP_HOST_TIMEOUT;}
 	inline ur_time_t getRDPReportTimeout()     const {return RDP_REPORT_TIMEOUT;}
 	inline ur_time_t getRDPAttackTimeout()     const {return RDP_ATTACK_TIMEOUT;}
 
@@ -114,7 +114,7 @@ public:
 	inline uint16_t  getTELNETMaxListSize()    const {return TELNET_LIST_SIZE;}
 	inline uint16_t  getTELNETListThreshold()  const {return TELNET_LIST_THRESHOLD;}
 	inline ur_time_t getTELNETRecordTimeout()  const {return TELNET_RECORD_TIMEOUT;}
-	inline ur_time_t getTELNETHostTimeout()    const {return TELNET_HOST_TIMEOUT;}
+	inline ur_time_t getTELNETHostDeleteTimeout()    const {return TELNET_HOST_TIMEOUT;}
 	inline ur_time_t getTELNETReportTimeout()  const {return TELNET_REPORT_TIMEOUT;}
     inline ur_time_t getTELNETAttackTimeout()  const {return TELNET_ATTACK_TIMEOUT;}
 

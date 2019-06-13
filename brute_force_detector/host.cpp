@@ -51,7 +51,7 @@ bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
 
-    // scan => SKIP!!!
+	// ignore port-scans
     if(isFlowScan(&st.packets, &st.flags))
 	{
     	return false;
@@ -92,9 +92,8 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
 
-        // Number of records in list is lower than BottomSize (set to 50 by default)
-        if (std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
-        ///	possible bug: lot of flows in one direction (50%), few flows in opposite direction -> passes as attack FIXME
+        // Number of records in list is lower than BottomSize (50 by default)
+        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
         {
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold())
             {
@@ -111,11 +110,11 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         }
         else
 		{
-			// Number of records is between bottom size and max size TODO What max size -max list size?
+			// Number of records is between bottom size and max size TODO What max size -max list size? per host or total max?
 
-			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
+			auto topMatchedRatio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-            if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
+            if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -128,7 +127,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
         }        
     }
-    else
+    else // isReported
     {
     	// host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
@@ -149,21 +148,11 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 				return SSHHost::END_OF_ATTACK;
 			}
 
-			double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-			
-            double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0)
-			{
-            	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
-			}
-            
-            double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0)
-			{
-            	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
-			}
-            
-            if (std::max(incomingMatchedPercentage, outgoingMatchedPercentage) < keepTrackingHostRatio)
+			auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+
+			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
+
+            if (topNewMatchedRatio < keepTrackingHostRatio)
             {
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
@@ -225,7 +214,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-        if (std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getRDPListBottomSize())
+        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getRDPListBottomSize())
         {
 
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getRDPListThreshold())
@@ -245,9 +234,9 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 		{
         	// Number of records is between bottom size and max size
 
-			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
+			auto topMatchedRatio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-			if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
+			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -282,22 +271,12 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
             	return RDPHost::END_OF_ATTACK;
 			}
 
-            double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+            auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
             
-            double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0)
+			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
+
+			if (topNewMatchedRatio < keepTrackingHostRatio)
 			{
-            	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
-			}
-            
-            double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0)
-			{
-            	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
-			}
-            
-            if (std::max(incomingMatchedPercentage, outgoingMatchedPercentage) < keepTrackingHostRatio)
-            {
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
                 	return RDPHost::REPORT_END_OF_ATTACK;
@@ -327,7 +306,7 @@ bool TELNETHost::addRecord(TELNETRecord *record, void *structure, uint8_t direct
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
 
-    // scan => SKIP
+	// ignore port-scans
     if(isFlowScan(&st.packets, &st.flags))
 	{
     	return false;
@@ -358,7 +337,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-        if (std::min(incomingListSize, outgoingListSize) <= Config::getInstance().getTELNETListBottomSize())
+        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getTELNETListBottomSize())
         {
 
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getTELNETListThreshold())
@@ -366,6 +345,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
                 recordListOutgoing.initTotalTargetsSet();
+
                 return TELNETHost::NEW_ATTACK;
             }
             else
@@ -377,9 +357,9 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 		{
         	// Number of records is between bottom size and max size
 
-			auto top_matched_ratio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
+			auto topMatchedRatio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
-			if(top_matched_ratio >= Config::getInstance().getGlobalMatchedFlowRatio())
+			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
                 recordListIncoming.initTotalTargetsSet();
@@ -413,22 +393,12 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
             	return TELNETHost::END_OF_ATTACK;
 			}
 
-            double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-            
-            double incomingMatchedPercentage = 0.0;
-            if(incomingTotalNew > 0)
+            auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+
+			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
+
+			if (topNewMatchedRatio < keepTrackingHostRatio)
 			{
-            	incomingMatchedPercentage = (100.0 / incomingTotalNew) * incomingMatchedNew;
-			}
-            
-            double outgoingMatchedPercentage = 0.0;
-            if(outgoingTotalNew > 0)
-			{
-            	outgoingMatchedPercentage = (100.0 / outgoingTotalNew) * outgoingMatchedNew;
-			}
-            
-            if (incomingMatchedPercentage < keepTrackingHostRatio && outgoingMatchedPercentage < keepTrackingHostRatio)
-            {
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
                 	return TELNETHost::REPORT_END_OF_ATTACK;
