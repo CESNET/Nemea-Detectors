@@ -150,9 +150,10 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
 			auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
 
-			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
+			double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : incomingMatchedNew / incomingTotalNew);
+			double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : outgoingMatchedNew / outgoingTotalNew);
 
-            if (topNewMatchedRatio < keepTrackingHostRatio)
+			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
             {
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
@@ -272,10 +273,11 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 			}
 
             auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-            
-			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
 
-			if (topNewMatchedRatio < keepTrackingHostRatio)
+            double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : incomingMatchedNew / incomingTotalNew);
+            double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : outgoingMatchedNew / outgoingTotalNew);
+
+			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
 			{
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
@@ -395,9 +397,10 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 
             auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
 
-			auto topNewMatchedRatio = std::max(incomingMatchedNew / incomingTotalNew, outgoingMatchedNew / outgoingTotalNew);
+			double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : incomingMatchedNew / incomingTotalNew);
+			double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : outgoingMatchedNew / outgoingTotalNew);
 
-			if (topNewMatchedRatio < keepTrackingHostRatio)
+			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
 			{
                 if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 				{
