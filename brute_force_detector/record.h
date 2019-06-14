@@ -70,13 +70,13 @@
  * Interface for record
  */
 class IRecord {
-	
+
 public:
     IRecord () : signatureMatched(false) {}
     virtual ~IRecord() = default;
     virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl) = 0;
     virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl) = 0;
-	
+
     inline bool isMatched() { return signatureMatched; }
     virtual ur_time_t getRecordTimeout() = 0;
 
@@ -103,7 +103,7 @@ protected:
 };
 
 class SSHRecord : public IRecord {
-	
+
 public:
     SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
     bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
@@ -121,9 +121,9 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
+    const static uint8_t signatureFlags = 0b00011010; 			   // SYN + ACK + PSH
     const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
     const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; // SYN + ACK + PSH
-    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 };
 
 
@@ -148,13 +148,13 @@ class RecordList {
 public:
     RecordList();
     ~RecordList();
-	
+
     void addRecord(T record, bool isHostReported);
     void setNewMaxListSize(uint16_t newMaxListSize);
     void clearOldRecords(ur_time_t actualTime);
     void clearAllRecords();
     ur_time_t getTimeOfLastRecord();
-	
+
     inline uint16_t getActualListSize() { return actualListSize; };
     inline uint16_t getActualMatchedFlows() { return actualMatchedFlows; }
     inline uint32_t getMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
@@ -173,13 +173,13 @@ public:
     std::vector<std::string> getIpsOfVictims();
 
 private:
-    std::list<T> list;
+    std::list<T> list; // TODO List of what
     uint16_t maxListSize;
     uint16_t actualListSize;
     uint16_t actualMatchedFlows;
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
-	
+
     uint32_t flowCounter;
     uint32_t flowMatchedCounter;
 
@@ -217,8 +217,8 @@ RecordList<T>::RecordList()
 	{
     	maxListSize = Config::getInstance().getTELNETMaxListSize();
 	}
-    else     
-    {    
+    else
+    {
         std::cerr << "Error record.h: Max list size for class " << typeid(T).name() << " is not defined!\n";
         std::terminate();
     }
@@ -259,14 +259,15 @@ void RecordList<T>::clearAllRecords()
 
 template <class T>
 void RecordList<T>::addRecord(T record, bool isHostReported)
-{	
+{
     flowCounter++;
     actualListSize++;
 
     if(actualListSize > maxListSize)
-    {   
+    {
     	// list is full
         // delete first record
+
         if((*list.begin())->isMatched())
 		{
         	actualMatchedFlows--;
@@ -276,14 +277,15 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
 
         list.pop_front();
         actualListSize--;
+        // TODO Missing if(isHostReported) { totalFlowsSinceLastReport--; } ?
     }
-	
+
     if(record->isMatched())
     {
         flowMatchedCounter++;
         actualMatchedFlows++;
     }
-	
+
     if(isHostReported)
     {
         totalFlowsSinceLastReport++;
@@ -291,8 +293,8 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
         if(record->isMatched())
         {
             matchedFlowsSinceLastReport++;
-            
-            hashedDstIPSet.insert(record->dstIp);   
+
+            hashedDstIPSet.insert(record->dstIp);
             hashedDstTotalIPSet.insert(record->dstIp);
         }
     }

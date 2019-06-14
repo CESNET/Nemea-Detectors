@@ -92,7 +92,7 @@ bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 	{
     	return false;
 	}
-    
+
     if(st.packets > Config::getInstance().getSSHOutMaxPackets() || st.packets < Config::getInstance().getSSHOutMinPackets())
 	{
     	return false;
@@ -128,7 +128,7 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
 
     signatureMatched = false;
-	
+
     // Win8 manual input
 
     if((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon)
@@ -144,10 +144,10 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
                 return false;
             }
             signatureMatched = true;
-            return true;        
+            return true;
         }
-    }	
-	
+    }
+
     // Ncrack/thc hydra to win8 unsuccessful connection
 
     if((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon)
@@ -193,9 +193,9 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
 bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
-    
+
     signatureMatched = false;
-    
+
     // Win8 manual input
 
     if((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon)
@@ -213,8 +213,8 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
             signatureMatched = true;
             return true;
         }
-    }   
-    
+    }
+
     // Ncrack/thc hydra to win8 unsuccessful connection
 
     if((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon)
@@ -232,12 +232,12 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
             return true;
         }
     }
-      
+
     if((st.flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags)
 	{
     	return false;
 	}
-    
+
     if(st.packets > Config::getInstance().getRDPOutMaxPackets()  || st.packets < Config::getInstance().getRDPOutMinPackets())
 	{
     	return false;
@@ -246,15 +246,15 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 	{
     	return false;
 	}
-    
-    
+
+
     if(wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
     {
         return false;
     }
 
     signatureMatched = true;
-    return true;    
+    return true;
 }
 
 
@@ -297,6 +297,7 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl)
     return true;
 }
 
+
 bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 {
     IRecord::MatchStructure st = *(IRecord::MatchStructure*)(structure);
@@ -315,12 +316,12 @@ bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 	}
 
     TSPProfile->profileWithNewData(st.packets, st.bytes);
-    
-    if(st.packets < 6)
+
+    if(st.packets < 6) // FIXME magic constant
     {
         return false;
 	}
-    
+
     //for max range only
     if(TSPProfile->isProfiled())
     {
@@ -335,7 +336,7 @@ bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl)
 	}
 
     signatureMatched = true;
-    return true;       
+    return true;
 }
 
 

@@ -48,32 +48,32 @@ using namespace std;
 
 void TelnetServerProfile::profileWithNewData(uint32_t packets, uint64_t bytes)
 {
-    //at least 6 packets from server to client
-    //1. syn+ack
-    //2. supported configuration
-    //3. username request //or only password
-    //4. ack username
-    //4/5. password request
-    //4/6. ack password
-    //5/7. information about successfull/failed login
-    //6/8. FIN packet
-    if(packets < 6)
+    // at least 6 packets from server to client
+    // 1. syn+ack
+    // 2. supported configuration
+    // 3. username request // or only password
+    // 4. ack username
+    // 4/5. password request
+    // 4/6. ack password
+    // 5/7. information about successfull/failed login
+    // 6/8. FIN packet
+    if(packets < 6) // FIXME magic constant
         return;
-    
+
     static uint16_t profileCounter = 0;
     profileCounter++;
-    
+
     if(listSize >= TSPArraySize)
     {
         byteList.pop_front();
         packetList.pop_front();
         listSize--;
     }
-    
+
     byteList.push_back(bytes);
     packetList.push_back(packets);
     listSize++;
-    
+
     if(!profiled && listSize == TSPArraySize)
     {
         countNewMaxValues();
@@ -83,38 +83,38 @@ void TelnetServerProfile::profileWithNewData(uint32_t packets, uint64_t bytes)
     {
         countNewMaxValues();
         profileCounter = 0;
-    } 
+    }
 }
 
 void TelnetServerProfile::countNewMaxValues()
 {
     size_t n = packetList.size() / 2;
-    
+
     vector<uint32_t> packetVector;
-    vector<uint64_t> byteVector;  
-    
+    vector<uint64_t> byteVector;
+
     copy(packetList.begin(), packetList.end(), back_inserter(packetVector));
     copy(byteList.begin(),   byteList.end(),   back_inserter(byteVector));
-    
-    //median
+
+    // median
     nth_element(byteVector.begin(),   byteVector.begin() + n,   byteVector.end());
     nth_element(packetVector.begin(), packetVector.begin() + n, packetVector.end());
-    
+
     maxPackets = packetVector[n] + 5;
     maxBytes   = byteVector[n] + 500;
-    
-    //char *c = new char[55];
-    //ip_to_str(&serverIp,c);
-    //std::cout<<"Profilovano "<<c<<": "<<maxPackets<<" "<<maxBytes<<std::endl; ///delete c;
+
+    // char *c = new char[55];
+    // ip_to_str(&serverIp,c);
+    // std::cout<<"Profilovano "<<c<<": "<<maxPackets<<" "<<maxBytes<<std::endl; // /delete c;
 }
 
 TelnetServerProfile * TelnetServerProfileMap::createProfile(ip_addr_t ip, ur_time_t firstSeen)
 {
     TelnetServerProfile *TSP;
-    
+
     TSP = new TelnetServerProfile(firstSeen, ip);
     TSPMap.insert(std::pair<ip_addr_t, TelnetServerProfile*>(ip, TSP));
-    
+
     return TSP;
 }
 
@@ -122,7 +122,9 @@ TelnetServerProfile * TelnetServerProfileMap::findProfile(ip_addr_t & hostIp) co
 {
     auto it = TSPMap.find(hostIp);
     if(it == TSPMap.end())
-        return nullptr;
-    
+	{
+    	return nullptr;
+	}
+
     return it->second;
 }

@@ -109,7 +109,7 @@ public:
         host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
 
-        return send(host, dstPort, actualTime, incomingMatched > outgoingMatched ? incomingMatched : outgoingMatched, endOfAttack, sNote);
+        return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), endOfAttack, sNote);
     }
 
 private:

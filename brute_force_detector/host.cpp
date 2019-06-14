@@ -106,11 +106,10 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 			{
                 return SSHHost::NO_ATTACK;
             }
-
         }
         else
 		{
-			// Number of records is between bottom size and max size TODO What max size -max list size? per host or total max?
+			// Number of records is between bottom size and max list size per protocol
 
 			auto topMatchedRatio = std::max(incomingMatched/incomingListSize, outgoingMatched/outgoingListSize);
 
@@ -125,7 +124,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 			{
                 return SSHHost::NO_ATTACK;
             }
-        }        
+        }
     }
     else // isReported
     {
@@ -138,7 +137,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
 			uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
-			
+
 			uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
 			uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
 
@@ -249,9 +248,9 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 			{
                 return RDPHost::NO_ATTACK;
             }
-        }     
+        }
     }
-    else
+    else // isReported
     {
     	// host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
@@ -262,7 +261,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
         {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
             uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
-            
+
             uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
             uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
 
@@ -372,9 +371,9 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 			{
                 return TELNETHost::NO_ATTACK;
             }
-        } 
+        }
     }
-    else
+    else // isReported
     {
     	// host is attacking, wait for timeout to report again
         if(!canReportAgain(actualTime))
@@ -385,7 +384,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
         {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
             uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
-            
+
             uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
             uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
 
@@ -497,7 +496,7 @@ RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
 	{
     	ip = structure->dstIp; // attacker is now destination address
 	}
-    
+
     auto it = hostMap.find(ip);
 
     RDPHost *host;

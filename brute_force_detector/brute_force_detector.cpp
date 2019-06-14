@@ -129,16 +129,24 @@ void signalHandler(int signal)
     else if(signal == SIGUSR2)
     {
         if(!whitelist.isLockedForConfigurationReload())
-            whitelist.reloadWhitelist();
+		{
+        	whitelist.reloadWhitelist();
+		}
         else
-            alarm(1); // cannot reload now.. wait
+		{
+        	alarm(1); // cannot reload now.. wait
+		}
     }
     else if(signal == SIGALRM)
     {
         if(!whitelist.isLockedForConfigurationReload())
-            whitelist.reloadWhitelist();
+		{
+        	whitelist.reloadWhitelist();
+		}
         else
-            alarm(1); // wait another second
+		{
+        	alarm(1); // wait another second
+		}
     }
 }
 
@@ -150,7 +158,8 @@ bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
 
 void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment /* optional, implicitly set to "" (see .h) */)
 {
-	if (b && p) {
+	if (b && p)
+	{
 		ios::fmtflags f(cout.flags());
 		cout << " ("
 			 << std::fixed << std::setprecision(2)
@@ -164,7 +173,6 @@ void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment /* opti
 	}
 	 // error output not necessary
 	 */
-
 }
 
 
@@ -275,9 +283,11 @@ int main(int argc, char **argv)
 
     char *errstr = nullptr;
     ur_template_t *tmplt = ur_create_input_template(0, unirecSpecifier.c_str(), &errstr);
-    if (tmplt == nullptr) {
+    if (tmplt == nullptr)
+    {
       cerr << "Error: Invalid UniRec specifier." << endl;
-      if(errstr != nullptr){
+      if(errstr != nullptr)
+      {
         fprintf(stderr, "%s\n", errstr);
         free(errstr);
       }
@@ -300,12 +310,11 @@ int main(int argc, char **argv)
         return 4;
     }
 
-
     // ***** Main processing loop *****
     SSHHostMap    sshHostMap;
     RDPHostMap    rdpHostMap;
     TELNETHostMap telnetHostMap;
-    
+
     logInfo ssh("SSH");
 	logInfo rdp("RDP");
 	logInfo telnet("TELNET");
@@ -341,20 +350,28 @@ int main(int argc, char **argv)
 
         // Skip non TCP flows
         if(ur_get(tmplt, data, F_PROTOCOL) != TCP_PROTOCOL_NUM) // TCP flows only
-            continue;
+		{
+        	continue;
+		}
 
         uint16_t dstPort = ur_get(tmplt, data, F_DST_PORT);
         uint16_t srcPort = ur_get(tmplt, data, F_SRC_PORT);
 
 	    if(dstPort != TCP_SSH_PORT && dstPort != TCP_TELNET_PORT && dstPort != TCP_RDP_PORT
 	       && srcPort != TCP_SSH_PORT && srcPort != TCP_TELNET_PORT && srcPort != TCP_RDP_PORT)
-	        continue;
+		{
+	    	continue;
+		}
 
 	    uint8_t direction;
         if(dstPort == TCP_SSH_PORT || dstPort == TCP_TELNET_PORT || dstPort == TCP_RDP_PORT)
-            direction = FLOW_INCOMING_DIRECTION;
+		{
+        	direction = FLOW_INCOMING_DIRECTION;
+		}
         else
-            direction = FLOW_OUTGOING_DIRECTION;
+		{
+        	direction = FLOW_OUTGOING_DIRECTION;
+		}
 
 	    // Process rest of new data
         IRecord::MatchStructure structure { // TODO proper name
@@ -389,7 +406,6 @@ int main(int argc, char **argv)
             }
             else // FLOW_OUTGOING_DIRECTION
             {
-
                 record = new SSHRecord(structure.srcIp, structure.flowLastSeen);
                 is_matched = record->matchWithOutgoingSignature(&structure, &whitelist);
                 if(is_matched)
@@ -467,7 +483,8 @@ int main(int argc, char **argv)
                 rdp.incomingFlows++;
             }
             else
-            { // FLOW_OUTGOING_DIRECTION
+            {
+            	// FLOW_OUTGOING_DIRECTION
                 record = new RDPRecord(structure.srcIp, structure.flowLastSeen);
                 is_matched = record->matchWithOutgoingSignature(&structure, &whitelist);
                 if(is_matched)
@@ -491,7 +508,8 @@ int main(int argc, char **argv)
             	delete record;
 			}
             else
-            {					  // check for attack
+            {
+            	// check for attack
                 RDPHost::ATTACK_STATE attackState = host->checkForAttack(structure.flowLastSeen);
                 if(attackState != RDPHost::NO_ATTACK)
                 {
@@ -567,7 +585,8 @@ int main(int argc, char **argv)
             	delete record;
 			}
             else
-            {					  // check for attack
+            {
+            	// check for attack
                 TELNETHost::ATTACK_STATE attackState = host->checkForAttack(structure.flowLastSeen);
                 if(attackState != TELNETHost::NO_ATTACK)
                 {
@@ -638,7 +657,7 @@ int main(int argc, char **argv)
         }
 
 	    // kontrola po odeslani
-	    TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, break);
+	    TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
 
     } // ***** End of main processing loop *****
 
@@ -669,13 +688,3 @@ int main(int argc, char **argv)
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     return 0;
 }
-/*
-void printHosts(IHostMap& obj)
-{
-	auto hostMap = obj.hostMap;
-	for(auto & item : obj)
-	{
-		cout << item.value << ", ";
-	}
-}
-*/

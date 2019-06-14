@@ -63,16 +63,16 @@ public:
 	inline ur_time_t getGlobalAttackMinEvToReport() const {return GENERAL_ATTACK_MIN_EVENTS_TO_REPORT;}
     inline double    getGlobalAttackMinRatioToKeepTrackingHost() const {return GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST;}
 
-    inline int       getGlobalIgnoreFirstSend() const {return GENERAL_IGNORE_FIRST_SEND;}
+    inline int       getGlobalIgnoreFirstSend()  const {return GENERAL_IGNORE_FIRST_SEND;}
     inline double    getGlobalMatchedFlowRatio() const {return GENERAL_MATCHED_FLOW_RATIO;}
 
-	//SSH  
-	inline uint16_t  getSSHMaxListSize()       const {return SSH_LIST_SIZE;}  
+	//SSH
+	inline uint16_t  getSSHMaxListSize()       const {return SSH_LIST_SIZE;}
     inline uint16_t  getSSHListBottomSize()    const {return SSH_LIST_SIZE_BOTTOM_THRESHOLD;}
 
 	inline uint16_t  getSSHListThreshold()     const {return SSH_LIST_THRESHOLD;}
 	inline ur_time_t getSSHRecordTimeout()     const {return SSH_RECORD_TIMEOUT;}
-	inline ur_time_t getSSHHostDeleteTimeout()       const {return SSH_HOST_TIMEOUT;}
+	inline ur_time_t getSSHHostDeleteTimeout() const {return SSH_HOST_TIMEOUT;}
 	inline ur_time_t getSSHReportTimeout()     const {return SSH_REPORT_TIMEOUT;}
 	inline ur_time_t getSSHAttackTimeout()     const {return SSH_ATTACK_TIMEOUT;}
 
@@ -81,19 +81,19 @@ public:
     inline uint16_t getSSHIncMaxPackets()    const  {return SSH_BRUTEFORCE_INC_MAX_PACKETS;}
     inline uint16_t getSSHIncMinBytes()      const  {return SSH_BRUTEFORCE_INC_MIN_BYTES;}
     inline uint16_t getSSHIncMaxBytes()      const  {return SSH_BRUTEFORCE_INC_MAX_BYTES;}
-	
+
     // SSH OUTGOING DIRECTION (VICTIM -> ATTACKER)
     inline uint16_t getSSHOutMinPackets()    const  {return SSH_BRUTEFORCE_OUT_MIN_PACKETS;}
     inline uint16_t getSSHOutMaxPackets()    const  {return SSH_BRUTEFORCE_OUT_MAX_PACKETS;}
     inline uint16_t getSSHOutMinBytes()      const  {return SSH_BRUTEFORCE_OUT_MIN_BYTES;}
     inline uint16_t getSSHOutMaxBytes()      const  {return SSH_BRUTEFORCE_OUT_MAX_BYTES;}
-	
+
 	//RDP
     inline uint16_t  getRDPListBottomSize()    const {return RDP_LIST_SIZE_BOTTOM_THRESHOLD;}
 	inline uint16_t  getRDPMaxListSize()       const {return RDP_LIST_SIZE;}
 	inline uint16_t  getRDPListThreshold()     const {return RDP_LIST_THRESHOLD;}
 	inline ur_time_t getRDPRecordTimeout()     const {return RDP_RECORD_TIMEOUT;}
-	inline ur_time_t getRDPHostDeleteTimeout()       const {return RDP_HOST_TIMEOUT;}
+	inline ur_time_t getRDPHostDeleteTimeout() const {return RDP_HOST_TIMEOUT;}
 	inline ur_time_t getRDPReportTimeout()     const {return RDP_REPORT_TIMEOUT;}
 	inline ur_time_t getRDPAttackTimeout()     const {return RDP_ATTACK_TIMEOUT;}
 
@@ -102,7 +102,7 @@ public:
     inline uint16_t getRDPIncMaxPackets()    const  {return RDP_BRUTEFORCE_INC_MAX_PACKETS;}
     inline uint16_t getRDPIncMinBytes()      const  {return RDP_BRUTEFORCE_INC_MIN_BYTES;}
     inline uint16_t getRDPIncMaxBytes()      const  {return RDP_BRUTEFORCE_INC_MAX_BYTES;}
-	
+
 	// RDP OUTGOING DIRECTION (VICTIM -> ATTACKER)
     inline uint16_t getRDPOutMinPackets()    const  {return RDP_BRUTEFORCE_OUT_MIN_PACKETS;}
     inline uint16_t getRDPOutMaxPackets()    const  {return RDP_BRUTEFORCE_OUT_MAX_PACKETS;}
@@ -114,7 +114,7 @@ public:
 	inline uint16_t  getTELNETMaxListSize()    const {return TELNET_LIST_SIZE;}
 	inline uint16_t  getTELNETListThreshold()  const {return TELNET_LIST_THRESHOLD;}
 	inline ur_time_t getTELNETRecordTimeout()  const {return TELNET_RECORD_TIMEOUT;}
-	inline ur_time_t getTELNETHostDeleteTimeout()    const {return TELNET_HOST_TIMEOUT;}
+	inline ur_time_t getTELNETHostDeleteTimeout()const {return TELNET_HOST_TIMEOUT;}
 	inline ur_time_t getTELNETReportTimeout()  const {return TELNET_REPORT_TIMEOUT;}
     inline ur_time_t getTELNETAttackTimeout()  const {return TELNET_ATTACK_TIMEOUT;}
 
@@ -122,6 +122,8 @@ public:
     inline uint16_t getTELNETIncMaxPackets() const  {return TELNET_BRUTEFORCE_INC_MAX_PACKETS;}
     inline uint16_t getTELNETIncMinBytes()   const  {return TELNET_BRUTEFORCE_INC_MIN_BYTES;}
     inline uint16_t getTELNETIncMaxBytes()   const  {return TELNET_BRUTEFORCE_INC_MAX_BYTES;}
+
+    // TODO Where is telnet outgoing
 
     static Config& getInstance()
     {
@@ -142,7 +144,7 @@ private:
     double    GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST;
     uint8_t   GENERAL_IGNORE_FIRST_SEND;
     float	  GENERAL_MATCHED_FLOW_RATIO;
-    
+
     std::string kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT;
     std::string kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT;
     std::string kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT;
@@ -166,11 +168,11 @@ private:
     uint16_t SSH_BRUTEFORCE_INC_MAX_PACKETS;
     uint16_t SSH_BRUTEFORCE_INC_MIN_BYTES;
     uint16_t SSH_BRUTEFORCE_INC_MAX_BYTES;
-    
+
     uint16_t SSH_BRUTEFORCE_OUT_MIN_PACKETS;
     uint16_t SSH_BRUTEFORCE_OUT_MAX_PACKETS;
     uint16_t SSH_BRUTEFORCE_OUT_MIN_BYTES;
-    uint16_t SSH_BRUTEFORCE_OUT_MAX_BYTES;    
+    uint16_t SSH_BRUTEFORCE_OUT_MAX_BYTES;
 
     //SSH keywords
     std::string kw_SSH_LIST_SIZE;
@@ -203,7 +205,7 @@ private:
     uint16_t RDP_BRUTEFORCE_INC_MAX_PACKETS;
     uint16_t RDP_BRUTEFORCE_INC_MIN_BYTES;
     uint16_t RDP_BRUTEFORCE_INC_MAX_BYTES;
-    
+
     uint16_t RDP_BRUTEFORCE_OUT_MIN_PACKETS;
     uint16_t RDP_BRUTEFORCE_OUT_MAX_PACKETS;
     uint16_t RDP_BRUTEFORCE_OUT_MIN_BYTES;

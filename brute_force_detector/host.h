@@ -92,28 +92,32 @@ public:
     virtual bool addRecord(T record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION)
     {
         if(direction == FLOW_INCOMING_DIRECTION)
-            recordListIncoming.addRecord(record, isReported());
+		{
+        	recordListIncoming.addRecord(record, isReported());
+		}
         else
-            recordListOutgoing.addRecord(record, isReported());
+		{
+        	recordListOutgoing.addRecord(record, isReported());
+		}
         return true;
     }
 
     void clearOldRecords(ur_time_t actualTime) { recordListIncoming.clearOldRecords(actualTime); recordListOutgoing.clearOldRecords(actualTime);}
-	
-	
-    virtual ur_time_t getHostDeleteTimeout() = 0; 
-	
+
+
+    virtual ur_time_t getHostDeleteTimeout() = 0;
+
     virtual bool canDeleteHost(ur_time_t actualTime)
     {
     	// TODO investigate this
         /*
          ur_time_t timeOfLastIncomingRecord = recordListIncoming.getTimeOfLastRecord();
          ur_time_t timeOfLastOutgoingRecord = recordListOutgoing.getTimeOfLastRecord();
-         
+
          if(timeOfLastIncomingRecord == 0 && timeOfLastOutgoingRecord == 0) //empty lists
              return true;
-         
-         
+
+
          ur_time_t timeOfLastRecord = timeOfLastIncomingRecord > timeOfLastOutgoingRecord ? timeOfLastIncomingRecord : timeOfLastOutgoingRecord;
          */
         ur_time_t timer = getHostDeleteTimeout();
@@ -304,7 +308,7 @@ public:
     {
         IHostMap::clearMap(&hostMap);
     }
-    
+
     inline uint16_t size() override
     {
         return hostMap.size();
@@ -329,7 +333,7 @@ public:
     {
         IHostMap::clearMap(&hostMap);
     }
-    
+
     inline uint16_t size() override
     {
         return hostMap.size();

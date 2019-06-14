@@ -46,12 +46,13 @@ Unirec template for output interface is `DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTO
 * `PROTOCOL` : TCP protocol number
 * `DST_PORT` : Port of the attacked service
 * `EVENT_SCALE` : Scale of the detected event
-* `NOTE` : This field contains (comma is used as separator):
+* `NOTE` : This field contains (comma is used as separator): 
+    <!--- FIXME --->
   1. Total number of targets since start of the attack from both 
 directions separated by a dash  
   2. Flag if the scan is performed
   3. Number of suspicious flows from both directions and since 
-last report separated by a dash 
+last report separated by a dash
 
 
 How to use
