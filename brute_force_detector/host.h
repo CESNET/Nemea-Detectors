@@ -75,8 +75,14 @@ public:
 
     virtual ~IHost() = default;
 
-    enum ATTACK_STATE { NO_ATTACK, NEW_ATTACK, ATTACK_REPORT_WAIT, ATTACK,
-	                    ATTACK_MIN_EVENTS_WAIT, END_OF_ATTACK, REPORT_END_OF_ATTACK };
+    enum ATTACK_STATE { NO_ATTACK,
+    		NEW_ATTACK, 			// send report
+    		ATTACK_REPORT_WAIT,
+    		ATTACK,					// send report
+    		ATTACK_MIN_EVENTS_WAIT,
+    		END_OF_ATTACK,
+    		REPORT_END_OF_ATTACK 	// send report
+    };
 
     inline ip_addr_t getHostIp() { return hostIp; }
     inline ur_time_t getTimeOfLastReport() { return timeOfLastReport; }
@@ -84,9 +90,9 @@ public:
     inline void setReportTime(ur_time_t actualTime) {  timeOfLastReport = actualTime; }
     inline void setNotReported()
     {
-        timeOfLastReport = 0;
 		recordListIncoming.clearTotalTargetsSinceAttack();
 		recordListOutgoing.clearTotalTargetsSinceAttack();
+        timeOfLastReport = 0;
     }
 
     inline bool getHostScannedNetwork() { return scanned; }
@@ -110,25 +116,11 @@ public:
     	recordListOutgoing.clearOldRecords(actualTime);
     }
 
-
     virtual ur_time_t getHostDeleteTimeout() = 0;
 
     virtual bool canDeleteHost(ur_time_t actualTime)
     {
-    	// TODO investigate this
-        /*
-         ur_time_t timeOfLastIncomingRecord = recordListIncoming.getTimeOfLastRecord();
-         ur_time_t timeOfLastOutgoingRecord = recordListOutgoing.getTimeOfLastRecord();
-
-         if(timeOfLastIncomingRecord == 0 && timeOfLastOutgoingRecord == 0) //empty lists
-		 {
-             return true;
-         }
-
-         ur_time_t timeOfLastRecord = std::max(timeOfLastIncomingRecord, timeOfLastOutgoingRecord);
-         */
         ur_time_t timer = getHostDeleteTimeout();
-        // return checkForTimeout(timeOfLastRecord, timer, actualTime);
 
         return checkForTimeout(timeOfLastReceivedRecord, timer, actualTime);
     }

@@ -51,18 +51,22 @@ Config::Config()
     //init default config variables
     GENERAL_CHECK_FOR_REPORT_TIMEOUT = ur_time_from_sec_msec(60, 0);
     GENERAL_CHECK_FOR_DELETE_TIMEOUT = ur_time_from_sec_msec(60, 0);
+
+    GENERAL_MATCHED_FLOW_RATIO = 0.9;
+
     GENERAL_ATTACK_MIN_EVENTS_TO_REPORT = 10;
+
     GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST = 10.0;
+
     GENERAL_IGNORE_FIRST_SEND = 0;
 
-    GENERAL_MATCHED_FLOW_RATIO = 0.9;  //TODO change back to 0.9 DEBUG
 
     //SSH
     SSH_LIST_SIZE = 1000;
-    SSH_LIST_SIZE_BOTTOM_THRESHOLD = 50; // There are two types of thresholds, first means how many records are in list [50/1000]
+    SSH_LIST_SIZE_BOTTOM_THRESHOLD = 100; // There are two types of thresholds, first means how many records are in list [50/1000]
     									// and based on this value is set up THRESHOLD which detects if host is attacker or not
-    SSH_LIST_THRESHOLD = 30;
-    SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(1800, 0);
+    SSH_LIST_THRESHOLD = 90;
+    SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
     SSH_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
 
     SSH_BRUTEFORCE_INC_MIN_PACKETS = 11;
@@ -80,9 +84,9 @@ Config::Config()
 
     //RDP
     RDP_LIST_SIZE = 1000;
-    RDP_LIST_SIZE_BOTTOM_THRESHOLD = 50;
-    RDP_LIST_THRESHOLD = 30;
-    RDP_RECORD_TIMEOUT = ur_time_from_sec_msec(1800, 0);
+    RDP_LIST_SIZE_BOTTOM_THRESHOLD = 100;
+    RDP_LIST_THRESHOLD = 90;
+    RDP_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
     RDP_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
 
     RDP_BRUTEFORCE_INC_MIN_PACKETS = 20;
@@ -101,9 +105,9 @@ Config::Config()
 
     //TELNET
     TELNET_LIST_SIZE = 1000;
-    TELNET_LIST_SIZE_BOTTOM_THRESHOLD = 50;
-    TELNET_LIST_THRESHOLD = 30;
-    TELNET_RECORD_TIMEOUT = ur_time_from_sec_msec(1800, 0);
+    TELNET_LIST_SIZE_BOTTOM_THRESHOLD = 100;
+    TELNET_LIST_THRESHOLD = 90;
+    TELNET_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
     TELNET_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
 
     TELNET_BRUTEFORCE_INC_MIN_PACKETS = 9;
