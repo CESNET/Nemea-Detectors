@@ -88,7 +88,7 @@ public:
             return TRAP_E_OK;
         }
 
-        //TODO check
+        //TODO test if output correct
 		uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
 		uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
@@ -105,11 +105,9 @@ public:
 
         string sNote;
 
-        host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
         host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToIncomingRecordList()->clearTotalFlowsSinceLastReport();
 
-        host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
 

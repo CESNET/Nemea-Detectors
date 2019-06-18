@@ -103,6 +103,7 @@ protected:
     bool signatureMatched;
 };
 
+
 class SSHRecord : public IRecord {
 
 public:
@@ -113,6 +114,7 @@ public:
 
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 };
+
 
 class RDPRecord : public IRecord {
 
@@ -163,16 +165,6 @@ public:
     inline void clearMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
     inline void clearTotalFlowsSinceLastReport() { totalFlowsSinceLastReport = 0; }
 
-    inline uint16_t getTargetsSinceLastReport() { return hashedDstIPSet.size(); }
-    inline void clearTargetsSinceLastReport() { hashedDstIPSet.clear(); }
-
-    inline uint16_t getCurrentTargets(); // TODO never used, investigate
-
-    inline uint32_t getTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
-    inline void clearTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
-    inline void initTotalTargetsSet();
-
-
     std::vector<std::string> getIpsOfVictims();
 
 private:
@@ -183,11 +175,6 @@ private:
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
 
-    // uint32_t flowCounter; // experimental
-    // uint32_t flowMatchedCounter; // experimental
-
-    std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;      // TODO WHAT ARE THOSE?
-    std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet; // AND WHY ARE NEITHER EVER USED ANYWHERE ELSE?
 
     char victimIP[46]{};
 };
@@ -197,9 +184,6 @@ RecordList<T>::RecordList()
 {
     actualListSize = 0;
     actualMatchedFlows = 0;
-
-    // flowCounter = 0; // experimental
-    // flowMatchedCounter = 0; // experimental
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
@@ -246,19 +230,14 @@ void RecordList<T>::clearAllRecords()
 
     actualListSize = 0;
     actualMatchedFlows = 0;
-    // flowCounter = 0; // experimental
-    // flowMatchedCounter = 0; // experimental
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
-
-	clearTargetsSinceLastReport();
 }
 
 template <class T>
 void RecordList<T>::addRecord(T record, bool isHostReported)
 {
-    // flowCounter++; // experimental
     actualListSize++;
 
     if(actualListSize > maxListSize)
@@ -280,7 +259,6 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
 
     if(record->isMatched())
     {
-        // flowMatchedCounter++; // experimental
         actualMatchedFlows++;
     }
 
@@ -291,9 +269,6 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
         if(record->isMatched())
         {
             matchedFlowsSinceLastReport++;
-
-            hashedDstIPSet.insert(record->dstIp);
-            hashedDstTotalIPSet.insert(record->dstIp);
         }
     }
     list.push_back(record);
@@ -377,33 +352,6 @@ ur_time_t RecordList<T>::getTimeOfLastRecord()
 	{
     	return 0;
 	}
-}
-
-template<class T>
-uint16_t RecordList<T>::getCurrentTargets()
-{
-    std::set<ip_addr_t, cmpByIpAddr> dstIpSet;
-    for(const auto & it : list)
-    {
-		if(it->isMatched())
-        {
-            dstIpSet.insert(it->dstIp);
-        }
-    }
-    return dstIpSet.size();
-}
-
-template<class T>
-void RecordList<T>::initTotalTargetsSet()
-{
-    for(const auto & it : list)
-    {
-		if(it->isMatched())
-        {
-			// TODO Why is TotalIPSet filled with matched flows only?
-            hashedDstTotalIPSet.insert(it->dstIp);
-        }
-    }
 }
 
 template<class T>
