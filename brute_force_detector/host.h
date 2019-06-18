@@ -55,6 +55,8 @@
 #include <map>
 #include "brute_force_detector.h"
 
+
+
 /**
  * Base class for host
  */
@@ -74,7 +76,7 @@ public:
     virtual ~IHost() = default;
 
     enum ATTACK_STATE { NO_ATTACK, NEW_ATTACK, ATTACK_REPORT_WAIT, ATTACK,
-	                    ATTACK_MIN_EVENTS_WAIT, END_OF_ATTACK, REPORT_END_OF_ATTACK};
+	                    ATTACK_MIN_EVENTS_WAIT, END_OF_ATTACK, REPORT_END_OF_ATTACK };
 
     inline ip_addr_t getHostIp() { return hostIp; }
     inline ur_time_t getTimeOfLastReport() { return timeOfLastReport; }
@@ -102,7 +104,11 @@ public:
         return true;
     }
 
-    void clearOldRecords(ur_time_t actualTime) { recordListIncoming.clearOldRecords(actualTime); recordListOutgoing.clearOldRecords(actualTime);}
+    void clearOldRecords(ur_time_t actualTime)
+    {
+    	recordListIncoming.clearOldRecords(actualTime);
+    	recordListOutgoing.clearOldRecords(actualTime);
+    }
 
 
     virtual ur_time_t getHostDeleteTimeout() = 0;
@@ -115,10 +121,11 @@ public:
          ur_time_t timeOfLastOutgoingRecord = recordListOutgoing.getTimeOfLastRecord();
 
          if(timeOfLastIncomingRecord == 0 && timeOfLastOutgoingRecord == 0) //empty lists
+		 {
              return true;
+         }
 
-
-         ur_time_t timeOfLastRecord = timeOfLastIncomingRecord > timeOfLastOutgoingRecord ? timeOfLastIncomingRecord : timeOfLastOutgoingRecord;
+         ur_time_t timeOfLastRecord = std::max(timeOfLastIncomingRecord, timeOfLastOutgoingRecord);
          */
         ur_time_t timer = getHostDeleteTimeout();
         // return checkForTimeout(timeOfLastRecord, timer, actualTime);
@@ -151,12 +158,12 @@ public:
 
     bool isFlowScan(const uint32_t *packets, const uint8_t *flags)
     {
-        if((*packets == 1 && *flags == 0b00000010) // SYN
-                || (*packets == 2 && *flags == 0b00000010)  // SYN
-                || (*packets == 2 && *flags == 0b00000110)  // SYN + RST
-                || (*packets == 1 && *flags == 0b00010010)  // SYN + ACK
-                || (*packets == 1 && *flags == 0b00010100)  // RST + ACK
-                || (*packets == 3 && *flags == 0b00000010)) // 3 SYN packets
+        if(	   (*packets == 1 && *flags == 0b00000010) 	// SYN
+        	|| (*packets == 1 && *flags == 0b00010010)  // SYN + ACK
+        	|| (*packets == 1 && *flags == 0b00010100)  // RST + ACK
+        	|| (*packets == 2 && *flags == 0b00000010)  // SYN
+        	|| (*packets == 2 && *flags == 0b00000110)  // SYN + RST
+        	|| (*packets == 3 && *flags == 0b00000010)) // 3 SYN packets
         {
             scanned = true;
             return true;
@@ -168,10 +175,6 @@ public:
     }
 
 protected:
-    bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
-    {
-		return flowTime + timer <= actualTime;
-    }
 
     bool scanned;
 
@@ -243,9 +246,10 @@ protected:
     void clearMap(Container *c)
     {
 		auto it = c->begin();
+
         while(it != c->end())
         {
-            // if(it->second)
+            // if(it->second) // TODO is this change harmless?
 			delete it->second;
             it++;
 
@@ -253,10 +257,20 @@ protected:
         c->clear();
     }
 
+    /**
+     * @brief clear old hostMap records and old hosts
+     *
+     * @tparam Container
+     * @param c
+     * @param actualTime
+     */
     template<typename Container>
     void clearOldRecAndHost(Container *c, ur_time_t actualTime)
     {
+
         typename Container::iterator it = c->begin();
+		// iterating over map<ip_addr_t, SSHHost*>  (or RDPHost* or TELNETHost*)
+
         while(it != c->end())
         {
             it->second->clearOldRecords(actualTime);

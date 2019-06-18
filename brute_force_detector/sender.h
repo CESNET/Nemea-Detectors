@@ -88,9 +88,13 @@ public:
             return TRAP_E_OK;
         }
 
-        string sNote;
+        //TODO check
+		uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
+		uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
-       return send(host, dstPort, actualTime, detectionThreshold, false, sNote);
+		string sNote;
+
+       return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), false, sNote);
     }
 
     template <class Host>

@@ -111,7 +111,7 @@ trap_module_info_t *module_info = nullptr;
 
 static int stop = 0;
 
-  // TODO consider changing globals
+// TODO consider changing globals
 TelnetServerProfileMap TELNETRecord::TSPMap;
 Whitelist whitelist;
 
@@ -150,35 +150,29 @@ void signalHandler(int signal)
     }
 }
 
-bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t actualTime)
-{
-	return oldTime + timer <= actualTime;
-}
-
-
 void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment /* optional, implicitly set to "" (see .h) */)
 {
-	if (b && p)
+	double percentage = 0.0;
+	if (b != 0 && p != 0)
 	{
-		ios::fmtflags f(cout.flags());
-		cout << " ("
-			 << std::fixed << std::setprecision(2)
-			 << 100.0 / b * p
-			 << "%" << comment << ")";
-		cout.flags(f);
+		percentage = 100.0 / b * p;
 	}
-	/*
-	else {
-		cerr << "Attempted division by zero in printFlowPercent." << endl;
-	}
-	 // error output not necessary
-	 */
+
+	ios::fmtflags f(cout.flags());
+
+	cout << " ("
+		 << std::fixed << std::setprecision(2)
+		 << percentage
+		 << "%" << comment << ")";
+	cout.flags(f);
+
+
 }
 
 
 int main(int argc, char **argv)
 {
-	getc(stdin); /// DEBUGGING
+	// getc(stdin); /// DEBUG
     // ***** TRAP initialization *****
     int ret;
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -349,7 +343,7 @@ int main(int argc, char **argv)
         }
 
         // Skip non TCP flows
-        if(ur_get(tmplt, data, F_PROTOCOL) != TCP_PROTOCOL_NUM) // TCP flows only
+        if(ur_get(tmplt, data, F_PROTOCOL) != TCP_PROTOCOL_NUM)
 		{
         	continue;
 		}
@@ -425,6 +419,7 @@ int main(int argc, char **argv)
             SSHHost *host = sshHostMap.findHost(&structure, direction);
 
             is_matched = host->addRecord(record, &structure, direction);
+
             if(!is_matched)
 			{
             	delete record;
@@ -433,7 +428,8 @@ int main(int argc, char **argv)
             {
             	// check for attack
                 auto attackState = host->checkForAttack(structure.flowLastSeen);
-                if(attackState != SSHHost::NO_ATTACK)
+
+				if(attackState != SSHHost::NO_ATTACK)
                 {
                     if(attackState == SSHHost::NEW_ATTACK)
 					{
@@ -620,7 +616,6 @@ int main(int argc, char **argv)
             }
         }
 
-        // check for timeout
         if(checkForTimeout(timeOfLastReportCheck, timerForReportCheck, structure.flowLastSeen))
         {
             timeOfLastReportCheck = structure.flowLastSeen;
@@ -656,7 +651,7 @@ int main(int argc, char **argv)
 			}
         }
 
-	    // kontrola po odeslani
+	    // post-send state check
 	    TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
 
     } // ***** End of main processing loop *****

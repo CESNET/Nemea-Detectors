@@ -58,13 +58,14 @@
 #include "whitelist.h"
 #include "config.h"
 
-// class TelnetServerProfileMap;
+// class TelnetServerProfileMap
 #include "telnet_server_profile.h"
 
-// TODO Is this relevant?
-// If we don't have a lot of memory use hash
-// #define USE_HASH
-
+// TODO find better place to put this as a global function
+inline bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t newTime)
+{
+	return oldTime + timer <= newTime;
+}
 
 /**
  * Interface for record
@@ -93,7 +94,7 @@ public:
         ur_time_t flowLastSeen;
     };
 
-    // May seem unused, actually are passed to reporting functions
+    // May seem unused, actually are passed to reporting functions TODO why separate from MatchStructure
 	ip_addr_t dstIp{};
 	ur_time_t flowLastSeen{};
 
@@ -165,33 +166,30 @@ public:
     inline uint16_t getTargetsSinceLastReport() { return hashedDstIPSet.size(); }
     inline void clearTargetsSinceLastReport() { hashedDstIPSet.clear(); }
 
-    inline uint16_t getCurrentTargets(); // TODO does this need implementation?
+    inline uint16_t getCurrentTargets(); // TODO never used, investigate
 
     inline uint32_t getTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
     inline void clearTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
     inline void initTotalTargetsSet();
+
+
     std::vector<std::string> getIpsOfVictims();
 
 private:
-    std::list<T> list; // TODO List of what
+    std::list<T> list; // In derived classes implemented like list<SSHRecord*>, stores flow records
     uint16_t maxListSize;
     uint16_t actualListSize;
     uint16_t actualMatchedFlows;
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
 
-    uint32_t flowCounter;
-    uint32_t flowMatchedCounter;
+    // uint32_t flowCounter; // experimental
+    // uint32_t flowMatchedCounter; // experimental
 
-    std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet; // TODO WHAT ARE THOSE?
+    std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;      // TODO WHAT ARE THOSE?
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet; // AND WHY ARE NEITHER EVER USED ANYWHERE ELSE?
 
     char victimIP[46]{};
-
-    static inline bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
-    {
-		return flowTime + timer <= actualTime;
-    }
 };
 
 template <class T>
@@ -199,8 +197,9 @@ RecordList<T>::RecordList()
 {
     actualListSize = 0;
     actualMatchedFlows = 0;
-    flowCounter = 0;
-    flowMatchedCounter = 0;
+
+    // flowCounter = 0; // experimental
+    // flowMatchedCounter = 0; // experimental
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
@@ -247,8 +246,8 @@ void RecordList<T>::clearAllRecords()
 
     actualListSize = 0;
     actualMatchedFlows = 0;
-    flowCounter = 0;
-    flowMatchedCounter = 0;
+    // flowCounter = 0; // experimental
+    // flowMatchedCounter = 0; // experimental
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
@@ -256,11 +255,10 @@ void RecordList<T>::clearAllRecords()
 	clearTargetsSinceLastReport();
 }
 
-
 template <class T>
 void RecordList<T>::addRecord(T record, bool isHostReported)
 {
-    flowCounter++;
+    // flowCounter++; // experimental
     actualListSize++;
 
     if(actualListSize > maxListSize)
@@ -282,7 +280,7 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
 
     if(record->isMatched())
     {
-        flowMatchedCounter++;
+        // flowMatchedCounter++; // experimental
         actualMatchedFlows++;
     }
 
@@ -298,7 +296,7 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
             hashedDstTotalIPSet.insert(record->dstIp);
         }
     }
-    list.push_back(record); // finally push record to a list
+    list.push_back(record);
 }
 
 template <class T>
@@ -314,7 +312,9 @@ void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
             T recToDelete = list.front();
 
             if (recToDelete->isMatched())
-                actualMatchedFlows--;
+			{
+            	actualMatchedFlows--;
+			}
 
             delete recToDelete;
             list.pop_front();
@@ -324,11 +324,19 @@ void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
     maxListSize = newMaxListSize;
 }
 
+/**
+ * @brief Delete records older than Record Timeout (30min by def)
+ *
+ * @tparam T
+ * @param actualTime
+ */
 template <class T>
 void RecordList<T>::clearOldRecords(ur_time_t actualTime)
 {
     if(list.empty())
-        return;
+	{
+    	return;
+	}
 
     T rec = list.front();
     ur_time_t timer = rec->getRecordTimeout();
@@ -338,6 +346,7 @@ void RecordList<T>::clearOldRecords(ur_time_t actualTime)
     while(it != list.end())
     {
         ur_time_t flowTime = (*it)->flowLastSeen;
+
         if (checkForTimeout(flowTime, timer, actualTime))
         {
             if ((*it)->isMatched())
@@ -374,7 +383,7 @@ template<class T>
 uint16_t RecordList<T>::getCurrentTargets()
 {
     std::set<ip_addr_t, cmpByIpAddr> dstIpSet;
-    for(auto it : list)
+    for(const auto & it : list)
     {
 		if(it->isMatched())
         {
@@ -387,7 +396,7 @@ uint16_t RecordList<T>::getCurrentTargets()
 template<class T>
 void RecordList<T>::initTotalTargetsSet()
 {
-    for(auto it : list)
+    for(const auto & it : list)
     {
 		if(it->isMatched())
         {
@@ -402,7 +411,7 @@ std::vector<std::string> RecordList<T>::getIpsOfVictims()
 {
     std::vector<std::string> tmpIpsOfVictims;
 
-    for(auto& it : list)
+    for(const auto& it : list)
     {
         if(it->isMatched())
         {

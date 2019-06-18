@@ -75,7 +75,8 @@ bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction)
 		{
         	recordListOutgoing.addRecord(record, isReported());
 		}
-        return true;
+
+		return true;
     }
 }
 
@@ -104,7 +105,9 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
             else
 			{
-                return SSHHost::NO_ATTACK;
+				cout << std::max(incomingMatched, outgoingMatched) << "< bottomThreshold" << "\n";
+
+				return SSHHost::NO_ATTACK;
             }
         }
         else
@@ -122,8 +125,10 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
             else
 			{
+				cout << topMatchedRatio << "< ratio" << "\n";
                 return SSHHost::NO_ATTACK;
-            }
+
+			}
         }
     }
     else // isReported
@@ -149,6 +154,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
 			auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
 
+			// avoids div by zero
 			double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : incomingMatchedNew / incomingTotalNew);
 			double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : outgoingMatchedNew / outgoingTotalNew);
 
@@ -478,7 +484,9 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 
 void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
 {
+	std::cout << "deleting:" << size(); // DEBUG
 	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
+	std::cout << "," << size() << "\n"; // DEBUG
 }
 
 // ************************************************************/
