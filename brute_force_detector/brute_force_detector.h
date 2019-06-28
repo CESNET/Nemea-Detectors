@@ -102,11 +102,11 @@ public:
 		std::cout << std::endl;
 		std::cout << "  Matched Incoming Flows: " << this->matchedIncomingFlows;
 		printFlowPercent(this->matchedFlows, this->matchedIncomingFlows, " from matched");
-		printFlowPercent(this->flows, this->matchedIncomingFlows, " from all flows");
+		printFlowPercent(this->flows, this->matchedIncomingFlows, " from incoming");
 		std::cout << std::endl;
 		std::cout << "  Matched Outgoing Flows: " << this->matchedOutgoingFlows;
 		printFlowPercent(this->matchedFlows, this->matchedOutgoingFlows, " from matched");
-		printFlowPercent(this->flows, this->matchedOutgoingFlows, " from all flows");
+		printFlowPercent(this->flows, this->matchedOutgoingFlows, " from outgoing");
 		std::cout << std::endl;
 	}
 

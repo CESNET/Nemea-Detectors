@@ -99,11 +99,11 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold())
             {
                 // crossed threshold, new attack detected
-                return SSHHost::NEW_ATTACK;
+                return SSHHost::REPORT_NEW_ATTACK;
             }
             else
 			{
-				cout << std::max(incomingMatched, outgoingMatched) << "< bottomThreshold" << "\n"; // DEBUG
+				// cout << std::max(incomingMatched, outgoingMatched) << "< bottomThreshold" << "\n"; // DEBUG
 
 				return SSHHost::NO_ATTACK;
             }
@@ -117,13 +117,13 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
-                return SSHHost::NEW_ATTACK;
+                return SSHHost::REPORT_NEW_ATTACK;
             }
             else
 			{
 				// cout << incomingMatched << "/" << incomingListSize << "\n";
 				// cout << outgoingMatched << "/" << outgoingListSize	 << "\n";
-				cout << topMatchedRatio << " < ratio" << "\n"; // DEBUG
+				// cout << topMatchedRatio << " < ratio" << "\n"; // DEBUG
                 return SSHHost::NO_ATTACK;
 
 			}
@@ -170,7 +170,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
             if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return SSHHost::ATTACK;
+            	return SSHHost::REPORT_ATTACK;
 			}
             else
 			{
@@ -224,7 +224,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getRDPListThreshold())
             {
                 // crossed threshold, new attack detected
-                return RDPHost::NEW_ATTACK;
+                return RDPHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -240,7 +240,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
-                return RDPHost::NEW_ATTACK;
+                return RDPHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -289,7 +289,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 
             if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return RDPHost::ATTACK;
+            	return RDPHost::REPORT_ATTACK;
 			}
             else
 			{
@@ -343,7 +343,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
             if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getTELNETListThreshold())
             {
                 // crossed threshold, new attack detected
-                return TELNETHost::NEW_ATTACK;
+                return TELNETHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -359,7 +359,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
             {
                 // crossed threshold, new attack detected
-                return TELNETHost::NEW_ATTACK;
+                return TELNETHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -408,7 +408,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 
 			if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return TELNETHost::ATTACK;
+            	return TELNETHost::REPORT_ATTACK;
 			}
 			else
 			{
@@ -473,9 +473,9 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 
 void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
 {
-	std::cout << "deleting:" << size(); // DEBUG
+	// std::cout << "deleting:" << size(); // DEBUG
 	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
-	std::cout << "," << size() << "\n"; // DEBUG
+	// std::cout << "," << size() << "\n"; // DEBUG
 }
 
 // ************************************************************/
