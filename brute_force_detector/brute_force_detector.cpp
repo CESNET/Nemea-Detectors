@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 
 				if(attackState != SSHHost::NO_ATTACK)
                 {
-                    if(attackState == SSHHost::NEW_ATTACK)
+                    if(attackState == SSHHost::REPORT_NEW_ATTACK)
 					{
                     	ret = sender->firstReport(host, TCP_SSH_PORT, structure.flowLastSeen, Config::getInstance().getSSHListThreshold());
 					}
@@ -454,7 +454,7 @@ int main(int argc, char **argv)
                         host->clearAllRecords();
                         host->setNotReported();
                     }
-                    else if(attackState == SSHHost::ATTACK)
+                    else if(attackState == SSHHost::REPORT_ATTACK)
                     {
                         ret = sender->continuingReport(host, TCP_SSH_PORT, structure.flowLastSeen);
                     }
@@ -509,7 +509,7 @@ int main(int argc, char **argv)
                 RDPHost::ATTACK_STATE attackState = host->checkForAttack(structure.flowLastSeen);
                 if(attackState != RDPHost::NO_ATTACK)
                 {
-                    if(attackState == RDPHost::NEW_ATTACK)
+                    if(attackState == RDPHost::REPORT_NEW_ATTACK)
 					{
                     	ret = sender->firstReport(host, TCP_RDP_PORT, structure.flowLastSeen, Config::getInstance().getRDPListThreshold());
 					}
@@ -531,7 +531,7 @@ int main(int argc, char **argv)
                         host->clearAllRecords();
                         host->setNotReported();
                     }
-                    else if(attackState == RDPHost::ATTACK)
+                    else if(attackState == RDPHost::REPORT_ATTACK)
                     {
                         ret = sender->continuingReport(host, TCP_RDP_PORT, structure.flowLastSeen);
                     }
@@ -586,7 +586,7 @@ int main(int argc, char **argv)
                 TELNETHost::ATTACK_STATE attackState = host->checkForAttack(structure.flowLastSeen);
                 if(attackState != TELNETHost::NO_ATTACK)
                 {
-                    if(attackState == TELNETHost::NEW_ATTACK)
+                    if(attackState == TELNETHost::REPORT_NEW_ATTACK)
 					{
                     	ret = sender->firstReport(host, TCP_TELNET_PORT, structure.flowLastSeen, Config::getInstance().getTELNETListThreshold());
 					}
@@ -608,7 +608,7 @@ int main(int argc, char **argv)
                         host->clearAllRecords();
                         host->setNotReported();
                     }
-                    else if(attackState == TELNETHost::ATTACK)
+                    else if(attackState == TELNETHost::REPORT_ATTACK)
                     {
                         ret = sender->continuingReport(host, TCP_TELNET_PORT, structure.flowLastSeen);
                     }

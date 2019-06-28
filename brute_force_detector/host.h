@@ -76,9 +76,9 @@ public:
     virtual ~IHost() = default;
 
     enum ATTACK_STATE { NO_ATTACK,
-    		NEW_ATTACK, 			// send report
+    		REPORT_NEW_ATTACK, 			// send report
     		ATTACK_REPORT_WAIT,
-    		ATTACK,					// send report
+    		REPORT_ATTACK,					// send report
     		ATTACK_MIN_EVENTS_WAIT,
     		END_OF_ATTACK,
     		REPORT_END_OF_ATTACK 	// send report
