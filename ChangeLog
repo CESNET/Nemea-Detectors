@@ -1,3 +1,7 @@
+2019-07-17 nemea-detectors-1.6.1
+	* blacklistfilter: update doc
+	* rpm: remove python34 reference
+
 2019-02-07 nemea-detectors-1.6.0
 	* wai_detection:
 		Add web application injection detector (wai_detector).

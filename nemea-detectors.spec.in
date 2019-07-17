@@ -1,5 +1,5 @@
 %if x%{?python3_pkgversion} == x
-%global python3_pkgversion 3
+%global python3_pkgversion 36
 %endif
 
 Summary: Package with detection modules of the Nemea system
