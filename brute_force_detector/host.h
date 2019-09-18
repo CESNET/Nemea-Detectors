@@ -237,12 +237,12 @@ protected:
     {
 		auto it = c->begin();
 
-        while(it != c->end())
+		while(it != c->end())
         {
-            // if(it->second) // TODO is this change harmless?
-			delete it->second;
-            it++;
+            if(it->second) // TODO harmless to remove this?
+				delete it->second;
 
+            it++;
         }
         c->clear();
     }
@@ -286,9 +286,9 @@ public:
     ~SSHHostMap() = default;
 
     void clear() override
-    {
-        IHostMap::clearMap(&hostMap);
-    }
+	{
+		IHostMap::clearMap(&hostMap);
+	}
     inline uint16_t size() override
     {
         return hostMap.size();
@@ -308,10 +308,10 @@ public:
     RDPHostMap() = default;
     ~RDPHostMap() = default;
 
-    void clear() override
-    {
-        IHostMap::clearMap(&hostMap);
-    }
+	void clear() override
+	{
+		IHostMap::clearMap(&hostMap);
+	}
 
     inline uint16_t size() override
     {
@@ -335,7 +335,7 @@ public:
 
     void clear() override
     {
-        IHostMap::clearMap(&hostMap);
+		IHostMap::clearMap(&hostMap);
     }
 
     inline uint16_t size() override

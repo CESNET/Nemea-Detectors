@@ -473,9 +473,7 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 
 void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
 {
-	// std::cout << "deleting:" << size(); // DEBUG
 	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
-	// std::cout << "," << size() << "\n"; // DEBUG
 }
 
 // ************************************************************/

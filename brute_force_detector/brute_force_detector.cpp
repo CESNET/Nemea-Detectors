@@ -245,7 +245,8 @@ int main(int argc, char **argv)
     if(!RDP && !SSH && !TELNET)
     {
         cerr << "Error: Detection mode is not set.\n";
-        return 3;
+		FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+		return 3;
     }
 
     // ***** Config init *****
@@ -286,7 +287,7 @@ int main(int argc, char **argv)
         free(errstr);
       }
       trap_finalize();
-	  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+	  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
     }
 
@@ -323,7 +324,7 @@ int main(int argc, char **argv)
         // Receive data from input interface (block until data are available)
         const void *data;
         uint16_t data_size;
-        ret = TRAP_RECEIVE(0, data, data_size, tmplt);
+        ret = TRAP_RECEIVE(0, data, data_size, tmplt)
         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
         // Check size of received data
@@ -386,6 +387,7 @@ int main(int argc, char **argv)
         if(SSH && (dstPort == TCP_SSH_PORT || srcPort == TCP_SSH_PORT))
         {
             bool is_matched;
+            bool is_portscan;
             SSHRecord *record;
 
             if(direction == FLOW_INCOMING_DIRECTION)
@@ -398,8 +400,9 @@ int main(int argc, char **argv)
 				}
                 ssh.incomingFlows++;
             }
-            else // FLOW_OUTGOING_DIRECTION
+            else
             {
+				// FLOW_OUTGOING_DIRECTION
                 record = new SSHRecord(structure.srcIp, structure.flowLastSeen);
                 is_matched = record->matchWithOutgoingSignature(&structure, &whitelist);
                 if(is_matched)
@@ -418,9 +421,9 @@ int main(int argc, char **argv)
             // host is the source of current flow/connection
             SSHHost *host = sshHostMap.findHost(&structure, direction);
 
-            is_matched = host->addRecord(record, &structure, direction);
+			is_portscan = host->addRecord(record, &structure, direction);
 
-            if(!is_matched)
+            if(!is_matched || is_portscan)
 			{
             	delete record;
 			}
@@ -466,6 +469,7 @@ int main(int argc, char **argv)
         if(RDP && (dstPort == TCP_RDP_PORT || srcPort == TCP_RDP_PORT))
         {
             bool is_matched;
+            bool is_portscan;
             RDPRecord *record;
 
             if(direction == FLOW_INCOMING_DIRECTION)
@@ -498,8 +502,8 @@ int main(int argc, char **argv)
 
             RDPHost *host = rdpHostMap.findHost(&structure, direction);
 
-            is_matched = host->addRecord(record, &structure, direction);
-            if(!is_matched)
+			is_portscan = host->addRecord(record, &structure, direction);
+            if(!is_matched || is_portscan)
 			{
             	delete record;
 			}
@@ -543,6 +547,7 @@ int main(int argc, char **argv)
         if(TELNET && (dstPort == TCP_TELNET_PORT || srcPort == TCP_TELNET_PORT))
         {
             bool is_matched;
+            bool is_portscan;
             TELNETRecord *record;
 
             if(direction == FLOW_INCOMING_DIRECTION)
@@ -575,8 +580,8 @@ int main(int argc, char **argv)
 
             TELNETHost *host = telnetHostMap.findHost(&structure, direction);
 
-            is_matched = host->addRecord(record, &structure, direction);
-            if(!is_matched)
+			is_portscan = host->addRecord(record, &structure, direction);
+            if(!is_matched || is_portscan)
 			{
             	delete record;
 			}
@@ -633,6 +638,7 @@ int main(int argc, char **argv)
             	telnetHostMap.checkForAttackTimeout(structure.flowLastSeen, sender);
 			}
         }
+
         if(checkForTimeout(timeOfLastDeleteCheck, timerForDeleteCheck, structure.flowLastSeen))
         {
             timeOfLastDeleteCheck = structure.flowLastSeen;
@@ -656,11 +662,14 @@ int main(int argc, char **argv)
 
     } // ***** End of main processing loop *****
 
+
+
     // TODO how to pass Host Map base class to printLogInfo
     if(SSH)
     {
 		ssh.printLogInfo();
 		std::cout << "  Host Map Size: " << sshHostMap.size() << std::endl;
+
 		sshHostMap.clear();
     }
     if(RDP)
@@ -676,7 +685,8 @@ int main(int argc, char **argv)
 	    telnetHostMap.clear();
     }
 
-    TRAP_DEFAULT_FINALIZATION();
+
+	TRAP_DEFAULT_FINALIZATION();
     ur_free_template(tmplt);
     ur_finalize();
     delete sender; // free output template

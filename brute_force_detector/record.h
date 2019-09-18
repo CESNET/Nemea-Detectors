@@ -175,7 +175,6 @@ private:
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
 
-
     char victimIP[46]{};
 };
 
