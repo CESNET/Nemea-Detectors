@@ -92,7 +92,6 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-
         // Number of records in list is lower than BottomSize (50 by default)
         if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
         {
@@ -105,8 +104,6 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
             else
 			{
-				cout << std::max(incomingMatched, outgoingMatched) << "< bottomThreshold" << "\n"; // DEBUG
-
 				return SSHHost::NO_ATTACK;
             }
         }
@@ -125,11 +122,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
             }
             else
 			{
-				// cout << incomingMatched << "/" << incomingListSize << "\n";
-				// cout << outgoingMatched << "/" << outgoingListSize	 << "\n";
-				cout << topMatchedRatio << " < ratio" << "\n"; // DEBUG
                 return SSHHost::NO_ATTACK;
-
 			}
         }
     }
@@ -485,9 +478,7 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 
 void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
 {
-	std::cerr << "deleting:" << hostMap.size(); // DEBUG
 	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
-	std::cerr << "," << size() << "\n"; // DEBUG
 }
 
 // ************************************************************/

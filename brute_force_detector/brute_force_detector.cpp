@@ -172,7 +172,6 @@ void printFlowPercent(uint64_t b, uint64_t p, const std::string& comment /* opti
 
 int main(int argc, char **argv)
 {
-	// getc(stdin); /// DEBUG
     // ***** TRAP initialization *****
     int ret;
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -421,9 +420,9 @@ int main(int argc, char **argv)
             // host is the source of current flow/connection
             SSHHost *host = sshHostMap.findHost(&structure, direction);
 
-			is_portscan = host->addRecord(record, &structure, direction);
+			is_portscan = !host->addRecord(record, &structure, direction);
 
-            if(!is_matched || is_portscan)
+            if(is_portscan)
 			{
             	delete record;
 			}
@@ -502,8 +501,8 @@ int main(int argc, char **argv)
 
             RDPHost *host = rdpHostMap.findHost(&structure, direction);
 
-			is_portscan = host->addRecord(record, &structure, direction);
-            if(!is_matched || is_portscan)
+			is_portscan = !host->addRecord(record, &structure, direction);
+            if(is_portscan)
 			{
             	delete record;
 			}
@@ -580,8 +579,8 @@ int main(int argc, char **argv)
 
             TELNETHost *host = telnetHostMap.findHost(&structure, direction);
 
-			is_portscan = host->addRecord(record, &structure, direction);
-            if(!is_matched || is_portscan)
+			is_portscan = !host->addRecord(record, &structure, direction);
+            if(is_portscan)
 			{
             	delete record;
 			}
