@@ -88,7 +88,7 @@ public:
             return TRAP_E_OK;
         }
 
-        //TODO test if output correct
+        // TODO test if output correct
 		uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
 		uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
