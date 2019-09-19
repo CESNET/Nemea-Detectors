@@ -101,7 +101,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return SSHHost::NEW_ATTACK;
+                return SSHHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -121,7 +121,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return SSHHost::NEW_ATTACK;
+                return SSHHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -174,7 +174,7 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 
             if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return SSHHost::ATTACK;
+            	return SSHHost::REPORT_ATTACK;
 			}
             else
 			{
@@ -230,7 +230,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return RDPHost::NEW_ATTACK;
+                return RDPHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -248,7 +248,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return RDPHost::NEW_ATTACK;
+                return RDPHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -297,7 +297,7 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 
             if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return RDPHost::ATTACK;
+            	return RDPHost::REPORT_ATTACK;
 			}
             else
 			{
@@ -353,7 +353,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return TELNETHost::NEW_ATTACK;
+                return TELNETHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -371,7 +371,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
                 // crossed threshold, new attack detected
 				recordListIncoming.initTotalTargetsSet();
 				recordListOutgoing.initTotalTargetsSet();
-                return TELNETHost::NEW_ATTACK;
+                return TELNETHost::REPORT_NEW_ATTACK;
             }
             else
 			{
@@ -420,7 +420,7 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 
 			if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
 			{
-            	return TELNETHost::ATTACK;
+            	return TELNETHost::REPORT_ATTACK;
 			}
 			else
 			{
@@ -485,9 +485,9 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
 
 void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
 {
-	std::cout << "deleting:" << size(); // DEBUG
+	std::cerr << "deleting:" << hostMap.size(); // DEBUG
 	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
-	std::cout << "," << size() << "\n"; // DEBUG
+	std::cerr << "," << size() << "\n"; // DEBUG
 }
 
 // ************************************************************/
