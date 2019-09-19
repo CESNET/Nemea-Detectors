@@ -187,8 +187,9 @@ private:
 	uint32_t flowCounter;
 	uint32_t flowMatchedCounter;
 
-	std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;      // TODO WHAT ARE THOSE?
-	std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet; // AND WHY ARE NEITHER EVER USED ANYWHERE ELSE?
+	// These keep track of all IPs, even after the host becomes inactive, for output log
+	std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
+	std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
     char victimIP[46]{};
 };
@@ -199,11 +200,11 @@ RecordList<T>::RecordList()
     actualListSize = 0;
     actualMatchedFlows = 0;
 
-	flowCounter = 0;
-	flowMatchedCounter = 0;
-
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
+
+	flowCounter = 0;
+	flowMatchedCounter = 0;
 
     if(typeid(T) == typeid(SSHRecord*))
 	{
@@ -251,7 +252,7 @@ void RecordList<T>::clearAllRecords()
 	flowCounter = 0;
 	flowMatchedCounter = 0;
 
-    matchedFlowsSinceLastReport = 0;
+	matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
 }
 
@@ -259,9 +260,9 @@ template <class T>
 void RecordList<T>::addRecord(T record, bool isHostReported)
 {
     actualListSize++;
-    flowCounter++;
+	flowCounter++;
 
-    if(actualListSize > maxListSize)
+	if(actualListSize > maxListSize)
     {
     	// list is full
         // delete first record
@@ -281,8 +282,8 @@ void RecordList<T>::addRecord(T record, bool isHostReported)
     if(record->isMatched())
     {
         actualMatchedFlows++;
-        flowMatchedCounter++;
-    }
+		flowMatchedCounter++;
+	}
 
     if(isHostReported)
     {
