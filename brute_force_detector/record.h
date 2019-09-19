@@ -94,7 +94,7 @@ public:
         ur_time_t flowLastSeen;
     };
 
-    // May seem unused, actually are passed to reporting functions TODO why separate from MatchStructure
+    // May seem unused, actually are passed to reporting functions
 	ip_addr_t dstIp{};
 	ur_time_t flowLastSeen{};
 
@@ -124,7 +124,7 @@ public:
     bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
     ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
 
-    const static uint8_t signatureFlags = 0b00011010; 			   // SYN + ACK + PSH
+    const static uint8_t signatureFlags = 			   0b00011010; // SYN + ACK + PSH
     const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
     const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; // SYN + ACK + PSH
 };

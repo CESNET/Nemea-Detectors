@@ -668,7 +668,6 @@ int main(int argc, char **argv)
     {
 		ssh.printLogInfo();
 		std::cout << "  Host Map Size: " << sshHostMap.size() << std::endl;
-
 		sshHostMap.clear();
     }
     if(RDP)
@@ -683,7 +682,6 @@ int main(int argc, char **argv)
 		std::cout << "  Host Map Size: " << telnetHostMap.size() << std::endl;
 	    telnetHostMap.clear();
     }
-
 
 	TRAP_DEFAULT_FINALIZATION();
     ur_free_template(tmplt);

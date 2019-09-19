@@ -160,10 +160,10 @@ bool Whitelist::isWhitelisted(const ip_addr_t *srcIp, const ip_addr_t *dstIp, ui
 {
    locked = true;
    bool found = false;
-	
+
    if (ip_is4(srcIp)) {
-      //ipv4
-      //check src addr first
+      // ipv4
+      // check src addr first
       found = trieSearch(ipv4Src, (uint8_t*) srcIp + 8, 4, srcPort);
       if (found) {
          locked = false;
@@ -175,15 +175,15 @@ bool Whitelist::isWhitelisted(const ip_addr_t *srcIp, const ip_addr_t *dstIp, ui
          locked = false;
          return true;
       }
-   } else {        //ipv6
-      //check src addr first
+   } else {        // ipv6
+      // check src addr first
       found = trieSearch(ipv6Src, (uint8_t*) srcIp, 6, srcPort);
       if (found) {
          locked = false;
          return true;
       }
 
-      //check dst addr
+      // check dst addr
       found = trieSearch(ipv6Dst, (uint8_t*) dstIp, 6, dstPort);
       if (found) {
          locked = false;
@@ -202,9 +202,9 @@ bool Whitelist::trieSearch(IPTrie *ipTrie, uint8_t *ip, uint8_t ipType, uint16_t
 
    for (int i = 0; i < iRange; i++) {
       for (int u = 7; u >= 0; u--) {
-         //change last known node
+         // change last known node
          if (currentNode->set) {
-            //vsechny porty
+            // vsechny porty
             if (currentNode->allPorts) {
                return true;
             }
@@ -215,10 +215,10 @@ bool Whitelist::trieSearch(IPTrie *ipTrie, uint8_t *ip, uint8_t ipType, uint16_t
             }
          }
 
-         //search right
+         // search right
          if (((ip[i] >> u) & 1) > 0) {
             currentNode = currentNode->right;
-         } else { //search left
+         } else { // search left
             currentNode = currentNode->left;
          }
 
@@ -283,15 +283,15 @@ void WhitelistParser::parse(ifstream *ifs, bool verboseMode)
 
       if (line[0] == WHITELIST_PARSER_COMMENT_DELIM) { // skip comment line
          continue;
-      } 
+      }
 
-      //substring before comment delim if exists
+      // substring before comment delim if exists
       size_t pos = line.find_first_of(WHITELIST_PARSER_COMMENT_DELIM);
       if (pos != string::npos) {
          line = line.substr(0, pos);
       }
 
-      //now check for src or dst direction
+      // now check for src or dst direction
       if (line.size() < 4) {
          if(verbose) {
             cout << "Invalid line: " << line << endl;
@@ -312,13 +312,13 @@ void WhitelistParser::parse(ifstream *ifs, bool verboseMode)
          direction = WHITELIST_PARSER_IP_DIRECTION_ALL;
       }
 
-      //now ip check parse
+      // now ip check parse
       pos = line.find_first_of(WHITELIST_PARSER_PREFIX_DELIM);
       if (pos != string::npos) {
          string ipstring = line.substr(0, pos);
          ip_addr_t ip;
          if (ip_from_str(ipstring.c_str(), &ip)) {
-            //ip ok, now parse prefix and ports
+            // ip ok, now parse prefix and ports
             string prefixAndPorts = line.substr(pos + 1);
             if (!prefixAndPorts.empty()) {
                if (verbose) {
@@ -330,7 +330,7 @@ void WhitelistParser::parse(ifstream *ifs, bool verboseMode)
                if (pos != string::npos) {
                   string prefixStr = prefixAndPorts.substr(0, pos);
                   int prefix = atoi(prefixStr.c_str());
-                  //get ports now
+                  // get ports now
                   ports = prefixAndPorts.substr(pos + 1);
                   if (ports.empty()) {
                      if (verbose) {
@@ -340,10 +340,10 @@ void WhitelistParser::parse(ifstream *ifs, bool verboseMode)
                      if (!checkPrefixAndPortsAndAdd(ip, direction, prefix, ports)) {
                         if (verbose) {
                            cout << "Invalid line: " << line << endl;
-                        }       
+                        }
                      }
                   }
-               } else { //??? mtva vezev?
+               } else { // ??? mtva vezev?
                   int prefix = atoi(prefixAndPorts.c_str());
                   if (!checkPrefixAndPortsAndAdd(ip, direction, prefix, ports)) {
                      if (verbose) {
@@ -354,7 +354,7 @@ void WhitelistParser::parse(ifstream *ifs, bool verboseMode)
             } else if (verbose) {
                cout << "Invalid line: " << line << endl;
             }
-         } else if (verbose) {   //invalid ip
+         } else if (verbose) {   // invalid ip
             cout << "Invalid line: " << line << endl;
          }
       } else if (verbose) {
@@ -387,16 +387,16 @@ void WhitelistParser::prepareAddIPAndPorts(ip_addr_t &addr, uint8_t direction, u
          addIPAndSelectedPorts((uint8_t*) &addr + 8, prefix, ipv4Dst, ports);
       } else if (direction == WHITELIST_PARSER_IP_DIRECTION_SRC) {
          addIPAndSelectedPorts((uint8_t*) &addr + 8, prefix, ipv4Src, ports);
-      } else { //direction == WHITELIST_PARSER_IP_DIRECTION_DST
+      } else { // direction == WHITELIST_PARSER_IP_DIRECTION_DST
          addIPAndSelectedPorts((uint8_t*) &addr + 8, prefix, ipv4Dst, ports);
       }
-   } else { //ipv6
+   } else { // ipv6
       if (direction == WHITELIST_PARSER_IP_DIRECTION_ALL) {
          addIPAndSelectedPorts((uint8_t*) &addr, prefix, ipv6Src, ports);
          addIPAndSelectedPorts((uint8_t*) &addr, prefix, ipv6Dst, ports);
       } else if (direction == WHITELIST_PARSER_IP_DIRECTION_SRC) {
          addIPAndSelectedPorts((uint8_t*) &addr, prefix, ipv6Src, ports);
-      } else { //direction == WHITELIST_PARSER_IP_DIRECTION_DST
+      } else { // direction == WHITELIST_PARSER_IP_DIRECTION_DST
          addIPAndSelectedPorts((uint8_t*) &addr, prefix, ipv6Dst, ports);
       }
    }
@@ -417,7 +417,7 @@ void WhitelistParser::addPorts(IPTrie *currentNode, string ports)
       ports = ports.substr(pos + 1);
 
       pos = portString.find_first_of(WHITELIST_PARSER_PORT_RANGE_DELIM);
-      if (pos != string::npos) { //range
+      if (pos != string::npos) { // range
          string firstStringPort = portString.substr(0, pos);
          string secondStringPort = portString.substr(pos + 1);
          if (secondStringPort.empty()) {
@@ -436,7 +436,7 @@ void WhitelistParser::addPorts(IPTrie *currentNode, string ports)
          if (verbose) {
             cout << "Adding port range " << portString << endl;
          }
-      } else { //single port
+      } else { // single port
          uint16_t port = atoi(portString.c_str());
          whitelistedPorts->addSinglePort(port);
          if(verbose) {
@@ -447,7 +447,7 @@ void WhitelistParser::addPorts(IPTrie *currentNode, string ports)
       addPorts(currentNode, ports);
    } else {
       pos = ports.find_first_of(WHITELIST_PARSER_PORT_RANGE_DELIM);
-      if (pos != string::npos) { //range
+      if (pos != string::npos) { // range
          string firstStringPort = ports.substr(0, pos);
          string secondStringPort = ports.substr(pos + 1);
          if (secondStringPort.empty()) {
@@ -467,7 +467,7 @@ void WhitelistParser::addPorts(IPTrie *currentNode, string ports)
          if (verbose) {
             cout << "Adding port range " << ports << endl;
          }
-      } else { //single port
+      } else { // single port
          uint16_t port = atoi(ports.c_str());
          whitelistedPorts->addSinglePort(port);
          if (verbose) {
@@ -481,22 +481,22 @@ void WhitelistParser::addIPAndSelectedPorts(uint8_t *ip, uint8_t prefix, IPTrie 
 {
    IPTrie *currentNode = trie;
    for (int i = 0; i < prefix; i++) {
-        //bitset go right
+        // bitset go right
       if (((ip[i / 8] >> (7 - i % 8)) & 1) > 0) {
          if (currentNode->right == NULL) {
             currentNode->right = new IPTrie();
          }
-         //next
+         // next
          currentNode = currentNode->right;
-      } else { //go left
+      } else { // go left
          if (currentNode->left == NULL) {
             currentNode->left = new IPTrie();
          }
-         //next
+         // next
          currentNode = currentNode->left;
       }
 
-      if ((i + 1) == prefix) { //last pos
+      if ((i + 1) == prefix) { // last pos
          if(currentNode->whitelistedPorts == NULL) {
             currentNode->whitelistedPorts = new WhitelistedPorts;
          }
@@ -504,14 +504,14 @@ void WhitelistParser::addIPAndSelectedPorts(uint8_t *ip, uint8_t prefix, IPTrie 
          if (ports.empty()) {
             currentNode->allPorts = true;
          } else {
-            addPorts(currentNode, ports);   
+            addPorts(currentNode, ports);
          }
-         
+
          currentNode->set = true;
          rulesCounter++;
       }
    }
-   //prefix 0
+   // prefix 0
    if (prefix == 0) {
       if (currentNode->whitelistedPorts == NULL) {
          currentNode->whitelistedPorts = new WhitelistedPorts;
@@ -520,7 +520,7 @@ void WhitelistParser::addIPAndSelectedPorts(uint8_t *ip, uint8_t prefix, IPTrie 
       if (ports.empty()) {
          currentNode->allPorts = true;
       } else {
-         addPorts(currentNode, ports);   
+         addPorts(currentNode, ports);
       }
 
       currentNode->set = true;
