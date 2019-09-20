@@ -106,7 +106,7 @@ UR_FIELDS(
 
 /* ************************************************************************* */
 // Struct with information about module
-trap_module_info_t *module_info = nullptr;
+trap_module_info_t *module_info = NULL;
 
 
 #define MODULE_BASIC_INFO(BASIC) \
@@ -130,18 +130,23 @@ void signalHandler(int signal) {
     if (signal == SIGTERM || signal == SIGINT) {
         stop = 1;
         trap_terminate();
-    } else if (signal == SIGUSR1) {
+    }
+    else if (signal == SIGUSR1) {
         Config::getInstance().reloadConfig();
-    } else if (signal == SIGUSR2) {
+    }
+    else if (signal == SIGUSR2) {
         if (!whitelist.isLockedForConfigurationReload()) {
             whitelist.reloadWhitelist();
-        } else {
+        }
+        else {
             alarm(1); // cannot reload now.. wait
         }
-    } else if (signal == SIGALRM) {
+    }
+    else if (signal == SIGALRM) {
         if (!whitelist.isLockedForConfigurationReload()) {
             whitelist.reloadWhitelist();
-        } else {
+        }
+        else {
             alarm(1); // wait another second
         }
     }
@@ -167,6 +172,7 @@ printFlowPercent(uint64_t b, uint64_t p, const std::string &comment /* optional,
 
 
 int main(int argc, char **argv) {
+    getc(stdin);
     // ***** TRAP initialization *****
     int ret;
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -188,11 +194,11 @@ int main(int argc, char **argv) {
     sigaddset(&sigAction.sa_mask, SIGALRM);
 
     // register signal handler
-    sigaction (SIGTERM, &sigAction, nullptr);
-    sigaction (SIGINT , &sigAction, nullptr);
-    sigaction (SIGUSR1, &sigAction, nullptr);
-    sigaction (SIGUSR2, &sigAction, nullptr);
-    sigaction (SIGALRM, &sigAction, nullptr);
+    sigaction (SIGTERM, &sigAction, NULL);
+    sigaction (SIGINT , &sigAction, NULL);
+    sigaction (SIGUSR1, &sigAction, NULL);
+    sigaction (SIGUSR2, &sigAction, NULL);
+    sigaction (SIGALRM, &sigAction, NULL);
 #else
     signal(SIGTERM, signalHandler);
     signal(SIGINT, signalHandler);
@@ -203,8 +209,8 @@ int main(int argc, char **argv) {
 
     // ***** Parsing non TRAP arguments *****
     signed char opt;
-    char *configFilePath = nullptr;
-    char *whitelistFilePath = nullptr;
+    char *configFilePath = NULL;
+    char *whitelistFilePath = NULL;
     bool whitelistParserVerbose = false;
     bool RDP = false, SSH = false, TELNET = false;
     while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -241,7 +247,7 @@ int main(int argc, char **argv) {
     }
 
     // ***** Config init *****
-    if (configFilePath != nullptr) {
+    if (configFilePath != NULL) {
         bool state = Config::getInstance().initFromFile(configFilePath);
         if (!state) {
             cerr << "Error: Cannot open configuration file \"" << configFilePath << "\".\n";
@@ -251,7 +257,7 @@ int main(int argc, char **argv) {
     }
 
     // ***** Whitelist init *****
-    if (whitelistFilePath != nullptr) {
+    if (whitelistFilePath != NULL) {
         bool state = whitelist.init(whitelistFilePath, whitelistParserVerbose);
         if (!state) {
             cerr << "Error: Cannot open whitelist file.\n";
@@ -263,11 +269,11 @@ int main(int argc, char **argv) {
     // ***** Create UniRec template for input *****
     std::string unirecSpecifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS";
 
-    char *errstr = nullptr;
+    char *errstr = NULL;
     ur_template_t *tmplt = ur_create_input_template(0, unirecSpecifier.c_str(), &errstr);
-    if (tmplt == nullptr) {
+    if (tmplt == NULL) {
         cerr << "Error: Invalid UniRec specifier." << endl;
-        if (errstr != nullptr) {
+        if (errstr != NULL) {
             fprintf(stderr, "%s\n", errstr);
             free(errstr);
         }
@@ -279,7 +285,7 @@ int main(int argc, char **argv) {
     // ***** Init UniRec template for sender *****
 
     bool senderState;
-    auto sender = new Sender(&senderState);
+    Sender *sender = new Sender(&senderState);
     if (!senderState) {
         cerr << "Error: Invalid output UniRec specifier. Check sender.cpp file.\n";
         delete sender;
@@ -314,7 +320,8 @@ int main(int argc, char **argv) {
         if (data_size < ur_rec_fixlen_size(tmplt)) {
             if (data_size <= 1) {
                 break; // End of data (used for testing purposes)
-            } else {
+            }
+            else {
                 cerr << "Error: data with wrong size received (expected size: >= "
                      << ur_rec_fixlen_size(tmplt) << ", received size: "
                      << data_size << ")\n";
@@ -338,7 +345,8 @@ int main(int argc, char **argv) {
         uint8_t direction;
         if (dstPort == TCP_SSH_PORT || dstPort == TCP_TELNET_PORT || dstPort == TCP_RDP_PORT) {
             direction = FLOW_INCOMING_DIRECTION;
-        } else {
+        }
+        else {
             direction = FLOW_OUTGOING_DIRECTION;
         }
 
@@ -351,8 +359,8 @@ int main(int argc, char **argv) {
                 .dstIp   = ur_get(tmplt, data, F_DST_IP),
                 .srcPort = srcPort,
                 .dstPort = dstPort,
-                .flowFirstSeen = ur_get(tmplt, data, F_TIME_FIRST),
-                .flowLastSeen  = ur_get(tmplt, data, F_TIME_LAST),
+                .firstSeen = ur_get(tmplt, data, F_TIME_FIRST),
+                .lastSeen  = ur_get(tmplt, data, F_TIME_LAST),
         };
 
         ret = 0;
@@ -364,15 +372,16 @@ int main(int argc, char **argv) {
             SSHRecord *record;
 
             if (direction == FLOW_INCOMING_DIRECTION) {
-                record = new SSHRecord(flow.dstIp, flow.flowLastSeen);
+                record = new SSHRecord(flow.dstIp, flow.lastSeen);
                 is_matched = record->matchWithIncomingSignature(&flow, &whitelist);
                 if (is_matched) {
                     ssh.matchedIncomingFlows++;
                 }
                 ssh.incomingFlows++;
-            } else {
+            }
+            else {
                 // FLOW_OUTGOING_DIRECTION
-                record = new SSHRecord(flow.srcIp, flow.flowLastSeen);
+                record = new SSHRecord(flow.srcIp, flow.lastSeen);
                 is_matched = record->matchWithOutgoingSignature(&flow, &whitelist);
                 if (is_matched) {
                     ssh.matchedOutgoingFlows++;
@@ -392,30 +401,35 @@ int main(int argc, char **argv) {
 
             if (is_portscan) {
                 delete record;
-            } else {
+            }
+            else {
                 // check for attack
-                auto attackState = host->checkForAttack(flow.flowLastSeen);
+                SSHHost::ATTACK_STATE attackState = host->checkForAttack(flow.lastSeen);
 
                 if (attackState != SSHHost::NO_ATTACK) {
                     if (attackState == SSHHost::REPORT_NEW_ATTACK) {
-                        ret = sender->firstReport(host, TCP_SSH_PORT, flow.flowLastSeen,
-                                                  Config::getInstance().getSSHListThreshold());
-                    } else if (attackState == SSHHost::ATTACK_REPORT_WAIT ||
-                               attackState == SSHHost::ATTACK_MIN_EVENTS_WAIT) {
+                        ret = sender->firstReport(host, TCP_SSH_PORT, flow.lastSeen,
+                                                  Config::getInstance().getSSHFlowThreshold());
+                    }
+                    else if (attackState == SSHHost::ATTACK_REPORT_WAIT ||
+                             attackState == SSHHost::ATTACK_MIN_EVENTS_WAIT) {
                         // waiting for report timeout or min events to report
                         // no action
-                    } else if (attackState == SSHHost::END_OF_ATTACK) {
+                    }
+                    else if (attackState == SSHHost::END_OF_ATTACK) {
                         // clear list
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == SSHHost::REPORT_END_OF_ATTACK) {
+                    }
+                    else if (attackState == SSHHost::REPORT_END_OF_ATTACK) {
                         // report and clear list
-                        ret = sender->continuingReport(host, TCP_SSH_PORT, flow.flowLastSeen, true);
+                        ret = sender->continuingReport(host, TCP_SSH_PORT, flow.lastSeen, true);
 
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == SSHHost::REPORT_ATTACK) {
-                        ret = sender->continuingReport(host, TCP_SSH_PORT, flow.flowLastSeen);
+                    }
+                    else if (attackState == SSHHost::REPORT_ATTACK) {
+                        ret = sender->continuingReport(host, TCP_SSH_PORT, flow.lastSeen);
                     }
                 }
             }
@@ -428,15 +442,16 @@ int main(int argc, char **argv) {
             RDPRecord *record;
 
             if (direction == FLOW_INCOMING_DIRECTION) {
-                record = new RDPRecord(flow.dstIp, flow.flowLastSeen);
+                record = new RDPRecord(flow.dstIp, flow.lastSeen);
                 is_matched = record->matchWithIncomingSignature(&flow, &whitelist);
                 if (is_matched) {
                     rdp.matchedIncomingFlows++;
                 }
                 rdp.incomingFlows++;
-            } else {
+            }
+            else {
                 // FLOW_OUTGOING_DIRECTION
-                record = new RDPRecord(flow.srcIp, flow.flowLastSeen);
+                record = new RDPRecord(flow.srcIp, flow.lastSeen);
                 is_matched = record->matchWithOutgoingSignature(&flow, &whitelist);
                 if (is_matched) {
                     rdp.matchedOutgoingFlows++;
@@ -454,28 +469,33 @@ int main(int argc, char **argv) {
             is_portscan = !host->addRecord(record, &flow, direction);
             if (is_portscan) {
                 delete record;
-            } else {
+            }
+            else {
                 // check for attack
-                RDPHost::ATTACK_STATE attackState = host->checkForAttack(flow.flowLastSeen);
+                RDPHost::ATTACK_STATE attackState = host->checkForAttack(flow.lastSeen);
                 if (attackState != RDPHost::NO_ATTACK) {
                     if (attackState == RDPHost::REPORT_NEW_ATTACK) {
-                        ret = sender->firstReport(host, TCP_RDP_PORT, flow.flowLastSeen,
-                                                  Config::getInstance().getRDPListThreshold());
-                    } else if (attackState == RDPHost::ATTACK_REPORT_WAIT ||
-                               attackState == RDPHost::ATTACK_MIN_EVENTS_WAIT) {
+                        ret = sender->firstReport(host, TCP_RDP_PORT, flow.lastSeen,
+                                                  Config::getInstance().getRDPFlowThreshold());
+                    }
+                    else if (attackState == RDPHost::ATTACK_REPORT_WAIT ||
+                             attackState == RDPHost::ATTACK_MIN_EVENTS_WAIT) {
                         // waiting for report timeout or min events to report
                         // no action
-                    } else if (attackState == RDPHost::END_OF_ATTACK) {
+                    }
+                    else if (attackState == RDPHost::END_OF_ATTACK) {
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == RDPHost::REPORT_END_OF_ATTACK) {
+                    }
+                    else if (attackState == RDPHost::REPORT_END_OF_ATTACK) {
                         // report and clear list
-                        ret = sender->continuingReport(host, TCP_RDP_PORT, flow.flowLastSeen, true);
+                        ret = sender->continuingReport(host, TCP_RDP_PORT, flow.lastSeen, true);
 
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == RDPHost::REPORT_ATTACK) {
-                        ret = sender->continuingReport(host, TCP_RDP_PORT, flow.flowLastSeen);
+                    }
+                    else if (attackState == RDPHost::REPORT_ATTACK) {
+                        ret = sender->continuingReport(host, TCP_RDP_PORT, flow.lastSeen);
                     }
                 }
             }
@@ -488,15 +508,16 @@ int main(int argc, char **argv) {
             TELNETRecord *record;
 
             if (direction == FLOW_INCOMING_DIRECTION) {
-                record = new TELNETRecord(flow.dstIp, flow.flowLastSeen);
+                record = new TELNETRecord(flow.dstIp, flow.lastSeen);
                 is_matched = record->matchWithIncomingSignature(&flow, &whitelist);
                 if (is_matched) {
                     telnet.matchedIncomingFlows++;
                 }
                 telnet.incomingFlows++;
-            } else {
+            }
+            else {
                 // FLOW_OUTGOING_DIRECTION
-                record = new TELNETRecord(flow.srcIp, flow.flowLastSeen);
+                record = new TELNETRecord(flow.srcIp, flow.lastSeen);
                 is_matched = record->matchWithOutgoingSignature(&flow, &whitelist);
                 if (is_matched) {
                     telnet.matchedOutgoingFlows++;
@@ -514,58 +535,63 @@ int main(int argc, char **argv) {
             is_portscan = !host->addRecord(record, &flow, direction);
             if (is_portscan) {
                 delete record;
-            } else {
+            }
+            else {
                 // check for attack
-                TELNETHost::ATTACK_STATE attackState = host->checkForAttack(flow.flowLastSeen);
+                TELNETHost::ATTACK_STATE attackState = host->checkForAttack(flow.lastSeen);
                 if (attackState != TELNETHost::NO_ATTACK) {
                     if (attackState == TELNETHost::REPORT_NEW_ATTACK) {
-                        ret = sender->firstReport(host, TCP_TELNET_PORT, flow.flowLastSeen,
-                                                  Config::getInstance().getTELNETListThreshold());
-                    } else if (attackState == TELNETHost::ATTACK_REPORT_WAIT ||
-                               attackState == TELNETHost::ATTACK_MIN_EVENTS_WAIT) {
+                        ret = sender->firstReport(host, TCP_TELNET_PORT, flow.lastSeen,
+                                                  Config::getInstance().getTELNETFlowThreshold());
+                    }
+                    else if (attackState == TELNETHost::ATTACK_REPORT_WAIT ||
+                             attackState == TELNETHost::ATTACK_MIN_EVENTS_WAIT) {
                         // waiting for report timeout or min events to report
                         // no action
-                    } else if (attackState == TELNETHost::END_OF_ATTACK) {
+                    }
+                    else if (attackState == TELNETHost::END_OF_ATTACK) {
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == TELNETHost::REPORT_END_OF_ATTACK) {
+                    }
+                    else if (attackState == TELNETHost::REPORT_END_OF_ATTACK) {
                         // report and clear list
-                        ret = sender->continuingReport(host, TCP_TELNET_PORT, flow.flowLastSeen, true);
+                        ret = sender->continuingReport(host, TCP_TELNET_PORT, flow.lastSeen, true);
 
                         host->clearAllRecords();
                         host->setNotReported();
-                    } else if (attackState == TELNETHost::REPORT_ATTACK) {
-                        ret = sender->continuingReport(host, TCP_TELNET_PORT, flow.flowLastSeen);
+                    }
+                    else if (attackState == TELNETHost::REPORT_ATTACK) {
+                        ret = sender->continuingReport(host, TCP_TELNET_PORT, flow.lastSeen);
                     }
                 }
             }
         }
 
-        if (checkForTimeout(timeOfLastReportCheck, timerForReportCheck, flow.flowLastSeen)) {
-            timeOfLastReportCheck = flow.flowLastSeen;
+        if (checkForTimeout(timeOfLastReportCheck, timerForReportCheck, flow.lastSeen)) {
+            timeOfLastReportCheck = flow.lastSeen;
 
             if (SSH) {
-                sshHostMap.checkForAttackTimeout(flow.flowLastSeen, sender);
+                sshHostMap.checkForAttackTimeout(flow.lastSeen, sender);
             }
             if (RDP) {
-                rdpHostMap.checkForAttackTimeout(flow.flowLastSeen, sender);
+                rdpHostMap.checkForAttackTimeout(flow.lastSeen, sender);
             }
             if (TELNET) {
-                telnetHostMap.checkForAttackTimeout(flow.flowLastSeen, sender);
+                telnetHostMap.checkForAttackTimeout(flow.lastSeen, sender);
             }
         }
 
-        if (checkForTimeout(timeOfLastDeleteCheck, timerForDeleteCheck, flow.flowLastSeen)) {
-            timeOfLastDeleteCheck = flow.flowLastSeen;
+        if (checkForTimeout(timeOfLastDeleteCheck, timerForDeleteCheck, flow.lastSeen)) {
+            timeOfLastDeleteCheck = flow.lastSeen;
 
             if (SSH) {
-                sshHostMap.deleteOldRecordAndHosts(flow.flowLastSeen);
+                sshHostMap.deleteOldRecordAndHosts(flow.lastSeen);
             }
             if (RDP) {
-                rdpHostMap.deleteOldRecordAndHosts(flow.flowLastSeen);
+                rdpHostMap.deleteOldRecordAndHosts(flow.lastSeen);
             }
             if (TELNET) {
-                telnetHostMap.deleteOldRecordAndHosts(flow.flowLastSeen);
+                telnetHostMap.deleteOldRecordAndHosts(flow.lastSeen);
             }
         }
 

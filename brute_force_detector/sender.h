@@ -64,6 +64,7 @@ extern "C" {
 #endif // __cplusplus
 
 #include <unirec/unirec.h>
+
 using namespace std;
 
 // WARDEN_TYPE
@@ -72,45 +73,41 @@ using namespace std;
 /**
  * @desc Class for handling output messages
  */
-class Sender
-{
+class Sender {
 public:
     explicit Sender(bool *success);
+
     ~Sender();
 
-    template <class Host>
-    int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold)
-    {
-        if(Config::getInstance().getGlobalIgnoreFirstSend())
-        {
-        	// Ignore first report
+    template<class Host>
+    int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold) {
+        if (Config::getInstance().getGlobalIgnoreFirstSend()) {
+            // Ignore first report
             host->setReportTime(actualTime);
             return TRAP_E_OK;
         }
 
-        //TODO test if output correct
-		uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
-		uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
-
-		string sNote;
-
-       return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), false, sNote);
-    }
-
-    template <class Host>
-    int continuingReport(Host *host, uint16_t dstPort, ur_time_t actualTime, bool endOfAttack = false)
-    {
         uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
         uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
         string sNote;
 
-		host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
-		host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
+        return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), false, sNote);
+    }
+
+    template<class Host>
+    int continuingReport(Host *host, uint16_t dstPort, ur_time_t actualTime, bool endOfAttack = false) {
+        uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
+        uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
+
+        string sNote;
+
+        host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToIncomingRecordList()->clearTotalFlowsSinceLastReport();
 
-		host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
-		host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
         host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
 
         return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), endOfAttack, sNote);
@@ -119,9 +116,9 @@ public:
 private:
     ur_template_t *outTemplate;
 
-    template <class Host>
-    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false, const string& stringNote = string())
-    {
+    template<class Host>
+    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false,
+             const string &stringNote = string()) {
         vector<string> incIpsVictims = host->getPointerToIncomingRecordList()->getIpsOfVictims();
         vector<string> outIpsVictims = host->getPointerToOutgoingRecordList()->getIpsOfVictims();
         string note;
@@ -134,20 +131,20 @@ private:
 
         // Incoming
         note.append("I:");
-        for (const auto & incIpsVictim : incIpsVictims) {
-            note.append(incIpsVictim);
+        for (unsigned long i = 0; i < incIpsVictims.size(); i++) {
+            note.append(incIpsVictims.at(i));
             note.append(",");
         }
 
-        // Outgoing
+        //Outgoing
         note.append("O:");
-        for (const auto & outIpsVictim : outIpsVictims) {
-            note.append(outIpsVictim);
+        for (unsigned long i = 0; i < outIpsVictims.size(); i++) {
+            note.append(outIpsVictims.at(i));
             note.append(",");
         }
-        note.erase(note.length(),1);
+        note.erase(note.length(), 1);
 
-		// get size of note
+        // get size of note
         uint16_t noteSize = note.size() + 1; // plus '\0'
 
         void *rec = ur_create_record(outTemplate, noteSize);
