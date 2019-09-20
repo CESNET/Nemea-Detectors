@@ -82,26 +82,16 @@ using namespace std;
 
 UR_FIELDS(
 // BASIC_FLOW
-        ipaddr
-        SRC_IP,      // Source address of a flow
-        ipaddr
-                DST_IP,      // Destination address of a flow
-        uint16
-                SRC_PORT,    // Source transport-layer port
-        uint16
-                DST_PORT,    // Destination transport-layer port
-        uint8
-                PROTOCOL,     // L4 protocol (TCP, UDP, ICMP, etc.)
-        uint32
-                PACKETS,     // Number of packets in a flow or in an interval
-        uint64
-                BYTES,       // Number of bytes in a flow or in an interval
-        time
-                TIME_FIRST,    // Timestamp of the first packet of a flow
-        time
-                TIME_LAST,     // Timestamp of the last packet of a flow
-        uint8
-                TCP_FLAGS,    // TCP flags of a flow (logical OR over TCP flags field of all packets)
+        ipaddr SRC_IP,      // Source address of a flow
+        ipaddr DST_IP,      // Destination address of a flow
+        uint16 SRC_PORT,    // Source transport-layer port
+        uint16 DST_PORT,    // Destination transport-layer port
+        uint8 PROTOCOL,     // L4 protocol (TCP, UDP, ICMP, etc.)
+        uint32 PACKETS,     // Number of packets in a flow or in an interval
+        uint64 BYTES,       // Number of bytes in a flow or in an interval
+        time TIME_FIRST,    // Timestamp of the first packet of a flow
+        time TIME_LAST,     // Timestamp of the last packet of a flow
+        uint8 TCP_FLAGS,    // TCP flags of a flow (logical OR over TCP flags field of all packets)
 )
 
 /* ************************************************************************* */
@@ -172,7 +162,6 @@ printFlowPercent(uint64_t b, uint64_t p, const std::string &comment /* optional,
 
 
 int main(int argc, char **argv) {
-    getc(stdin);
     // ***** TRAP initialization *****
     int ret;
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)

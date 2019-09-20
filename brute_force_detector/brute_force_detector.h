@@ -71,17 +71,17 @@ struct cmpByIpAddr {
 
 struct thousandsSeparator : std::numpunct<char> {
     // use dot as separator
-    char do_thousands_sep() const override { return '.'; }
+    char do_thousands_sep() const { return '.'; }
 
     // digits are grouped by 3 digits each
-    std::string do_grouping() const override { return "\3"; }
+    std::string do_grouping() const { return "\3"; }
 };
 
 
 class logInfo {
 public:
 
-    explicit logInfo(std::string _protocolName) : protocolName(std::move(_protocolName)),
+    explicit logInfo(std::string _protocolName) : protocolName((_protocolName)),
                                                   flows(0),
                                                   incomingFlows(0),
                                                   outgoingFlows(0),
