@@ -47,132 +47,95 @@
 // ************************************************************/
 // ************************* SSH HOST *************************/
 // ************************************************************/
-bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction)
-{
-    IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
+bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction) {
+    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
 
-	// ignore port-scans
-    if(isFlowScan(&st.packets, &st.flags))
-	{
-    	return false;
-	}
-    else if(st.packets == 1 && st.flags == 0b00010000) // skip ack only packet
-	{
-    	return false;
-	}
-    else if(st.packets == 4 && st.flags == 0b00000010) // 4 packet SYN request
-	{
-    	return false;
-	}
-    else
+    // ignore port-scans
+    if (isFlowScan(&st.packets, &st.flags)) {
+        return false;
+    } else if (st.packets == 1 && st.flags == 0b00010000) // skip ack only packet
     {
+        return false;
+    } else if (st.packets == 4 && st.flags == 0b00000010) // 4 packet SYN request
+    {
+        return false;
+    } else {
         timeOfLastReceivedRecord = st.flowLastSeen;
-        if(direction == FLOW_INCOMING_DIRECTION)
-		{
-        	recordListIncoming.addRecord(record, isReported());
-		}
-        else
-		{
-        	recordListOutgoing.addRecord(record, isReported());
-		}
+        if (direction == FLOW_INCOMING_DIRECTION) {
+            recordListIncoming.addRecord(record, isReported());
+        } else {
+            recordListOutgoing.addRecord(record, isReported());
+        }
 
-		return true;
+        return true;
     }
 }
 
 
-SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
-{
+SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime) {
     uint16_t incomingMatched = recordListIncoming.getActualMatchedFlows();
     uint16_t outgoingMatched = recordListOutgoing.getActualMatchedFlows();
 
-    if(!isReported())
-    {
-    	// no attack yet
+    if (!isReported()) {
+        // no attack yet
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-        // Number of records in list is lower than BottomSize (50 by default)
-        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getSSHListBottomSize())
-        {
-            if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return SSHHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-				return SSHHost::NO_ATTACK;
-            }
-        }
-        else
-		{
-			// Number of records is between bottom size and max list size per protocol
+        double incomingMatchedRatio = (incomingListSize == 0 ? 0 : (double) incomingMatched / incomingListSize);
+        double outgoingMatchedRatio = (outgoingListSize == 0 ? 0 : (double) outgoingMatched / outgoingListSize);
 
-			double topMatchedRatio = std::max((double)incomingMatched/incomingListSize, (double)outgoingMatched/outgoingListSize);
+        double topMatchedRatio = std::max(incomingMatchedRatio, outgoingMatchedRatio);
 
-            if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return SSHHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-                return SSHHost::NO_ATTACK;
-			}
+        // is flow count over a minimum threshold and is a big enough part of it matched?
+        if (std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getSSHListThreshold() &&
+            (topMatchedRatio >= Config::getInstance().getSSHMatchedFlowRatio())) {
+            // crossed threshold, new attack detected
+            recordListIncoming.initTotalTargetsSet();
+            recordListOutgoing.initTotalTargetsSet();
+            return SSHHost::REPORT_NEW_ATTACK;
+        } else {
+            return SSHHost::NO_ATTACK;
         }
-    }
-    else // isReported
+    } else // isReported
     {
-    	// host is attacking, wait for timeout to report again
-        if(!canReportAgain(actualTime))
-		{
-        	return SSHHost::ATTACK_REPORT_WAIT;
-		}
-        else
-        {
+        // host is attacking, wait for timeout to report again
+        if (!canReportAgain(actualTime)) {
+            return SSHHost::ATTACK_REPORT_WAIT;
+        } else {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
-			uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
+            uint32_t incomingTotalNew = recordListIncoming.getTotalFlowsSinceLastReport();
 
-			uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
-			uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
+            uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
+            uint32_t outgoingTotalNew = recordListOutgoing.getTotalFlowsSinceLastReport();
 
-			if(incomingMatched == 0 && incomingMatchedNew == 0 &&
-               outgoingMatched == 0 && outgoingMatchedNew == 0)
-			{
-				return SSHHost::END_OF_ATTACK;
-			}
-
-			auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-
-			// avoids div by zero
-			auto incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double)incomingMatchedNew / incomingTotalNew);
-			auto outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double)outgoingMatchedNew / outgoingTotalNew);
-
-			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
-            {
-                if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-				{
-                	return SSHHost::REPORT_END_OF_ATTACK;
-				}
-                else
-				{
-                	return SSHHost::END_OF_ATTACK;
-				}
+            if (incomingMatched == 0 && incomingMatchedNew == 0 &&
+                outgoingMatched == 0 && outgoingMatchedNew == 0) {
+                return SSHHost::END_OF_ATTACK;
             }
 
-            if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-			{
-            	return SSHHost::REPORT_ATTACK;
-			}
-            else
-			{
-            	return SSHHost::ATTACK_MIN_EVENTS_WAIT;
-			}
+            double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+
+            // avoids div by zero
+            double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double) incomingMatchedNew /
+                                                                          incomingTotalNew);
+            double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double) outgoingMatchedNew /
+                                                                          outgoingTotalNew);
+
+            if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio) {
+                if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                    Config::getInstance().getGlobalAttackMinEvToReport()) {
+                    return SSHHost::REPORT_END_OF_ATTACK;
+                } else {
+                    return SSHHost::END_OF_ATTACK;
+                }
+            }
+
+            if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                Config::getInstance().getGlobalAttackMinEvToReport()) {
+                return SSHHost::REPORT_ATTACK;
+            } else {
+                return SSHHost::ATTACK_MIN_EVENTS_WAIT;
+            }
         }
     }
 }
@@ -180,122 +143,87 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime)
 // ************************************************************/
 // ************************* RDP HOST *************************/
 // ************************************************************/
-bool RDPHost::addRecord(RDPRecord *record, void *structure, uint8_t direction)
-{
-    IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
+bool RDPHost::addRecord(RDPRecord *record, void *structure, uint8_t direction) {
+    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
 
     // ignore port-scans
-    if(isFlowScan(&st.packets, &st.flags))
-	{
-    	return false;
-	}
-    else
-    {
+    if (isFlowScan(&st.packets, &st.flags)) {
+        return false;
+    } else {
         timeOfLastReceivedRecord = st.flowLastSeen;
-        if(direction == FLOW_INCOMING_DIRECTION)
-		{
-        	recordListIncoming.addRecord(record, isReported());
-		}
-        else
-		{
-        	recordListOutgoing.addRecord(record, isReported());
-		}
+        if (direction == FLOW_INCOMING_DIRECTION) {
+            recordListIncoming.addRecord(record, isReported());
+        } else {
+            recordListOutgoing.addRecord(record, isReported());
+        }
         return true;
     }
 }
 
-RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
-{
+RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime) {
     uint16_t incomingMatched = recordListIncoming.getActualMatchedFlows();
     uint16_t outgoingMatched = recordListOutgoing.getActualMatchedFlows();
 
-    if(!isReported())
-    {
-    	// no attack yet
+    if (!isReported()) {
+        // no attack yet
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getRDPListBottomSize())
-        {
+        double incomingMatchedRatio = (incomingListSize == 0 ? 0 : (double) incomingMatched / incomingListSize);
+        double outgoingMatchedRatio = (outgoingListSize == 0 ? 0 : (double) outgoingMatched / outgoingListSize);
+        double topMatchedRatio = std::max(incomingMatchedRatio, outgoingMatchedRatio);
 
-            if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getRDPListThreshold())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return RDPHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-				return RDPHost::NO_ATTACK;
-            }
+        // is flow count over a minimum threshold and is a big enough part of it matched?
+        if (std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getRDPListThreshold() &&
+            (topMatchedRatio >= Config::getInstance().getRDPMatchedFlowRatio())) {
+            recordListIncoming.initTotalTargetsSet();
+            recordListOutgoing.initTotalTargetsSet();
+
+            return RDPHost::REPORT_NEW_ATTACK;
+        } else {
+            return RDPHost::NO_ATTACK;
         }
-        else
-		{
-        	// Number of records is between bottom size and max size
 
-			auto topMatchedRatio = std::max((double)incomingMatched/incomingListSize, (double)outgoingMatched/outgoingListSize);
-
-			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return RDPHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-                return RDPHost::NO_ATTACK;
-            }
-        }
-    }
-    else // isReported
+    } else // isReported
     {
-    	// host is attacking, wait for timeout to report again
-        if(!canReportAgain(actualTime))
-		{
-        	return RDPHost::ATTACK_REPORT_WAIT;
-		}
-        else
-        {
+        // host is attacking, wait for timeout to report again
+        if (!canReportAgain(actualTime)) {
+            return RDPHost::ATTACK_REPORT_WAIT;
+        } else {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
-            uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
+            uint32_t incomingTotalNew = recordListIncoming.getTotalFlowsSinceLastReport();
 
             uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
-            uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
+            uint32_t outgoingTotalNew = recordListOutgoing.getTotalFlowsSinceLastReport();
 
-            if(incomingMatched == 0 && incomingMatchedNew == 0 &&
-               outgoingMatched == 0 && outgoingMatchedNew == 0)
-			{
-            	return RDPHost::END_OF_ATTACK;
-			}
-
-            auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-
-            // avoids div by zero
-			auto incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double)incomingMatchedNew / incomingTotalNew);
-			auto outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double)outgoingMatchedNew / outgoingTotalNew);
-
-			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
-			{
-                if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-				{
-                	return RDPHost::REPORT_END_OF_ATTACK;
-				}
-                else
-				{
-                	return RDPHost::END_OF_ATTACK;
-				}
+            if (incomingMatched == 0 && incomingMatchedNew == 0 &&
+                outgoingMatched == 0 && outgoingMatchedNew == 0) {
+                return RDPHost::END_OF_ATTACK;
             }
 
-            if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-			{
-            	return RDPHost::REPORT_ATTACK;
-			}
-            else
-			{
-            	return RDPHost::ATTACK_MIN_EVENTS_WAIT;
-			}
+            double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+
+            // avoids div by zero
+            double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double) incomingMatchedNew /
+                                                                          incomingTotalNew);
+            double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double) outgoingMatchedNew /
+                                                                          outgoingTotalNew);
+
+            if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio) {
+                if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                    Config::getInstance().getGlobalAttackMinEvToReport()) {
+                    return RDPHost::REPORT_END_OF_ATTACK;
+                } else {
+                    return RDPHost::END_OF_ATTACK;
+                }
+            }
+
+            if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                Config::getInstance().getGlobalAttackMinEvToReport()) {
+                return RDPHost::REPORT_ATTACK;
+            } else {
+                return RDPHost::ATTACK_MIN_EVENTS_WAIT;
+            }
         }
     }
 }
@@ -303,122 +231,84 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime)
 // ************************************************************/
 // ************************ TELNET HOST ***********************/
 // ************************************************************/
-bool TELNETHost::addRecord(TELNETRecord *record, void *structure, uint8_t direction)
-{
-    IRecord::MatchStructure st = *(IRecord::MatchStructure*) (structure);
+bool TELNETHost::addRecord(TELNETRecord *record, void *structure, uint8_t direction) {
+    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
 
-	// ignore port-scans
-    if(isFlowScan(&st.packets, &st.flags))
-	{
-    	return false;
-	}
-    else
-    {
+    // ignore port-scans
+    if (isFlowScan(&st.packets, &st.flags)) {
+        return false;
+    } else {
         timeOfLastReceivedRecord = st.flowLastSeen;
-        if(direction == FLOW_INCOMING_DIRECTION)
-		{
-        	recordListIncoming.addRecord(record, isReported());
-		}
-        else
-		{
-        	recordListOutgoing.addRecord(record, isReported());
-		}
+        if (direction == FLOW_INCOMING_DIRECTION) {
+            recordListIncoming.addRecord(record, isReported());
+        } else {
+            recordListOutgoing.addRecord(record, isReported());
+        }
         return true;
     }
 }
 
-TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
-{
+TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime) {
     uint16_t incomingMatched = recordListIncoming.getActualMatchedFlows();
     uint16_t outgoingMatched = recordListOutgoing.getActualMatchedFlows();
 
-    if(!isReported())
-    {
-    	// no attack yet
+    if (!isReported()) {
         uint16_t incomingListSize = recordListIncoming.getActualListSize();
         uint16_t outgoingListSize = recordListOutgoing.getActualListSize();
 
-        if (std::max(incomingListSize, outgoingListSize) <= Config::getInstance().getTELNETListBottomSize())
-        {
+        double incomingMatchedRatio = (incomingListSize == 0 ? 0 : (double) incomingMatched / incomingListSize);
+        double outgoingMatchedRatio = (outgoingListSize == 0 ? 0 : (double) outgoingMatched / outgoingListSize);
+        double topMatchedRatio = std::max(incomingMatchedRatio, outgoingMatchedRatio);
 
-            if(std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getTELNETListThreshold())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return TELNETHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-                return TELNETHost::NO_ATTACK;
-            }
+        // is flow count over a minimum threshold and is a big enough part of it matched?
+        if (std::max(incomingMatched, outgoingMatched) >= Config::getInstance().getTELNETListThreshold() &&
+            (topMatchedRatio >= Config::getInstance().getTELNETMatchedFlowRatio())) {
+            recordListIncoming.initTotalTargetsSet();
+            recordListOutgoing.initTotalTargetsSet();
+
+            return TELNETHost::REPORT_NEW_ATTACK;
+        } else {
+            return TELNETHost::NO_ATTACK;
         }
-        else
-		{
-        	// Number of records is between bottom size and max size
-
-			auto topMatchedRatio = std::max((double)incomingMatched/incomingListSize, (double)outgoingMatched/outgoingListSize);
-
-			if(topMatchedRatio >= Config::getInstance().getGlobalMatchedFlowRatio())
-            {
-                // crossed threshold, new attack detected
-				recordListIncoming.initTotalTargetsSet();
-				recordListOutgoing.initTotalTargetsSet();
-                return TELNETHost::REPORT_NEW_ATTACK;
-            }
-            else
-			{
-                return TELNETHost::NO_ATTACK;
-            }
-        }
-    }
-    else // isReported
+    } else // isReported
     {
-    	// host is attacking, wait for timeout to report again
-        if(!canReportAgain(actualTime))
-		{
-        	return TELNETHost::ATTACK_REPORT_WAIT;
-		}
-        else
-        {
+        // host is attacking, wait for timeout to report again
+        if (!canReportAgain(actualTime)) {
+            return TELNETHost::ATTACK_REPORT_WAIT;
+        } else {
             uint32_t incomingMatchedNew = recordListIncoming.getMatchedFlowsSinceLastReport();
-            uint32_t incomingTotalNew  = recordListIncoming.getTotalFlowsSinceLastReport();
+            uint32_t incomingTotalNew = recordListIncoming.getTotalFlowsSinceLastReport();
 
             uint32_t outgoingMatchedNew = recordListOutgoing.getMatchedFlowsSinceLastReport();
-            uint32_t outgoingTotalNew  = recordListOutgoing.getTotalFlowsSinceLastReport();
+            uint32_t outgoingTotalNew = recordListOutgoing.getTotalFlowsSinceLastReport();
 
-            if(incomingMatched == 0 && incomingMatchedNew == 0 &&
-               outgoingMatched == 0 && outgoingMatchedNew == 0)
-			{
-            	return TELNETHost::END_OF_ATTACK;
-			}
-
-            auto keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
-
-			// avoids div by zero
-			auto incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double)incomingMatchedNew / incomingTotalNew);
-			auto outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double)outgoingMatchedNew / outgoingTotalNew);
-
-			if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio)
-			{
-                if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-				{
-                	return TELNETHost::REPORT_END_OF_ATTACK;
-				}
-                else
-				{
-                	return TELNETHost::END_OF_ATTACK;
-				}
+            if (incomingMatched == 0 && incomingMatchedNew == 0 &&
+                outgoingMatched == 0 && outgoingMatchedNew == 0) {
+                return TELNETHost::END_OF_ATTACK;
             }
 
-			if(std::max(incomingMatchedNew, outgoingMatchedNew) >= Config::getInstance().getGlobalAttackMinEvToReport())
-			{
-            	return TELNETHost::REPORT_ATTACK;
-			}
-			else
-			{
-            	return TELNETHost::ATTACK_MIN_EVENTS_WAIT;
-			}
+            double keepTrackingHostRatio = Config::getInstance().getGlobalAttackMinRatioToKeepTrackingHost();
+
+            double incomingMatchedNewRatio = (incomingTotalNew == 0 ? 0 : (double) incomingMatchedNew /
+                                                                          incomingTotalNew);
+            double outgoingMatchedNewRatio = (outgoingTotalNew == 0 ? 0 : (double) outgoingMatchedNew /
+                                                                          outgoingTotalNew);
+
+            if (std::max(incomingMatchedNewRatio, outgoingMatchedNewRatio) < keepTrackingHostRatio) {
+                if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                    Config::getInstance().getGlobalAttackMinEvToReport()) {
+                    return TELNETHost::REPORT_END_OF_ATTACK;
+                } else {
+                    return TELNETHost::END_OF_ATTACK;
+                }
+            }
+
+            if (std::max(incomingMatchedNew, outgoingMatchedNew) >=
+                Config::getInstance().getGlobalAttackMinEvToReport()) {
+                return TELNETHost::REPORT_ATTACK;
+            } else {
+                return TELNETHost::ATTACK_MIN_EVENTS_WAIT;
+            }
         }
     }
 }
@@ -427,47 +317,36 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime)
 // *********************** SSH HOST MAP ***********************/
 // ************************************************************/
 
-SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction)
-{
+SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
     ip_addr_t ip;
-    if(direction == FLOW_INCOMING_DIRECTION)
-	{
-    	ip = structure->srcIp;
-	}
-    else
-	{
-    	ip = structure->dstIp;
-	}
+    if (direction == FLOW_INCOMING_DIRECTION) {
+        ip = structure->srcIp;
+    } else {
+        ip = structure->dstIp;
+    }
 
     auto it = hostMap.find(ip);
 
     SSHHost *host;
 
-    if(it == hostMap.end())
-    {
-    	// not found, create new host
+    if (it == hostMap.end()) {
+        // not found, create new host
         host = new SSHHost(ip, structure->flowFirstSeen);
-        hostMap.insert(std::pair<ip_addr_t, SSHHost*>(ip, host));
+        hostMap.insert(std::pair<ip_addr_t, SSHHost *>(ip, host));
+    } else {
+        host = it->second;
     }
-    else
-	{
-    	host = it->second;
-	}
 
     return host;
 }
 
-void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
-{
-    for (const auto & it : hostMap)
-    {
+void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender) {
+    for (const auto &it : hostMap) {
         SSHHost *host = it.second;
-        if(host->isReported() && host->checkForAttackTimeout(actualTime))
-        {
+        if (host->isReported() && host->checkForAttackTimeout(actualTime)) {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
 
-            if(numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport())
-            {
+            if (numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport()) {
                 sender->continuingReport(host, TCP_SSH_PORT, actualTime, true);
             }
             host->setNotReported();
@@ -476,56 +355,44 @@ void SSHHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
     }
 }
 
-void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
-{
-	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
+void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime) {
+    IHostMap::clearOldRecAndHost(&hostMap, actualTime);
 }
 
 // ************************************************************/
 // *********************** RDP HOST MAP ***********************/
 // ************************************************************/
 
-RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction)
-{
+RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
     ip_addr_t ip;
-    if(direction == FLOW_INCOMING_DIRECTION)
-	{
-    	ip = structure->srcIp;
-	}
-    else
-	{
-    	ip = structure->dstIp; // attacker is now destination address
-	}
+    if (direction == FLOW_INCOMING_DIRECTION) {
+        ip = structure->srcIp;
+    } else {
+        ip = structure->dstIp; // attacker is now destination address
+    }
 
     auto it = hostMap.find(ip);
 
     RDPHost *host;
 
-    if (it == hostMap.end())
-    {
-    	// not found, create new host
+    if (it == hostMap.end()) {
+        // not found, create new host
         host = new RDPHost(ip, structure->flowFirstSeen);
-        hostMap.insert(std::pair<ip_addr_t, RDPHost*>(ip, host));
+        hostMap.insert(std::pair<ip_addr_t, RDPHost *>(ip, host));
+    } else {
+        host = it->second;
     }
-    else
-	{
-    	host = it->second;
-	}
 
     return host;
 }
 
-void RDPHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
-{
-    for(const auto & it : hostMap)
-    {
+void RDPHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender) {
+    for (const auto &it : hostMap) {
         RDPHost *host = it.second;
-        if(host->isReported() && host->checkForAttackTimeout(actualTime))
-        {
+        if (host->isReported() && host->checkForAttackTimeout(actualTime)) {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
 
-            if(numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport())
-            {
+            if (numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport()) {
                 sender->continuingReport(host, TCP_RDP_PORT, actualTime, true);
             }
             host->setNotReported();
@@ -534,56 +401,44 @@ void RDPHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
     }
 }
 
-void RDPHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
-{
-	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
+void RDPHostMap::deleteOldRecordAndHosts(ur_time_t actualTime) {
+    IHostMap::clearOldRecAndHost(&hostMap, actualTime);
 }
 
 // ************************************************************/
 // ********************** TELNET HOST MAP *********************/
 // ************************************************************/
 
-TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction)
-{
+TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
     ip_addr_t ip;
-    if(direction == FLOW_INCOMING_DIRECTION)
-	{
-    	ip = structure->srcIp;
-	}
-    else
-	{
-    	ip = structure->dstIp; // attacker is now destination address
-	}
+    if (direction == FLOW_INCOMING_DIRECTION) {
+        ip = structure->srcIp;
+    } else {
+        ip = structure->dstIp; // attacker is now destination address
+    }
 
     auto it = hostMap.find(ip);
 
     TELNETHost *host;
 
-    if(it == hostMap.end())
-    {
-    	// not found, create new host
+    if (it == hostMap.end()) {
+        // not found, create new host
         host = new TELNETHost(ip, structure->flowFirstSeen);
-        hostMap.insert(std::pair<ip_addr_t, TELNETHost*>(ip, host));
+        hostMap.insert(std::pair<ip_addr_t, TELNETHost *>(ip, host));
+    } else {
+        host = it->second;
     }
-    else
-	{
-    	host = it->second;
-	}
 
     return host;
 }
 
-void TELNETHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
-{
-    for(const auto & it : hostMap)
-    {
+void TELNETHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender) {
+    for (const auto &it : hostMap) {
         TELNETHost *host = it.second;
-        if(host->isReported() && host->checkForAttackTimeout(actualTime))
-        {
+        if (host->isReported() && host->checkForAttackTimeout(actualTime)) {
             uint32_t numOfEvents = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
 
-            if(numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport())
-            {
+            if (numOfEvents >= Config::getInstance().getGlobalAttackMinEvToReport()) {
                 sender->continuingReport(host, TCP_TELNET_PORT, actualTime, true);
             }
 
@@ -593,7 +448,6 @@ void TELNETHostMap::checkForAttackTimeout(ur_time_t actualTime, Sender *sender)
     }
 }
 
-void TELNETHostMap::deleteOldRecordAndHosts(ur_time_t actualTime)
-{
-	IHostMap::clearOldRecAndHost(&hostMap, actualTime);
+void TELNETHostMap::deleteOldRecordAndHosts(ur_time_t actualTime) {
+    IHostMap::clearOldRecAndHost(&hostMap, actualTime);
 }

@@ -184,7 +184,7 @@ class SSHHost : public IHost<SSHRecord*> {
 public:
     SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord*> (hostIp, firstSeen) {}
 
-	bool addRecord(SSHRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	bool addRecord(SSHRecord *record, void *structure, uint8_t direction) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
 	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getSSHHostDeleteTimeout(); }
     ur_time_t getHostReportTimeout() override { return Config::getInstance().getSSHReportTimeout(); }
@@ -197,7 +197,7 @@ class RDPHost : public IHost<RDPRecord*> {
 public:
     RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord*> (hostIp, firstSeen) {}
 
-	bool addRecord(RDPRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	bool addRecord(RDPRecord *record, void *structure, uint8_t direction) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
 	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getRDPHostDeleteTimeout(); }
     ur_time_t getHostReportTimeout() override { return Config::getInstance().getRDPReportTimeout(); }
@@ -209,7 +209,7 @@ class TELNETHost : public IHost<TELNETRecord*> {
 public:
     TELNETHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<TELNETRecord*> (hostIp,  firstSeen) {}
 
-	bool addRecord(TELNETRecord *record, void *structure, uint8_t direction = FLOW_INCOMING_DIRECTION) override;
+	bool addRecord(TELNETRecord *record, void *structure, uint8_t direction) override;
 	ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
 	ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getTELNETHostDeleteTimeout(); }
 	ur_time_t getHostReportTimeout() override { return Config::getInstance().getTELNETReportTimeout(); }

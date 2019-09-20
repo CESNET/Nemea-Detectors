@@ -46,28 +46,22 @@
 
 using namespace std;
 
-Config::Config()
-{
+Config::Config() {
     //init default config variables
     GENERAL_CHECK_FOR_REPORT_TIMEOUT = ur_time_from_sec_msec(60, 0);
     GENERAL_CHECK_FOR_DELETE_TIMEOUT = ur_time_from_sec_msec(60, 0);
 
-    GENERAL_MATCHED_FLOW_RATIO = 0.9;
-
     GENERAL_ATTACK_MIN_EVENTS_TO_REPORT = 10;
-
     GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST = 10.0;
-
     GENERAL_IGNORE_FIRST_SEND = 0;
-
 
     //SSH
     SSH_LIST_SIZE = 1000;
-    SSH_LIST_SIZE_BOTTOM_THRESHOLD = 100; // There are two types of thresholds, first means how many records are in list [50/1000]
-    									// and based on this value is set up THRESHOLD which detects if host is attacker or not
     SSH_LIST_THRESHOLD = 90;
+    SSH_MATCHED_FLOW_RATIO = 0.9;
+
     SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
-    SSH_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
+    SSH_HOST_TIMEOUT = ur_time_from_sec_msec(4200, 0);
 
     SSH_BRUTEFORCE_INC_MIN_PACKETS = 11;
     SSH_BRUTEFORCE_INC_MAX_PACKETS = 30;
@@ -84,10 +78,11 @@ Config::Config()
 
     //RDP
     RDP_LIST_SIZE = 1000;
-    RDP_LIST_SIZE_BOTTOM_THRESHOLD = 100;
     RDP_LIST_THRESHOLD = 90;
+    RDP_MATCHED_FLOW_RATIO = 0.9;
+
     RDP_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
-    RDP_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
+    RDP_HOST_TIMEOUT = ur_time_from_sec_msec(4200, 0);
 
     RDP_BRUTEFORCE_INC_MIN_PACKETS = 20;
     RDP_BRUTEFORCE_INC_MAX_PACKETS = 100;
@@ -105,10 +100,11 @@ Config::Config()
 
     //TELNET
     TELNET_LIST_SIZE = 1000;
-    TELNET_LIST_SIZE_BOTTOM_THRESHOLD = 100;
     TELNET_LIST_THRESHOLD = 90;
+    TELNET_MATCHED_FLOW_RATIO = 0.9;
+
     TELNET_RECORD_TIMEOUT = ur_time_from_sec_msec(3600, 0);
-    TELNET_HOST_TIMEOUT   = ur_time_from_sec_msec(4200, 0);
+    TELNET_HOST_TIMEOUT = ur_time_from_sec_msec(4200, 0);
 
     TELNET_BRUTEFORCE_INC_MIN_PACKETS = 9;
     TELNET_BRUTEFORCE_INC_MAX_PACKETS = 50;
@@ -118,118 +114,109 @@ Config::Config()
     TELNET_REPORT_TIMEOUT = ur_time_from_sec_msec(300, 0);
     TELNET_ATTACK_TIMEOUT = ur_time_from_sec_msec(600, 0);
 
-	//init keywords
+    //init keywords
     kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT = "GENERAL_CHECK_FOR_REPORT_TIMEOUT";
     kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT = "GENERAL_CHECK_FOR_DELETE_TIMEOUT";
     kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT = "GENERAL_ATTACK_MIN_EVENTS_TO_REPORT";
     kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST = "GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST";
     kw_GENERAL_IGNORE_FIRST_SEND = "GENERAL_IGNORE_FIRST_SEND";
-	kw_GENERAL_MATCHED_FLOW_RATIO = "GENERAL_MATCHED_FLOW_RATIO";
+    kw_GENERAL_MATCHED_FLOW_RATIO = "GENERAL_MATCHED_FLOW_RATIO";
 
     //SSH
-    kw_SSH_LIST_SIZE      = "SSH_LIST_SIZE";
+    kw_SSH_LIST_SIZE = "SSH_LIST_SIZE";
     kw_SSH_LIST_THRESHOLD = "SSH_LIST_THRESHOLD";
-	kw_SSH_LIST_SIZE_BOTTOM_THRESHOLD = "SSH_LIST_SIZE_BOTTOM_THRESHOLD";
+    kw_SSH_LIST_SIZE_BOTTOM_THRESHOLD = "SSH_LIST_SIZE_BOTTOM_THRESHOLD";
 
     kw_SSH_RECORD_TIMEOUT = "SSH_RECORD_TIMEOUT";
-    kw_SSH_HOST_TIMEOUT   = "SSH_HOST_TIMEOUT";
+    kw_SSH_HOST_TIMEOUT = "SSH_HOST_TIMEOUT";
     kw_SSH_REPORT_TIMEOUT = "SSH_REPORT_TIMEOUT";
     kw_SSH_ATTACK_TIMEOUT = "SSH_ATTACK_TIMEOUT";
 
     kw_SSH_BRUTEFORCE_INC_MIN_PACKETS = "SSH_BRUTEFORCE_INC_MIN_PACKETS";
     kw_SSH_BRUTEFORCE_INC_MAX_PACKETS = "SSH_BRUTEFORCE_INC_MAX_PACKETS";
-    kw_SSH_BRUTEFORCE_INC_MIN_BYTES   = "SSH_BRUTEFORCE_INC_MIN_BYTES";
-    kw_SSH_BRUTEFORCE_INC_MAX_BYTES   = "SSH_BRUTEFORCE_INC_MAX_BYTES";
+    kw_SSH_BRUTEFORCE_INC_MIN_BYTES = "SSH_BRUTEFORCE_INC_MIN_BYTES";
+    kw_SSH_BRUTEFORCE_INC_MAX_BYTES = "SSH_BRUTEFORCE_INC_MAX_BYTES";
 
     kw_SSH_BRUTEFORCE_OUT_MIN_PACKETS = "SSH_BRUTEFORCE_OUT_MIN_PACKETS";
     kw_SSH_BRUTEFORCE_OUT_MAX_PACKETS = "SSH_BRUTEFORCE_OUT_MAX_PACKETS";
-    kw_SSH_BRUTEFORCE_OUT_MIN_BYTES   = "SSH_BRUTEFORCE_OUT_MIN_BYTES";
-    kw_SSH_BRUTEFORCE_OUT_MAX_BYTES   = "SSH_BRUTEFORCE_OUT_MAX_BYTES";
+    kw_SSH_BRUTEFORCE_OUT_MIN_BYTES = "SSH_BRUTEFORCE_OUT_MIN_BYTES";
+    kw_SSH_BRUTEFORCE_OUT_MAX_BYTES = "SSH_BRUTEFORCE_OUT_MAX_BYTES";
 
     //RDP
-    kw_RDP_LIST_SIZE      = "RDP_LIST_SIZE";
+    kw_RDP_LIST_SIZE = "RDP_LIST_SIZE";
     kw_RDP_LIST_THRESHOLD = "RDP_LIST_THRESHOLD";
-	kw_RDP_LIST_SIZE_BOTTOM_THRESHOLD = "RDP_LIST_SIZE_BOTTOM_THRESHOLD";
+    kw_RDP_LIST_SIZE_BOTTOM_THRESHOLD = "RDP_LIST_SIZE_BOTTOM_THRESHOLD";
 
-	kw_RDP_RECORD_TIMEOUT = "RDP_RECORD_TIMEOUT";
-    kw_RDP_HOST_TIMEOUT   = "RDP_HOST_TIMEOUT";
+    kw_RDP_RECORD_TIMEOUT = "RDP_RECORD_TIMEOUT";
+    kw_RDP_HOST_TIMEOUT = "RDP_HOST_TIMEOUT";
     kw_RDP_REPORT_TIMEOUT = "RDP_REPORT_TIMEOUT";
     kw_RDP_ATTACK_TIMEOUT = "RDP_ATTACK_TIMEOUT";
 
     kw_RDP_BRUTEFORCE_INC_MIN_PACKETS = "RDP_BRUTEFORCE_INC_MIN_PACKETS";
     kw_RDP_BRUTEFORCE_INC_MAX_PACKETS = "RDP_BRUTEFORCE_INC_MAX_PACKETS";
-    kw_RDP_BRUTEFORCE_INC_MIN_BYTES   = "RDP_BRUTEFORCE_INC_MIN_BYTES";
-    kw_RDP_BRUTEFORCE_INC_MAX_BYTES   = "RDP_BRUTEFORCE_INC_MAX_BYTES";
+    kw_RDP_BRUTEFORCE_INC_MIN_BYTES = "RDP_BRUTEFORCE_INC_MIN_BYTES";
+    kw_RDP_BRUTEFORCE_INC_MAX_BYTES = "RDP_BRUTEFORCE_INC_MAX_BYTES";
 
     kw_RDP_BRUTEFORCE_OUT_MIN_PACKETS = "RDP_BRUTEFORCE_OUT_MIN_PACKETS";
     kw_RDP_BRUTEFORCE_OUT_MAX_PACKETS = "RDP_BRUTEFORCE_OUT_MAX_PACKETS";
-    kw_RDP_BRUTEFORCE_OUT_MIN_BYTES   = "RDP_BRUTEFORCE_OUT_MIN_BYTES";
-    kw_RDP_BRUTEFORCE_OUT_MAX_BYTES   = "RDP_BRUTEFORCE_OUT_MAX_BYTES";
+    kw_RDP_BRUTEFORCE_OUT_MIN_BYTES = "RDP_BRUTEFORCE_OUT_MIN_BYTES";
+    kw_RDP_BRUTEFORCE_OUT_MAX_BYTES = "RDP_BRUTEFORCE_OUT_MAX_BYTES";
 
     //TELNET
-    kw_TELNET_LIST_SIZE      = "TELNET_LIST_SIZE";
+    kw_TELNET_LIST_SIZE = "TELNET_LIST_SIZE";
     kw_TELNET_LIST_THRESHOLD = "TELNET_LIST_THRESHOLD";
-	kw_TELNET_LIST_SIZE_BOTTOM_THRESHOLD = "TELNET_LIST_SIZE_BOTTOM_THRESHOLD";
+    kw_TELNET_LIST_SIZE_BOTTOM_THRESHOLD = "TELNET_LIST_SIZE_BOTTOM_THRESHOLD";
 
-	kw_TELNET_RECORD_TIMEOUT = "TELNET_RECORD_TIMEOUT";
-    kw_TELNET_HOST_TIMEOUT   = "TELNET_HOST_TIMEOUT";
+    kw_TELNET_RECORD_TIMEOUT = "TELNET_RECORD_TIMEOUT";
+    kw_TELNET_HOST_TIMEOUT = "TELNET_HOST_TIMEOUT";
     kw_TELNET_REPORT_TIMEOUT = "TELNET_REPORT_TIMEOUT";
     kw_TELNET_ATTACK_TIMEOUT = "TELNET_ATTACK_TIMEOUT";
 
     kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS = "TELNET_BRUTEFORCE_INC_MIN_PACKETS";
     kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS = "TELNET_BRUTEFORCE_INC_MAX_PACKETS";
-    kw_TELNET_BRUTEFORCE_INC_MIN_BYTES   = "TELNET_BRUTEFORCE_INC_MIN_BYTES";
-    kw_TELNET_BRUTEFORCE_INC_MAX_BYTES   = "TELNET_BRUTEFORCE_INC_MAX_BYTES";
+    kw_TELNET_BRUTEFORCE_INC_MIN_BYTES = "TELNET_BRUTEFORCE_INC_MIN_BYTES";
+    kw_TELNET_BRUTEFORCE_INC_MAX_BYTES = "TELNET_BRUTEFORCE_INC_MAX_BYTES";
 }
 
-void Config::reloadConfig()
-{
-    if(!configPath.empty())
-    {
-        if(!initFromFile(configPath))
-        {
+void Config::reloadConfig() {
+    if (!configPath.empty()) {
+        if (!initFromFile(configPath)) {
             cerr << "Error Config: Configuration reload failed!\n";
         }
-        else
-        {
+        else {
             cout << "Config: Configuration reloaded successfully.\n";
         }
     }
-    else
-    {
+    else {
         cerr << "Error Config: Configuration path is not set!\n";
     }
 }
 
-bool Config::initFromFile(const string& path)
-{
+bool Config::initFromFile(const string &path) {
     configPath = path;
 
     ifstream configFile;
     configFile.open(path.c_str());
-    if(!configFile.is_open())
+    if (!configFile.is_open()) {
         return false;
+    }
 
     //Parse file
     string line;
     string keyword, value;
-    while(configFile.good())
-    {
+    while (configFile.good()) {
         getline(configFile, line);
 
-        if(line.empty())
-		{
-        	continue; //skip empty line
-		}
+        if (line.empty()) {
+            continue; //skip empty line
+        }
 
-        if(line[0] == '#')
-		{
-        	continue; //skip comment line
-		}
+        if (line[0] == '#') {
+            continue; //skip comment line
+        }
 
         size_t pos = line.find('='); // = delimiter
-        if(pos == std::string::npos)
-        {
+        if (pos == std::string::npos) {
             cerr << "Error Config: Invalid line \"" << line << "\"" << endl;
             cerr.flush();
             continue; //skip invalid line
@@ -242,229 +229,178 @@ bool Config::initFromFile(const string& path)
         keyword.erase(remove_if(keyword.begin(), keyword.end(), ::isspace), keyword.end());
         value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
 
-		// *********************
-		// ****** GENERAL ******
-		// *********************
-        if(keyword == kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT)
-        {
+        // *********************
+        // ****** GENERAL ******
+        // *********************
+        if (keyword == kw_GENERAL_CHECK_FOR_REPORT_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             GENERAL_CHECK_FOR_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT)
-        {
+        else if (keyword == kw_GENERAL_CHECK_FOR_DELETE_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             GENERAL_CHECK_FOR_DELETE_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT)
-        {
+        else if (keyword == kw_GENERAL_ATTACK_MIN_EVENTS_TO_REPORT) {
             GENERAL_ATTACK_MIN_EVENTS_TO_REPORT = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST)
-        {
+        else if (keyword == kw_GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST) {
             GENERAL_ATTACK_MIN_RATIO_TO_KEEP_TRACKING_HOST = std::stod(value, nullptr);
         }
-        else if(keyword == kw_GENERAL_IGNORE_FIRST_SEND)
-        {
+        else if (keyword == kw_GENERAL_IGNORE_FIRST_SEND) {
             GENERAL_IGNORE_FIRST_SEND = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_GENERAL_MATCHED_FLOW_RATIO)
-        {
-			GENERAL_MATCHED_FLOW_RATIO = std::stod(value, nullptr);
-        }
-        // *********************
-        // ******* SSH *********
-        // *********************
-        else if(keyword == kw_SSH_LIST_SIZE)
-        {
+            // *********************
+            // ******* SSH *********
+            // *********************
+        else if (keyword == kw_SSH_LIST_SIZE) {
             SSH_LIST_SIZE = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_LIST_THRESHOLD)
-        {
+        else if (keyword == kw_SSH_LIST_THRESHOLD) {
             SSH_LIST_THRESHOLD = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_LIST_SIZE_BOTTOM_THRESHOLD)
-        {
-            SSH_LIST_SIZE_BOTTOM_THRESHOLD = std::stoul(value, nullptr);
+        else if (keyword == kw_SSH_MATCHED_FLOW_RATIO) {
+            SSH_MATCHED_FLOW_RATIO = std::stod(value, nullptr);
         }
-        else if(keyword == kw_SSH_ATTACK_TIMEOUT)
-        {
+        else if (keyword == kw_SSH_ATTACK_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             SSH_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_SSH_RECORD_TIMEOUT)
-        {
+        else if (keyword == kw_SSH_RECORD_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             SSH_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_SSH_HOST_TIMEOUT)
-        {
+        else if (keyword == kw_SSH_HOST_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             SSH_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_SSH_REPORT_TIMEOUT)
-        {
+        else if (keyword == kw_SSH_REPORT_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             SSH_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        // SSH INCOMING DIRECTION (ATTACKER -> VICTIM)
-        else if(keyword == kw_SSH_BRUTEFORCE_INC_MIN_PACKETS)
-        {
+            // SSH INCOMING DIRECTION (ATTACKER -> VICTIM)
+        else if (keyword == kw_SSH_BRUTEFORCE_INC_MIN_PACKETS) {
             SSH_BRUTEFORCE_INC_MIN_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_INC_MAX_PACKETS)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_INC_MAX_PACKETS) {
             SSH_BRUTEFORCE_INC_MAX_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_INC_MIN_BYTES)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_INC_MIN_BYTES) {
             SSH_BRUTEFORCE_INC_MIN_BYTES = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_INC_MAX_BYTES)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_INC_MAX_BYTES) {
             SSH_BRUTEFORCE_INC_MAX_BYTES = std::stoul(value, nullptr);
         }
-        // SSH OUTGOING DIRECTION (VICTIM -> ATTACKER)
-        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MIN_PACKETS)
-        {
+            // SSH OUTGOING DIRECTION (VICTIM -> ATTACKER)
+        else if (keyword == kw_SSH_BRUTEFORCE_OUT_MIN_PACKETS) {
             SSH_BRUTEFORCE_OUT_MIN_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MAX_PACKETS)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_OUT_MAX_PACKETS) {
             SSH_BRUTEFORCE_OUT_MAX_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MIN_BYTES)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_OUT_MIN_BYTES) {
             SSH_BRUTEFORCE_OUT_MIN_BYTES = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_SSH_BRUTEFORCE_OUT_MAX_BYTES)
-        {
+        else if (keyword == kw_SSH_BRUTEFORCE_OUT_MAX_BYTES) {
             SSH_BRUTEFORCE_OUT_MAX_BYTES = std::stoul(value, nullptr);
         }
-        // *********************
-        // ******* RDP *********
-        // *********************
-        else if(keyword == kw_RDP_LIST_SIZE)
-        {
+            // *********************
+            // ******* RDP *********
+            // *********************
+        else if (keyword == kw_RDP_LIST_SIZE) {
             RDP_LIST_SIZE = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_LIST_THRESHOLD)
-        {
+        else if (keyword == kw_RDP_LIST_THRESHOLD) {
             RDP_LIST_THRESHOLD = std::stoul(value, nullptr);
         }
-		else if(keyword == kw_RDP_LIST_SIZE_BOTTOM_THRESHOLD)
-		{
-			RDP_LIST_SIZE_BOTTOM_THRESHOLD = std::stoul(value, nullptr);
-		}
-        else if(keyword == kw_RDP_ATTACK_TIMEOUT)
-        {
+        else if (keyword == kw_RDP_MATCHED_FLOW_RATIO) {
+            RDP_MATCHED_FLOW_RATIO = std::stod(value, nullptr);
+        }
+        else if (keyword == kw_RDP_ATTACK_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             RDP_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_RDP_RECORD_TIMEOUT)
-        {
+        else if (keyword == kw_RDP_RECORD_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             RDP_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_RDP_HOST_TIMEOUT)
-        {
+        else if (keyword == kw_RDP_HOST_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             RDP_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_RDP_REPORT_TIMEOUT)
-        {
+        else if (keyword == kw_RDP_REPORT_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             RDP_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        // RDP INCOMING DIRECTION (ATTACKER -> VICTIM)
-        else if(keyword == kw_RDP_BRUTEFORCE_INC_MIN_PACKETS)
-        {
+            // RDP INCOMING DIRECTION (ATTACKER -> VICTIM)
+        else if (keyword == kw_RDP_BRUTEFORCE_INC_MIN_PACKETS) {
             RDP_BRUTEFORCE_INC_MIN_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_INC_MAX_PACKETS)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_INC_MAX_PACKETS) {
             RDP_BRUTEFORCE_INC_MAX_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_INC_MIN_BYTES)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_INC_MIN_BYTES) {
             RDP_BRUTEFORCE_INC_MIN_BYTES = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_INC_MAX_BYTES)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_INC_MAX_BYTES) {
             RDP_BRUTEFORCE_INC_MAX_BYTES = std::stoul(value, nullptr);
         }
-        // RDP OUTGOING DIRECTION (VICTIM -> ATTACKER)
-        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MIN_PACKETS)
-        {
+            // RDP OUTGOING DIRECTION (VICTIM -> ATTACKER)
+        else if (keyword == kw_RDP_BRUTEFORCE_OUT_MIN_PACKETS) {
             RDP_BRUTEFORCE_OUT_MIN_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MAX_PACKETS)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_OUT_MAX_PACKETS) {
             RDP_BRUTEFORCE_OUT_MAX_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MIN_BYTES)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_OUT_MIN_BYTES) {
             RDP_BRUTEFORCE_OUT_MIN_BYTES = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_RDP_BRUTEFORCE_OUT_MAX_BYTES)
-        {
+        else if (keyword == kw_RDP_BRUTEFORCE_OUT_MAX_BYTES) {
             RDP_BRUTEFORCE_OUT_MAX_BYTES = std::stoul(value, nullptr);
         }
-        // *********************
-        // ****** TELNET *******
-        // *********************
-        else if(keyword == kw_TELNET_LIST_SIZE)
-        {
+            // *********************
+            // ****** TELNET *******
+            // *********************
+        else if (keyword == kw_TELNET_LIST_SIZE) {
             TELNET_LIST_SIZE = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_TELNET_LIST_THRESHOLD)
-        {
+        else if (keyword == kw_TELNET_LIST_THRESHOLD) {
             TELNET_LIST_THRESHOLD = std::stoul(value, nullptr);
         }
-		else if(keyword == kw_TELNET_LIST_SIZE_BOTTOM_THRESHOLD)
-		{
-			TELNET_LIST_SIZE_BOTTOM_THRESHOLD = std::stoul(value, nullptr);
-		}
-        else if(keyword == kw_TELNET_ATTACK_TIMEOUT)
-        {
+        else if (keyword == kw_TELNET_MATCHED_FLOW_RATIO) {
+            TELNET_MATCHED_FLOW_RATIO = std::stod(value, nullptr);
+        }
+        else if (keyword == kw_TELNET_ATTACK_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             TELNET_ATTACK_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_TELNET_RECORD_TIMEOUT)
-        {
+        else if (keyword == kw_TELNET_RECORD_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             TELNET_RECORD_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_TELNET_HOST_TIMEOUT)
-        {
+        else if (keyword == kw_TELNET_HOST_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             TELNET_HOST_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_TELNET_REPORT_TIMEOUT)
-        {
+        else if (keyword == kw_TELNET_REPORT_TIMEOUT) {
             uint32_t sec = std::stoul(value, nullptr);
             TELNET_REPORT_TIMEOUT = ur_time_from_sec_msec(sec, 0);
         }
-        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS)
-        {
+        else if (keyword == kw_TELNET_BRUTEFORCE_INC_MIN_PACKETS) {
             TELNET_BRUTEFORCE_INC_MIN_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS)
-        {
+        else if (keyword == kw_TELNET_BRUTEFORCE_INC_MAX_PACKETS) {
             TELNET_BRUTEFORCE_INC_MAX_PACKETS = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MIN_BYTES)
-        {
+        else if (keyword == kw_TELNET_BRUTEFORCE_INC_MIN_BYTES) {
             TELNET_BRUTEFORCE_INC_MIN_BYTES = std::stoul(value, nullptr);
         }
-        else if(keyword == kw_TELNET_BRUTEFORCE_INC_MAX_BYTES)
-        {
+        else if (keyword == kw_TELNET_BRUTEFORCE_INC_MAX_BYTES) {
             TELNET_BRUTEFORCE_INC_MAX_BYTES = std::stoul(value, nullptr);
         }
-        // *********************
-        // ******* UNKNOWN *****
-        // *********************
-        else
-        {
+            // *********************
+            // ******* UNKNOWN *****
+            // *********************
+        else {
             cerr << "Error Config: Unknown keyword " << keyword << endl;
             cerr.flush();
         }
