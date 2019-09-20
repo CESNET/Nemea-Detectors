@@ -172,6 +172,7 @@ printFlowPercent(uint64_t b, uint64_t p, const std::string &comment /* optional,
 
 
 int main(int argc, char **argv) {
+    getc(stdin);
     // ***** TRAP initialization *****
     int ret;
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
