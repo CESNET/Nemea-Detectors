@@ -50,14 +50,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include <time.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
 #include <iostream>
 #include <string>
-#include <map>
 #include <unistd.h>
 
 #include "record.h"
@@ -66,8 +64,6 @@
 #include "sender.h"
 #include "brute_force_detector.h"
 #include "whitelist.h"
-#include <locale>
-#include <sys/time.h>
 #include <iomanip>
 
 #ifdef __cplusplus
@@ -169,7 +165,7 @@ int main(int argc, char **argv) {
 
     // ***** Capturing signals *****
 #ifdef HAVE_SIGACTION
-    struct sigaction sigAction{};
+    struct sigaction sigAction = {};
 
     sigAction.sa_handler = signalHandler;
     sigemptyset (&sigAction.sa_mask);
@@ -340,7 +336,7 @@ int main(int argc, char **argv) {
         }
 
         // Process rest of new data
-        IRecord::MatchStructure flow{
+        IRecord::MatchStructure flow = {
                 .flags = ur_get(tmplt, data, F_TCP_FLAGS),
                 .packets = ur_get(tmplt, data, F_PACKETS),
                 .bytes   = ur_get(tmplt, data, F_BYTES),

@@ -1,5 +1,4 @@
 ACLOCAL_AMFLAGS = -I m4
-
 SUBDIRS=amplification_detection \
 	blacklistfilter \
 	blacklistfilter/adaptive_filter \
@@ -51,7 +50,7 @@ deb:
 	make distdir && cd nemea-detectors-@VERSION@ && debuild -i -us -uc -b
 else
 endif
-	
+
 deb-clean:
 	rm -rf nemea-detectors_*.build* nemea-detectors_*.changes nemea-detectors*.deb nemea-detectors_*.orig.tar.gz nemea-detectors-*.tar.gz nemea-detectors-@VERSION@
 

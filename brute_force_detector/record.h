@@ -73,7 +73,7 @@ class IRecord {
 public:
     IRecord() : signatureMatched(false) {}
 
-    virtual ~IRecord() = default;
+    virtual ~IRecord() {};
 
     virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl) = 0;
 
@@ -96,8 +96,8 @@ public:
     };
 
     // May seem unused, actually are passed to reporting functions
-    ip_addr_t dstIp{};
-    ur_time_t flowLastSeen{};
+    ip_addr_t dstIp;
+    ur_time_t flowLastSeen;
 
 
 protected:
@@ -110,11 +110,11 @@ class SSHRecord : public IRecord {
 public:
     SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl) ;
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) ;
 
-    ur_time_t getRecordTimeout() override { return Config::getInstance().getSSHRecordTimeout(); }
+    ur_time_t getRecordTimeout() { return Config::getInstance().getSSHRecordTimeout(); }
 
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 };
@@ -125,11 +125,11 @@ class RDPRecord : public IRecord {
 public:
     RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl);
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
 
-    ur_time_t getRecordTimeout() override { return Config::getInstance().getRDPRecordTimeout(); }
+    ur_time_t getRecordTimeout() { return Config::getInstance().getRDPRecordTimeout(); }
 
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
     const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
@@ -142,11 +142,11 @@ class TELNETRecord : public IRecord {
 public:
     TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithIncomingSignature(void *structure, Whitelist *wl) ;
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) override;
+    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) ;
 
-    ur_time_t getRecordTimeout() override { return Config::getInstance().getTELNETRecordTimeout(); }
+    ur_time_t getRecordTimeout() { return Config::getInstance().getTELNETRecordTimeout(); }
 
     const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
     const static uint8_t signatureFlagsFin = 0b00011011; // SYN + ACK + PSH + FIN
@@ -214,7 +214,7 @@ private:
     std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
-    char victimIP[46]{};
+    char victimIP[46];
 };
 
 template<class T>

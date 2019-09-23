@@ -71,7 +71,7 @@ public:
         scanned = false;
     }
 
-    virtual ~IHost() = default;
+    virtual ~IHost() {};
 
     enum ATTACK_STATE {
         NO_ATTACK,
@@ -181,15 +181,15 @@ class SSHHost : public IHost<SSHRecord *> {
 public:
     SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(SSHRecord *record, void *structure, uint8_t direction) override;
+    bool addRecord(SSHRecord *record, void *structure, uint8_t direction);
 
-    ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+    ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
-    ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getSSHHostDeleteTimeout(); }
+    ur_time_t getHostDeleteTimeout()  { return Config::getInstance().getSSHHostDeleteTimeout(); }
 
-    ur_time_t getHostReportTimeout() override { return Config::getInstance().getSSHReportTimeout(); }
+    ur_time_t getHostReportTimeout()  { return Config::getInstance().getSSHReportTimeout(); }
 
-    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getSSHAttackTimeout(); }
+    ur_time_t getHostAttackTimeout()  { return Config::getInstance().getSSHAttackTimeout(); }
 };
 
 
@@ -198,15 +198,15 @@ class RDPHost : public IHost<RDPRecord *> {
 public:
     RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(RDPRecord *record, void *structure, uint8_t direction) override;
+    bool addRecord(RDPRecord *record, void *structure, uint8_t direction);
 
-    ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+    ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
-    ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getRDPHostDeleteTimeout(); }
+    ur_time_t getHostDeleteTimeout()  { return Config::getInstance().getRDPHostDeleteTimeout(); }
 
-    ur_time_t getHostReportTimeout() override { return Config::getInstance().getRDPReportTimeout(); }
+    ur_time_t getHostReportTimeout()  { return Config::getInstance().getRDPReportTimeout(); }
 
-    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getRDPAttackTimeout(); }
+    ur_time_t getHostAttackTimeout()  { return Config::getInstance().getRDPAttackTimeout(); }
 };
 
 class TELNETHost : public IHost<TELNETRecord *> {
@@ -214,15 +214,15 @@ class TELNETHost : public IHost<TELNETRecord *> {
 public:
     TELNETHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<TELNETRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(TELNETRecord *record, void *structure, uint8_t direction) override;
+    bool addRecord(TELNETRecord *record, void *structure, uint8_t direction);
 
-    ATTACK_STATE checkForAttack(ur_time_t actualTime) override;
+    ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
-    ur_time_t getHostDeleteTimeout() override { return Config::getInstance().getTELNETHostDeleteTimeout(); }
+    ur_time_t getHostDeleteTimeout()  { return Config::getInstance().getTELNETHostDeleteTimeout(); }
 
-    ur_time_t getHostReportTimeout() override { return Config::getInstance().getTELNETReportTimeout(); }
+    ur_time_t getHostReportTimeout()  { return Config::getInstance().getTELNETReportTimeout(); }
 
-    ur_time_t getHostAttackTimeout() override { return Config::getInstance().getTELNETAttackTimeout(); }
+    ur_time_t getHostAttackTimeout()  { return Config::getInstance().getTELNETAttackTimeout(); }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -232,9 +232,9 @@ public:
 class IHostMap {
 
 public:
-    IHostMap() = default;
+    IHostMap() {};
 
-    ~IHostMap() = default;
+    ~IHostMap() {};
 
     virtual void clear() = 0;
 
@@ -288,23 +288,23 @@ protected:
 class SSHHostMap : public IHostMap {
 
 public:
-    SSHHostMap() = default;
+    SSHHostMap() {};
 
-    ~SSHHostMap() = default;
+    ~SSHHostMap() {};
 
-    void clear() override {
+    void clear()  {
         IHostMap::clearMap(&hostMap);
     }
 
-    inline uint16_t size() override {
+    inline uint16_t size()  {
         return hostMap.size();
     }
 
     SSHHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
-    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void deleteOldRecordAndHosts(ur_time_t actualTime);
 
-    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
 
 private:
     map<ip_addr_t, SSHHost *, cmpByIpAddr> hostMap;
@@ -313,23 +313,23 @@ private:
 class RDPHostMap : public IHostMap {
 
 public:
-    RDPHostMap() = default;
+    RDPHostMap() {};
 
-    ~RDPHostMap() = default;
+    ~RDPHostMap() {};
 
-    void clear() override {
+    void clear()  {
         IHostMap::clearMap(&hostMap);
     }
 
-    inline uint16_t size() override {
+    inline uint16_t size()  {
         return hostMap.size();
     }
 
     RDPHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
-    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void deleteOldRecordAndHosts(ur_time_t actualTime);
 
-    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
 
 private:
     map<ip_addr_t, RDPHost *, cmpByIpAddr> hostMap;
@@ -339,23 +339,23 @@ private:
 class TELNETHostMap : public IHostMap {
 
 public:
-    TELNETHostMap() = default;
+    TELNETHostMap() {};
 
-    ~TELNETHostMap() = default;
+    ~TELNETHostMap() {};
 
-    void clear() override {
+    void clear()  {
         IHostMap::clearMap(&hostMap);
     }
 
-    inline uint16_t size() override {
+    inline uint16_t size()  {
         return hostMap.size();
     }
 
     TELNETHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
-    void deleteOldRecordAndHosts(ur_time_t actualTime) override;
+    void deleteOldRecordAndHosts(ur_time_t actualTime);
 
-    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender) override;
+    void checkForAttackTimeout(ur_time_t actualTime, Sender *sender);
 
 private:
     map<ip_addr_t, TELNETHost *, cmpByIpAddr> hostMap;
