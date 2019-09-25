@@ -12,8 +12,8 @@
         <element name="ipv6_blacklist_file">
              /tmp/blacklistfilter/ip6.blist
         </element>
-        <!-- When set to true, watch the blacklist file(s) for changes (with inotify mechanism)
-        and reload them instantly when there is a blacklist update, false means just to load blacklists at startup
+        <!-- When set to dynamic, watch the blacklist file(s) for changes (with inotify mechanism)
+        and reload them instantly, static means just to load files at startup
         -->
         <element name="watch_blacklists">
             true
