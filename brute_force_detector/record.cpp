@@ -53,25 +53,24 @@ SSHRecord::SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen) {
     this->flowLastSeen = flowLastSeen;
 }
 
-bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool SSHRecord::matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) {
 
     signatureMatched = false;
 
-    if ((st.flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags) {
+    if ((flow->flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags) {
         return false;
     }
 
-    if (st.packets > Config::getInstance().getSSHIncMaxPackets() ||
-        st.packets < Config::getInstance().getSSHIncMinPackets()) {
+    if (flow->packets > Config::getInstance().getSSHIncMaxPackets() ||
+        flow->packets < Config::getInstance().getSSHIncMinPackets()) {
         return false;
     }
 
-    if (st.bytes > Config::getInstance().getSSHIncMaxBytes() || st.bytes < Config::getInstance().getSSHIncMinBytes()) {
+    if (flow->bytes > Config::getInstance().getSSHIncMaxBytes() || flow->bytes < Config::getInstance().getSSHIncMinBytes()) {
         return false;
     }
 
-    if (wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort)) {
+    if (wl->isWhitelisted(&flow->srcIp, &flow->dstIp, flow->srcPort, flow->dstPort)) {
         std::cerr << "w\n";
         return false;
     }
@@ -81,23 +80,23 @@ bool SSHRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
     return true;
 }
 
-bool SSHRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool SSHRecord::matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) {
 
-    if ((st.flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags) {
+    if ((flow->flags & SSHRecord::signatureFlags) != SSHRecord::signatureFlags) {
         return false;
     }
 
-    if (st.packets > Config::getInstance().getSSHOutMaxPackets() ||
-        st.packets < Config::getInstance().getSSHOutMinPackets()) {
+    if (flow->packets > Config::getInstance().getSSHOutMaxPackets()
+        || flow->packets < Config::getInstance().getSSHOutMinPackets()) {
         return false;
     }
 
-    if (st.bytes > Config::getInstance().getSSHOutMaxBytes() || st.bytes < Config::getInstance().getSSHOutMinBytes()) {
+    if (flow->bytes > Config::getInstance().getSSHOutMaxBytes()
+        || flow->bytes < Config::getInstance().getSSHOutMinBytes()) {
         return false;
     }
 
-    if (wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
+    if (wl->isWhitelisted(&flow->dstIp, &flow->srcIp, flow->dstPort, flow->srcPort)) // NOLINT: swapped src/dst ip and port
     {
         return false;
     }
@@ -116,20 +115,19 @@ RDPRecord::RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen) {
     this->flowLastSeen = flowLastSeen;
 }
 
-bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool RDPRecord::matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) {
 
     signatureMatched = false;
 
     // Win8 manual input
 
-    if ((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon) {
+    if ((flow->flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon) {
         // s port, d port, packets, bytes, flags
         //  42315,   3389,       8,  1691,  30
         //  42345,   3389,       9,  1747,  30
 
-        if (st.packets >= 7 && st.packets <= 11 && st.bytes >= 1500 && st.bytes <= 2000) {
-            if (wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort)) {
+        if (flow->packets >= 7 && flow->packets <= 11 && flow->bytes >= 1500 && flow->bytes <= 2000) {
+            if (wl->isWhitelisted(&flow->srcIp, &flow->dstIp, flow->srcPort, flow->dstPort)) {
                 return false;
             }
             signatureMatched = true;
@@ -139,12 +137,12 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
 
     // Ncrack/thc hydra to win8 unsuccessful connection
 
-    if ((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon) {
+    if ((flow->flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon) {
         // s port, d port, packets, bytes, flags
         //  37501,   3389,       3,   165,  26
 
-        if (st.packets == 3 && (st.bytes >= 100 && st.bytes <= 200)) {
-            if (wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort)) {
+        if (flow->packets == 3 && (flow->bytes >= 100 && flow->bytes <= 200)) {
+            if (wl->isWhitelisted(&flow->srcIp, &flow->dstIp, flow->srcPort, flow->dstPort)) {
                 return false;
             }
             signatureMatched = true;
@@ -153,19 +151,19 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
     }
 
 
-    if ((st.flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags) {
+    if ((flow->flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags) {
         return false;
     }
 
-    if (st.packets > Config::getInstance().getRDPIncMaxPackets() ||
-        st.packets < Config::getInstance().getRDPIncMinPackets()) {
+    if (flow->packets > Config::getInstance().getRDPIncMaxPackets() ||
+        flow->packets < Config::getInstance().getRDPIncMinPackets()) {
         return false;
     }
-    if (st.bytes > Config::getInstance().getRDPIncMaxBytes() || st.bytes < Config::getInstance().getRDPIncMinBytes()) {
+    if (flow->bytes > Config::getInstance().getRDPIncMaxBytes() || flow->bytes < Config::getInstance().getRDPIncMinBytes()) {
         return false;
     }
 
-    if (wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort)) {
+    if (wl->isWhitelisted(&flow->srcIp, &flow->dstIp, flow->srcPort, flow->dstPort)) {
         return false;
     }
 
@@ -173,20 +171,19 @@ bool RDPRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
     return true;
 }
 
-bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool RDPRecord::matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) {
 
     signatureMatched = false;
 
     // Win8 manual input
 
-    if ((st.flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon) {
+    if ((flow->flags & RDPRecord::signatureFlagsWin8ManualCon) == RDPRecord::signatureFlagsWin8ManualCon) {
         // s port, d port, packets, bytes, flags
         //   3389,  42320,       7,  1882,  26
         //   3389,  42303,       7,  1951,  26
 
-        if (st.packets == 7 && st.bytes >= 1700 && st.bytes <= 2200) {
-            if (wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
+        if (flow->packets == 7 && flow->bytes >= 1700 && flow->bytes <= 2200) {
+            if (wl->isWhitelisted(&flow->dstIp, &flow->srcIp, flow->dstPort, flow->srcPort)) // NOLINT: swapped src/dst ip and port
             {
                 return false;
             }
@@ -197,12 +194,12 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl) {
 
     // Ncrack/thc hydra to win8 unsuccessful connection
 
-    if ((st.flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon) {
+    if ((flow->flags & RDPRecord::signatureFlagsWin8FailedCon) == RDPRecord::signatureFlagsWin8FailedCon) {
         // s port, d port, packets, bytes, flags
         //   3389,  37639,       2,    92,  22
 
-        if (st.packets == 2 && (st.bytes > 80 && st.bytes < 120)) {
-            if (wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
+        if (flow->packets == 2 && (flow->bytes > 80 && flow->bytes < 120)) {
+            if (wl->isWhitelisted(&flow->dstIp, &flow->srcIp, flow->dstPort, flow->srcPort)) // NOLINT: swapped src/dst ip and port
             {
                 return false;
             }
@@ -211,20 +208,20 @@ bool RDPRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl) {
         }
     }
 
-    if ((st.flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags) {
+    if ((flow->flags & RDPRecord::signatureFlags) != RDPRecord::signatureFlags) {
         return false;
     }
 
-    if (st.packets > Config::getInstance().getRDPOutMaxPackets() ||
-        st.packets < Config::getInstance().getRDPOutMinPackets()) {
+    if (flow->packets > Config::getInstance().getRDPOutMaxPackets() ||
+        flow->packets < Config::getInstance().getRDPOutMinPackets()) {
         return false;
     }
-    if (st.bytes > Config::getInstance().getRDPOutMaxBytes() || st.bytes < Config::getInstance().getRDPOutMinBytes()) {
+    if (flow->bytes > Config::getInstance().getRDPOutMaxBytes() || flow->bytes < Config::getInstance().getRDPOutMinBytes()) {
         return false;
     }
 
 
-    if (wl->isWhitelisted(&st.dstIp, &st.srcIp, st.dstPort, st.srcPort)) //swapped src/dst ip and port
+    if (wl->isWhitelisted(&flow->dstIp, &flow->srcIp, flow->dstPort, flow->srcPort)) // NOLINT: swapped src/dst ip and port
     {
         return false;
     }
@@ -243,25 +240,24 @@ TELNETRecord::TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen) {
     this->flowLastSeen = flowLastSeen;
 }
 
-bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool TELNETRecord::matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) {
 
     signatureMatched = false;
 
-    if ((st.flags & TELNETRecord::signatureFlags) != TELNETRecord::signatureFlags) {
+    if ((flow->flags & TELNETRecord::signatureFlags) != TELNETRecord::signatureFlags) {
         return false;
     }
 
-    if (st.packets > Config::getInstance().getTELNETIncMaxPackets() ||
-        st.packets < Config::getInstance().getTELNETIncMinPackets()) {
+    if (flow->packets > Config::getInstance().getTELNETIncMaxPackets() ||
+        flow->packets < Config::getInstance().getTELNETIncMinPackets()) {
         return false;
     }
-    if (st.bytes > Config::getInstance().getTELNETIncMaxBytes() ||
-        st.bytes < Config::getInstance().getTELNETIncMinBytes()) {
+    if (flow->bytes > Config::getInstance().getTELNETIncMaxBytes() ||
+        flow->bytes < Config::getInstance().getTELNETIncMinBytes()) {
         return false;
     }
 
-    if (wl->isWhitelisted(&st.srcIp, &st.dstIp, st.srcPort, st.dstPort)) {
+    if (wl->isWhitelisted(&flow->srcIp, &flow->dstIp, flow->srcPort, flow->dstPort)) {
         return false;
     }
 
@@ -270,29 +266,28 @@ bool TELNETRecord::matchWithIncomingSignature(void *structure, Whitelist *wl) {
 }
 
 
-bool TELNETRecord::matchWithOutgoingSignature(void *structure, Whitelist *wl) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool TELNETRecord::matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) {
 
     signatureMatched = false;
 
-    if ((st.flags & TELNETRecord::signatureFlagsFin) != TELNETRecord::signatureFlagsFin) {
+    if ((flow->flags & TELNETRecord::signatureFlagsFin) != TELNETRecord::signatureFlagsFin) {
         return false;
     }
 
-    TelnetServerProfile *TSPProfile = TSPMap.findProfile(st.srcIp);
+    TelnetServerProfile *TSPProfile = TSPMap.findProfile(flow->srcIp);
     if (TSPProfile == NULL) {
-        TSPProfile = TSPMap.createProfile(st.srcIp, st.firstSeen);
+        TSPProfile = TSPMap.createProfile(flow->srcIp, flow->firstSeen);
     }
 
-    TSPProfile->profileWithNewData(st.packets, st.bytes);
+    TSPProfile->profileWithNewData(flow->packets, flow->bytes);
 
-    if (st.packets < TELNET_OUTGOING_MIN_PACKETS) {
+    if (flow->packets < TELNET_OUTGOING_MIN_PACKETS) {
         return false;
     }
 
     //for max range only
     if (TSPProfile->isProfiled()) {
-        if (st.packets > TSPProfile->getMaxPackets() || st.bytes > TSPProfile->getMaxBytes()) {
+        if (flow->packets > TSPProfile->getMaxPackets() || flow->bytes > TSPProfile->getMaxBytes()) {
             return false;
         }
     }

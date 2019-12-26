@@ -47,23 +47,22 @@
 // ************************************************************/
 // ************************* SSH HOST *************************/
 // ************************************************************/
-bool SSHHost::addRecord(SSHRecord *record, void *structure, uint8_t direction) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool SSHHost::addRecord(SSHRecord *record, IRecord::MatchStructure *flow, uint8_t direction) {
 
     // ignore port-scans
-    if (isFlowScan(&st.packets, &st.flags)) {
+    if (isFlowScan(flow->packets, flow->flags)) {
         return false;
     }
-    else if (st.packets == 1 && st.flags == 0b00010000) // skip ack only packet
+    else if (flow->packets == 1 && flow->flags == 0b00010000) // skip ack only packet
     {
         return false;
     }
-    else if (st.packets == 4 && st.flags == 0b00000010) // 4 packet SYN request
+    else if (flow->packets == 4 && flow->flags == 0b00000010) // 4 packet SYN request
     {
         return false;
     }
     else {
-        timeOfLastReceivedRecord = st.lastSeen;
+        timeOfLastReceivedRecord = flow->lastSeen;
         if (direction == FLOW_INCOMING_DIRECTION) {
             recordListIncoming.addRecord(record, isReported());
         }
@@ -152,15 +151,14 @@ SSHHost::ATTACK_STATE SSHHost::checkForAttack(ur_time_t actualTime) {
 // ************************************************************/
 // ************************* RDP HOST *************************/
 // ************************************************************/
-bool RDPHost::addRecord(RDPRecord *record, void *structure, uint8_t direction) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool RDPHost::addRecord(RDPRecord *record, IRecord::MatchStructure *flow, uint8_t direction) {
 
     // ignore port-scans
-    if (isFlowScan(&st.packets, &st.flags)) {
+    if (isFlowScan(flow->packets, flow->flags)) {
         return false;
     }
     else {
-        timeOfLastReceivedRecord = st.lastSeen;
+        timeOfLastReceivedRecord = flow->lastSeen;
         if (direction == FLOW_INCOMING_DIRECTION) {
             recordListIncoming.addRecord(record, isReported());
         }
@@ -247,15 +245,14 @@ RDPHost::ATTACK_STATE RDPHost::checkForAttack(ur_time_t actualTime) {
 // ************************************************************/
 // ************************ TELNET HOST ***********************/
 // ************************************************************/
-bool TELNETHost::addRecord(TELNETRecord *record, void *structure, uint8_t direction) {
-    IRecord::MatchStructure st = *(IRecord::MatchStructure *) (structure);
+bool TELNETHost::addRecord(TELNETRecord *record, IRecord::MatchStructure *flow, uint8_t direction) {
 
     // ignore port-scans
-    if (isFlowScan(&st.packets, &st.flags)) {
+    if (isFlowScan(flow->packets, flow->flags)) {
         return false;
     }
     else {
-        timeOfLastReceivedRecord = st.lastSeen;
+        timeOfLastReceivedRecord = flow->lastSeen;
         if (direction == FLOW_INCOMING_DIRECTION) {
             recordListIncoming.addRecord(record, isReported());
         }
@@ -340,13 +337,13 @@ TELNETHost::ATTACK_STATE TELNETHost::checkForAttack(ur_time_t actualTime) {
 // *********************** SSH HOST MAP ***********************/
 // ************************************************************/
 
-SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
+SSHHost *SSHHostMap::findHost(const IRecord::MatchStructure *const flow, uint8_t direction) {
     ip_addr_t ip;
     if (direction == FLOW_INCOMING_DIRECTION) {
-        ip = structure->srcIp;
+        ip = flow->srcIp;
     }
     else {
-        ip = structure->dstIp;
+        ip = flow->dstIp;
     }
 
     std::map<ip_addr_t, SSHHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
@@ -355,7 +352,7 @@ SSHHost *SSHHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
 
     if (it == hostMap.end()) {
         // not found, create new host
-        host = new SSHHost(ip, structure->firstSeen);
+        host = new SSHHost(ip, flow->firstSeen);
         hostMap.insert(std::pair<ip_addr_t, SSHHost *>(ip, host));
     }
     else {
@@ -388,13 +385,13 @@ void SSHHostMap::deleteOldRecordAndHosts(ur_time_t actualTime) {
 // *********************** RDP HOST MAP ***********************/
 // ************************************************************/
 
-RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
+RDPHost *RDPHostMap::findHost(const IRecord::MatchStructure *const flow, uint8_t direction) {
     ip_addr_t ip;
     if (direction == FLOW_INCOMING_DIRECTION) {
-        ip = structure->srcIp;
+        ip = flow->srcIp;
     }
     else {
-        ip = structure->dstIp; // attacker is now destination address
+        ip = flow->dstIp; // attacker is now destination address
     }
 
     std::map<ip_addr_t, RDPHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
@@ -403,7 +400,7 @@ RDPHost *RDPHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direct
 
     if (it == hostMap.end()) {
         // not found, create new host
-        host = new RDPHost(ip, structure->firstSeen);
+        host = new RDPHost(ip, flow->firstSeen);
         hostMap.insert(std::pair<ip_addr_t, RDPHost *>(ip, host));
     }
     else {
@@ -437,13 +434,13 @@ void RDPHostMap::deleteOldRecordAndHosts(ur_time_t actualTime) {
 // ********************** TELNET HOST MAP *********************/
 // ************************************************************/
 
-TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t direction) {
+TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *flow, uint8_t direction) {
     ip_addr_t ip;
     if (direction == FLOW_INCOMING_DIRECTION) {
-        ip = structure->srcIp;
+        ip = flow->srcIp;
     }
     else {
-        ip = structure->dstIp; // attacker is now destination address
+        ip = flow->dstIp; // attacker is now destination address
     }
 
     std::map<ip_addr_t, TELNETHost*, cmpByIpAddr>::iterator it = hostMap.find(ip);
@@ -452,7 +449,7 @@ TELNETHost *TELNETHostMap::findHost(IRecord::MatchStructure *structure, uint8_t 
 
     if (it == hostMap.end()) {
         // not found, create new host
-        host = new TELNETHost(ip, structure->firstSeen);
+        host = new TELNETHost(ip, flow->firstSeen);
         hostMap.insert(std::pair<ip_addr_t, TELNETHost *>(ip, host));
     }
     else {

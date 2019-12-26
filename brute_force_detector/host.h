@@ -99,7 +99,7 @@ public:
 
     inline bool getHostScannedNetwork() { return scanned; }
 
-    virtual bool addRecord(T record, void *structure, uint8_t direction) {
+    virtual bool addRecord(T record, IRecord::MatchStructure* flow, uint8_t direction) {
         if (direction == FLOW_INCOMING_DIRECTION) {
             recordListIncoming.addRecord(record, isReported());
         }
@@ -147,13 +147,13 @@ public:
         recordListOutgoing.clearAllRecords();
     }
 
-    bool isFlowScan(const uint32_t *packets, const uint8_t *flags) {
-        if ((*packets == 1 && *flags == 0b00000010)    // SYN
-            || (*packets == 1 && *flags == 0b00010010)  // SYN + ACK
-            || (*packets == 1 && *flags == 0b00010100)  // RST + ACK
-            || (*packets == 2 && *flags == 0b00000010)  // SYN
-            || (*packets == 2 && *flags == 0b00000110)  // SYN + RST
-            || (*packets == 3 && *flags == 0b00000010)) // 3 SYN packets
+    bool isFlowScan(const uint32_t packets, const uint8_t flags) {
+        if ((packets == 1 && flags == 0b00000010)    // SYN
+            || (packets == 1 && flags == 0b00010010)  // SYN + ACK
+            || (packets == 1 && flags == 0b00010100)  // RST + ACK
+            || (packets == 2 && flags == 0b00000010)  // SYN
+            || (packets == 2 && flags == 0b00000110)  // SYN + RST
+            || (packets == 3 && flags == 0b00000010)) // 3 SYN packets
         {
             scanned = true;
             return true;
@@ -181,7 +181,7 @@ class SSHHost : public IHost<SSHRecord *> {
 public:
     SSHHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<SSHRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(SSHRecord *record, void *structure, uint8_t direction);
+    bool addRecord(SSHRecord *record, IRecord::MatchStructure *flow, uint8_t direction);
 
     ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
@@ -198,7 +198,7 @@ class RDPHost : public IHost<RDPRecord *> {
 public:
     RDPHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<RDPRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(RDPRecord *record, void *structure, uint8_t direction);
+    bool addRecord(RDPRecord *record, IRecord::MatchStructure *flow, uint8_t direction);
 
     ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
@@ -214,7 +214,7 @@ class TELNETHost : public IHost<TELNETRecord *> {
 public:
     TELNETHost(ip_addr_t hostIp, ur_time_t firstSeen) : IHost<TELNETRecord *>(hostIp, firstSeen) {}
 
-    bool addRecord(TELNETRecord *record, void *structure, uint8_t direction);
+    bool addRecord(TELNETRecord *record, IRecord::MatchStructure *flow, uint8_t direction);
 
     ATTACK_STATE checkForAttack(ur_time_t actualTime);
 
@@ -300,7 +300,7 @@ public:
         return hostMap.size();
     }
 
-    SSHHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
+    SSHHost *findHost(const IRecord::MatchStructure *const flow, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
     void deleteOldRecordAndHosts(ur_time_t actualTime);
 
@@ -325,7 +325,7 @@ public:
         return hostMap.size();
     }
 
-    RDPHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
+    RDPHost *findHost(const IRecord::MatchStructure *const flow, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
     void deleteOldRecordAndHosts(ur_time_t actualTime);
 
@@ -351,7 +351,7 @@ public:
         return hostMap.size();
     }
 
-    TELNETHost *findHost(IRecord::MatchStructure *structure, uint8_t direction = FLOW_INCOMING_DIRECTION);
+    TELNETHost *findHost(IRecord::MatchStructure *flow, uint8_t direction = FLOW_INCOMING_DIRECTION);
 
     void deleteOldRecordAndHosts(ur_time_t actualTime);
 

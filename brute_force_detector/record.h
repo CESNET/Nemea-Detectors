@@ -71,18 +71,6 @@ inline bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t newTim
 class IRecord {
 
 public:
-    IRecord() : signatureMatched(false) {}
-
-    virtual ~IRecord() {};
-
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl) = 0;
-
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl) = 0;
-
-    inline bool isMatched() { return signatureMatched; }
-
-    virtual ur_time_t getRecordTimeout() = 0;
-
     struct MatchStructure {
         uint8_t flags;
         uint32_t packets;
@@ -94,6 +82,20 @@ public:
         ur_time_t firstSeen;
         ur_time_t lastSeen;
     };
+
+    IRecord() : signatureMatched(false) {}
+
+    virtual ~IRecord() {};
+
+
+    virtual bool matchWithIncomingSignature(IRecord::MatchStructure *flow, Whitelist *wl) = 0;
+
+    virtual bool matchWithOutgoingSignature(IRecord::MatchStructure *flow, Whitelist *wl) = 0;
+
+    inline bool isMatched() { return signatureMatched; }
+
+    virtual ur_time_t getRecordTimeout() = 0;
+
 
     // May seem unused, actually are passed to reporting functions
     ip_addr_t dstIp;
@@ -110,9 +112,9 @@ class SSHRecord : public IRecord {
 public:
     SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl) ;
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) ;
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) ;
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) ;
 
     ur_time_t getRecordTimeout() { return Config::getInstance().getSSHRecordTimeout(); }
 
@@ -125,9 +127,9 @@ class RDPRecord : public IRecord {
 public:
     RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl);
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl);
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl);
 
     ur_time_t getRecordTimeout() { return Config::getInstance().getRDPRecordTimeout(); }
 
@@ -142,9 +144,9 @@ class TELNETRecord : public IRecord {
 public:
     TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
 
-    bool matchWithIncomingSignature(void *structure, Whitelist *wl) ;
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) ;
 
-    bool matchWithOutgoingSignature(void *structure, Whitelist *wl) ;
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) ;
 
     ur_time_t getRecordTimeout() { return Config::getInstance().getTELNETRecordTimeout(); }
 
