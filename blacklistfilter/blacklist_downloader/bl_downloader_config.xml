@@ -26,9 +26,9 @@
                 <!-- Method of retrieving blacklist -->
                 <element name="method">web</element>
                 <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
-                <element name="name">ZeuS Tracker</element>
+                <element name="name">Feodo Tracker</element>
                 <!-- Address from which the blacklist will be downloaded -->
-                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
                 <element name="download_interval">10</element>
                 <!--Are the blacklist entries IPv4 or IPv6-->
@@ -37,26 +37,6 @@
 
             <struct>
                 <element name="id">2</element>
-                <element name="category">Intrusion.Botnet</element>
-                <element name="method">web</element>
-                <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
-                <element name="name">Feodo Tracker</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">3</element>
-                <element name="category">Malware.Ransomware</element>
-                <element name="method">web</element>
-                <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_IPBL.txt</element>
-                <element name="name">Ransomware Tracker</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">4</element>
                 <element name="category">Anomaly.Traffic</element>
                 <element name="method">web</element>
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
@@ -65,19 +45,8 @@
                 <element name="ip_version">4</element>
             </struct>
 
-            <!-- We don't want to report TOR nodes at this time -->
-            <!-- <struct>
-                <element name="id">5</element>
-                <element name="category">Suspicious.Tor</element>
-                <element name="method">web</element>
-                <element name="source">https://check.torproject.org/exit-addresses</element>
-                <element name="name">TOR exit nodes</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct> -->
-
             <struct>
-                <element name="id">6</element>
+                <element name="id">3</element>
                 <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
                 <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
@@ -87,7 +56,7 @@
             </struct>
 
             <struct>
-                <element name="id">7</element>
+                <element name="id">4</element>
                 <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
                 <element name="source">https://isc.sans.edu/api/threatlist/miner?text</element>
@@ -97,17 +66,7 @@
             </struct>
 
             <struct>
-                <element name="id">8</element>
-                <element name="category">Suspicious.Miner</element>
-                <element name="method">web</element>
-                <element name="source">https://cryptoioc.ch/downloads/csv</element>
-                <element name="name">Cryptoioc Miners</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">9</element>
+                <element name="id">5</element>
                 <element name="category">Anomaly.Traffic</element>
                 <element name="method">web</element>
                 <element name="source">https://www.spamhaus.org/drop/dropv6.txt</element>
@@ -116,19 +75,8 @@
                 <element name="ip_version">6</element>
             </struct>
 
-
-            <!-- <struct>
-                <element name="id">10</element>
-                <element name="category">Anomaly.Traffic</element>
-                <element name="method">web</element>
-                <element name="source">https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt</element>
-                <element name="name">IPv6 Full Bogons</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">6</element>
-            </struct> -->
-
             <struct>
-                <element name="id">9</element>
+                <element name="id">6</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
                 <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
@@ -138,7 +86,7 @@
             </struct>
 
             <struct>
-                <element name="id">10</element>
+                <element name="id">7</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
@@ -148,7 +96,7 @@
             </struct>
 
             <struct>
-                <element name="id">11</element>
+                <element name="id">8</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
@@ -157,8 +105,9 @@
                 <element name="ip_version">4</element>
             </struct>
 
+            <!-- last updated 2019-12-16, as of 2020-02-13 -->
             <struct>
-                <element name="id">12</element>
+                <element name="id">9</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
                 <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
@@ -168,14 +117,36 @@
             </struct>
 
             <struct>
-                <element name="id">13</element>
-                <element name="category">Malware</element>
+                <element name="id">10</element>
+                <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
-                <element name="source">http://www.urlvir.com/export-ip-addresses</element>
-                <element name="name">URLVir</element>
+                <element name="source">http://smashed.fit.vutbr.cz:8080/miningProp/json</element>
+                <element name="name">Smashed Miners</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
+
+            <!-- <struct>
+                <element name="id">11</element>
+                <element name="category">Anomaly.Traffic</element>
+                <element name="method">web</element>
+                <element name="source">https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt</element>
+                <element name="name">IPv6 Full Bogons</element>
+                <element name="download_interval">10</element>
+                <element name="ip_version">6</element>
+            </struct> -->
+
+            <!-- We don't want to report TOR nodes at this time -->
+            <!-- <struct>
+                <element name="id">12</element>
+                <element name="category">Suspicious.Tor</element>
+                <element name="method">web</element>
+                <element name="source">https://check.torproject.org/exit-addresses</element>
+                <element name="name">TOR exit nodes</element>
+                <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
+            </struct> -->
+
         </array>
 
         <array type="URL/DNS">
@@ -186,30 +157,20 @@
                 <!-- Method of retrieving blacklist -->
                 <element name="method">web</element>
                 <!-- Name of the blacklist, modules uses this name to choose which blacklist to use -->
-                <element name="name">Malware Domains</element>
+                <element name="name">PhishTank</element>
                 <!-- Address from which the blacklist will be downloaded -->
-                <element name="source">http://mirror1.malwaredomains.com/files/justdomains</element>
+                <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
-                <element name="category">Malware</element>
+                <element name="category">Fraud.Phishing</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">10</element>
                 <!--What detectors should use this blacklist-->
                 <element name="detectors">URL,DNS</element>
             </struct>
 
+            <!-- daily limit 10x -->
             <struct>
                 <element name="id">2</element>
-                <element name="method">web</element>
-                <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
-                <element name="csv_col">2</element>
-                <element name="name">PhishTank</element>
-                <element name="category">Fraud.Phishing</element>
-                <element name="download_interval">10</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-
-            <struct>
-                <element name="id">3</element>
                 <element name="method">web</element>
                 <element name="source">https://openphish.com/feed.txt</element>
                 <element name="name">OpenPhish</element>
@@ -230,7 +191,7 @@
             </struct> -->
 
             <struct>
-                <element name="id">5</element>
+                <element name="id">3</element>
                 <element name="method">web</element>
                 <element name="source">https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt</element>
                 <element name="name">DisconnectMe</element>
@@ -240,7 +201,7 @@
             </struct>
 
             <struct>
-                <element name="id">6</element>
+                <element name="id">4</element>
                 <element name="method">web</element>
                 <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
                 <element name="name">Booters</element>
@@ -249,27 +210,6 @@
                 <element name="detectors">URL,DNS</element>
             </struct>
 
-            <struct>
-                <element name="id">7</element>
-                <element name="method">web</element>
-                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=compromised</element>
-                <element name="name">Zeus Tracker</element>
-                <element name="category">Intrusion.Botnet</element>
-                <element name="download_interval">10</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-
-            <struct>
-                <element name="id">8</element>
-                <element name="method">web</element>
-                <element name="source">https://ransomwaretracker.abuse.ch/downloads/RW_DOMBL.txt</element>
-                <element name="name">Ransomware Tracker</element>
-                <element name="category">Malware.Ransomware</element>
-                <element name="download_interval">10</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-
         </array>
-
     </struct>
 </configuration>
