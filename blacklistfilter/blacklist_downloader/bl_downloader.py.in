@@ -11,6 +11,7 @@ import subprocess
 import argparse
 import csv
 import ipaddress
+import json
 
 from contextlib import suppress
 
@@ -131,11 +132,26 @@ class Blacklist:
             if req.status_code == 200:
                 data = req.content
 
-                # If CSV, cut the desired column
-                with suppress(AttributeError):
-                    data = self.cut_csv(data)
+                # JSON
+                try:
+                    data = json.loads(data)  # if not JSON, throws exception
 
-                new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
+                    data_list = []
+
+                    for i in data:
+                        ip_val = i.get('address')
+                        if ip_val not in data_list:
+                            data_list.append(ip_val)
+
+                    new_entities = sorted(data_list)  # , key=type(self).comparator
+
+                except ValueError as err:
+
+                    # If CSV, cut the desired column
+                    with suppress(AttributeError):
+                        data = self.cut_csv(data)
+
+                    new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
 
                 if new_entities != self.entities:
                     # Blacklist entities changed since last download
@@ -150,7 +166,7 @@ class Blacklist:
                 if not new_entities:
                     logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
 
-            else:
+            else:  # req.status_code != 200
                 logger.warning('Could not fetch blacklist: {}\n'
                                'Status code: {}'.format(self.source, req.status_code))
 

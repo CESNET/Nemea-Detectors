@@ -54,9 +54,9 @@ Below is an example config
                 <!-- Method of retrieving blacklist -->
                 <element name="method">web</element>
                 <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
-                <element name="name">ZeuS Tracker</element>
+                <element name="name">Feodo Tracker</element>
                 <!-- Address from which the blacklist will be downloaded -->
-                <element name="source">https://zeustracker.abuse.ch/blocklist.php?download=ipblocklist</element>
+                <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
                 <element name="download_interval">10</element>
                 <!--Are the blacklist entries IPv4 or IPv6-->
@@ -72,29 +72,18 @@ Below is an example config
                 <!-- Method of retrieving blacklist -->
                 <element name="method">web</element>
                 <!-- Name of the blacklist, modules uses this name to choose which blacklist to use -->
-                <element name="name">Malware Domains</element>
+                <element name="name">PhishTank</element>
                 <!-- Address from which the blacklist will be downloaded -->
-                <element name="source">http://mirror1.malwaredomains.com/files/justdomains</element>
+                <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
+                <!-- OPTIONAL, if specified, module treats the source as .csv file and tries to parse column with this number-->
+                <element name="csv_col">2</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
-                <element name="category">Malware</element>
+                 <element name="category">Fraud.Phishing</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">10</element>
                 <!--What detectors should use this blacklist-->
                 <element name="detectors">URL,DNS</element>
             </struct>
-
-            <struct>
-                <element name="id">2</element>
-                <element name="method">web</element>
-                <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
-                <!-- OPTIONAL, if specified, module treats the source as .csv file and tries to parse column with this number-->
-                <element name="csv_col">2</element>
-                <element name="name">PhishTank</element>
-                <element name="category">Fraud.Phishing</element>
-                <element name="download_interval">10</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-        
         </array>
     </struct>
 </configuration>
