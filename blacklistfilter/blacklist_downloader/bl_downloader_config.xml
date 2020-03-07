@@ -17,9 +17,9 @@
     <!-- Array with information about public blacklist -->
     <struct name="blacklist_array">
         <array type="IP">
-            <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
-                 BEWARE: Could be number from interval <0, 63> in one group/type -->
             <struct>
+                <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
+                     BEWARE: Could be number from interval <0, 63> in one group/type -->
                 <element name="id">1</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Intrusion.Botnet</element>
@@ -27,6 +27,10 @@
                 <element name="method">web</element>
                 <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
                 <element name="name">Feodo Tracker</element>
+                <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
+                <element name="file_format">plaintext</element>
+                <!-- When file_format=JSON, this specifies the JSON key that contains the IP/URL address -->
+                <!-- <element name="json_address_key">address</element> -->
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
@@ -49,7 +53,9 @@
                 <element name="id">3</element>
                 <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
-                <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
+                <element name="source">
+                    https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst
+                </element>
                 <element name="name">Andoniaf Miners</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
@@ -122,6 +128,8 @@
                 <element name="method">web</element>
                 <element name="source">http://smashed.fit.vutbr.cz:8080/miningProp/json</element>
                 <element name="name">Smashed Miners</element>
+                <element name="file_format">JSON</element>
+                <element name="ip_key">address</element> <!-- only when file_format=JSON -->
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -164,7 +172,7 @@
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Fraud.Phishing</element>
                 <!-- Download interval in minutes -->
-                <element name="download_interval">10</element>
+                <element name="download_interval">144</element>
                 <!--What detectors should use this blacklist-->
                 <element name="detectors">URL,DNS</element>
             </struct>
@@ -193,7 +201,9 @@
             <struct>
                 <element name="id">4</element>
                 <element name="method">web</element>
-                <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
+                <element name="source">
+                    https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv
+                </element>
                 <element name="name">Booters</element>
                 <element name="category">Suspicious.Booter</element>
                 <element name="download_interval">10</element>
