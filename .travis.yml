@@ -60,7 +60,7 @@ before_install:
    - pyenv global 2.7 3.6
    - sudo pip3 install ply
    - sudo pip3 install PyYAML pynspect
-   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
+   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python3) setup.py install;); (cd pycommon && $(pyenv which python3) setup.py install;); )
    - python3 -c 'import pytrap'
 
 script:
