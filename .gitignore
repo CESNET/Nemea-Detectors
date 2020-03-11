@@ -9,7 +9,10 @@ RPMBUILD
 aclocal.m4
 amplification_detection/amplification_detection
 autom4te.cache
+blacklistfilter/blacklist_downloader/bl_downloader.py
+blacklistfilter/ipblacklistfilter
 blacklistfilter/ipdetect/ipblacklistfilter
+blacklistfilter/urlblacklistfilter
 brute_force_detector/brute_force_detector
 compile
 config.guess
@@ -35,6 +38,7 @@ missing
 nemea-detectors-*.tar.gz
 nemea-detectors.spec
 sip_bf_detector/sip_bf_detector
+smtp_spam_detector/smtp_spam_detector
 stamp-h1
 test-driver
 tunnel_detection/dnstunnel_detection
