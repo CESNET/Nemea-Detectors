@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <struct name="general">
-        <!-- Download interval of all blacklists in minutes -->
+        <!-- Download check interval for all blacklists in minutes -->
         <element name="download_interval">10</element>
         <!-- Socket timeout for requests.get method in seconds -->
         <element name="socket_timeout">5</element>
@@ -29,8 +29,13 @@
                 <element name="name">Feodo Tracker</element>
                 <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
                 <element name="file_format">plaintext</element>
+
                 <!-- When file_format=JSON, this specifies the JSON key that contains the IP/URL address -->
                 <!-- <element name="json_address_key">address</element> -->
+
+                <!-- When file_format=csv, this specifies the csv column that contains the IP/URL address -->
+                <!-- <element name="csv_col">2</element> -->
+
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
@@ -45,6 +50,7 @@
                 <element name="method">web</element>
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
                 <element name="name">Spamhaus Drop</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -53,10 +59,9 @@
                 <element name="id">3</element>
                 <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
-                <element name="source">
-                    https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst
-                </element>
+                <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
                 <element name="name">Andoniaf Miners</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -67,6 +72,7 @@
                 <element name="method">web</element>
                 <element name="source">https://isc.sans.edu/api/threatlist/miner?text</element>
                 <element name="name">SANS Miners</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -77,6 +83,7 @@
                 <element name="method">web</element>
                 <element name="source">https://www.spamhaus.org/drop/dropv6.txt</element>
                 <element name="name">Spamhaus Drop</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">6</element>
             </struct>
@@ -87,6 +94,7 @@
                 <element name="method">web</element>
                 <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
                 <element name="name">CI Army - BadGuys</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -97,6 +105,7 @@
                 <element name="method">web</element>
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
                 <element name="name">CZ.NIC Honeypot Cowrie</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -107,17 +116,18 @@
                 <element name="method">web</element>
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
                 <element name="name">CZ.NIC Honeypot Dionaea</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
 
-            <!-- last updated 2019-12-16, as of 2020-02-21 -->
             <struct>
                 <element name="id">9</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
                 <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
                 <element name="name">Malc0de</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct>
@@ -129,8 +139,8 @@
                 <element name="source">http://smashed.fit.vutbr.cz:8080/miningProp/json</element>
                 <element name="name">Smashed Miners</element>
                 <element name="file_format">JSON</element>
-                <element name="ip_key">address</element> <!-- only when file_format=JSON -->
-                <element name="download_interval">10</element>
+                <element name="json_address_key">address</element>
+                <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
 
@@ -140,6 +150,7 @@
                 <element name="method">web</element>
                 <element name="source">https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt</element>
                 <element name="name">IPv6 Full Bogons</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">6</element>
             </struct> -->
@@ -151,6 +162,7 @@
                 <element name="method">web</element>
                 <element name="source">https://check.torproject.org/exit-addresses</element>
                 <element name="name">TOR exit nodes</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="ip_version">4</element>
             </struct> -->
@@ -171,8 +183,10 @@
                 <element name="source">http://data.phishtank.com/data/online-valid.csv</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Fraud.Phishing</element>
+                <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
+                <element name="file_format">plaintext</element>
                 <!-- Download interval in minutes -->
-                <element name="download_interval">144</element>
+                <element name="download_interval">144</element> <!-- 10x per day -->
                 <!--What detectors should use this blacklist-->
                 <element name="detectors">URL,DNS</element>
             </struct>
@@ -184,7 +198,8 @@
                 <element name="source">https://openphish.com/feed.txt</element>
                 <element name="name">OpenPhish</element>
                 <element name="category">Fraud.Phishing</element>
-                <element name="download_interval">10</element>
+                <element name="file_format">plaintext</element>
+                <element name="download_interval">720</element> <!-- 2x per day -->
                 <element name="detectors">URL,DNS</element>
             </struct>
 
@@ -194,6 +209,7 @@
                 <element name="source">https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt</element>
                 <element name="name">DisconnectMe</element>
                 <element name="category">Malware</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="detectors">URL,DNS</element>
             </struct>
@@ -201,12 +217,12 @@
             <struct>
                 <element name="id">4</element>
                 <element name="method">web</element>
-                <element name="source">
-                    https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv
-                </element>
+                <element name="source">https://raw.githubusercontent.com/jjsantanna/booters_ecosystem_analysis/master/booterblacklist.csv</element>
                 <element name="name">Booters</element>
+                <element name="file_format">csv</element>
+                <element name="csv_col">2</element>
                 <element name="category">Suspicious.Booter</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">1440</element> <!-- 1x per day -->
                 <element name="detectors">URL,DNS</element>
             </struct>
 
@@ -217,6 +233,7 @@
                 <element name="source">https://www.squidblacklist.org/downloads/dg-malicious.acl</element>
                 <element name="name">SquidBlacklist</element>
                 <element name="category">Malware</element>
+                <element name="file_format">plaintext</element>
                 <element name="download_interval">10</element>
                 <element name="detectors">URL,DNS</element>
             </struct> -->
