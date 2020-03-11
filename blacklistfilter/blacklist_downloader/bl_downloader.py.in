@@ -11,6 +11,7 @@ import subprocess
 import argparse
 import csv
 import ipaddress
+import json
 
 from contextlib import suppress
 
@@ -66,15 +67,30 @@ def split_ip6(ip):
 
 class GeneralConfig:
     def __init__(self, general_config):
+        self.socket_timeout = None
+        self.download_interval = None
+
         for elem in general_config:
             with suppress(ValueError):
                 setattr(self, elem.attrib['name'], int(elem.text))
 
 
 class Blacklist:
+    separator = None
+    comparator = None
+    detector_file = None
+    source = None
+
     def __init__(self, bl):
         self.entities = []
         self.last_download = 1
+
+        self.id = None
+        self.name = None
+        self.download_interval = None
+        self.file_format = None
+        self.csv_col = None
+        self.json_address_key = None
 
         # Generate variables from the XML config file
         for element in bl:
@@ -124,6 +140,7 @@ class Blacklist:
 
     def download_and_update(self):
         updated = False
+        new_entities = None
 
         try:
             req = requests.get(self.source, timeout=g_conf.socket_timeout)
@@ -131,13 +148,32 @@ class Blacklist:
             if req.status_code == 200:
                 data = req.content
 
-                # If CSV, cut the desired column
-                with suppress(AttributeError):
-                    data = self.cut_csv(data)
+                if self.file_format == 'JSON':
+                    try:
+                        data = json.loads(data)
 
-                new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
+                        data_set = set()
 
-                if new_entities != self.entities:
+                        for i in data:
+                            data_set.add(i.get(self.json_address_key))
+
+                        new_entities = sorted(data_set, key=type(self).comparator)
+
+                    except (ValueError, TypeError) as e:
+                        logger.warning('Could not parse {}\n{}'.format(self.name, e))
+
+                else:
+                    # csv or plaintext
+                    if self.file_format == 'csv':
+                        with suppress(AttributeError):
+                            data = self.cut_csv(data)
+
+                    new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
+
+                if not new_entities:
+                    logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
+
+                elif new_entities != self.entities:
                     # Blacklist entities changed since last download
                     self.entities = new_entities
                     if repo_path:
@@ -147,12 +183,9 @@ class Blacklist:
 
                     logger.info('Updated {}: {}'.format(type(self).__name__, self.name))
 
-                if not new_entities:
-                    logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
-
-            else:
-                logger.warning('Could not fetch blacklist: {}\n'
-                               'Status code: {}'.format(self.source, req.status_code))
+            else:  # req.status_code != 200
+                logger.warning('Could not fetch blacklist: {} ({})\n'
+                               'Status code: {}'.format(self.name, self.source, req.status_code))
 
         except requests.RequestException as e:
             logger.warning('Could not fetch blacklist: {}\n'
@@ -236,6 +269,8 @@ class IPv4Blacklist(Blacklist):
 
 
 class URLandDNSBlacklist(Blacklist):
+    dns_detector_file = None
+    url_detector_file = None
     separator = '\\'
     comparator = str
 
@@ -308,29 +343,31 @@ class URLandDNSBlacklist(Blacklist):
 def parse_config(config_file):
     tree = ET.parse(config_file)
 
-    r = tree.getroot().getchildren()
+    r = list(tree.getroot())
 
-    general_config = r[0].getchildren()
-    detector_files = r[1].getchildren()
-    bl_type_array = r[2].getchildren()
+    general_config = list(r[0])
+    detector_files = list(r[1])
+    blacklist_array = list(r[2])
 
     global g_conf
     g_conf = GeneralConfig(general_config)
 
     IPv4Blacklist.detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'IP4'][0]
     IPv6Blacklist.detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'IP6'][0]
-    URLandDNSBlacklist.url_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'URL'][0]
-    URLandDNSBlacklist.dns_detector_file = [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'DNS'][0]
+    URLandDNSBlacklist.url_detector_file = \
+        [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'URL'][0]
+    URLandDNSBlacklist.dns_detector_file = \
+        [det_file.text for det_file in detector_files if det_file.attrib['name'] == 'DNS'][0]
 
-    for bl_type in bl_type_array:
-        type = bl_type.attrib['type']
-        for bl in bl_type:
-            if type == "IP":
+    for bl_type_element in blacklist_array:
+        bl_type = bl_type_element.attrib['type']
+        for bl in bl_type_element:
+            if bl_type == "IP":
                 if int(bl.findall(".//*[@name='ip_version']")[0].text) == 6:
                     blacklists.append(IPv6Blacklist(bl))
                 else:
                     blacklists.append(IPv4Blacklist(bl))
-            elif type == "URL/DNS":
+            elif bl_type == "URL/DNS":
                 blacklists.append(URLandDNSBlacklist(bl))
 
 
@@ -354,10 +391,10 @@ def prepare_repo():
 def commit_to_repo(bl_type):
     try:
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                               '--work-tree', '{}'.format(repo_path), 'add', '-A'],)
+                               '--work-tree', '{}'.format(repo_path), 'add', '-A'], )
 
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
-                              'commit', '--allow-empty', '-m', '{}s updated'.format(bl_type.__name__)],
+                               'commit', '--allow-empty', '-m', '{}s updated'.format(bl_type.__name__)],
                               stdout=subprocess.DEVNULL)
 
         logger.info('Committed changes to GIT')
