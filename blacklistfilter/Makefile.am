@@ -63,4 +63,3 @@ urlpkgdocdir=${docdir}/urlblacklistfilter
 urlpkgdoc_DATA=urldetect/README.md
 
 include ../aminclude.am
-
