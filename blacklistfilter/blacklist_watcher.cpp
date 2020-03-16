@@ -132,10 +132,13 @@ void *watch_blacklist_files(void *arg)
         case 0:
             detection_file =  ((ip_config_t *) watcher_wrapper->data) -> ipv4_blacklist_file;
             detection_file2 = ((ip_config_t *) watcher_wrapper->data) -> ipv6_blacklist_file;
+	    break;
         case 1:
             detection_file = ((url_config_t *) watcher_wrapper->data) -> blacklist_file;
+	    break;
         case 2:
             detection_file = ((dns_config_t *) watcher_wrapper->data) -> blacklist_file;
+	    break;
     }
 
     int fd, poll_num;
