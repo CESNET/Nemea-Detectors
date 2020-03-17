@@ -1,3 +1,7 @@
+2019-05-24 (Filip Šuster): Blacklistfilter: Readme update (#41)
+2019-05-24 (Tomas Cejka): rpm: removed old python3.4 from spec file (dependencies)
+2019-04-12 (Tomas Cejka): blacklistfilter: fixed build as a nemea/ submodule
+
 2019-02-07 (Tomas Cejka): wai_detection: changed Description and move variable info into Note
 2019-02-07 (Tomas Duracka): wai_detection: update of reporter module
 2019-02-07 (Tomas Cejka): booterfilter: removed, the functionality is provided by blacklistfilter
