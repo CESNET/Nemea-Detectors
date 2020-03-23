@@ -24,7 +24,7 @@ parser.add_option("-t", "--time", dest="time", type="float",
 
 # All ports higher than MINSRCPORT are considered as dynamic/private;
 # therefore, let's put lower ports into IDEA messages.
-MINSRCPORT=49152
+MINSRCPORT = 49152
 
 # Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
 MAX_DST_IPS_PER_EVENT = 1000
@@ -411,4 +411,3 @@ if __name__ == '__main__':
 
     trap.sendFlush()
     trap.finalize()
-
