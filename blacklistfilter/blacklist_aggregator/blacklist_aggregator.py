@@ -315,7 +315,6 @@ class Aggregator:
         trap.setRequiredFmt(URLProcessor.iface_num, pytrap.FMT_UNIREC, URLProcessor.template_in)
         # trap.setRequiredFmt(blfilter_interfaces['DNS'])    # Refers to flows with DNS headers from dnsdetect
 
-    def _create_threads(self):
         # Create workers for each receiver
         ip = IPProcessor()
         url = URLProcessor()
@@ -326,8 +325,6 @@ class Aggregator:
         self.url_processor = Thread(target=self._process_data, args=[url])
 
     def run(self):
-        self._create_threads()
-
         # Run multireceiver
         self.ip_receiver.start()
         self.url_receiver.start()
