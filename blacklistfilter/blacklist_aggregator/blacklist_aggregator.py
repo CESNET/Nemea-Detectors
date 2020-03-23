@@ -133,21 +133,21 @@ class IPProcessor:
 
     def _insert_event(self, key):
         event = {
-                 "type": "ip",
-                 "ts_first": float(self.ur_input.TIME_FIRST),
-                 "ts_last": float(self.ur_input.TIME_LAST),
-                 "protocol": self.ur_input.PROTOCOL,
-                 "source_ports": set(),
-                 "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
-                 "targets": {self.ur_input.DST_IP} if self.ur_input.SRC_BLACKLIST else {self.ur_input.SRC_IP},
-                 "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
-                 "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
-                 "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
-                 "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
-                 "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
-                 "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
-                 "blacklist_id": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
-                 "agg_win_minutes": options.time
+            "type": "ip",
+            "ts_first": float(self.ur_input.TIME_FIRST),
+            "ts_last": float(self.ur_input.TIME_LAST),
+            "protocol": self.ur_input.PROTOCOL,
+            "source_ports": set(),
+            "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
+            "targets": {self.ur_input.DST_IP} if self.ur_input.SRC_BLACKLIST else {self.ur_input.SRC_IP},
+            "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
+            "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
+            "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
+            "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
+            "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
+            "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
+            "blacklist_id": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
+            "agg_win_minutes": options.time
         }
 
         # if self.ur_input.SRC_BLACKLIST and self.ur_input.SRC_PORT <= MINSRCPORT:
