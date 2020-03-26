@@ -1,5 +1,4 @@
 ACLOCAL_AMFLAGS = -I m4
-
 SUBDIRS=amplification_detection \
 	blacklistfilter \
 	blacklistfilter/adaptive_filter \

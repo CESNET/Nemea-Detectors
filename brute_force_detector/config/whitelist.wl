@@ -13,12 +13,13 @@
 # direction:
 # "src", "dst" or "" (no keyword = src and dst)
 
-dst 192.30.252.128/30/22 #github 
+dst 192.30.252.128/30/22 #github
 dst 131.103.20.160/28/22 #bitbucket
 
-src 166.88.20.3/32   # valid communication to 195.113.184.18
-src 195.113.44.19/32 # valid(???) communication to 88.208.125.10 & 88.208.125.11
+src 166.88.20.3/32   # EGIHosting (USA) ?, valid communication to 195.113.184.18,
+src 195.113.44.19/32 # Charles University (CZ), valid(???) communication to 88.208.125.10 & 88.208.125.11,
 
+179.176.223.171
 
 
 

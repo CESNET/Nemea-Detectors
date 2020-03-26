@@ -45,76 +45,80 @@
 #ifndef SENDER_H
 #define SENDER_H
 
-#include <libtrap/trap.h>
-
-#include <cstring>
-#include "brute_force_detector.h"
 #include <iostream>
 #include <vector>
+#include <cstring>
+
+#include <libtrap/trap.h>
+#include "brute_force_detector.h"
 #include "config.h"
+
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
+
 #include "fields.h"
+
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
+
 #include <unirec/unirec.h>
+
 using namespace std;
 
-//WARDEN_TYPE
+// WARDEN_TYPE
 #define WT_BRUTEFORCE      2
 
 /**
  * @desc Class for handling output messages
  */
-class Sender
-{
+class Sender {
 public:
-    Sender(bool *success);
+    explicit Sender(bool *success);
+
     ~Sender();
 
-    template <class Host>
-    int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold)
-    {
-        if(Config::getInstance().getGlobalIgnoreFirstSend())
-        {   ///Ignore first report
+    template<class Host>
+    int firstReport(Host *host, uint16_t dstPort, ur_time_t actualTime, uint16_t detectionThreshold) {
+        if (Config::getInstance().getGlobalIgnoreFirstSend()) {
+            // Ignore first report
             host->setReportTime(actualTime);
             return TRAP_E_OK;
         }
 
+        uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
+        uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
+
         string sNote;
 
-       return send(host, dstPort, actualTime, detectionThreshold, false, sNote);
+        return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), false, sNote);
     }
 
-    template <class Host>
-    int continuingReport(Host *host, uint16_t dstPort, ur_time_t actualTime, bool endOfAttack = false)
-    {
-        uint32_t incomingAttackScale = host->getPointerToIncomingRecordList()->getNumOfMatchedFlowsSinceLastReport();
-        uint32_t outgoingAttackScale = host->getPointerToOutgoingRecordList()->getNumOfMatchedFlowsSinceLastReport();
+    template<class Host>
+    int continuingReport(Host *host, uint16_t dstPort, ur_time_t actualTime, bool endOfAttack = false) {
+        uint32_t incomingMatched = host->getPointerToIncomingRecordList()->getMatchedFlowsSinceLastReport();
+        uint32_t outgoingMatched = host->getPointerToOutgoingRecordList()->getMatchedFlowsSinceLastReport();
 
         string sNote;
 
-        host->getPointerToIncomingRecordList()->clearNumOfTargetsSinceLastReport();
-        host->getPointerToIncomingRecordList()->clearNumOfMatchedFlowsSinceLastReport();
-        host->getPointerToIncomingRecordList()->clearNumOTotalFlowsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearMatchedFlowsSinceLastReport();
+        host->getPointerToIncomingRecordList()->clearTotalFlowsSinceLastReport();
 
-        host->getPointerToOutgoingRecordList()->clearNumOfTargetsSinceLastReport();
-        host->getPointerToOutgoingRecordList()->clearNumOfMatchedFlowsSinceLastReport();
-        host->getPointerToOutgoingRecordList()->clearNumOTotalFlowsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearTargetsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearMatchedFlowsSinceLastReport();
+        host->getPointerToOutgoingRecordList()->clearTotalFlowsSinceLastReport();
 
-
-
-        return send(host, dstPort, actualTime, incomingAttackScale > outgoingAttackScale ? incomingAttackScale : outgoingAttackScale, endOfAttack, sNote);
+        return send(host, dstPort, actualTime, std::max(incomingMatched, outgoingMatched), endOfAttack, sNote);
     }
 
 private:
     ur_template_t *outTemplate;
 
-    template <class Host>
-    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false, string stringNote = string())
-    {
+    template<class Host>
+    int send(Host *host, uint16_t dstPort, ur_time_t actualTime, uint32_t intensity, bool endOfAttack = false,
+             const string &stringNote = string()) {
         vector<string> incIpsVictims = host->getPointerToIncomingRecordList()->getIpsOfVictims();
         vector<string> outIpsVictims = host->getPointerToOutgoingRecordList()->getIpsOfVictims();
         string note;
@@ -125,29 +129,29 @@ private:
         sort(outIpsVictims.begin(), outIpsVictims.end());
         outIpsVictims.erase(unique(outIpsVictims.begin(), outIpsVictims.end()), outIpsVictims.end());
 
-        //Incoming
+        // Incoming
         note.append("I:");
-        for (unsigned int i = 0; i < incIpsVictims.size(); i++) {
+        for (unsigned long i = 0; i < incIpsVictims.size(); i++) {
             note.append(incIpsVictims.at(i));
             note.append(",");
         }
 
         //Outgoing
         note.append("O:");
-        for (unsigned int i = 0; i < outIpsVictims.size(); i++) {
+        for (unsigned long i = 0; i < outIpsVictims.size(); i++) {
             note.append(outIpsVictims.at(i));
             note.append(",");
         }
-        note.erase(note.length(),1);
+        note.erase(note.length(), 1);
 
-		//get size of note
-        uint16_t noteSize = note.size() + 1; //plus '\0'
+        // get size of note
+        uint16_t noteSize = note.size() + 1; // plus '\0'
 
         void *rec = ur_create_record(outTemplate, noteSize);
 
-        //@WARDEN_REPORT=DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,
-        //               NOTE (IP addresses of victims)
-        //set fields
+        // @WARDEN_REPORT=DETECTION_TIME,WARDEN_TYPE,SRC_IP,PROTOCOL,DST_PORT,EVENT_SCALE,
+        //                NOTE (IP addresses of victims)
+        // set fields
         ur_set(outTemplate, rec, F_DETECTION_TIME, actualTime);
         ur_set(outTemplate, rec, F_WARDEN_TYPE, WT_BRUTEFORCE);
         ur_set(outTemplate, rec, F_SRC_IP, host->getHostIp());
@@ -155,10 +159,10 @@ private:
         ur_set(outTemplate, rec, F_PROTOCOL, TCP_PROTOCOL_NUM);
         ur_set(outTemplate, rec, F_EVENT_SCALE, intensity);
 
-        //set dynamic field
+        // set dynamic field
         ur_set_string(outTemplate, rec, F_NOTE, note.c_str());
 
-        //send
+        // send
         int sendState = trap_send(0, rec, ur_rec_size(outTemplate, rec));
 
         host->setReportTime(actualTime);
@@ -168,4 +172,4 @@ private:
     }
 };
 
-#endif
+#endif // SENDER_H

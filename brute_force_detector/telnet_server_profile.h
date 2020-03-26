@@ -45,7 +45,6 @@
 #ifndef TELNET_SERVER_PROFILE_H
 #define TELNET_SERVER_PROFILE_H
 
-//#include "record.h"
 #include "brute_force_detector.h"
 #include <unirec/ipaddr.h> //ip_addr_t
 #include <unirec/unirec.h> //ur_time_t
@@ -58,40 +57,46 @@
 const static uint16_t TSPArraySize = 15;
 const static uint8_t profileEvery = 10;
 
-class TelnetServerProfile
-{
-public:    
+class TelnetServerProfile {
+public:
     TelnetServerProfile(ur_time_t firstSeen, ip_addr_t ip) : timeOfCreation(firstSeen), serverIp(ip), profiled(false),
                                                              listSize(0), maxBytes(0), maxPackets(0) {}
-    bool isProfiled() const {return profiled;}
+
+    bool isProfiled() const { return profiled; }
+
     uint32_t getMaxPackets() const { return maxPackets; }
+
     uint64_t getMaxBytes() const { return maxBytes; }
+
     void profileWithNewData(uint32_t packets, uint64_t bytes);
-    
-    
+
+
+
 private:
     ur_time_t timeOfCreation;
     ip_addr_t serverIp;
     bool profiled;
-   
+
     std::list<uint64_t> byteList;
     std::list<uint32_t> packetList;
     uint16_t listSize;
-    
+
     uint64_t maxBytes;
     uint32_t maxPackets;
-    void countNewMaxValues();   
+
+    void countNewMaxValues();
 };
 
-class TelnetServerProfileMap
-{
+class TelnetServerProfileMap {
 public:
     TelnetServerProfileMap() {};
-    TelnetServerProfile * createProfile(ip_addr_t ip, ur_time_t firstSeen);
-    TelnetServerProfile * findProfile(ip_addr_t & hostIp) const;
-    
+
+    TelnetServerProfile *createProfile(ip_addr_t ip, ur_time_t firstSeen);
+
+    TelnetServerProfile *findProfile(ip_addr_t &hostIp) const;
+
 private:
-    std::map<ip_addr_t, TelnetServerProfile*, cmpByIpAddr> TSPMap;
+    std::map<ip_addr_t, TelnetServerProfile *, cmpByIpAddr> TSPMap;
 };
 
-#endif 
+#endif

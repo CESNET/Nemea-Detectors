@@ -46,39 +46,32 @@
 #define RECORD_H
 
 #include <iostream>
-//class TelnetServerProfileMap;
-#include "telnet_server_profile.h"
-
-#include <unirec/ipaddr.h> //ip_addr_t
-#include <unirec/unirec.h> //ur_time_t
 #include <typeinfo>
 #include <set>
+#include <list>
+#include <cassert>
+
+#include <nemea-common.h>
+#include <unirec/ipaddr.h> // ip_addr_t
+#include <unirec/unirec.h> // ur_time_t
 #include "brute_force_detector.h"
 #include "whitelist.h"
-#include <nemea-common.h>
-#include <cassert>
-#include <list>
 #include "config.h"
 
-//If we don't have a lot of memory use hash
-//#define USE_HASH 
+// class TelnetServerProfileMap
+#include "telnet_server_profile.h"
+
+inline bool checkForTimeout(ur_time_t oldTime, ur_time_t timer, ur_time_t newTime) {
+    return oldTime + timer <= newTime;
+}
 
 /**
  * Interface for record
  */
 class IRecord {
-	
-public:
-    IRecord () : signatureMatched(false) {}
-    virtual ~IRecord() {}
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl) = 0;
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl) = 0;
-	
-    inline bool isMatched() { return signatureMatched; }
-    virtual ur_time_t getRecordTimeout() = 0;
 
-    struct MatchStructure
-    {
+public:
+    struct MatchStructure {
         uint8_t flags;
         uint32_t packets;
         uint64_t bytes;
@@ -86,48 +79,79 @@ public:
         ip_addr_t dstIp;
         uint16_t srcPort;
         uint16_t dstPort;
-        ur_time_t flowFirstSeen;
-        ur_time_t flowLastSeen;
+        ur_time_t firstSeen;
+        ur_time_t lastSeen;
     };
+
+    IRecord() : signatureMatched(false) {}
+
+    virtual ~IRecord() {};
+
+
+    virtual bool matchWithIncomingSignature(IRecord::MatchStructure *flow, Whitelist *wl) = 0;
+
+    virtual bool matchWithOutgoingSignature(IRecord::MatchStructure *flow, Whitelist *wl) = 0;
+
+    inline bool isMatched() { return signatureMatched; }
+
+    virtual ur_time_t getRecordTimeout() = 0;
+
+
+    // May seem unused, actually are passed to reporting functions
+    ip_addr_t dstIp;
+    ur_time_t flowLastSeen;
+
 
 protected:
     bool signatureMatched;
 };
 
+
 class SSHRecord : public IRecord {
-	
+
 public:
     SSHRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getSSHRecordTimeout(); }
-	
-    ip_addr_t dstIp;
-    ur_time_t flowLastSeen;
+
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) ;
+
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) ;
+
+    ur_time_t getRecordTimeout() { return Config::getInstance().getSSHRecordTimeout(); }
+
+    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
 };
+
 
 class RDPRecord : public IRecord {
 
 public:
     RDPRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getRDPRecordTimeout(); }
 
-    ip_addr_t dstIp;
-    ur_time_t flowLastSeen;
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl);
+
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl);
+
+    ur_time_t getRecordTimeout() { return Config::getInstance().getRDPRecordTimeout(); }
+
+    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
+    const static uint8_t signatureFlagsWin8ManualCon = 0b00011110; // SYN + ACK + PSH + RST
+    const static uint8_t signatureFlagsWin8FailedCon = 0b00011010; // SYN + ACK + PSH
 };
+
 
 class TELNETRecord : public IRecord {
 
 public:
     TELNETRecord(ip_addr_t dstIp, ur_time_t flowLastSeen);
-    virtual bool matchWithIncomingSignature(void *structure, Whitelist *wl);
-    virtual bool matchWithOutgoingSignature(void *structure, Whitelist *wl);
-    virtual ur_time_t getRecordTimeout() { return Config::getInstance().getTELNETRecordTimeout(); }
 
-    ip_addr_t dstIp;
-    ur_time_t flowLastSeen;
+    bool matchWithIncomingSignature(MatchStructure *flow, Whitelist *wl) ;
+
+    bool matchWithOutgoingSignature(MatchStructure *flow, Whitelist *wl) ;
+
+    ur_time_t getRecordTimeout() { return Config::getInstance().getTELNETRecordTimeout(); }
+
+    const static uint8_t signatureFlags = 0b00011010; // SYN + ACK + PSH
+    const static uint8_t signatureFlagsFin = 0b00011011; // SYN + ACK + PSH + FIN
 
 private:
     static TelnetServerProfileMap TSPMap;
@@ -138,165 +162,165 @@ class RecordList {
 
 public:
     RecordList();
+
     ~RecordList();
-	
+
     void addRecord(T record, bool isHostReported);
+
     void setNewMaxListSize(uint16_t newMaxListSize);
+
     void clearOldRecords(ur_time_t actualTime);
+
     void clearAllRecords();
+
     ur_time_t getTimeOfLastRecord();
-	
-    inline uint16_t getActualNumOfListSize() { return actualListSize; };
-    inline uint16_t getActualNumOfMatchedFlows() { return actualListMatchedFlows; }
-    inline uint32_t getNumOfMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
-    inline uint32_t getNumOfTotalFlowsSinceLastReport() { return totalFlowsSinceLastReport; }
-    inline void clearNumOfMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
-    inline void clearNumOTotalFlowsSinceLastReport() { totalFlowsSinceLastReport = 0; }
 
-    inline uint16_t getNumOfTargetsSinceLastReport() { return hashedDstIPSet.size(); }
-    inline void clearNumOfTargetsSinceLastReport() { hashedDstIPSet.clear(); }
+    inline uint16_t getActualListSize() { return actualListSize; };
 
-    inline uint16_t getNumOfCurrentTargets();
+    inline uint16_t getActualMatchedFlows() { return actualMatchedFlows; }
 
-    inline uint32_t getNumOfTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
-    inline void clearNumOfTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
+    inline uint32_t getMatchedFlowsSinceLastReport() { return matchedFlowsSinceLastReport; }
+
+    inline uint32_t getTotalFlowsSinceLastReport() { return totalFlowsSinceLastReport; }
+
+    inline void clearMatchedFlowsSinceLastReport() { matchedFlowsSinceLastReport = 0; }
+
+    inline void clearTotalFlowsSinceLastReport() { totalFlowsSinceLastReport = 0; }
+
+    inline uint16_t getTargetsSinceLastReport() { return hashedDstIPSet.size(); }
+
+    inline void clearTargetsSinceLastReport() { hashedDstIPSet.clear(); }
+
+    inline uint16_t getCurrentTargets(); // TODO unused
+
+    inline uint32_t getTotalTargetsSinceAttack() { return hashedDstTotalIPSet.size(); }
+
+    inline void clearTotalTargetsSinceAttack() { hashedDstTotalIPSet.clear(); }
+
     inline void initTotalTargetsSet();
+
     std::vector<std::string> getIpsOfVictims();
 
 private:
-    std::list<T> list;
+    std::list<T> list; // In derived classes implemented like list<SSHRecord*>, stores flow records
     uint16_t maxListSize;
     uint16_t actualListSize;
-    uint16_t actualListMatchedFlows;
+    uint16_t actualMatchedFlows;
     uint32_t matchedFlowsSinceLastReport;
     uint32_t totalFlowsSinceLastReport;
-	
+
     uint32_t flowCounter;
     uint32_t flowMatchedCounter;
 
+    // These keep track of all IPs, even after the host becomes inactive, for output log
     std::set<ip_addr_t, cmpByIpAddr> hashedDstIPSet;
     std::set<ip_addr_t, cmpByIpAddr> hashedDstTotalIPSet;
 
-    char str[46];
-
-    bool checkForTimeout(ur_time_t flowTime, ur_time_t timer, ur_time_t actualTime)
-    {
-        if(flowTime + timer <= actualTime)
-            return true;
-        else
-            return false;
-    }
+    char victimIP[46];
 };
 
-template <class T>
-RecordList<T>::RecordList()
-{
+template<class T>
+RecordList<T>::RecordList() {
     actualListSize = 0;
-    actualListMatchedFlows = 0;
-    flowCounter = 0;
-    flowMatchedCounter = 0;
+    actualMatchedFlows = 0;
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
 
-    if(typeid(T) == typeid(SSHRecord*))
-        maxListSize = Config::getInstance().getSSHMaxListSize();
-    else if(typeid(T) == typeid(RDPRecord*))
-        maxListSize = Config::getInstance().getRDPMaxListSize();
-    else if(typeid(T) == typeid(TELNETRecord*))
-        maxListSize = Config::getInstance().getTELNETMaxListSize();
-    else     
-    {    
-        std::cerr<<"Error record.h: Max list size for class "<<typeid(T).name()<<" is not defined!\n";    
+    flowCounter = 0;
+    flowMatchedCounter = 0;
+
+    if (typeid(T) == typeid(SSHRecord *)) {
+        maxListSize = Config::getInstance().getSSHMaxRecords();
+    }
+    else if (typeid(T) == typeid(RDPRecord *)) {
+        maxListSize = Config::getInstance().getRDPMaxRecords();
+    }
+    else if (typeid(T) == typeid(TELNETRecord *)) {
+        maxListSize = Config::getInstance().getTELNETMaxRecords();
+    }
+    else {
+        std::cerr << "Error record.h: Max list size for class " << typeid(T).name() << " is not defined!\n";
         std::terminate();
     }
 }
 
-template <class T>
-RecordList<T>::~RecordList()
-{
-    while(!list.empty())
-    {
+template<class T>
+RecordList<T>::~RecordList() {
+    while (!list.empty()) {
         T recToDel = list.front();
         list.pop_front();
         delete recToDel;
     }
 }
 
-template <class T>
-void RecordList<T>::clearAllRecords()
-{
-    while(!list.empty())
-    {
+template<class T>
+void RecordList<T>::clearAllRecords() {
+    while (!list.empty()) {
         T recToDel = list.front();
         list.pop_front();
         delete recToDel;
     }
 
     actualListSize = 0;
-    actualListMatchedFlows = 0;
+    actualMatchedFlows = 0;
+
     flowCounter = 0;
     flowMatchedCounter = 0;
 
     matchedFlowsSinceLastReport = 0;
     totalFlowsSinceLastReport = 0;
-
-    clearNumOfTargetsSinceLastReport();
 }
 
-
-template <class T>
-void RecordList<T>::addRecord(T record, bool isHostReported)
-{	
-    flowCounter++;
+template<class T>
+void RecordList<T>::addRecord(T record, bool isHostReported) {
     actualListSize++;
-    if(actualListSize > maxListSize)
-    {   //list is full
-        //delete first record
-        if((*list.begin())->isMatched())
-            actualListMatchedFlows--;
+    flowCounter++;
+
+    if (actualListSize > maxListSize) {
+        // list is full
+        // delete first record
+
+        if ((*list.begin())->isMatched()) {
+            actualMatchedFlows--;
+        }
         T recToDelete = list.front();
         delete recToDelete;
+
         list.pop_front();
         actualListSize--;
     }
-	
-    if(record->isMatched())
-    {
+
+    if (record->isMatched()) {
+        actualMatchedFlows++;
         flowMatchedCounter++;
-        actualListMatchedFlows++; 
     }
-	
-    if(isHostReported)
-    {
+
+    if (isHostReported) {
         totalFlowsSinceLastReport++;
 
-        if(record->isMatched())
-        {
+        if (record->isMatched()) {
             matchedFlowsSinceLastReport++;
-            
-            hashedDstIPSet.insert(record->dstIp);   
+
+            hashedDstIPSet.insert(record->dstIp);
             hashedDstTotalIPSet.insert(record->dstIp);
         }
     }
-
-    list.push_back(record); //finally push record to a list
+    list.push_back(record);
 }
 
-template <class T>
-void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
-{
+template<class T>
+void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize) {
     uint32_t currentMaxSize = maxListSize;
 
-    if (currentMaxSize > newMaxListSize)
-    {
-        while (actualListSize > newMaxListSize)
-        {
-            //delete first record
+    if (currentMaxSize > newMaxListSize) {
+        while (actualListSize > newMaxListSize) {
+            // delete first record
             T recToDelete = list.front();
 
-            if (recToDelete->isMatched())
-                actualListMatchedFlows--;
+            if (recToDelete->isMatched()) {
+                actualMatchedFlows--;
+            }
 
             delete recToDelete;
             list.pop_front();
@@ -306,25 +330,29 @@ void RecordList<T>::setNewMaxListSize(uint16_t newMaxListSize)
     maxListSize = newMaxListSize;
 }
 
-template <class T>
-void RecordList<T>::clearOldRecords(ur_time_t actualTime)
-{
-    if(list.empty())
+/**
+ * @brief Delete records older than Record Timeout (30min by def)
+ *
+ * @tparam T
+ * @param actualTime
+ */
+template<class T>
+void RecordList<T>::clearOldRecords(ur_time_t actualTime) {
+    if (list.empty()) {
         return;
+    }
 
     T rec = list.front();
     ur_time_t timer = rec->getRecordTimeout();
 
     typename std::list<T>::iterator it = list.begin();
 
-    while(it != list.end())
-    {
+    while (it != list.end()) {
         ur_time_t flowTime = (*it)->flowLastSeen;
-        if (checkForTimeout(flowTime, timer, actualTime))
-        {
-            if ((*it)->isMatched())
-            {
-                actualListMatchedFlows--;
+
+        if (checkForTimeout(flowTime, timer, actualTime)) {
+            if ((*it)->isMatched()) {
+                actualMatchedFlows--;
             }
 
             actualListSize--;
@@ -332,62 +360,54 @@ void RecordList<T>::clearOldRecords(ur_time_t actualTime)
             delete *it;
             list.erase(it++);
         }
-        else
+        else {
             break;
+        }
     }
 }
 
-template <class T>
-ur_time_t RecordList<T>::getTimeOfLastRecord()
-{
-    if(!list.empty())
+template<class T>
+ur_time_t RecordList<T>::getTimeOfLastRecord() {
+    if (!list.empty()) {
         return list.back()->flowLastSeen;
-    else
+    }
+    else {
         return 0;
+    }
 }
 
 template<class T>
-uint16_t RecordList<T>::getNumOfCurrentTargets()
-{
+uint16_t RecordList<T>::getCurrentTargets() {
     std::set<ip_addr_t, cmpByIpAddr> dstIpSet;
     for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
     {
-        if((*it)->isMatched())
-        {
-            ip_addr_t dstIp = (*it)->dstIp;
-            dstIpSet.insert(dstIp);
+        if ((*it).isMatched()) {
+            dstIpSet.insert((*it)->dstIp);
         }
     }
     return dstIpSet.size();
 }
 
 template<class T>
-void RecordList<T>::initTotalTargetsSet()
-{
+void RecordList<T>::initTotalTargetsSet() {
     for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
-    {
-        if((*it)->isMatched())
-        {
-            ip_addr_t dstIp = (*it)->dstIp;
-
-            hashedDstTotalIPSet.insert(dstIp);
+        if ((*it)->isMatched()) {
+            hashedDstTotalIPSet.insert((*it)->dstIp);
         }
     }
-}
+
+
 
 template<class T>
-std::vector<std::string> RecordList<T>::getIpsOfVictims()
-{
+std::vector<std::string> RecordList<T>::getIpsOfVictims() {
     std::vector<std::string> tmpIpsOfVictims;
 
     for(typename std::list<T>::iterator it = list.begin(); it != list.end(); ++it)
     {
-        if((*it)->isMatched())
-        {
-            ip_addr_t dstIp = (*it)->dstIp;
-            ip_to_str(&dstIp, str);
+        if ((*it)->isMatched()) {
+            ip_to_str(&((*it)->dstIp), victimIP);
 
-            tmpIpsOfVictims.push_back(std::string(str));
+            tmpIpsOfVictims.push_back(std::string(victimIP));
         }
     }
 

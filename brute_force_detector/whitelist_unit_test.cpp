@@ -48,38 +48,40 @@
 using namespace std;
 
 //init and delete WL for new test instance
-#define WL() {								\
-    if(wl!=NULL)							\
-    {										\
-	    delete wl;							\
-		wl = NULL;							\
-    }										\
-    if(wl == NULL)							\
-        wl = new Whitelist();				\
-    parser = wl->getPointerToParser();		\
+#define WL() {                                \
+    if(wl!=NULL)                            \
+    {                                        \
+        delete wl;                            \
+        wl = NULL;                        \
+    }                                        \
+    if(wl == NULL)                        \
+    {                                        \
+        wl = new Whitelist();                \
+    }                                        \
+    parser = wl->getPointerToParser();        \
 }
 //parser->setVerbose();
 
 //print test number
 #define TEST(x) { WL(); } // cout << "Test " << x << ":" << endl; }
 
-uint16_t getRandomPort(){return rand() % 65536;}
+uint16_t getRandomPort() { return rand() % 65536; }
 
 int failCounter = 0;
 
-void subTestRes(int testNum, string state)
-{
+void subTestRes(int testNum, const string &state) {
     //cout <<"Subtest "<< testNum <<": "<< state << endl;
-    if (state == "fail") failCounter++;
+    if (state == "fail") {
+        failCounter++;
+    }
 }
 
 
-int main()
-{
+int main() {
     Whitelist *wl = NULL;
     WhitelistParser *parser;
 
-    srand(0);
+    srand(0); // TODO constant value as random seed
 
     //add rules using:
     //parser->addSelectedPortRule(ip_addr_t, direction, prefix, string ports);
@@ -103,38 +105,46 @@ int main()
     ip_from_str("255.255.255.255", &ip5);
 
 
-	/*******************************************
-	 ***************** TEST 1 ******************
-	 ****** TEST FOR ALL PORTS, ALL DIR ********
-	 *******************************************/
+    /*******************************************
+     ***************** TEST 1 ******************
+     ****** TEST FOR ALL PORTS, ALL DIR ********
+     *******************************************/
     TEST(1);
 
     string ports = string(); //empty string behaves like all port rule
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32, ports);
 
     //ip should be whitelisted
-    if(wl->isWhitelisted(&ip1, &zeroIp, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&ip1, &zeroIp, getRandomPort(), getRandomPort())) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip2, &zeroIp, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&ip2, &zeroIp, getRandomPort(), getRandomPort())) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip should be whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), getRandomPort())) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), getRandomPort())) {
         subTestRes(4, "passed");
-    else
+    }
+    else {
         subTestRes(4, "fail");
+    }
 
     /*******************************************
      ***************** TEST 2 ******************
@@ -143,22 +153,28 @@ int main()
     TEST(2);
     parser->addSelectedPortRule(ip2, WHITELIST_PARSER_IP_DIRECTION_SRC, 32, ports);
     //ip should be whitelisted
-    if(wl->isWhitelisted(&ip2, &zeroIp, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&ip2, &zeroIp, getRandomPort(), getRandomPort())) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip1, &zeroIp, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&ip1, &zeroIp, getRandomPort(), getRandomPort())) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip3, &zeroIp, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&ip3, &zeroIp, getRandomPort(), getRandomPort())) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*******************************************
      ***************** TEST 3 ******************
@@ -167,22 +183,28 @@ int main()
     TEST(3);
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //ip should be whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), getRandomPort())) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), getRandomPort())) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip3, getRandomPort(), getRandomPort()))
+    if (!wl->isWhitelisted(&zeroIp, &ip3, getRandomPort(), getRandomPort())) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*******************************************
      ***************** TEST 4 ******************
@@ -193,34 +215,44 @@ int main()
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_ALL, 32, ports);
 
     //ip port should be whitelisted
-    if(wl->isWhitelisted(&ip1, &zeroIp, 80, zeroPort))
+    if (wl->isWhitelisted(&ip1, &zeroIp, 80, zeroPort)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip2, &zeroIp, 80, 80))
+    if (!wl->isWhitelisted(&ip2, &zeroIp, 80, 80)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip port should be whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, zeroPort, 80))
+    if (wl->isWhitelisted(&zeroIp, &ip1, zeroPort, 80)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, 80, 80))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, 80, 80)) {
         subTestRes(4, "passed");
-    else
+    }
+    else {
         subTestRes(4, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip1, 79, 79))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, 79, 79)) {
         subTestRes(5, "passed");
-    else
+    }
+    else {
         subTestRes(5, "fail");
+    }
 
     /*******************************************
      ***************** TEST 5 ******************
@@ -230,22 +262,28 @@ int main()
     ports = "80";
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_SRC, 32, ports);
     //ip should be whitelisted
-    if(wl->isWhitelisted(&ip1, &zeroIp, 80, getRandomPort()))
+    if (wl->isWhitelisted(&ip1, &zeroIp, 80, getRandomPort())) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip1, &zeroIp, 79, 80))
+    if (!wl->isWhitelisted(&ip1, &zeroIp, 79, 80)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&ip3, &zeroIp, 80, 80))
+    if (!wl->isWhitelisted(&ip3, &zeroIp, 80, 80)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*******************************************
      ***************** TEST 6 ******************
@@ -255,22 +293,28 @@ int main()
     ports = "80";
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //ip should be whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 80))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 80)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 80))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 80)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 79))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 79)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*******************************************
      ***************** TEST 7 ******************
@@ -280,40 +324,52 @@ int main()
     ports = "80-100";
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //inside 80-100 range
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 95))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 95)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //inside 80-100 range
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 80))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 80)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //inside 80-100 range
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 100))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 100)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     //outside 80-100 range
-    if(!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 79))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 79)) {
         subTestRes(4, "passed");
-    else
+    }
+    else {
         subTestRes(4, "fail");
+    }
 
     //outside 80-100 range
-    if(!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 101))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 101)) {
         subTestRes(5, "passed");
-    else
+    }
+    else {
         subTestRes(5, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 80))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 80)) {
         subTestRes(6, "passed");
-    else
+    }
+    else {
         subTestRes(6, "fail");
+    }
 
     /*******************************************
      ***************** TEST 8 ******************
@@ -324,34 +380,44 @@ int main()
     ports = "50,10-20,1000";
     parser->addSelectedPortRule(ip1, WHITELIST_PARSER_IP_DIRECTION_DST, 32, ports);
     //1000 whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 1000))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 1000)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
     //inside 80-100 range
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 10))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 10)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     //inside 80-100 range
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 18))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 18)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     //50 whitelisted
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 50))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 50)) {
         subTestRes(4, "passed");
-    else
+    }
+    else {
         subTestRes(4, "fail");
+    }
 
     //ip should not be whitelisted
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 50))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 50)) {
         subTestRes(5, "passed");
-    else
+    }
+    else {
         subTestRes(5, "fail");
+    }
 
     /*******************************************
      ***************** TEST 9 ******************
@@ -363,35 +429,47 @@ int main()
     ports = string();
     parser->addSelectedPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 16, ports);
 
-    if(wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 15))
+    if (wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 15)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
-    if(wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 15))
+    if (wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 15)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
-    if(!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 21))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 21)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9)) {
         subTestRes(4, "passed");
-    else
+    }
+    else {
         subTestRes(4, "fail");
+    }
 
-    if(wl->isWhitelisted(&zeroIp, &ip3, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&zeroIp, &ip3, getRandomPort(), getRandomPort())) {
         subTestRes(5, "passed");
-    else
+    }
+    else {
         subTestRes(5, "fail");
+    }
 
-    if(wl->isWhitelisted(&zeroIp, &ip4, getRandomPort(), getRandomPort()))
+    if (wl->isWhitelisted(&zeroIp, &ip4, getRandomPort(), getRandomPort())) {
         subTestRes(6, "passed");
-    else
+    }
+    else {
         subTestRes(6, "fail");
+    }
 
     /*******************************************
      ***************** TEST 10 ******************
@@ -401,22 +479,28 @@ int main()
     ports = "10-20";
     parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 0, ports);
 
-    if(wl->isWhitelisted(&zeroIp, &ip4, getRandomPort(), 10))
+    if (wl->isWhitelisted(&zeroIp, &ip4, getRandomPort(), 10)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
-    if(!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9))
+    if (!wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
     ports = string();
     parser->addSelectedPortRule(ip3, WHITELIST_PARSER_IP_DIRECTION_DST, 0, ports);
-    if(wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9))
+    if (wl->isWhitelisted(&zeroIp, &ip2, getRandomPort(), 9)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*******************************************
      ***************** TEST 11 *****************
@@ -426,20 +510,26 @@ int main()
     ports = "25";
     parser->addSelectedPortRule(ip5, WHITELIST_PARSER_IP_DIRECTION_DST, 8, ports);
 
-    if(wl->isWhitelisted(&zeroIp, &ip5, getRandomPort(), 25))
+    if (wl->isWhitelisted(&zeroIp, &ip5, getRandomPort(), 25)) {
         subTestRes(1, "passed");
-    else
+    }
+    else {
         subTestRes(1, "fail");
+    }
 
-    if(!wl->isWhitelisted(&zeroIp, &ip5, 25, 0))
+    if (!wl->isWhitelisted(&zeroIp, &ip5, 25, 0)) {
         subTestRes(2, "passed");
-    else
+    }
+    else {
         subTestRes(2, "fail");
+    }
 
-    if(!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 25))
+    if (!wl->isWhitelisted(&zeroIp, &ip1, getRandomPort(), 25)) {
         subTestRes(3, "passed");
-    else
+    }
+    else {
         subTestRes(3, "fail");
+    }
 
     /*
     if(failCounter == 0)
