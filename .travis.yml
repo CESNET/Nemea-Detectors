@@ -28,6 +28,7 @@ addons:
       - gcc
       - gcc-multilib
       - git
+      - libtool
       - libcurl4-openssl-dev
       - libpcap-dev
       - libxml2
@@ -51,7 +52,7 @@ addons:
 before_install:
    - sudo pip3 install ply
    - sudo pip3 install PyYAML pynspect
-   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && sudo python3 setup.py install;); (cd pycommon && sudo python3 setup.py install;); )
+   - ( git clone --depth 2 https://github.com/CESNET/Nemea-Framework; cd Nemea-Framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && sudo python3 setup.py install;); (cd pycommon && sudo pip3 install --upgrade MarkupSafe; sudo python3 setup.py install;); )
    - python3 -c 'import pytrap'
 
 script:

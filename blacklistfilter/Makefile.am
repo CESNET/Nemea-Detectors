@@ -1,4 +1,8 @@
-bin_PROGRAMS=ipblacklistfilter urlblacklistfilter dnsblacklistfilter
+bin_PROGRAMS=ipblacklistfilter dnsblacklistfilter
+
+if HAVE_LIBIDN
+bin_PROGRAMS+=urlblacklistfilter
+endif
 
 dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            dnsblacklistfilter.h \
