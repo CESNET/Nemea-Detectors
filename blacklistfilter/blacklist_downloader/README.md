@@ -1,4 +1,4 @@
-__# Blacklist Downloader
+# Blacklist Downloader
 
 Blacklist Downloader is a python script used to download public blacklists. 
 It periodically fetches IP/URL/DNS blacklists, preprocesses them and stores them
@@ -25,6 +25,12 @@ Usage:	bl_downloader.py [-c <config_file>] [-r <repo_path>] [-l <log_level>]
 Is done via configuration file (command-line options override config file).
 Below is an example config
 
+Notable elements:
+- file_format (optional)
+    - JSON - use json_address_key to specify JSON key with target adress
+    - csv - use csv_col to cut out specified column
+    - plaintext - no special action on parsing
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
@@ -45,9 +51,9 @@ Below is an example config
     <!-- Array with information about public blacklist -->
     <struct name="blacklist_array">
         <array type="IP">
-            <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
-                 BEWARE: Could be number from interval <0, 63> in one group/type -->
             <struct>
+                <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
+                     BEWARE: Could be number from interval <0, 63> in one group/type -->
                 <element name="id">1</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Intrusion.Botnet</element>
@@ -55,6 +61,10 @@ Below is an example config
                 <element name="method">web</element>
                 <!-- Name of the blacklist, module uses this name to choose which blacklist to use -->
                 <element name="name">Feodo Tracker</element>
+                <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
+                <element name="file_format">plaintext</element>
+                <!-- When file_format=JSON, this specifies the JSON key that contains the IP/URL address -->
+                <!-- <element name="json_address_key">address</element> -->
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
@@ -78,12 +88,12 @@ Below is an example config
                 <!-- OPTIONAL, if specified, module treats the source as .csv file and tries to parse column with this number-->
                 <element name="csv_col">2</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
-                <element name="category">Fraud.Phishing</element>
+                 <element name="category">Fraud.Phishing</element>
                 <!-- Download interval in minutes -->
-                <element name="download_interval">10</element>
+                <element name="download_interval">144</element>
                 <!--What detectors should use this blacklist-->
                 <element name="detectors">URL,DNS</element>
-            </struct>        
+            </struct>
         </array>
     </struct>
 </configuration>

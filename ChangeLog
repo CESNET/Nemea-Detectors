@@ -1,3 +1,17 @@
+2020-04-22 nemea-detectors-1.6.2
+	* blacklistfilter:
+		Aggregator bugfixes
+		Blacklist sources edited
+		Added parsing JSON due to new Smashed blacklist source
+	* brute_force_detector:
+		Fix printing
+	* bl_downloader:
+		Tweaked download intervals
+	* haddrscan_detector:
+		Comment maintenance and bugfixes
+	* travis:
+		Maintenance performed
+
 2019-07-17 nemea-detectors-1.6.1
 	* blacklistfilter: update doc
 	* rpm: remove python34 reference

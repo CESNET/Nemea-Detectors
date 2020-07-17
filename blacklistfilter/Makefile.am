@@ -1,4 +1,8 @@
-bin_PROGRAMS=ipblacklistfilter urlblacklistfilter dnsblacklistfilter
+bin_PROGRAMS=ipblacklistfilter dnsblacklistfilter
+
+if HAVE_LIBIDN
+bin_PROGRAMS+=urlblacklistfilter
+endif
 
 dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            dnsblacklistfilter.h \
@@ -8,7 +12,7 @@ dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            fields.c fields.h
 dnsblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 dnsblacklistfilter_CFLAGS=-std=gnu99
-dnsblacklistfilter_CXXFLAGS=-std=c++11 -Wno-write-strings
+dnsblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
 dnsblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_dnsblacklistfiltersysconf_DATA=dnsdetect/dnsdetect_config.xml
 
@@ -21,7 +25,7 @@ ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
                           fields.c fields.h
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
 ipblacklistfilter_CFLAGS=-std=gnu99
-ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
+ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
 ipblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 
@@ -34,7 +38,7 @@ urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            fields.c fields.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
 urlblacklistfilter_CFLAGS=-std=gnu99
-urlblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic
+urlblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
 urlblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 
@@ -63,4 +67,3 @@ urlpkgdocdir=${docdir}/urlblacklistfilter
 urlpkgdoc_DATA=urldetect/README.md
 
 include ../aminclude.am
-

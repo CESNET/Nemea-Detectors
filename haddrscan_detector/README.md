@@ -51,7 +51,8 @@ every `pruning-interval` for entries unmodified for more than
    reaching this threshold, an alert is generated. The threshold
    affects memory consumption, detection delay and number of possibly
    undetectable scans (if a scanner probes fewer addresses than the
-   threshold, the scan remains undetected).
+   threshold, the scan remains undetected). This threshold is included
+   in the alert as `ADDR_THRSD`.
 
 3. **Maximum age of unmodified list of destination addresses**
    (`idle-threshold`, default 5 minutes). This threshold defines the
@@ -85,23 +86,24 @@ shows required flow information together with the field names:
 
 ## Detector output data
 
-Alerts are sent on the output interface, also in Unirec format and
-they contain the following information:
+Alerts are sent on the output interface, also in Unirec format, they
+contain the following information:
 
-| Unirec field | Description                        |
-|:------------:|:----------------------------------:|
-| `EVENT_TYPE` | type of event (1 for scanning)     |
-| `TIME_FIRST` | first time stamp                   |
-| `TIME_LAST`  | last time stamp                    |
-| `SRC_IP`     | IP address of the attacker         |
-| `SRC_PORT`   | last src port used by the attacker |
-| `DST_PORT`   | dst port probed by the attacker    |
-| `PROTOCOL`   | transport protocol (TCP)           |
-| `ADDR_CNT`   | number of probed dst addresses     |
-| `DST_IP0`    | sample probed dst address 0        |
-| `DST_IP1`    | sample probed dst address 1        |
-| `DST_IP2`    | sample probed dst address 2        |
-| `DST_IP3`    | sample probed dst address 3        |
+| Unirec field | Description                                  |
+|:------------:|:--------------------------------------------:|
+| `EVENT_TYPE` | type of event (1 for scanning)               |
+| `TIME_FIRST` | first time stamp                             |
+| `TIME_LAST`  | last time stamp                              |
+| `SRC_IP`     | IP address of the attacker                   |
+| `SRC_PORT`   | last src port used by the attacker           |
+| `DST_PORT`   | dst port probed by the attacker              |
+| `PROTOCOL`   | transport protocol (TCP)                     |
+| `ADDR_CNT`   | number of probed dst addresses               |
+| `ADDR_THRSD` | threshold for number of probed dst addresses |
+| `DST_IP0`    | sample probed dst address 0                  |
+| `DST_IP1`    | sample probed dst address 1                  |
+| `DST_IP2`    | sample probed dst address 2                  |
+| `DST_IP3`    | sample probed dst address 3                  |
 
 
 ## Detector module parameters
@@ -159,20 +161,21 @@ fields 0 though 11. The last alert fills fields 12 through 15.
 This module expects alerts in Unirec format. The table below shows
 required data together with the field names:
 
-| Unirec field | Description                        |
-|:------------:|:----------------------------------:|
-| `EVENT_TYPE` | type of event (1 for scanning)     |
-| `TIME_FIRST` | first time stamp                   |
-| `TIME_LAST`  | last time stamp                    |
-| `SRC_IP`     | IP address of the attacker         |
-| `SRC_PORT`   | last src port used by the attacker |
-| `DST_PORT`   | dst port probed by the attacker    |
-| `PROTOCOL`   | transport protocol (TCP)           |
-| `ADDR_CNT`   | number of probed dst addresses     |
-| `DST_IP0`    | sample probed dst address 0        |
-| `DST_IP1`    | sample probed dst address 1        |
-| `DST_IP2`    | sample probed dst address 2        |
-| `DST_IP3`    | sample probed dst address 3        |
+| Unirec field | Description                                  |
+|:------------:|:--------------------------------------------:|
+| `EVENT_TYPE` | type of event (1 for scanning)               |
+| `TIME_FIRST` | first time stamp                             |
+| `TIME_LAST`  | last time stamp                              |
+| `SRC_IP`     | IP address of the attacker                   |
+| `SRC_PORT`   | last src port used by the attacker           |
+| `DST_PORT`   | dst port probed by the attacker              |
+| `PROTOCOL`   | transport protocol (TCP)                     |
+| `ADDR_CNT`   | number of probed dst addresses               |
+| `ADDR_THRSD` | threshold for number of probed dst addresses |
+| `DST_IP0`    | sample probed dst address 0                  |
+| `DST_IP1`    | sample probed dst address 1                  |
+| `DST_IP2`    | sample probed dst address 2                  |
+| `DST_IP3`    | sample probed dst address 3                  |
 
 
 ## Aggregator output data
@@ -180,32 +183,33 @@ required data together with the field names:
 Aggregated alerts are sent on the output interface, also in Unirec
 format and they contain the following information:
 
-| Unirec field | Description                        |
-|:------------:|:----------------------------------:|
-| `EVENT_TYPE` | type of event (1 for scanning)     |
-| `TIME_FIRST` | first time stamp                   |
-| `TIME_LAST`  | last time stamp                    |
-| `SRC_IP`     | IP address of the attacker         |
-| `SRC_PORT`   | last src port used by the attacker |
-| `DST_PORT`   | dst port probed by the attacker    |
-| `PROTOCOL`   | transport protocol (TCP)           |
-| `ADDR_CNT`   | number of probed dst addresses     |
-| `DST_IP0`    | sample probed dst address 0        |
-| `DST_IP1`    | sample probed dst address 1        |
-| `DST_IP2`    | sample probed dst address 2        |
-| `DST_IP3`    | sample probed dst address 3        |
-| `DST_IP4`    | sample probed dst address 4        |
-| `DST_IP5`    | sample probed dst address 5        |
-| `DST_IP6`    | sample probed dst address 6        |
-| `DST_IP7`    | sample probed dst address 7        |
-| `DST_IP8`    | sample probed dst address 8        |
-| `DST_IP9`    | sample probed dst address 9        |
-| `DST_IP10`   | sample probed dst address 10       |
-| `DST_IP11`   | sample probed dst address 11       |
-| `DST_IP12`   | sample probed dst address 12       |
-| `DST_IP13`   | sample probed dst address 13       |
-| `DST_IP14`   | sample probed dst address 14       |
-| `DST_IP15`   | sample probed dst address 15       |
+| Unirec field | Description                                  |
+|:------------:|:--------------------------------------------:|
+| `EVENT_TYPE` | type of event (1 for scanning)               |
+| `TIME_FIRST` | first time stamp                             |
+| `TIME_LAST`  | last time stamp                              |
+| `SRC_IP`     | IP address of the attacker                   |
+| `SRC_PORT`   | last src port used by the attacker           |
+| `DST_PORT`   | dst port probed by the attacker              |
+| `PROTOCOL`   | transport protocol (TCP)                     |
+| `ADDR_CNT`   | number of probed dst addresses               |
+| `ADDR_THRSD` | threshold for number of probed dst addresses |
+| `DST_IP0`    | sample probed dst address 0                  |
+| `DST_IP1`    | sample probed dst address 1                  |
+| `DST_IP2`    | sample probed dst address 2                  |
+| `DST_IP3`    | sample probed dst address 3                  |
+| `DST_IP4`    | sample probed dst address 4                  |
+| `DST_IP5`    | sample probed dst address 5                  |
+| `DST_IP6`    | sample probed dst address 6                  |
+| `DST_IP7`    | sample probed dst address 7                  |
+| `DST_IP8`    | sample probed dst address 8                  |
+| `DST_IP9`    | sample probed dst address 9                  |
+| `DST_IP10`   | sample probed dst address 10                 |
+| `DST_IP11`   | sample probed dst address 11                 |
+| `DST_IP12`   | sample probed dst address 12                 |
+| `DST_IP13`   | sample probed dst address 13                 |
+| `DST_IP14`   | sample probed dst address 14                 |
+| `DST_IP15`   | sample probed dst address 15                 |
 
 
 ## Aggregator module parameters
@@ -218,3 +222,11 @@ module takes the following parameter:
 
 For more detailed information see above under [aggregator
 algorithm](#aggregator-algorithm).
+
+
+<!--- Local variables: -->
+<!--- mode: markdown; -->
+<!--- mode: auto-fill; -->
+<!--- mode: flyspell; -->
+<!--- ispell-local-dictionary: "british"; -->
+<!--- End: -->

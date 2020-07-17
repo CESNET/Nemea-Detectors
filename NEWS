@@ -1,3 +1,16 @@
+2020-04-21 (Tomáš Čejka): travis: fix bad version of python3-MarkupSafe
+2020-03-24 (Radko Krkos): brute_force_detector: Fix DIV0 check in printFlowPercent()
+2020-03-23 (Radko Krkos): blacklistfilter: aggregator: Fixes
+2020-03-16 (Radko Krkos): blacklistfilter: Turn on more warnings
+2020-03-16 (Radko Krkos): blacklistfilter: Fix blacklist file watching
+2020-03-11 (Petr Miculek): bl_downloader fixes - catching exceptions; config: tweaked download intervals
+2020-03-11 (Petr Miculek): Travis fixes
+2020-02-21 (Petr Miculek): Source-blacklists: +miners Smashed; -discontinued blacklists (ZeuS, urlvir, CryptoIOC, ransomware tracker); parsing JSON (specific to Smashed blacklist)
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Send address threshold in haddrscan alerts
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Tweak wording and add local variables for Emacs
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Repair call to getDataFmt in haddrscan_aggregator.py
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Report trailing addresses scanned
+
 2019-05-24 (Filip Šuster): Blacklistfilter: Readme update (#41)
 2019-05-24 (Tomas Cejka): rpm: removed old python3.4 from spec file (dependencies)
 2019-04-12 (Tomas Cejka): blacklistfilter: fixed build as a nemea/ submodule

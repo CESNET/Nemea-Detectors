@@ -24,7 +24,7 @@ parser.add_option("-t", "--time", dest="time", type="float",
 
 # All ports higher than MINSRCPORT are considered as dynamic/private;
 # therefore, let's put lower ports into IDEA messages.
-MINSRCPORT=49152
+MINSRCPORT = 49152
 
 # Maximum number of dest. IPs in an event record (if there are more, they are trimmed)
 MAX_DST_IPS_PER_EVENT = 1000
@@ -116,8 +116,9 @@ class RepeatedTimer:
             self.is_running = True
 
     def stop(self):
-        self._timer.cancel()
-        self.is_running = False
+        if self._timer:
+            self._timer.cancel()
+            self.is_running = False
 
 
 class IPProcessor:
@@ -133,21 +134,21 @@ class IPProcessor:
 
     def _insert_event(self, key):
         event = {
-                 "type": "ip",
-                 "ts_first": float(self.ur_input.TIME_FIRST),
-                 "ts_last": float(self.ur_input.TIME_LAST),
-                 "protocol": self.ur_input.PROTOCOL,
-                 "source_ports": set(),
-                 "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
-                 "targets": {self.ur_input.DST_IP} if self.ur_input.SRC_BLACKLIST else {self.ur_input.SRC_IP},
-                 "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
-                 "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
-                 "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
-                 "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
-                 "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
-                 "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
-                 "blacklist_id": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
-                 "agg_win_minutes": options.time
+            "type": "ip",
+            "ts_first": float(self.ur_input.TIME_FIRST),
+            "ts_last": float(self.ur_input.TIME_LAST),
+            "protocol": self.ur_input.PROTOCOL,
+            "source_ports": set(),
+            "source": self.ur_input.SRC_IP if self.ur_input.SRC_BLACKLIST else self.ur_input.DST_IP,
+            "targets": {self.ur_input.DST_IP} if self.ur_input.SRC_BLACKLIST else {self.ur_input.SRC_IP},
+            "src_sent_bytes": self.ur_input.BYTES if self.ur_input.SRC_BLACKLIST else 0,
+            "src_sent_flows": self.ur_input.COUNT if self.ur_input.SRC_BLACKLIST else 0,
+            "src_sent_packets": self.ur_input.PACKETS if self.ur_input.SRC_BLACKLIST else 0,
+            "tgt_sent_bytes": self.ur_input.BYTES if self.ur_input.DST_BLACKLIST else 0,
+            "tgt_sent_flows": self.ur_input.COUNT if self.ur_input.DST_BLACKLIST else 0,
+            "tgt_sent_packets": self.ur_input.PACKETS if self.ur_input.DST_BLACKLIST else 0,
+            "blacklist_id": self.ur_input.SRC_BLACKLIST | self.ur_input.DST_BLACKLIST,
+            "agg_win_minutes": options.time
         }
 
         # if self.ur_input.SRC_BLACKLIST and self.ur_input.SRC_PORT <= MINSRCPORT:
@@ -315,7 +316,6 @@ class Aggregator:
         trap.setRequiredFmt(URLProcessor.iface_num, pytrap.FMT_UNIREC, URLProcessor.template_in)
         # trap.setRequiredFmt(blfilter_interfaces['DNS'])    # Refers to flows with DNS headers from dnsdetect
 
-    def _create_threads(self):
         # Create workers for each receiver
         ip = IPProcessor()
         url = URLProcessor()
@@ -326,8 +326,6 @@ class Aggregator:
         self.url_processor = Thread(target=self._process_data, args=[url])
 
     def run(self):
-        self._create_threads()
-
         # Run multireceiver
         self.ip_receiver.start()
         self.url_receiver.start()
@@ -414,4 +412,3 @@ if __name__ == '__main__':
 
     trap.sendFlush()
     trap.finalize()
-
