@@ -97,9 +97,22 @@ class Blacklist:
     def __str__(self):
         return str(self.__dict__)
 
+    def print_single_blacklist(self):
+        # dictionary (OrderedDict) expected to be sorted
+        output = ''
+
+        for blacklist, ports in self.entities.items():
+            output += blacklist + ':'
+            for val in sorted(ports):
+                if val != -1:
+                    output += str(val) + ','
+            output = output[:-1] + '\n'  # remove last comma
+        return output
+
     @staticmethod
-    def print_formatted(entities_dict):
-        # order defined by set (assumed to be sorted)
+    def print_all_blacklists(entities_dict):
+        # dictionary (OrderedDict) expected to be sorted
+        # ports set NOT expected to be sorted
         output = ''
         separator_blacklists = ';'
 
@@ -113,13 +126,12 @@ class Blacklist:
             # blacklist: ports
             all_blacklists = ''
 
-            for bl in entities_dict[ip]:
+            for blacklist in entities_dict[ip]:
                 ignore_list = False
-                bitfield |= 2 ** (bl - 1)
-                single_blacklist = str(bl) + ':'
+                bitfield |= 2 ** (blacklist - 1)
+                single_blacklist = str(blacklist) + ':'
 
-                ports = sorted(entities_dict[ip][bl])
-                for port in ports:
+                for port in sorted(entities_dict[ip][blacklist]):
                     if port == PORT_UNKNOWN:
                         ignore_list = True
                     single_blacklist += str(port) + ','
@@ -146,10 +158,9 @@ class Blacklist:
         elif isinstance(self, URLandDNSBlacklist):
             type_dir = 'url_dns'
 
-        bl_file = '{}/{}/{}'.format(repo_path, type_dir, self.name)
+        bl_file = '{}/{}/{}.blist'.format(repo_path, type_dir, self.name)
         with open(bl_file, 'w') as f:
-            f.write('\n'.join(self.entities))
-            # f.write(self.print_formatted(...))  # sem netisknu merged všechny, ale jen jeden konkrétní blacklist
+            f.write(self.print_single_blacklist())
 
     def cut_csv(self, data):
         col_idx = int(self.csv_col) - 1
@@ -191,7 +202,7 @@ class Blacklist:
                               )
         """
 
-        return OrderedDict(sorted(all_entities.items(), key=cls.comparator))  # # todo revert
+        return OrderedDict(sorted(all_entities.items(), key=cls.comparator))
 
     def download_and_update(self):
         updated = False
@@ -358,7 +369,7 @@ class IPv4Blacklist(Blacklist):
 
         try:
             with open(cls.detector_file, 'w') as f:
-                f.write(Blacklist.print_formatted(entities))  # todo add port-thingies here
+                f.write(Blacklist.print_all_blacklists(entities))  # todo add port-thingies here
 
             logger.info('New IPv4 detector file created: {}'.format(cls.detector_file))
 
@@ -471,12 +482,15 @@ def parse_config(config_file):
 
 
 def prepare_repo():
+    if not os.path.isdir(repo_path + '/ip4'):
+        os.makedirs(repo_path + '/ip4', exist_ok=True)
+    if not os.path.isdir(repo_path + '/ip6'):
+        os.makedirs(repo_path + '/ip6', exist_ok=True)
+    if not os.path.isdir(repo_path + '/url_dns'):
+        os.makedirs(repo_path + '/url_dns', exist_ok=True)
+
     if not os.path.isdir(repo_path + '/.git'):
         ret = subprocess.check_output(['git', 'init', '{}'.format(repo_path)])
-
-        os.makedirs(repo_path + '/ip4', exist_ok=True)
-        os.makedirs(repo_path + '/ip6', exist_ok=True)
-        os.makedirs(repo_path + '/url_dns', exist_ok=True)
 
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
                                'config', 'user.name', 'bl_downloader'])
