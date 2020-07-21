@@ -101,19 +101,20 @@ class Blacklist:
     def print_formatted(entities_dict):
         # order defined by set (assumed to be sorted)
         output = ''
+        separator_blacklists = ';'
 
         for ip in entities_dict:
             # IP
             output += ip + ','
 
-            # blacklists bitmap
+            # blacklists bitfield
             bitfield = 0
 
             # blacklist: ports
             all_blacklists = ''
-            ignore_list = False
 
             for bl in entities_dict[ip]:
+                ignore_list = False
                 bitfield |= 2 ** (bl - 1)
                 single_blacklist = str(bl) + ':'
 
@@ -124,18 +125,17 @@ class Blacklist:
                     single_blacklist += str(port) + ','
 
                 # replace last port separator by blacklist separator
-                single_blacklist = single_blacklist[:-1] + ';'
+                single_blacklist = single_blacklist[:-1] + separator_blacklists
 
                 if not ignore_list:
                     all_blacklists += single_blacklist
 
             output += str(bitfield)
             if len(all_blacklists) > 0:
-                output += ',' + all_blacklists[:-1]
+                output += separator_blacklists + all_blacklists[:-1]
 
             output += '\n'
 
-        # print(output)
         return output
 
     def write_to_repo(self):
