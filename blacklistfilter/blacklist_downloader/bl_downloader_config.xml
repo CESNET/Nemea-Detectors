@@ -112,7 +112,7 @@
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
                 <element name="name">CZ.NIC Honeypot Cowrie</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
 
@@ -123,7 +123,7 @@
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
                 <element name="name">CZ.NIC Honeypot Dionaea</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
 
