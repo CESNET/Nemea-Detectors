@@ -47,7 +47,9 @@
 #ifndef BLACKLISTFILTER_H
 #define BLACKLISTFILTER_H
 
+#include <map>
 #include <vector>
+#include <set>
 #include <string>
 #include <unirec/unirec.h>
 
@@ -105,6 +107,7 @@ typedef struct {
     uint8_t prefix_len; /**< Length of the prefix. (set to 32/128 if missing) */
     uint64_t in_blacklist; /**< Bit field of blacklists for the address. */
     std::string adaptive_ids; /**< IDs for adaptive filter events */
+    std::map<int, std::set<int>> bl_ports; /**< Ports for blacklists (where known) */
 } ip_bl_entry_t;
 
 

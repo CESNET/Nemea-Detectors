@@ -130,6 +130,7 @@ static bool WATCH_BLACKLISTS_FLAG;
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
+
 /**
  * Function for swapping bits in byte.
  * \param in Input byte.
@@ -275,7 +276,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
                 }
 
                 ip.erase(0, slash_sep + 1);
-                bl_entry.prefix_len = (uint8_t) strtol(ip.c_str(), NULL, 0);
+                bl_entry.prefix_len = (uint8_t) strtol(ip.c_str(), nullptr, 0);
             }
 
             // Parse blacklist ID
@@ -292,7 +293,90 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
                 bl_entry.adaptive_ids = id_part;
             }
 
-            // Add entry to vector
+			// blacklist:[ports] parsing
+			uint16_t bl_num;
+			uint16_t port;
+
+			size_t bl_semicolon_sep = line.find_first_of(';');
+
+			if(bl_semicolon_sep == string::npos)
+			{
+				// no ports present
+				continue;
+			}
+
+			string str = line.substr(bl_semicolon_sep, string::npos);
+			char *index = const_cast<char *>(str.c_str());
+
+			bl_entry.bl_ports = {};
+
+#define state_start 0
+#define state_blacklist_num 1
+#define state_ports 2
+#define state_invalid 3
+#define state_end 4
+
+			int state = state_start;
+			while (state != state_end)
+			{
+				switch (state)
+				{
+					case state_start:
+						if (*index == ';')
+						{
+							index++;
+							state = state_blacklist_num;
+						} else if (*index == '\0')
+						{
+							state = state_end;
+						}
+						else
+						{
+							state = state_invalid;
+						}
+						break;
+
+					case state_blacklist_num:
+						bl_num = strtoul(index, &index, 10);
+						bl_entry.bl_ports[bl_num] = {};
+
+						if (*index == ':')
+						{
+							index++;
+							state = state_ports;
+						} else
+						{
+							state = state_invalid;
+						}
+						break;
+
+					case state_ports:
+						port = strtoul(index, &index, 10);
+						bl_entry.bl_ports.at(bl_num).insert(port);
+
+						if (*index == ',')
+						{
+							index++;
+							state = state_ports;
+						} else if (*index == ';')
+						{
+							index++;
+							state = state_start;
+						} else
+						{
+							state = state_end;
+						}
+						break;
+				}
+
+				if (state == state_invalid)
+				{
+					cerr << "Invalid blacklist:[ports] on line:" << str << endl;
+					break;
+				}
+			}
+
+			// Add entry to vector
             if (ip_is4(&bl_entry.ip)) {
                 v4_list_new.push_back(bl_entry);
             } else {
@@ -382,6 +466,36 @@ int ip_binary_search(const ip_addr_t *searched,
 }
 
 /**
+ * @brief fill bitfield with flags of ports where the port matching succeeded or where no port information are available
+ * 		  gets called for records that have been already matched based on SRC_IP/DST_IP
+ *
+ * @param bl_entry blacklist entry
+ * @param port src/dst port of the matched record
+ *
+ * @return bitfield with only those flags filled where ports were matched or not available
+ */
+uint64_t check_ports_get_bitfield(const ip_bl_entry_t &bl_entry, uint16_t port)
+{
+	uint64_t inverse_matched_bitfield = 0;
+
+	if (bl_entry.bl_ports.empty())
+	{
+		// no port information => match everything
+		return bl_entry.in_blacklist;
+	}
+
+	for (const auto &blacklist: bl_entry.bl_ports)
+	{
+		if (blacklist.second.find(port) == blacklist.second.end())
+		{
+			inverse_matched_bitfield |= (uint64_t) (1u << (uint32_t) (blacklist.first - 1));
+		}
+	}
+
+	return inverse_matched_bitfield xor bl_entry.in_blacklist;
+}
+
+/**
  * \brief Function for checking blacklisted IPv4/IPv6 addresses.
  *
  * It extracts both source and
@@ -413,31 +527,59 @@ int blacklist_check(ur_template_t *ur_in,
     // index of the prefix the source ip fits in (return value of binary search)
     int search_result;
 
+    // port-matching
+    uint16_t port;
+    uint64_t matched_bitfield;
+
     // Check source IP
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_out, detected, F_SRC_BLACKLIST, bl[search_result].in_blacklist);
-        ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
-        if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
-            // Adaptive IP filter mode
-            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
-        } else {
-            ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
-        }
-        return BLACKLISTED;
-    // Check destination IP
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND)
+	{
+		if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX)
+		{
+			// Adaptive IP filter mode
+			ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
+		} else
+		{
+			ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
+		}
+
+		port = ur_get(ur_in, record, F_SRC_PORT);  // source IP was matched
+
+		matched_bitfield = check_ports_get_bitfield(bl[search_result], port);
+
+		if (matched_bitfield != 0)
+		{
+			ur_set(ur_out, detected, F_SRC_BLACKLIST, matched_bitfield);
+			return BLACKLISTED;
+		}
+
+		ur_set(ur_out, detected, F_DST_BLACKLIST, 0x0);
+
+		// Check destination IP
     } else if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_DST_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
-        ur_set(ur_out, detected, F_DST_BLACKLIST, bl[search_result].in_blacklist);
-        ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
         if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
             ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
         } else {
             ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
         }
-        return BLACKLISTED;
-    }
+
+		port = ur_get(ur_in, record, F_DST_PORT);  // dest IP was matched - mirrored
+
+		matched_bitfield = check_ports_get_bitfield(bl[search_result], port);
+
+		if (matched_bitfield != 0)
+		{
+			ur_set(ur_out, detected, F_DST_BLACKLIST, matched_bitfield);
+			return BLACKLISTED;
+		}
+
+        ur_set(ur_out, detected, F_SRC_BLACKLIST, 0x0);
+
+	}
 
     return ADDR_CLEAR;
 }
+
 
 /**
  * \brief Function for checking if incoming flow has src/dst port 53.
