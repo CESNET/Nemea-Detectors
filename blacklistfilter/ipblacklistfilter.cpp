@@ -130,7 +130,6 @@ static bool WATCH_BLACKLISTS_FLAG;
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
-
 /**
  * Function for swapping bits in byte.
  * \param in Input byte.
