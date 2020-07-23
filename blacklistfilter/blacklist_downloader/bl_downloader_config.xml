@@ -193,7 +193,9 @@
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Fraud.Phishing</element>
                 <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
-                <element name="file_format">plaintext</element>
+                <element name="file_format">csv</element>
+                <!-- When file_format=csv, this specifies the csv column that contains the IP/URL address -->
+                <element name="csv_col">2</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">144</element> <!-- 10x per day -->
                 <!--What detectors should use this blacklist-->

@@ -110,7 +110,7 @@ class Blacklist:
         return output
 
     @staticmethod
-    def print_all_blacklists(entities_dict):
+    def print_all_blacklists(entities_dict, bitfield_separator):
         # dictionary (OrderedDict) expected to be sorted
         # ports set NOT expected to be sorted
         output = ''
@@ -118,7 +118,7 @@ class Blacklist:
 
         for ip in entities_dict:
             # IP
-            output += ip + ','
+            output += ip + bitfield_separator
 
             # blacklists bitfield
             bitfield = 0
@@ -191,20 +191,17 @@ class Blacklist:
 
         for bl in blacklists:
             if isinstance(bl, cls):
-                for ip in bl.entities:
-                    ports = bl.entities[ip]
-                    insert_entity(all_entities, ip, int(bl.id), ports)
-
-        """
-        # Create sorted list of entities and their cumulative indexes
-        all_entities = sorted(['{entity}{sep}{idx}'.format(entity=entity, idx=idx, sep=cls.separator)
-                               for entity, idx in all_entities.items()],
-                              )
-        """
+                for entity in bl.entities:
+                    ports = bl.entities[entity]
+                    insert_entity(all_entities, entity, int(bl.id), ports)
 
         return OrderedDict(sorted(all_entities.items(), key=cls.comparator))
 
     def download_and_update(self):
+        """
+
+        :return: OrderedDict where key=IP, value=(OrderedDict where key=Blacklist number, value=set of ports for given bl)
+        """
         updated = False
         new_entities = None
 
@@ -224,7 +221,8 @@ class Blacklist:
                             data = self.cut_csv(data)
 
                     # sorted ordered dictionary, with all values (ports) == {-1}, representing unknown/all ports
-                    new_entities = OrderedDict.fromkeys(sorted(self.extract_entities(data), key=type(self).comparator), {PORT_UNKNOWN})
+                    new_entities = OrderedDict.fromkeys(sorted(self.extract_entities(data), key=type(self).comparator),
+                                                        {PORT_UNKNOWN})
 
                 if not new_entities:
                     logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
@@ -275,7 +273,7 @@ class Blacklist:
             # filter entities based on value of given field (e.g. server_status = up)
             if not flag_check_filter \
                     or str(i.get(self.filter_key)) != self.filter_value:
-                pass # continue
+                continue
 
             ip = i.get(self.json_address_key)
             port = i.get(self.json_port_key)
@@ -333,7 +331,7 @@ class IPv6Blacklist(Blacklist):
 
         try:
             with open(cls.detector_file, 'w') as f:
-                f.write('\n'.join(entities))
+                f.write(super().print_all_blacklists(entities, cls.separator))
 
             logger.info('New IPv6 detector file created: {}'.format(cls.detector_file))
 
@@ -369,7 +367,7 @@ class IPv4Blacklist(Blacklist):
 
         try:
             with open(cls.detector_file, 'w') as f:
-                f.write(Blacklist.print_all_blacklists(entities))  # todo add port-thingies here
+                f.write(super().print_all_blacklists(entities, cls.separator))
 
             logger.info('New IPv4 detector file created: {}'.format(cls.detector_file))
 
@@ -434,13 +432,14 @@ class URLandDNSBlacklist(Blacklist):
         os.makedirs(os.path.dirname(cls.url_detector_file), exist_ok=True)
         os.makedirs(os.path.dirname(cls.dns_detector_file), exist_ok=True)
 
-        extracted_fqdns = [entity for entity in entities if
-                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])]
+        # not an OrderedDict but since its origin was sorted, this will keep the same order
+        extracted_fqdns = {entity: vals for entity, vals in entities.items() if
+                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])}
 
         try:
             with open(cls.url_detector_file, 'w') as url_f, open(cls.dns_detector_file, 'w') as dns_f:
-                url_f.write('\n'.join(entities))
-                dns_f.write('\n'.join(extracted_fqdns))
+                url_f.write(super().print_all_blacklists(entities, cls.separator))
+                dns_f.write(super().print_all_blacklists(extracted_fqdns, cls.separator))
 
             logger.info('New URL detector file created: {}'.format(cls.url_detector_file))
             logger.info('New DNS detector file created: {}'.format(cls.dns_detector_file))
@@ -550,7 +549,7 @@ if __name__ == '__main__':
     parser.add_argument('--config-file', '-c',
                         help="Configuration file for downloader (blacklists and metadata)",
                         type=str,
-                        default='/etc/nemea/bl_downloader_config.xml')
+                        default='/etc/nemea/blacklistfilter/bl_downloader_config.xml')
 
     args = parser.parse_args()
     repo_path = args.repo_path
