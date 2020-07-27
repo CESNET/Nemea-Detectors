@@ -316,21 +316,16 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 #define state_end 4
 
 			int state = state_start;
-			while (state != state_end)
-			{
-				switch (state)
-				{
+			while (state != state_end) {
+				switch (state) {
 					case state_start:
-						if (*index == ';')
-						{
+						if (*index == ';') {
 							index++;
 							state = state_blacklist_num;
-						} else if (*index == '\0')
-						{
+						} else if (*index == '\0') {
 							state = state_end;
 						}
-						else
-						{
+						else {
 							state = state_invalid;
 						}
 						break;
@@ -339,12 +334,10 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 						bl_num = strtoul(index, &index, 10);
 						bl_entry.bl_ports[bl_num] = {};
 
-						if (*index == ':')
-						{
+						if (*index == ':') {
 							index++;
 							state = state_ports;
-						} else
-						{
+						} else {
 							state = state_invalid;
 						}
 						break;
@@ -353,23 +346,19 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 						port = strtoul(index, &index, 10);
 						bl_entry.bl_ports.at(bl_num).insert(port);
 
-						if (*index == ',')
-						{
+						if (*index == ',') {
 							index++;
 							state = state_ports;
-						} else if (*index == ';')
-						{
+						} else if (*index == ';') {
 							index++;
 							state = state_start;
-						} else
-						{
+						} else {
 							state = state_end;
 						}
 						break;
 				}
 
-				if (state == state_invalid)
-				{
+				if (state == state_invalid) {
 					cerr << "Invalid blacklist:[ports] on line:" << str << endl;
 					break;
 				}
@@ -477,16 +466,13 @@ uint64_t check_ports_get_bitfield(const ip_bl_entry_t &bl_entry, uint16_t port)
 {
 	uint64_t inverse_matched_bitfield = 0;
 
-	if (bl_entry.bl_ports.empty())
-	{
+	if (bl_entry.bl_ports.empty()) {
 		// no port information => match everything
 		return bl_entry.in_blacklist;
 	}
 
-	for (const auto &blacklist: bl_entry.bl_ports)
-	{
-		if (blacklist.second.find(port) == blacklist.second.end())
-		{
+	for (const auto &blacklist: bl_entry.bl_ports) {
+		if (blacklist.second.find(port) == blacklist.second.end()) {
 			inverse_matched_bitfield |= (uint64_t) (1u << (uint32_t) (blacklist.first - 1));
 		}
 	}
@@ -531,10 +517,8 @@ int blacklist_check(ur_template_t *ur_in,
     uint64_t matched_bitfield;
 
     // Check source IP
-    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND)
-	{
-		if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX)
-		{
+    if ((search_result = ip_binary_search(ur_get_ptr(ur_in, record, F_SRC_IP), v4mm, v6mm, bl)) != IP_NOT_FOUND) {
+		if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
 			// Adaptive IP filter mode
 			ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
 		} else
@@ -546,8 +530,7 @@ int blacklist_check(ur_template_t *ur_in,
 
 		matched_bitfield = check_ports_get_bitfield(bl[search_result], port);
 
-		if (matched_bitfield != 0)
-		{
+		if (matched_bitfield != 0) {
 			ur_set(ur_out, detected, F_SRC_BLACKLIST, matched_bitfield);
 			return BLACKLISTED;
 		}
@@ -566,8 +549,7 @@ int blacklist_check(ur_template_t *ur_in,
 
 		matched_bitfield = check_ports_get_bitfield(bl[search_result], port);
 
-		if (matched_bitfield != 0)
-		{
+		if (matched_bitfield != 0) {
 			ur_set(ur_out, detected, F_DST_BLACKLIST, matched_bitfield);
 			return BLACKLISTED;
 		}
