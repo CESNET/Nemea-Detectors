@@ -38,10 +38,10 @@ Authors:
 
 
 """
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #from cluster import Cluster
-from flow import Flow, SMTP_Flow
-from smtp_entity import SMTP_ENTITY
+from .flow import Flow, SMTP_Flow
+from .smtp_entity import SMTP_ENTITY
 from pytrap import TrapCtx
 from threading import Thread, RLock
 
@@ -55,7 +55,7 @@ import json
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 import report2idea
-import g
+from . import g
 
 detection_log = logging.getLogger('smtp_spam.detection')
 

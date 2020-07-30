@@ -14,7 +14,7 @@ The main goal of this project is to detect attacks on web applications in their 
 This module uses pytrap which is part of the [Nemea-Framework](https://github.com/CESNET/Nemea-Framework).
 
 Additional requirements are:
-  - [python2.7](https://www.python.org/ftp/python/2.7.15/Python-2.7.15.tar.xz)
+  - [python3.6](https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tar.xz)
   - [Nemea-Framework](https://github.com/CESNET/Nemea-Framework)
 
 ### 2.1.2 Directory Structure

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Aggregation of alert from vportscan_detector.
 # It receives alerts and aggregates them into time window.

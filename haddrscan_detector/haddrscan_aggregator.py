@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- mode: python; python-indent-offset: 3; coding: utf-8; -*-
 #
 # Aggregation of alert from haddrscan_detector.
