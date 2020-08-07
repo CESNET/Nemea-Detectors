@@ -48,10 +48,7 @@ from threading import Thread, Semaphore, Lock
 from .flow import Flow, SMTP_Flow, FlowConversionException
 from .smtp_entity import SMTP_ENTITY
 from .detection import SpamDetection
-try:
-    from queue import Queue
-except:
-    from queue import Queue
+from queue import Queue
 
 """
 Parse input parameters
