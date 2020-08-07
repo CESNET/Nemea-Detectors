@@ -298,8 +298,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 
 			size_t bl_semicolon_sep = line.find_first_of(';');
 
-			if (bl_semicolon_sep == string::npos)
-			{
+			if (bl_semicolon_sep == string::npos) {
 				// no ports present
 				continue;
 			}
