@@ -520,8 +520,7 @@ int blacklist_check(ur_template_t *ur_in,
 		if (bl[search_result].in_blacklist == ADAPTIVE_BLACKLIST_INDEX) {
 			// Adaptive IP filter mode
 			ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, bl[search_result].adaptive_ids.c_str());
-		} else
-		{
+		} else {
 			ur_set_string(ur_out, detected, F_ADAPTIVE_IDS, "");
 		}
 
