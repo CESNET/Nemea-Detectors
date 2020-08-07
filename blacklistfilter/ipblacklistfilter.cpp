@@ -323,8 +323,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 							state = state_blacklist_num;
 						} else if (*index == '\0') {
 							state = state_end;
-						}
-						else {
+						} else {
 							state = state_invalid;
 						}
 						break;
