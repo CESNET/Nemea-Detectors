@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <cerrno>
 #include <signal.h>
 #include <getopt.h>
 #include <pthread.h>
@@ -308,6 +309,7 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
 
          string str = line.substr(bl_semicolon_sep, string::npos);
          char *index = const_cast<char *>(str.c_str());
+         char* end_ptr = nullptr;
 
          bl_entry.bl_ports = {};
 
@@ -332,7 +334,14 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
                break;
 
             case state_blacklist_num:
-               bl_num = strtoul(index, &index, 10);
+               bl_num = strtoul(index, &end_ptr, 10);
+               if (end_ptr == index || errno != 0) {
+                  cerr << "Parsing blacklist number failed, errno:" << errno << endl;
+                  state = state_invalid;
+                  break;
+               }
+
+               index = end_ptr;
                bl_entry.bl_ports[bl_num] = {};
 
                if (*index == ':') {
@@ -344,7 +353,13 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
                break;
 
             case state_ports:
-               port = strtoul(index, &index, 10);
+               port = strtoul(index, &end_ptr, 10);
+               if (end_ptr == index || errno != 0) {
+                  cerr << "Parsing port number failed, errno:" << errno << endl;
+                  state = state_invalid;
+                  break;
+               }
+               index = end_ptr;
                bl_entry.bl_ports.at(bl_num).insert(port);
 
                if (*index == ',') {
