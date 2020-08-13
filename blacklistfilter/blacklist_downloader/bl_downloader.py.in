@@ -12,8 +12,10 @@ import argparse
 import csv
 import ipaddress
 import json
-
+from collections import OrderedDict
 from contextlib import suppress
+
+PORT_UNKNOWN = -1  # for blacklists that do not use port numbers; value is used internally only
 
 SECONDS_IN_MINUTE = 60
 
@@ -23,8 +25,10 @@ cs.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.addHandler(cs)
 
-ip4_regex = re.compile('\\b((2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(2(5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)((/(3[012]|[12]?[0-9]))?)\\b')
+# IPv4 regex -- matches IPv4 + optional prefix
+ip4_regex = re.compile('\\b(?:(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)(?:(?:/(3[012]|[12]?[0-9]))?)\\b')
 
+# IPv6 regex -- matches only IPv6 (prefix not included)
 ip6_regex = re.compile('\\b^[a-fA-F0-9:]+(/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?\\b')
 
 # Just a simple regex to eliminate commentaries
@@ -41,9 +45,14 @@ blacklists = []
 repo_path = None
 
 
-# Sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
-# into tuple of IP (A, B, C, D), which is comparable by python (numerically)
-def split_ip4(ip):
+def split_ip4(ip_dict_entry):
+    """Split an IPv4 address given as string into a 4-tuple of integers.
+
+    Used as sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
+    into tuple of IP (A, B, C, D), which is numerically comparable.
+    """
+    ip = ip_dict_entry[0]
+
     # Extract only IP, without the prefix and indexes
     ip = ip.split('/')[0] if '/' in ip else ip.split(',')[0]
 
@@ -54,11 +63,16 @@ def split_ip4(ip):
         logger.warning(e)
         tuple_ip = (0, 0, 0, 0)
 
-    """Split a IP address given as string into a 4-tuple of integers."""
     return tuple_ip
 
 
-def split_ip6(ip):
+def split_ip6(ip_dict_entry):
+    """Split an IPv6 address given as string into a N-tuple of integers.
+
+    Used as sorting comparator, splits the IP in format "A.B.C.D(/X),Y,Z"
+    into tuple of IP (A, B, C, D), which is numerically comparable.
+    """
+    ip = ip_dict_entry[0]
     ip = ip.split('/')[0] if '/' in ip else ip.split(',')[0]
     tuple_ip = tuple(int(part, 16) for part in ip.split(':'))
 
@@ -78,19 +92,12 @@ class GeneralConfig:
 class Blacklist:
     separator = None
     comparator = None
-    detector_file = None
-    source = None
 
     def __init__(self, bl):
-        self.entities = []
-        self.last_download = 1
+        self.entities = dict()  # key=IP/URL, value={set of ports}
+        # ports are not used for URL/DNS blacklists
 
-        self.id = None
-        self.name = None
-        self.download_interval = None
-        self.file_format = None
-        self.csv_col = None
-        self.json_address_key = None
+        self.last_download = 1
 
         # Generate variables from the XML config file
         for element in bl:
@@ -99,7 +106,76 @@ class Blacklist:
     def __str__(self):
         return str(self.__dict__)
 
+    def stringify_blacklist_repo(self):
+        """Output string with entries from this blacklist for version control (repo) files
+
+        Blacklist entities expected to be sorted
+
+        Returns:
+            String with entities from this blacklist, in the version control file format
+
+        """
+        output = ''
+
+        for blacklist, ports in self.entities.items():
+            output += blacklist + ':'
+            for port in sorted(ports):
+                if port != -1:
+                    output += str(port) + ','
+            output = output[:-1] + '\n'  # remove last comma
+        return output
+
+    @staticmethod
+    def stringify_blacklists_detector_file(entities_dict, bitfield_separator):
+        """Output string with entries in the detector file format (.blist)
+
+        entities_dict (OrderedDict) is expected to be already sorted
+        set of ports is NOT expected to be sorted
+
+        Returns:
+            String with all blacklist entries, in the detector file format
+        """
+        output = ''
+        separator_blacklists = ';'
+
+        for ip in entities_dict:
+            # IP
+            output += ip + bitfield_separator
+
+            # blacklists bitfield
+            bitfield = 0
+
+            # blacklist: ports
+            all_blacklists = ''
+
+            for blacklist in entities_dict[ip]:
+                ignore_list = False
+                bitfield |= 2 ** (blacklist - 1)
+                single_blacklist = str(blacklist) + ':'
+
+                ports = sorted(entities_dict[ip][blacklist])
+
+                for port in ports:
+                    if port == PORT_UNKNOWN:
+                        ignore_list = True
+                    single_blacklist += str(port) + ','
+
+                # replace last port separator by blacklist separator
+                single_blacklist = single_blacklist[:-1] + separator_blacklists
+
+                if not ignore_list:
+                    all_blacklists += single_blacklist
+
+            output += str(bitfield)
+            if len(all_blacklists) > 0:
+                output += separator_blacklists + all_blacklists[:-1]
+
+            output += '\n'
+
+        return output
+
     def write_to_repo(self):
+        """Output this blacklist to a version control (repo) file"""
         if isinstance(self, IPv4Blacklist):
             type_dir = 'ip4'
         elif isinstance(self, IPv6Blacklist):
@@ -107,38 +183,63 @@ class Blacklist:
         elif isinstance(self, URLandDNSBlacklist):
             type_dir = 'url_dns'
 
-        bl_file = '{}/{}/{}'.format(repo_path, type_dir, self.name)
+        bl_file = '{}/{}/{}.blist'.format(repo_path, type_dir, self.name)
         with open(bl_file, 'w') as f:
-            f.write('\n'.join(self.entities))
+            f.write(self.stringify_blacklist_repo())
 
-    def cut_csv(self, data):
+    def cut_csv(self, csv_data):
+        """Cut out specified column from a csv file"""
         col_idx = int(self.csv_col) - 1
-        rdr = csv.reader(data.decode().splitlines())
+        rdr = csv.reader(csv_data.decode().splitlines())
         return '\n'.join([row[col_idx] for row in rdr if len(row) > 0]).encode()
 
     @classmethod
     def process_entities(cls):
+        """Merge entities from all blacklists of given type (IPv4/IPv6/URL-DNS)
+
+        Returns: Sorted OrderedDict with all entities from all blacklists of given type
+        """
+        def insert_entity(all_entities_dict, entity, ports, blacklist_id):
+            """Insert entity to all-blacklists-entities structure (merging blacklists)
+
+            Args:
+                all_entities_dict: nested dictionary structure to be inserted into
+                entity: IP/URL string to be inserted
+                ports: set of port numbers associated with given entity
+                blacklist_id: ID of the blacklist the entity was on
+
+            """
+            # add IP to upper-level dict
+            try:
+                if all_entities_dict[entity] is not None:
+                    pass
+            except KeyError as e:
+                all_entities_dict[entity] = dict()
+
+            # add bl+ports to lower-level dict
+            try:
+                if ports == {PORT_UNKNOWN} and len(all_entities_dict[entity][blacklist_id]) != 0:
+                    pass  # do not add -1 if there are other ports present
+                else:
+                    all_entities_dict[entity][blacklist_id].append(ports)
+            except KeyError:
+                all_entities_dict[entity][blacklist_id] = ports
+
         all_entities = dict()
 
-        # Enrich the entities with blacklist index (bitfield way), merge the indexes if the same entity
-        # found on more blacklists
         for bl in blacklists:
             if isinstance(bl, cls):
-                bl_idx = 2 ** (int(bl.id) - 1)
                 for entity in bl.entities:
-                    if entity in all_entities.keys() and all_entities[entity] & bl_idx == 0:
-                        all_entities[entity] = all_entities[entity] + bl_idx
-                    else:
-                        all_entities[entity] = bl_idx
+                    ports = bl.entities[entity]
+                    insert_entity(all_entities, entity, ports, int(bl.id))
 
-        # Create sorted list of entities and their cumulative indexes
-        all_entities = sorted(['{entity}{sep}{idx}'.format(entity=entity, idx=idx, sep=cls.separator)
-                               for entity, idx in all_entities.items()],
-                              key=cls.comparator)
-
-        return all_entities
+        return OrderedDict(sorted(all_entities.items(), key=cls.comparator))
 
     def download_and_update(self):
+        """Download blacklists and update detector files if any lists have changed.
+
+        :return: OrderedDict where key=IP, value=(OrderedDict where key=Blacklist number, value=set of ports for given bl)
+        """
         updated = False
         new_entities = None
 
@@ -146,29 +247,20 @@ class Blacklist:
             req = requests.get(self.source, timeout=g_conf.socket_timeout)
 
             if req.status_code == 200:
-                data = req.content
+                blacklist_data = req.content
 
                 if self.file_format == 'JSON':
-                    try:
-                        data = json.loads(data)
-
-                        data_set = set()
-
-                        for i in data:
-                            data_set.add(i.get(self.json_address_key))
-
-                        new_entities = sorted(data_set, key=type(self).comparator)
-
-                    except (ValueError, TypeError) as e:
-                        logger.warning('Could not parse {}\n{}'.format(self.name, e))
+                    new_entities = self.extract_entities_json(blacklist_data)
 
                 else:
                     # csv or plaintext
                     if self.file_format == 'csv':
                         with suppress(AttributeError):
-                            data = self.cut_csv(data)
+                            blacklist_data = self.cut_csv(blacklist_data)
 
-                    new_entities = sorted(self.extract_entities(data), key=type(self).comparator)
+                    # sorted ordered dictionary, with all values (ports) == {-1}, representing unknown/all ports
+                    new_entities = OrderedDict.fromkeys(sorted(self.extract_entities(blacklist_data), key=type(self).comparator),
+                                                        {PORT_UNKNOWN})
 
                 if not new_entities:
                     logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
@@ -193,6 +285,61 @@ class Blacklist:
 
         return updated
 
+    def extract_ip_entities_json(self, blacklist_file):
+        """Extract IPv4/IPv6 entities from a JSON file
+
+        Based on fields in xml config file, decide about:
+        loading IP prefixes
+        filtering entities by the value of a given json field
+
+        Args:
+            blacklist_file: Blacklist file in JSON format
+
+        Returns: OrderedDict with sorted entities extracted from blacklist (or None on error)
+        """
+        try:
+            blacklist_data = json.loads(blacklist_file)
+
+        except (ValueError, TypeError) as e:
+            logger.warning('Could not parse {}:\n"{}"'.format(self.name, e))
+            return None
+
+        bl_entities = dict()  # key=(IP+prefix), value={set of ports}
+        flag_check_filter = False
+
+        with suppress(AttributeError):
+            if self.filter_key is not None \
+                    and self.filter_value is not None:
+                flag_check_filter = True
+
+        flag_use_prefix = False
+
+        with suppress(AttributeError):
+            if self.json_prefix_key is not None:
+                flag_use_prefix = True
+
+        for bl_entry in blacklist_data:
+            # filter entities based on value of given field (e.g. server_status = up)
+            if not flag_check_filter \
+                    or str(bl_entry.get(self.filter_key)) != self.filter_value:
+                continue
+
+            ip = bl_entry.get(self.json_address_key)
+            port = bl_entry.get(self.json_port_key)
+
+            if flag_use_prefix:
+                prefix = str(bl_entry.get(self.json_prefix_key))
+                if prefix != '32':
+                    # ignore prefix if /32
+                    ip += '/' + prefix
+
+            try:
+                bl_entities[ip].add(port)
+            except KeyError:
+                bl_entities[ip] = {port}
+
+        return OrderedDict(sorted(bl_entities.items(), key=type(self).comparator))
+
 
 class IPv6Blacklist(Blacklist):
     separator = ','
@@ -202,35 +349,56 @@ class IPv6Blacklist(Blacklist):
         super().__init__(bl)
 
     @staticmethod
-    def extract_entities(data):
+    def extract_entities(blacklist_data):
+        """Extract IPv6 addresses from a (plaintext) blacklist file, using regex
+
+        Args:
+            blacklist_data: Downloaded blacklist file data
+
+        Returns: List of IPv6 addresses
+        """
         extracted = []
 
-        for line in data.decode('utf-8').splitlines():
+        for line in blacklist_data.decode('utf-8').splitlines():
             match = re.search(ip6_regex, line)
             if match:
-                ip, prefix = match.group(0).split('/')
-                exploded_ip = ipaddress.IPv6Address(ip).exploded
-                if prefix:
+                try:
+                    ip, prefix = match.group(0).split('/')
+                except ValueError:
+                    # no prefix found, assume /128
+                    ip = match.group(0)
+                    prefix = '128'
+
+                try:
+                    exploded_ip = ipaddress.IPv6Address(ip).exploded
                     ip = exploded_ip + '/' + prefix
-                extracted.append(ip)
+                    extracted.append(ip)
+                except ipaddress.AddressValueError as e:
+                    # invalid IPv6 format
+                    logger.warning('Could not parse IPv6: {}\n{}'.format(line, e))
 
         return extracted
 
     @classmethod
     def create_detector_file(cls):
+        """Fill detector file (.blist) with entities from all IPv6 blacklists"""
         entities = cls.process_entities()
 
         os.makedirs(os.path.dirname(cls.detector_file), exist_ok=True)
 
         try:
             with open(cls.detector_file, 'w') as f:
-                f.write('\n'.join(entities))
+                f.write(super().stringify_blacklists_detector_file(entities, cls.separator))
 
             logger.info('New IPv6 detector file created: {}'.format(cls.detector_file))
 
         except OSError as e:
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
             exit(1)
+
+    def extract_entities_json(self, blacklist_file):
+        """Extract IPv6 addresses from a json blacklist file (implementation shared with IPv4)"""
+        return super().extract_ip_entities_json(blacklist_file)
 
 
 class IPv4Blacklist(Blacklist):
@@ -241,31 +409,44 @@ class IPv4Blacklist(Blacklist):
         super().__init__(bl)
 
     @staticmethod
-    def extract_entities(data):
+    def extract_entities(blacklist_data):
+        """Extract IPv4 addresses from a (plaintext) blacklist file, using regex
+
+        Args:
+            blacklist_data: Downloaded blacklist file data
+
+        Returns: List of IPv4 addresses
+        """
         extracted = []
 
-        for line in data.decode('utf-8').splitlines():
+        for line in blacklist_data.decode('utf-8').splitlines():
+            # regex already matches the prefix - if present
             match = re.search(ip4_regex, line)
-            if match:
+            if match and match.group(1) != '32':  # ignore default /32 prefix
                 extracted.append(match.group(0))
 
         return extracted
 
     @classmethod
     def create_detector_file(cls):
+        """Fill detector file (.blist) with entities from all IPv4 blacklists"""
         entities = cls.process_entities()
 
         os.makedirs(os.path.dirname(cls.detector_file), exist_ok=True)
 
         try:
             with open(cls.detector_file, 'w') as f:
-                f.write('\n'.join(entities))
+                f.write(super().stringify_blacklists_detector_file(entities, cls.separator))
 
             logger.info('New IPv4 detector file created: {}'.format(cls.detector_file))
 
         except OSError as e:
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
             exit(1)
+
+    def extract_entities_json(self, blacklist_file):
+        """Extract IPv4 addresses from a json blacklist file (implementation shared with IPv6)"""
+        return super().extract_ip_entities_json(blacklist_file)
 
 
 class URLandDNSBlacklist(Blacklist):
@@ -279,6 +460,7 @@ class URLandDNSBlacklist(Blacklist):
 
     @staticmethod
     def domain_to_idna(url):
+        """Reencode domain name to idna"""
         path = None
         if '/' in url:
             path = '/'.join(url.split('/')[1:])
@@ -291,10 +473,17 @@ class URLandDNSBlacklist(Blacklist):
         return domain + '/' + path if path else domain
 
     @staticmethod
-    def extract_entities(data):
+    def extract_entities(blacklist_data):
+        """Extract URLs from a (plaintext) blacklist file, using regex
+
+        Args:
+            blacklist_data: Downloaded blacklist file data
+
+        Returns: List of URLs
+        """
         extracted = []
 
-        for line in data.decode('utf-8').splitlines():
+        for line in blacklist_data.decode('utf-8').splitlines():
             match = re.search(url_regex, line)
             if match:
                 url = match.group(0)
@@ -319,18 +508,20 @@ class URLandDNSBlacklist(Blacklist):
 
     @classmethod
     def create_detector_file(cls):
+        """Fill detector file (.blist) with entities from all URL-DNS blacklists"""
         entities = cls.process_entities()
 
         os.makedirs(os.path.dirname(cls.url_detector_file), exist_ok=True)
         os.makedirs(os.path.dirname(cls.dns_detector_file), exist_ok=True)
 
-        extracted_fqdns = [entity for entity in entities if
-                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])]
+        # not an OrderedDict but since its origin was sorted, this will keep the same order
+        extracted_fqdns = {entity: vals for entity, vals in entities.items() if
+                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])}
 
         try:
             with open(cls.url_detector_file, 'w') as url_f, open(cls.dns_detector_file, 'w') as dns_f:
-                url_f.write('\n'.join(entities))
-                dns_f.write('\n'.join(extracted_fqdns))
+                url_f.write(super().stringify_blacklists_detector_file(entities, cls.separator))
+                dns_f.write(super().stringify_blacklists_detector_file(extracted_fqdns, cls.separator))
 
             logger.info('New URL detector file created: {}'.format(cls.url_detector_file))
             logger.info('New DNS detector file created: {}'.format(cls.dns_detector_file))
@@ -339,8 +530,13 @@ class URLandDNSBlacklist(Blacklist):
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
             exit(1)
 
+    def extract_entities_json(self, blacklist_file):
+        """unused, no url blacklists use json"""
+        raise NotImplementedError
+
 
 def parse_config(config_file):
+    """Parse bl_downloader_config.xml file and load configuration"""
     tree = ET.parse(config_file)
 
     r = list(tree.getroot())
@@ -372,12 +568,16 @@ def parse_config(config_file):
 
 
 def prepare_repo():
+    """Create repo folders and initialize repository"""
+    if not os.path.isdir(repo_path + '/ip4'):
+        os.makedirs(repo_path + '/ip4', exist_ok=True)
+    if not os.path.isdir(repo_path + '/ip6'):
+        os.makedirs(repo_path + '/ip6', exist_ok=True)
+    if not os.path.isdir(repo_path + '/url_dns'):
+        os.makedirs(repo_path + '/url_dns', exist_ok=True)
+
     if not os.path.isdir(repo_path + '/.git'):
         ret = subprocess.check_output(['git', 'init', '{}'.format(repo_path)])
-
-        os.makedirs(repo_path + '/ip4', exist_ok=True)
-        os.makedirs(repo_path + '/ip6', exist_ok=True)
-        os.makedirs(repo_path + '/url_dns', exist_ok=True)
 
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
                                'config', 'user.name', 'bl_downloader'])
@@ -389,6 +589,7 @@ def prepare_repo():
 
 
 def commit_to_repo(bl_type):
+    """Commit changes to repo"""
     try:
         subprocess.check_call(['git', '--git-dir', '{}'.format(repo_path + '/.git'),
                                '--work-tree', '{}'.format(repo_path), 'add', '-A'], )
@@ -404,6 +605,10 @@ def commit_to_repo(bl_type):
 
 
 def run(s):
+    """Start a wave of updates
+
+    Download blacklists, update detector files if anything changed, commit changes to repo
+    """
     # schedule next check immediately
     s.enter(g_conf.download_interval * SECONDS_IN_MINUTE, 1, run, (s,))
 
@@ -426,7 +631,7 @@ def run(s):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--repo-path', '-r',
-                        help="If set, blacklists will be saved in this directory and versioned using git. ",
+                        help="If set, blacklists will be saved in specified directory and versioned using git. ",
                         default=None)
 
     parser.add_argument('--log-level', '-l',

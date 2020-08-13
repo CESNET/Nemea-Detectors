@@ -19,7 +19,7 @@
         <array type="IP">
             <struct>
                 <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
-                     BEWARE: Could be number from interval <0, 63> in one group/type -->
+                     BEWARE: Could be number from interval <1, 64> in one group/type -->
                 <element name="id">1</element>
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Intrusion.Botnet</element>
@@ -30,11 +30,17 @@
                 <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
                 <element name="file_format">plaintext</element>
 
+                <!-- When file_format=csv, this specifies the csv column that contains the IP/URL address -->
+                <!-- <element name="csv_col">2</element> -->
+
                 <!-- When file_format=JSON, this specifies the JSON key that contains the IP/URL address -->
                 <!-- <element name="json_address_key">address</element> -->
 
-                <!-- When file_format=csv, this specifies the csv column that contains the IP/URL address -->
-                <!-- <element name="csv_col">2</element> -->
+                <!-- When file_format=JSON, a filtering key can be set (to be used together with filter_value)  -->
+                <!-- <element name="filter_key">status</element> -->
+
+                <!-- When file_format=JSON and filter_key is set, this specifies a value for the filtering key  -->
+                <!-- <element name="filter_value">1</element> -->
 
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
@@ -51,7 +57,7 @@
                 <element name="source">http://www.spamhaus.org/drop/drop.txt</element>
                 <element name="name">Spamhaus Drop</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">720</element> <!-- 2x per day -->
                 <element name="ip_version">4</element>
             </struct>
 
@@ -81,10 +87,10 @@
                 <element name="id">5</element>
                 <element name="category">Anomaly.Traffic</element>
                 <element name="method">web</element>
-                <element name="source">https://www.spamhaus.org/drop/dropv6.txt</element>
+                 <element name="source">https://www.spamhaus.org/drop/dropv6.txt</element>
                 <element name="name">Spamhaus Drop</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">720</element> <!-- 2x per day -->
                 <element name="ip_version">6</element>
             </struct>
 
@@ -106,7 +112,7 @@
                 <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
                 <element name="name">CZ.NIC Honeypot Cowrie</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
 
@@ -117,7 +123,7 @@
                 <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
                 <element name="name">CZ.NIC Honeypot Dionaea</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
 
@@ -140,6 +146,9 @@
                 <element name="name">Smashed Miners</element>
                 <element name="file_format">JSON</element>
                 <element name="json_address_key">address</element>
+                <element name="json_port_key">port</element>
+                <element name="filter_key">status</element>
+                <element name="filter_value">1</element>
                 <element name="download_interval">60</element> <!-- 1x per hour -->
                 <element name="ip_version">4</element>
             </struct>
@@ -173,7 +182,7 @@
         <array type="URL/DNS">
             <struct>
                 <!-- ID of the blacklist, blacklisted flows are flagged with corresponding ID of blacklist
-                     BEWARE: Could be number from interval <0, 63> -->
+                     BEWARE: Could be number from interval <1, 64> -->
                 <element name="id">1</element>
                 <!-- Method of retrieving blacklist -->
                 <element name="method">web</element>
@@ -184,7 +193,9 @@
                 <!--Category of the blacklist, it SHOULD match some of the IDEA categories (idea.cesnet.cz)-->
                 <element name="category">Fraud.Phishing</element>
                 <!-- File format of the blacklist: JSON/csv/plaintext => different parsing -->
-                <element name="file_format">plaintext</element>
+                <element name="file_format">csv</element>
+                <!-- When file_format=csv, this specifies the csv column that contains the IP/URL address -->
+                <element name="csv_col">2</element>
                 <!-- Download interval in minutes -->
                 <element name="download_interval">144</element> <!-- 10x per day -->
                 <!--What detectors should use this blacklist-->
