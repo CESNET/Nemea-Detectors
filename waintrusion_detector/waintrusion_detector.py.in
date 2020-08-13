@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- mode: python; python-indent-offset: 4; coding: utf-8; -*-
 #
 # Web application intrusion detector.
@@ -45,8 +45,8 @@ import pytrap
 import sys
 import re
 import os
-import urllib
-import urlparse
+import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 import argparse
 import time
 
@@ -183,7 +183,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)^(?!(" + "|".join(map(re.escape, list(filter(None, data)))) + ")$)"), [HTTP_METHOD]])
+                    signatures.append([rule, re.compile("(?i)^(?!(" + "|".join(map(re.escape, list([_f for _f in data if _f]))) + ")$)"), [HTTP_METHOD]])
 
         elif rule == REQUEST_SCANNER_DETECTION:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-user-agents.data
@@ -192,7 +192,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)(\\b(" + "|".join(map(re.escape, list(filter(None, data))))+")[/0-9.]*)"), [HTTP_USER_AGENT]])
+                    signatures.append([rule, re.compile("(?i)(\\b(" + "|".join(map(re.escape, list([_f for _f in data if _f])))+")[/0-9.]*)"), [HTTP_USER_AGENT]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-urls.data
             dataFile = WAIDATADIR_PATH + "/data/scanners-urls.data"
@@ -200,7 +200,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME, HTTP_URL_ARGS]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_FILENAME, HTTP_URL_ARGS]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/scanners-headers.data
             dataFile = WAIDATADIR_PATH + "/data/scanners-headers.data"
@@ -208,7 +208,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_HOST, HTTP_USER_AGENT, HTTP_REFERER]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_HOST, HTTP_USER_AGENT, HTTP_REFERER]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_LFI:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/restricted-files.data
@@ -217,7 +217,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_FILENAME]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_FILENAME]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/lfi-os-files.data
             dataFile = WAIDATADIR_PATH + "/data/lfi-os-files.data"
@@ -225,7 +225,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_RCE:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/windows-powershell-commands.data
@@ -234,7 +234,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/unix-shell.data
             dataFile = WAIDATADIR_PATH + "/data/unix-shell.data"
@@ -242,7 +242,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
         elif rule == REQUEST_APPLICATION_ATTACK_PHP:
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-config-directives.data
@@ -251,7 +251,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-variables.data
             dataFile = WAIDATADIR_PATH + "/data/php-variables.data"
@@ -259,7 +259,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
 
             #data source: https://github.com/SpiderLabs/owasp-modsecurity-crs/blob/v3.0/master/rules/php-function-names-933150.data
             dataFile = WAIDATADIR_PATH + "/data/php-function-names-933150.data"
@@ -267,7 +267,7 @@ def prepare_detection_signatures(rules):
                 with open(dataFile) as f:
                     data = f.read().splitlines()
                     #data includes empty lines removed by list(filter(None, data)), strings are then escaped for regex usage
-                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list(filter(None, data))))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
+                    signatures.append([rule, re.compile("(?i)" + "|".join(map(re.escape, list([_f for _f in data if _f])))), [HTTP_URL_ARGS, HTTP_URL_ARGS_NAMES]])
     return signatures
 
 #prepare detection signatures based on module arguments
@@ -321,7 +321,7 @@ def send_alert(rec, maliciousEvent):
 
     if args.verbose:    
         print("--------------------------------------------------------------------------\n")
-        print("New Malicious Event Detected: \n\nDetection Rule: " + str(maliciousEvent[WAI_RULE]) + "\nMalicious Field: " + str(maliciousEvent[WAI_MALICIOUS_FIELD]) + "\nMalicious Value: " + str(maliciousEvent[WAI_MALICIOUS_VALUE]) + "\n")
+        print(("New Malicious Event Detected: \n\nDetection Rule: " + str(maliciousEvent[WAI_RULE]) + "\nMalicious Field: " + str(maliciousEvent[WAI_MALICIOUS_FIELD]) + "\nMalicious Value: " + str(maliciousEvent[WAI_MALICIOUS_VALUE]) + "\n"))
 
     # send alert
     trap.send(alert.getData(), 0)
@@ -405,12 +405,12 @@ while True:
     HTTPRequest[HTTP_REFERER] = getattr(rec, UR_HTTP_REFERER, "")
 
     #prepare and initialize extended HTTPRequest fields
-    HTTPUrlParts = urlparse.urlparse(HTTPRequest[HTTP_URL])
+    HTTPUrlParts = urllib.parse.urlparse(HTTPRequest[HTTP_URL])
     HTTPRequest[HTTP_URL_QUERY_STRING] = HTTPUrlParts.query
     HTTPRequest[HTTP_METHOD_AND_URL] = HTTPRequest[HTTP_METHOD] + " " + HTTPRequest[HTTP_URL]
     HTTPRequest[HTTP_URL_FILENAME] = HTTPUrlParts.path
 
-    queryParams = urlparse.parse_qs(HTTPUrlParts.query)
+    queryParams = urllib.parse.parse_qs(HTTPUrlParts.query)
     HTTPRequest[HTTP_URL_ARGS_NAMES] = list(queryParams.keys())
 
     #queryParams.values() is a list of lists - convert lists to strings
@@ -428,10 +428,10 @@ while True:
     totalRequests += 1
 
 if args.verbose:
-    print("Elapsed Time (including waiting for reception and data parsing): " + str(time.time() - start))
-    print("Detection Time: " + str(detectionTime))
-    print("Total Requests: " + str(totalRequests))
-    print("Total Alerts: " + str(totalAlerts))
+    print(("Elapsed Time (including waiting for reception and data parsing): " + str(time.time() - start)))
+    print(("Detection Time: " + str(detectionTime)))
+    print(("Total Requests: " + str(totalRequests)))
+    print(("Total Alerts: " + str(totalAlerts)))
 
 # Free allocated TRAP IFCs - free C memory not Python memory - Python memory (UniRec) gets freed using garbage collector
 trap.finalize()

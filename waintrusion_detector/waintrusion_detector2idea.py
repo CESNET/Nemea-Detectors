@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- mode: python; python-indent-offset: 4; coding: utf-8; -*-
 #
 # Converts output of waintrusion_detector module to IDEA.

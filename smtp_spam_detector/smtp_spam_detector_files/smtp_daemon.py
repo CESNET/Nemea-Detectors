@@ -38,20 +38,17 @@ Authors:
 
 """
 
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import pytrap
 import sys
 import signal
 import logging
 import argparse
 from threading import Thread, Semaphore, Lock
-from flow import Flow, SMTP_Flow, FlowConversionException
-from smtp_entity import SMTP_ENTITY
-from detection import SpamDetection
-try:
-    from queue import Queue
-except:
-    from Queue import Queue
+from .flow import Flow, SMTP_Flow, FlowConversionException
+from .smtp_entity import SMTP_ENTITY
+from .detection import SpamDetection
+from queue import Queue
 
 """
 Parse input parameters
@@ -77,7 +74,7 @@ SMTP_IF = 1
 """
 Initialize logging mechanism
 """
-import g
+from . import g
 g.PATH_DEBUG_LOG = args.log
 g.debug_level = args.debug
 g.PROBE_INTERVAL = int(args.interval)
@@ -136,7 +133,7 @@ def fetch_data(trap, rec, interface, queue):
             break
         rec.setData(data)
         if interface is BASIC_IF:
-            if rec.DST_PORT in g.email_protocols.values():
+            if rec.DST_PORT in list(g.email_protocols.values()):
                 flow = Flow(rec)
                 queue.put(flow)
         else:
