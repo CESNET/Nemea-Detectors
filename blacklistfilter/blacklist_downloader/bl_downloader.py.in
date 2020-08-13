@@ -15,7 +15,7 @@ import json
 from collections import OrderedDict
 from contextlib import suppress
 
-PORT_UNKNOWN = -1  # for blacklists that do not use port numbers; value only used internally
+PORT_UNKNOWN = -1  # for blacklists that do not use port numbers; value is used internally only
 
 SECONDS_IN_MINUTE = 60
 
