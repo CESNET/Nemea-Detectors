@@ -91,7 +91,7 @@
 /**
  * Used when not using active test.
  */
-#define STRATUM_NOT_USED 0xdeadbeaf
+#define STRATUM_NOT_USED ((int) (0xdeadbeaf))
 
 /**
  * Used to identify permanent records in blacklist/whitelist DB.
