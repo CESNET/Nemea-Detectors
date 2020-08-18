@@ -17,7 +17,7 @@ Requires: nemea-framework
 Requires: wget
 Requires: libidn
 Requires: openssl
-Requires: python-requests
+Requires: python%{python3_pkgversion}-requests
 Requires: python%{python3_pkgversion}-requests
 Requires: python%{python3_pkgversion}-dns
 BuildRequires: gcc
