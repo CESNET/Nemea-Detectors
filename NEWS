@@ -1,3 +1,7 @@
+2020-08-13 (Tomas Cejka): Merge pull request #51 from petrmiculek/blacklistfilter-port-filtering
+2020-08-13 (Tomas Cejka): Merge pull request #52 from CESNET/centos8_support
+2020-07-30 (Adam Piecek): Removed python2 dependency
+
 2020-04-21 (Tomáš Čejka): travis: fix bad version of python3-MarkupSafe
 2020-03-24 (Radko Krkos): brute_force_detector: Fix DIV0 check in printFlowPercent()
 2020-03-23 (Radko Krkos): blacklistfilter: aggregator: Fixes
