@@ -18,7 +18,6 @@ Requires: wget
 Requires: libidn
 Requires: openssl
 Requires: python%{python3_pkgversion}-requests
-Requires: python%{python3_pkgversion}-requests
 Requires: python%{python3_pkgversion}-dns
 BuildRequires: gcc
 BuildRequires: gcc-c++
