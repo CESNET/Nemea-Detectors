@@ -54,6 +54,20 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+
+# Check the version of the compiler, if gcc is used and it is newer than 10, we
+# need -fcommon in CFLAGS
+if test x"$CC" = xgcc; then
+    AC_MSG_CHECKING([for version of compiler])
+    compiler_version="`$CC -dumpversion`"
+    if test "$compiler_version" -ge 10 2>/dev/null ; then
+        CFLAGS="$CFLAGS -fcommon"
+	AC_MSG_RESULT([$compiler_version -> adding -fcommon into CFLAGS])
+    else
+	AC_MSG_RESULT([$compiler_version])
+    fi
+fi
+
 AC_CHECK_PROG(PYTHON, python3, python3, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
