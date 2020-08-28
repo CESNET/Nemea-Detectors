@@ -29,7 +29,7 @@ logger.addHandler(cs)
 ip4_regex = re.compile('\\b(?:(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)(?:(?:/(3[012]|[12]?[0-9]))?)\\b')
 
 # IPv6 regex -- matches only IPv6 (prefix not included)
-ip6_regex = re.compile('\\b^[a-fA-F0-9:]+(/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])\\b)?$')
+ip6_regex = re.compile('^[a-fA-F0-9:]+(/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?$')
 
 # Just a simple regex to eliminate commentaries
 url_regex = re.compile('^[^#/].*\..+')
