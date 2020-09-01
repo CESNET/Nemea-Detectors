@@ -113,7 +113,8 @@ class Blacklist:
 
         for blacklist, ports in self.entities.items():
             output += blacklist + ':'
-            ports.remove(PORT_UNKNOWN)
+            if PORT_UNKNOWN in ports:
+                ports.remove(PORT_UNKNOWN)
             output += ",".join([str(i) for i in sorted(ports)]) + '\n'
 
         return output
