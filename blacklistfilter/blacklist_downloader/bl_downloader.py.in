@@ -355,12 +355,11 @@ class IPv6Blacklist(Blacklist):
 
         for line in blacklist_data.decode('utf-8').splitlines():
             try:
-                ipnet = ipaddress.ip_network(line)
-                if ipnet.version == 6:
-                    if ipnet.prefixlen == 128:
-                        extracted.append(ipnet.network_address.exploded)
-                    else:
-                        extracted.append(ipnet.exploded)
+                ipnet = ipaddress.IPv6Network(line)
+                if ipnet.prefixlen == 128:
+                    extracted.append(ipnet.network_address.exploded)
+                else:
+                    extracted.append(ipnet.exploded)
             except ValueError as e:
                 logger.warning('Could not parse IP address: {}\n{}'.format(line, e))
 
@@ -408,12 +407,11 @@ class IPv4Blacklist(Blacklist):
 
         for line in blacklist_data.decode('utf-8').splitlines():
             try:
-                ipnet = ipaddress.ip_network(line)
-                if ipnet.version == 4:
-                    if ipnet.prefixlen == 32:
-                        extracted.append(ipnet.network_address.exploded)
-                    else:
-                        extracted.append(ipnet.exploded)
+                ipnet = ipaddress.IPv4Network(line)
+                if ipnet.prefixlen == 32:
+                    extracted.append(ipnet.network_address.exploded)
+                else:
+                    extracted.append(ipnet.exploded)
             except ValueError as e:
                 logger.warning('Could not parse IP address: {}\n{}'.format(line, e))
 
