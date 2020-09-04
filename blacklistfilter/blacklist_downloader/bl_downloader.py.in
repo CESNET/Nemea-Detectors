@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import xml.etree.ElementTree as ET
 import requests
 import logging
@@ -518,7 +519,7 @@ class URLandDNSBlacklist(Blacklist):
 
         except OSError as e:
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
-            exit(1)
+            sys.exit(1)
 
     def extract_entities_json(self, blacklist_file):
         """unused, no url blacklists use json"""
