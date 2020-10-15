@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import xml.etree.ElementTree as ET
 import requests
 import logging
@@ -26,13 +27,13 @@ logger = logging.getLogger(__name__)
 logger.addHandler(cs)
 
 # IPv4 regex -- matches IPv4 + optional prefix
-ip4_regex = re.compile('\\b(?:(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)(?:(?:/(3[012]|[12]?[0-9]))?)\\b')
+ip4_regex = re.compile(r'\b((?:(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?)\.){3}(?:2(?:5[0-5]|[0-4][0-9])|[01]?[0-9][0-9]?))(?:(?:/(3[012]|[12]?[0-9]))?)\b')
 
-# IPv6 regex -- matches only IPv6 (prefix not included)
-ip6_regex = re.compile('\\b^[a-fA-F0-9:]+(/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))?\\b')
+# IPv6 regex -- matches characters of IPv6 + optional prefix (IPv6 might not be valid, it is further processed by ipaddress module)
+ip6_regex = re.compile(r'([a-f0-9:]+)(/([1-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])\b)?', re.IGNORECASE)
 
 # Just a simple regex to eliminate commentaries
-url_regex = re.compile('^[^#/].*\..+')
+url_regex = re.compile(r'^[^#/].*\..+')
 
 # FQDN regex for DNS
 # taken from: https://github.com/guyhughes/fqdn/blob/develop/fqdn/__init__.py
@@ -119,10 +120,10 @@ class Blacklist:
 
         for blacklist, ports in self.entities.items():
             output += blacklist + ':'
-            for port in sorted(ports):
-                if port != -1:
-                    output += str(port) + ','
-            output = output[:-1] + '\n'  # remove last comma
+            if PORT_UNKNOWN in ports:
+                ports.remove(PORT_UNKNOWN)
+            output += ",".join([str(i) for i in sorted(ports)]) + '\n'
+
         return output
 
     @staticmethod
@@ -350,10 +351,10 @@ class IPv6Blacklist(Blacklist):
 
     @staticmethod
     def extract_entities(blacklist_data):
-        """Extract IPv6 addresses from a (plaintext) blacklist file, using regex
+        """Extract IPv6 addresses from a (plaintext) blacklist file, using regex and ipaddress module
 
         Args:
-            blacklist_data: Downloaded blacklist file data
+            blacklist_data: Downloaded blacklist file data with multiple lines containing IP addresses with optional comments
 
         Returns: List of IPv6 addresses
         """
@@ -363,19 +364,13 @@ class IPv6Blacklist(Blacklist):
             match = re.search(ip6_regex, line)
             if match:
                 try:
-                    ip, prefix = match.group(0).split('/')
-                except ValueError:
-                    # no prefix found, assume /128
-                    ip = match.group(0)
-                    prefix = '128'
-
-                try:
-                    exploded_ip = ipaddress.IPv6Address(ip).exploded
-                    ip = exploded_ip + '/' + prefix
-                    extracted.append(ip)
-                except ipaddress.AddressValueError as e:
-                    # invalid IPv6 format
-                    logger.warning('Could not parse IPv6: {}\n{}'.format(line, e))
+                    ipnet = ipaddress.IPv6Network(match.group(0))
+                    if ipnet.prefixlen == 128:
+                        extracted.append(ipnet.network_address.exploded)
+                    else:
+                        extracted.append(ipnet.exploded)
+                except ValueError as e:
+                    logger.warning('Could not parse IP address: {}\n{}'.format(line, e))
 
         return extracted
 
@@ -422,8 +417,13 @@ class IPv4Blacklist(Blacklist):
         for line in blacklist_data.decode('utf-8').splitlines():
             # regex already matches the prefix - if present
             match = re.search(ip4_regex, line)
-            if match and match.group(1) != '32':  # ignore default /32 prefix
-                extracted.append(match.group(0))
+            if match:
+                if not match.group(2) or match.group(2) == '32':  # ignore default /32 prefix
+                    extracted.append(match.group(1))
+                else:
+                    extracted.append(match.group(0)) # append IP with prefix
+            else:
+                logger.error('Could not parse IP address from line: %s' % line)
 
         return extracted
 
@@ -528,7 +528,7 @@ class URLandDNSBlacklist(Blacklist):
 
         except OSError as e:
             logger.critical('Failed to create detector file. {}. Exiting downloader'.format(e))
-            exit(1)
+            sys.exit(1)
 
     def extract_entities_json(self, blacklist_file):
         """unused, no url blacklists use json"""
