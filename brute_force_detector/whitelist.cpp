@@ -198,7 +198,7 @@ bool Whitelist::isWhitelisted(const ip_addr_t *srcIp, const ip_addr_t *dstIp, ui
 bool Whitelist::trieSearch(IPTrie *ipTrie, uint8_t *ip, uint8_t ipType, uint16_t port)
 {
    IPTrie *currentNode = ipTrie;
-   int iRange = (ipType == 4) ? 32 : 128;
+   int iRange = (ipType == 4) ? 4 : 16; // 32bits : 128bits
 
    for (int i = 0; i < iRange; i++) {
       for (int u = 7; u >= 0; u--) {
