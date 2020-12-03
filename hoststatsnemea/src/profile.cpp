@@ -130,7 +130,7 @@ HostProfile::HostProfile()
    bp.projected_element_count = 2 * table_size;
    bp.false_positive_probability = 0.01;
    bp.compute_optimal_parameters();
-   log(LOG_DEBUG, "process_data: Creating Bloom Filter, table size: %lu, hashes: %lu",
+   log(LOG_DEBUG, "process_data: Creating Bloom Filter, table size: %lu, hashes: %u",
       bp.optimal_parameters.table_size, bp.optimal_parameters.number_of_hashes);
    bf_com_active = new bloom_filter(bp);
    bf_com_learn = new bloom_filter(bp);
