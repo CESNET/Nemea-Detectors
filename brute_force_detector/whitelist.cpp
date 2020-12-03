@@ -228,6 +228,18 @@ bool Whitelist::trieSearch(IPTrie *ipTrie, uint8_t *ip, uint8_t ipType, uint16_t
       }
    }
 
+   // last chance to return true
+   if (currentNode->set) {
+      if (currentNode->allPorts) {
+         return true;
+      }
+      if (currentNode->whitelistedPorts != NULL) {
+         if ((currentNode->whitelistedPorts->findPort(port)) == true) {
+            return true;
+         }
+      }
+   }
+
    return false;
 }
 
