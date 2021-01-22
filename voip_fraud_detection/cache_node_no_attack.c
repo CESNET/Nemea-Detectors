@@ -47,6 +47,8 @@
 // initialize size of cache_node_no_attack
 int cache_node_no_attack_size = 0;
 
+prefix_tree_inner_node_t * cache_node_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
+
 // Find if node is verified for no attack by cache
 // Return 1 if node exists in cache, 0 otherwise
 
