@@ -48,8 +48,8 @@
 #include "configuration.h"
 
 
-/** \brief Storage of cache_node_no_attack. */
-prefix_tree_inner_node_t * cache_node_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
+/** \brief Storage of cache_node_no_attack (extern). */
+extern prefix_tree_inner_node_t * cache_node_no_attack_data[MAX_CACHE_NO_ATTACK_SIZE];
 
 /** \brief Size of cache_node_no_attack (extern). */
 extern int cache_node_no_attack_size;
