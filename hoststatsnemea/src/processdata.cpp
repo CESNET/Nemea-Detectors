@@ -160,7 +160,7 @@ void *data_reader_trap(void *args)
       if (data_size < ur_rec_fixlen_size(tmpl_in)) {
          if (data_size > 1) {
             log(LOG_ERR, "Error: data with wrong size received (expected size: "
-               "%lu, received size: %i.)\nHint: if you are using this module "
+               "%u, received size: %i.)\nHint: if you are using this module "
                "without flowdirection module change value 'port-flowdir' in "
                "the configuration file (hoststats.conf by default)",
                ur_rec_fixlen_size(tmpl_in), data_size);
@@ -280,7 +280,7 @@ void offline_analyzer()
       if (data_size < ur_rec_fixlen_size(tmpl_in)) {
          if (data_size > 1) {
             log(LOG_ERR, "Error: data with wrong size received (expected size: "
-               "%lu, received size: %i)", ur_rec_fixlen_size(tmpl_in), data_size);
+               "%u, received size: %i)", ur_rec_fixlen_size(tmpl_in), data_size);
             return;
          }
          end_of_steam = true;

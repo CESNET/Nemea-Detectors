@@ -489,7 +489,10 @@ uint64_t check_ports_get_bitfield(const ip_bl_entry_t &bl_entry, uint16_t port)
 
    for (const auto &blacklist: bl_entry.bl_ports) {
       if (blacklist.second.find(port) == blacklist.second.end()) {
-         inverse_matched_bitfield |= (uint64_t)(1u << (uint32_t)(blacklist.first - 1));
+         const uint64_t one = 1;
+         const int key = blacklist.first;
+         const uint64_t set_bit = key > 0 && key <= 63 ? (one << (key - 1)) : 0;
+         inverse_matched_bitfield |= set_bit;
       }
    }
 
