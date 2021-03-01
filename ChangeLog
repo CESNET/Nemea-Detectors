@@ -1,3 +1,16 @@
+2021-03-01 nemea-detectors-1.7.0
+	* blacklist_downloader:
+		bugfixing and refactoring
+		changed regex for IPs, validate IPv6 by ipadddress
+	* hoststatsnemea:
+		bugfix - invalid type in argument to printf format
+	* bruter_force_detector:
+		bugfix - out-of-bounds access
+	* ipblacklistfilter:
+		bugfix - unintentional integer overflow
+	* build: 
+		gcc10+ compatibility
+
 2020-08-18 nemea-detectors-1.6.3
 	* blacklistfilter:
 		new implementations

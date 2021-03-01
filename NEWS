@@ -1,3 +1,18 @@
+2021-01-22 (Radko Krkos): voip_fraud_detection: Fix build with GCC v10.x
+2021-01-22 (Radko Krkos): Revert "build: gcc10+ compatibility: add -fcommon if gcc version is at least 10"
+2020-12-03 (aPiecek): refactor/bugfixes: BUGFIX bruter_force_detector, out-of-bounds access
+2020-12-03 (aPiecek): refactor/bugfixes: BUGFIX hoststatsnemea profile, invalid type in argument to printf format
+2020-12-03 (aPiecek): refactor/bugfixes: ipblacklistfilter, unintentional integer overflow
+2020-12-03 (aPiecek): refactor/bugfixes: bruter_force_detector, out-of-bounds access
+2020-12-03 (aPiecek): refactor/bugfixes: hoststatsnemea processdata and profile, invalid type in argument to printf format
+2020-09-04 (Tomas Cejka): bl_downloader: changed regex for IPs, validate IPv6 by ipadddress
+2020-09-04 (Tomas Cejka): bl_downloader: use sys.exit() suggested by pylint
+2020-09-01 (Tomas Cejka): bl_downloader: simplified IPv4 and IPv6 parsing
+2020-09-01 (Tomas Cejka): blacklist_downloader: bugfix - cannot remove port which is not contained
+2020-08-28 (Tomas Cejka): blacklist_downloader: refactoring: replaced IP regex, simplified output
+2020-08-28 (Tomas Cejka): blacklist_downloader: BUGFIX regex cannot match leading ::
+2020-08-24 (Tomas Cejka): blacklist_downloader: BUGFIX regex cannot match IPv6
+
 2020-08-13 (Tomas Cejka): Merge pull request #51 from petrmiculek/blacklistfilter-port-filtering
 2020-08-13 (Tomas Cejka): Merge pull request #52 from CESNET/centos8_support
 2020-07-30 (Adam Piecek): Removed python2 dependency
