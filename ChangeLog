@@ -1,0 +1,267 @@
+2021-03-01 nemea-detectors-1.7.0
+	* blacklist_downloader:
+		bugfixing and refactoring
+		changed regex for IPs, validate IPv6 by ipadddress
+	* hoststatsnemea:
+		bugfix - invalid type in argument to printf format
+	* bruter_force_detector:
+		bugfix - out-of-bounds access
+	* ipblacklistfilter:
+		bugfix - unintentional integer overflow
+	* build: 
+		gcc10+ compatibility
+
+2020-08-18 nemea-detectors-1.6.3
+	* blacklistfilter:
+		new implementations
+		improved coding style and documentation
+	* ddos_detector:
+		Removed python2 dependency
+	* haddrscan_detector:
+		Removed python2 dependency
+	* smtp_spam_detector: 
+		Removed python2 dependency
+	* vportscan_detector:
+		Removed python2 dependency
+	* wainstrusion_detector:
+		Removed python2 dependency
+
+2020-04-22 nemea-detectors-1.6.2
+	* blacklistfilter:
+		Aggregator bugfixes
+		Blacklist sources edited
+		Added parsing JSON due to new Smashed blacklist source
+	* brute_force_detector:
+		Fix printing
+	* bl_downloader:
+		Tweaked download intervals
+	* haddrscan_detector:
+		Comment maintenance and bugfixes
+	* travis:
+		Maintenance performed
+
+2019-07-17 nemea-detectors-1.6.1
+	* blacklistfilter: update doc
+	* rpm: remove python34 reference
+
+2019-02-07 nemea-detectors-1.6.0
+	* wai_detection:
+		Add web application injection detector (wai_detector).
+	* booterfilter:
+		Remove booterfilter because its functionality is in new
+		blacklistfilter.
+	* blacklistfilter:
+		Add blacklist watcher.
+		Reworked blacklistfilter modules.
+		Add adaptive filter for blacklistfilters.
+		Add evaluator for adaptive filter.
+	* sip_bf_detector:
+		Bugfix in sip_bf_detector related to timestamps.
+
+2018-11-19 nemea-detectors-1.5.3
+	* blacklistfilter:
+		Blacklist downloader encoding fix
+		Add some blacklists from PROKI for blacklistfilter
+		Speed up blacklist aggregation
+2018-10-09 nemea-detectors-1.5.2
+	* vportscan:
+		Updated documentation.
+	* blacklistfilter:
+		Rename ipblacklist and urlblacklist to just backlist.
+		Refactoring blacklist aggregator.
+		Changed format of aggregated data from blacklistfilter.
+		Blacklist downloader creates data file with blacklisted DNS.
+
+2018-09-26 nemea-detectors-1.5.1
+	* Blacklistfilter:
+		Add maximum number of IPs in IDEA from blacklistfilters.
+		Blacklist downloader does not store empty changes of blacklists.
+		Add new blacklists of cryptominers.
+
+2018-09-18 nemea-detectors-1.5.0
+	* blacklistfilter:
+		Improve downloader to store history of downloaded blacklists
+	* blacklistfilter:
+		Add urlblacklist_aggregator.py module for aggregation of urlblacklistfilter output
+		Commented out TOR and squidblacklist
+		Change hostname to lowercase before checkling listed domains
+	* smtp_spam_detector:
+		Fix wrapper script for smtp_spam_detector to exec instead of fork.
+		Fix flow.py in smtp_spam_detector.
+
+2018-08-14 nemea-detectors-1.4.2
+	* RPM:
+		Maintenance in the spec file
+	* smtp_spam_detector:
+		Add module smtp_spam_detector.
+
+2018-08-08 nemea-detectors-1.4.1
+	* urlblacklistfilter:
+		Fixed incompatible UniRec template in urlblacklistfilter.
+	* rpm:
+		Updated python dependencies for blacklist downloader
+
+2018-08-01 nemea-detectors-1.4.0
+	* blacklistfilter:
+		Add module blacklistfilter (replaced an old version).
+		Add blacklist downloader.
+	* python modules:
+		Enable -h to show help
+	* improved doc, maintenance:
+		haddrscan_dectector, ddos_detector, vportscan, haddrscan_aggregator
+
+2018-03-20 Nemea-detectors-1.3.10
+	* amplification_detector:
+		change behaviour of -d (log_dir)
+
+2017-11-29 Nemea-detectors-1.3.9
+	* sip_bf_detector:
+		temporarily removed second output interface
+	* vportscan:
+		aggregate portscans into block scans
+	* build:
+		--disable-repobuild is now default option
+
+2017-09-23 Nemea-detectors-1.3.8
+	* sip_bf_detector:
+		commented lines calling TimeMachine alerts
+	* ipblacklistfilter:
+		updated config files
+	* many deployment and build bugfixes
+
+2017-08-21 Nemea-detectors-1.3.7
+	* blacklistfilter: 
+		removed PalevoTracker
+
+	* brute_force_detector:
+		whitelist: code refactoring, reworked coding style
+		fixed possible division by zero, fixed some warnings regarding int and unsigned int comparison
+		updated whitelist unit tests
+
+	* hoststats:
+		removed ippaddr_cpp.h, now uses ip_to_str
+		bugfixes
+	
+	* sip_bf_detector:
+		improved signal handler
+
+	* ignore build artefacts
+	* minor bugfixes all over the Nemea-detectors
+
+2017-06-08 Nemea-detectors-1.3.6
+	* ddos_detector:
+		added threshold-based detector of distributed denial of service attacks
+	* miner_detector: 
+		added support for other cryptocurrencies
+		passive detection based on decision tree
+		whitelist/blacklist items now expire
+
+2017-03-01 Nemea-detectors-1.3.5
+	* sip_bf_detector:
+		fixed bug causing the detector to crash
+		added possibility to change some additional default thresholds
+		updated README
+
+2016-10-07 Nemea-detectors-1.3.4
+        * sip_bf_detector:
+		added source and destination port to alert
+	* voip_fraud_detection:
+		bugfixes
+	* haddrscan_detector:
+		changed detection method (read README)
+		updated agregator
+		updated README
+	* vportscan_detector:
+		updated README
+	* booterfilter:
+		added new detector - detection of booter communication
+
+2016-10-07 Nemea-detectors-1.3.3
+        * sip_bf_detector:
+		now reporting soure IP instead of destination IP to TimeMachine
+		updated README
+		bugfixes
+	* vportscan & haddrscan:
+		bugfix
+
+2016-10-04 Nemea-detectors-1.3.2
+        * sip_bf_detector:
+                improved detection algorithm
+		output format now in UniRec
+		added second output interface for alerting the Time Machine
+        * voip_fraud_detection: 
+                changed required unirec fields
+	* vportscan_detector:
+		aggregator: uses a dictionary instead of a list for events
+	* haddrscan_detector: 
+		aggregator: uses a dictionary instead of a list for events
+
+2016-08-05 Nemea-detectors-1.3.1
+	* sip_bf_detector:
+		compatibility with c++11
+	* miner_detector:
+		bugfixes
+
+2016-07-28 Nemea-detectors-1.3.0
+	* vportscan_detector:
+		bugfix bad timestamp field used
+		optimization
+		replace python wrapper with pytrap in aggregator
+	* UrlBlacklistFilter:
+		update to new framework version
+	* miner_detector:
+		added new detector of BitCoin miners
+	* hoststats:
+		updated detection of scans and dos
+	* haddrscan_detector:
+		added new detector of horizontal scans
+	* all detectors:
+		adapted to changed API of B+ tree in nemea-common
+	* bruteforcedetector:
+		published from internal repository
+	* amplification_detector:
+		code maintenance
+
+2016-06-03 Nemea-detectors-1.2.4
+	* tunnel_detection & DNSblacklistfilter:
+		fixed data type of DNS_RDATA (bytes->string)
+	* sip_bf_detecotr:
+		updated default values
+		added Doxyfile
+
+2016-04-24 Nemea-detectors-1.2.3
+        * voip_fraud_detecion:
+		added IFC for SDM statistics
+		changed default path to the file with last event id
+		disabled debugging info output
+	* sip_bf_detector:
+		added protocol and link bit field to outgoing alerts
+		illogical fields in report now set to null
+		breach flag now contain true/flase rather than 0/1 value
+	* tunnel_detection:
+		path to the file with last event id can be set with parameter E
+		default path to the file is set to /data/dnstunnel_detection/event_id.txt
+
+2016-04-03 Nemea-detectors-1.2.2
+        * vportscan_detector:
+		added README
+		few bugfixes
+
+2016-03-16 Nemea-detectors-1.2
+        * added module: SIP Brute-Force Detector
+
+
+2016-02-28 Nemea-detectors-1.1
+	* bugfix voip_fraud_detection
+	* doc improvement
+	* renamed tunnel_detection to dnstunnel_detection
+
+2016-02-16 Nemea-detectros-1.0
+
+	* Contained components:
+		amplification_detection
+		blacklistfilter
+		hoststatsnemea
+		tunnel_detection
+		voip_fraud_detection
+		vportscan_detector

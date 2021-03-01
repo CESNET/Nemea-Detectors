@@ -1,0 +1,18 @@
+Source: nemea-detectors
+Section: unknown
+Priority: extra
+Maintainer: CESNET <nemea@cesnet.cz> 
+Build-Depends: autotools-dev, libtrap-dev, unirec, nemea-common-dev,
+	debhelper (>=9)
+Standards-Version: 3.9.5
+Homepage: https://github.com/CESNET/Nemea-Detectors
+Vcs-Git: https://github.com/CESNET/Nemea-Detectors
+Vcs-Browser: https://github.com/CESNET/Nemea-Detectors/
+
+Package: nemea-detectors
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${misc:Depends}
+Description: NEMEA detectors
+

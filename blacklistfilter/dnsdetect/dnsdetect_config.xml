@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <struct name="main struct">
+        <!-- Name of the file with blacklisted DNSs (FQDNs).
+             These blacklists are meant to be prepared by blacklist downloader. -->
+        <element name="blacklist_file">
+            /tmp/blacklistfilter/dns.blist
+        </element>
+        <!-- When set to true, watch the blacklist file(s) for changes (with inotify mechanism)
+        and reload them instantly when there is a blacklist update, false means just to load blacklists at startup
+        -->
+        <element name="watch_blacklists">
+            true
+        </element>
+    </struct>
+</configuration>

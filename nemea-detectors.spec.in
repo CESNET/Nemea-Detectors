@@ -1,0 +1,89 @@
+%if x%{?python3_pkgversion} == x
+%global python3_pkgversion 36
+%endif
+
+Summary: Package with detection modules of the Nemea system
+Name: nemea-detectors
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: https://www.github.com/CESNET/Nemea-Detectors/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+Requires: nemea-framework
+Requires: wget
+Requires: libidn
+Requires: openssl
+Requires: python%{python3_pkgversion}-requests
+Requires: python%{python3_pkgversion}-dns
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: make
+BuildRequires: doxygen
+BuildRequires: pkgconfig
+BuildRequires: nemea-framework-devel
+BuildRequires: libidn-devel
+BuildRequires: openssl-devel
+Provides: nemea-detectors
+
+%description
+
+%prep
+%setup
+
+%build
+./configure --disable-silent-rules --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea --disable-repobuild --docdir=%{_docdir}/nemea-detectors --datadir=%{_datadir};
+make
+
+%install
+make -j5 DESTDIR=$RPM_BUILD_ROOT install
+
+%post
+
+%files
+%{_bindir}/nemea/amplification_detection
+%{_bindir}/nemea/ddos_detector
+%{_bindir}/nemea/dnstunnel_detection
+%{_bindir}/nemea/haddrscan_detector
+%{_bindir}/nemea/bl_downloader.py
+%{_bindir}/nemea/ipblacklistfilter
+%{_bindir}/nemea/urlblacklistfilter
+%{_bindir}/nemea/dnsblacklistfilter
+%{_bindir}/nemea/blacklist_aggregator.py
+%{_bindir}/nemea/sip_bf_detector
+%{_bindir}/nemea/smtp_spam_detector
+%{_bindir}/nemea/smtp_spam_detector_files/detection.py
+%{_bindir}/nemea/smtp_spam_detector_files/flow.py
+%{_bindir}/nemea/smtp_spam_detector_files/g.py
+%{_bindir}/nemea/smtp_spam_detector_files/__init__.py
+%{_bindir}/nemea/smtp_spam_detector_files/smtp_daemon.py
+%{_bindir}/nemea/smtp_spam_detector_files/smtp_entity.py
+%{_bindir}/nemea/adaptive_filter
+%{_bindir}/nemea/adaptive_filter_files/__init__.py
+%{_bindir}/nemea/adaptive_filter_files/adaptive_filter.py
+%{_bindir}/nemea/adaptive_filter_files/scenarios.py
+%{_bindir}/nemea/adaptive_filter_files/g.py
+%{_bindir}/nemea/adaptive_filter_files/utils.py
+%{_bindir}/nemea/vportscan_aggregator.py
+%{_bindir}/nemea/brute_force_detector
+%{_bindir}/nemea/haddrscan_aggregator.py
+%{_bindir}/nemea/hoststatsnemea
+%{_bindir}/nemea/miner_detector
+%{_bindir}/nemea/voip_fraud_detection
+%{_bindir}/nemea/vportscan_detector
+%{_bindir}/nemea/waintrusion_detector.py
+%{_bindir}/nemea/waintrusion_detector2idea.py
+%{_docdir}/nemea-detectors/*/README*
+%config(noreplace) %{_sysconfdir}/nemea/hoststats.conf
+%config(noreplace) %{_sysconfdir}/nemea/miner_detector/userConfigFile.xml
+%config(noreplace) %{_sysconfdir}/nemea/hoststats.conf.default
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/bl_downloader_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/dnsdetect_config.xml
+%{_datadir}/nemea/wai_detector/*/*
+%{_mandir}/man1/*.1.gz
+

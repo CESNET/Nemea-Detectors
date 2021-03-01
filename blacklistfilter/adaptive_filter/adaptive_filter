@@ -1,0 +1,9 @@
+#!/bin/bash
+
+
+prefix=/usr/local
+exec_prefix=${prefix}
+bindir=${exec_prefix}/bin
+
+exec python3 $bindir/adaptive_filter_files/adaptive_filter.py "$@"
+

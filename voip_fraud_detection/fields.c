@@ -1,0 +1,90 @@
+/************* THIS IS AUTOMATICALLY GENERATED FILE, DO NOT EDIT *************/
+// Tables are indexed by field ID
+#include "fields.h"
+
+char *ur_field_names_static[] = {
+   "DST_IP",
+   "SRC_IP",
+   "CALLEE_CNT",
+   "CALLER_CNT",
+   "DETECTION_TIME",
+   "INVITE_CNT",
+   "LINK_BIT_FIELD",
+   "TIME_FIRST",
+   "EVENT_ID",
+   "VOIP_FRAUD_INVITE_COUNT",
+   "VOIP_FRAUD_PREFIX_EXAMINATION_COUNT",
+   "VOIP_FRAUD_SUCCESSFUL_CALL_COUNT",
+   "SIP_MSG_TYPE",
+   "SIP_STATUS_CODE",
+   "VOIP_FRAUD_PREFIX_LENGTH",
+   "EVENT_TYPE",
+   "SIP_CALLED_PARTY",
+   "SIP_CALL_ID",
+   "SIP_CALLING_PARTY",
+   "SIP_CSEQ",
+   "SIP_REQUEST_URI",
+   "SIP_USER_AGENT",
+   "VOIP_FRAUD_COUNTRY_CODE",
+   "VOIP_FRAUD_SIP_FROM",
+   "VOIP_FRAUD_SIP_TO",
+   "VOIP_FRAUD_USER_AGENT",
+};
+short ur_field_sizes_static[] = {
+   16, /* DST_IP */
+   16, /* SRC_IP */
+   8, /* CALLEE_CNT */
+   8, /* CALLER_CNT */
+   8, /* DETECTION_TIME */
+   8, /* INVITE_CNT */
+   8, /* LINK_BIT_FIELD */
+   8, /* TIME_FIRST */
+   4, /* EVENT_ID */
+   4, /* VOIP_FRAUD_INVITE_COUNT */
+   4, /* VOIP_FRAUD_PREFIX_EXAMINATION_COUNT */
+   4, /* VOIP_FRAUD_SUCCESSFUL_CALL_COUNT */
+   2, /* SIP_MSG_TYPE */
+   2, /* SIP_STATUS_CODE */
+   2, /* VOIP_FRAUD_PREFIX_LENGTH */
+   1, /* EVENT_TYPE */
+   -1, /* SIP_CALLED_PARTY */
+   -1, /* SIP_CALL_ID */
+   -1, /* SIP_CALLING_PARTY */
+   -1, /* SIP_CSEQ */
+   -1, /* SIP_REQUEST_URI */
+   -1, /* SIP_USER_AGENT */
+   -1, /* VOIP_FRAUD_COUNTRY_CODE */
+   -1, /* VOIP_FRAUD_SIP_FROM */
+   -1, /* VOIP_FRAUD_SIP_TO */
+   -1, /* VOIP_FRAUD_USER_AGENT */
+};
+ur_field_type_t ur_field_types_static[] = {
+   UR_TYPE_IP, /* DST_IP */
+   UR_TYPE_IP, /* SRC_IP */
+   UR_TYPE_UINT64, /* CALLEE_CNT */
+   UR_TYPE_UINT64, /* CALLER_CNT */
+   UR_TYPE_TIME, /* DETECTION_TIME */
+   UR_TYPE_UINT64, /* INVITE_CNT */
+   UR_TYPE_UINT64, /* LINK_BIT_FIELD */
+   UR_TYPE_TIME, /* TIME_FIRST */
+   UR_TYPE_UINT32, /* EVENT_ID */
+   UR_TYPE_UINT32, /* VOIP_FRAUD_INVITE_COUNT */
+   UR_TYPE_UINT32, /* VOIP_FRAUD_PREFIX_EXAMINATION_COUNT */
+   UR_TYPE_UINT32, /* VOIP_FRAUD_SUCCESSFUL_CALL_COUNT */
+   UR_TYPE_UINT16, /* SIP_MSG_TYPE */
+   UR_TYPE_UINT16, /* SIP_STATUS_CODE */
+   UR_TYPE_UINT16, /* VOIP_FRAUD_PREFIX_LENGTH */
+   UR_TYPE_UINT8, /* EVENT_TYPE */
+   UR_TYPE_STRING, /* SIP_CALLED_PARTY */
+   UR_TYPE_STRING, /* SIP_CALL_ID */
+   UR_TYPE_STRING, /* SIP_CALLING_PARTY */
+   UR_TYPE_STRING, /* SIP_CSEQ */
+   UR_TYPE_STRING, /* SIP_REQUEST_URI */
+   UR_TYPE_STRING, /* SIP_USER_AGENT */
+   UR_TYPE_STRING, /* VOIP_FRAUD_COUNTRY_CODE */
+   UR_TYPE_STRING, /* VOIP_FRAUD_SIP_FROM */
+   UR_TYPE_STRING, /* VOIP_FRAUD_SIP_TO */
+   UR_TYPE_STRING, /* VOIP_FRAUD_USER_AGENT */
+};
+ur_static_field_specs_t UR_FIELD_SPECS_STATIC = {ur_field_names_static, ur_field_sizes_static, ur_field_types_static, 26};
+ur_field_specs_t ur_field_specs = {ur_field_names_static, ur_field_sizes_static, ur_field_types_static, 26, 26, 26, NULL, UR_UNINITIALIZED};

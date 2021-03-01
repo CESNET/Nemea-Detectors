@@ -1,0 +1,96 @@
+2021-01-22 (Radko Krkos): voip_fraud_detection: Fix build with GCC v10.x
+2021-01-22 (Radko Krkos): Revert "build: gcc10+ compatibility: add -fcommon if gcc version is at least 10"
+2020-12-03 (aPiecek): refactor/bugfixes: BUGFIX bruter_force_detector, out-of-bounds access
+2020-12-03 (aPiecek): refactor/bugfixes: BUGFIX hoststatsnemea profile, invalid type in argument to printf format
+2020-12-03 (aPiecek): refactor/bugfixes: ipblacklistfilter, unintentional integer overflow
+2020-12-03 (aPiecek): refactor/bugfixes: bruter_force_detector, out-of-bounds access
+2020-12-03 (aPiecek): refactor/bugfixes: hoststatsnemea processdata and profile, invalid type in argument to printf format
+2020-09-04 (Tomas Cejka): bl_downloader: changed regex for IPs, validate IPv6 by ipadddress
+2020-09-04 (Tomas Cejka): bl_downloader: use sys.exit() suggested by pylint
+2020-09-01 (Tomas Cejka): bl_downloader: simplified IPv4 and IPv6 parsing
+2020-09-01 (Tomas Cejka): blacklist_downloader: bugfix - cannot remove port which is not contained
+2020-08-28 (Tomas Cejka): blacklist_downloader: refactoring: replaced IP regex, simplified output
+2020-08-28 (Tomas Cejka): blacklist_downloader: BUGFIX regex cannot match leading ::
+2020-08-24 (Tomas Cejka): blacklist_downloader: BUGFIX regex cannot match IPv6
+
+2020-08-13 (Tomas Cejka): Merge pull request #51 from petrmiculek/blacklistfilter-port-filtering
+2020-08-13 (Tomas Cejka): Merge pull request #52 from CESNET/centos8_support
+2020-07-30 (Adam Piecek): Removed python2 dependency
+
+2020-04-21 (Tomáš Čejka): travis: fix bad version of python3-MarkupSafe
+2020-03-24 (Radko Krkos): brute_force_detector: Fix DIV0 check in printFlowPercent()
+2020-03-23 (Radko Krkos): blacklistfilter: aggregator: Fixes
+2020-03-16 (Radko Krkos): blacklistfilter: Turn on more warnings
+2020-03-16 (Radko Krkos): blacklistfilter: Fix blacklist file watching
+2020-03-11 (Petr Miculek): bl_downloader fixes - catching exceptions; config: tweaked download intervals
+2020-03-11 (Petr Miculek): Travis fixes
+2020-02-21 (Petr Miculek): Source-blacklists: +miners Smashed; -discontinued blacklists (ZeuS, urlvir, CryptoIOC, ransomware tracker); parsing JSON (specific to Smashed blacklist)
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Send address threshold in haddrscan alerts
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Tweak wording and add local variables for Emacs
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Repair call to getDataFmt in haddrscan_aggregator.py
+2019-07-18 (Ulrik Haugen): haddrscan_detector: Report trailing addresses scanned
+
+2019-05-24 (Filip Šuster): Blacklistfilter: Readme update (#41)
+2019-05-24 (Tomas Cejka): rpm: removed old python3.4 from spec file (dependencies)
+2019-04-12 (Tomas Cejka): blacklistfilter: fixed build as a nemea/ submodule
+
+2019-02-07 (Tomas Cejka): wai_detection: changed Description and move variable info into Note
+2019-02-07 (Tomas Duracka): wai_detection: update of reporter module
+2019-02-07 (Tomas Cejka): booterfilter: removed, the functionality is provided by blacklistfilter
+2019-02-07 (Filip Šuster): blacklistfilter: New suite including Adaptive filter and Evaluator (#40)
+2018-12-11 (Tomas Jansky): sip_bf_detector: substituted ur_time_t with uint32_t since ur_time_get_sec() returns uint32_t
+2018-12-09 (Tomas Jansky): sip_bf_detector: fixed problem with cease time being less than event time
+2018-11-30 (Jaroslav Hlavac): waintrusion_detector: fixed typo in README.md
+2018-11-30 (Tomas Cejka): waintrusion: add README into dist package
+2018-11-30 (Tomas Duracka): waintrusion: add README
+2018-11-30 (Tomas Cejka): waintrusion: dist & rpm
+2018-11-30 (Tomas Cejka): waintrusion: add Makefile
+2018-11-30 (Tomas Cejka): waintrusion: optimization, source code maintenance
+2018-11-30 (Tomas Duracka): waintrusion: New detector: web app intrusion or exploitation
+
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Optimize usage of split_blacklist_bmp
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Get rid of locking
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Minor optimizations
+2018-11-19 (Filip Suster): blacklistfilter: aggregator: Speed up update_event method
+2018-11-19 (Filip Suster): blacklistfilter: downloader: Ignore non-ascii URLs
+2018-10-29 (Filip Šuster): Fix trap.terminate()
+2018-10-28 (Filip Suster): blacklistfilter: Add some blacklists from PROKI
+2018-10-28 (Filip Suster): blacklistfilter: aggregator: Speed up aggregation
+2018-10-09 (Filip Šuster): blacklistfilter: Universal blacklistfilter aggregation; Downloader improvements (#36)
+2018-10-02 (Jaroslav Hlavac): vportscan_aggregator.py added to README
+
+2018-09-26 (Filip Šuster): Blacklistfilter: improved aggregators, new blacklists, downloader fix (#34)
+2018-09-19 (Tomas Cejka): rpm: add new (blacklistfilter) modules into package
+
+2018-09-18 (Filip Šuster): blacklistfilter: downloader: Add versioning option (#31)
+2018-09-18 (Tomas Cejka): blacklistfilter: ip & url aggregators and reporters (#30)
+2018-08-14 (Tomas Cejka): smtp_spam_detector: Smtp spam fix (#28)
+
+2018-08-14 (Tomas Cejka): RPM: maintenance, removed useless '/' character
+2018-08-14 (Ladislav): smtp_spam_detector: add new detection module (#25)
+
+2018-08-08 (Filip Šuster): urlblacklistfilter: Fix incompatible UR fields (#27)
+2018-08-02 (Tomas Cejka): rpm: add python3-requests dependency because of blacklist downloader
+
+2018-08-01 (Filip Šuster): blacklistfilter: new implementation of IP/URL blacklist filters and downloader (#23)
+2018-07-19 (Tomas Cejka): python modules: enable basic help
+2018-05-08 (Ulrik Haugen): Remove unused global variable in haddrscan_aggregator.
+2018-05-08 (Ulrik Haugen): Tweak help/docs in haddrscan_detector.
+2018-05-08 (Ulrik Haugen): Document aggregator in haddrscan_detector readme.
+2018-05-08 (Ulrik Haugen): Update haddrscan_detector readme.
+2018-05-08 (Ulrik Haugen): Fold long lines in haddrscan_detector readme.
+2018-04-23 (Ulrik Haugen): Replace hard coded constants with params in haddrscan_detector.
+2018-04-19 (Ulrik Haugen): haddrscan_dectector:main: add comment.
+2018-04-19 (Ulrik Haugen): Add coding style info for Emacs in haddrscan_detector.
+2018-04-19 (Ulrik Haugen): ddos_detector: whitespace.
+2018-03-26 (Tomas Cejka): vportscan: add some test data (results)
+2018-03-23 (Ulrik Haugen): haddrscan_aggregator:sendEvents: fix typo.
+2018-03-20 (Tomas Cejka): build: fixed missing rpm-clean target
+2018-03-20 (Tomas Cejka): debian: add metadata to create a package
+Nemea-2.0:
+	* added new modules (see ChangeLog for the list)
+	* replaced "script" by Supervisor to control and monitor Nemea
+	* extended libnemea-common
+	* extended libunirec
+	* bugfixes of libtrap
+
