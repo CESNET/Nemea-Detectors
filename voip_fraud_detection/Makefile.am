@@ -15,7 +15,5 @@ voip_fraud_detection_SOURCES=voip_fraud_detection.c \
                              configuration.h \
                              fields.c fields.h
 voip_fraud_detection_LDADD=-lunirec -ltrap -lm -lnemea-common
-voip_fraud_detection_CXXFLAGS=-std=c++98
-voip_fraud_detection_CFLAGS=-std=gnu99
 
 include ../aminclude.am

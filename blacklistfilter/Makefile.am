@@ -11,8 +11,7 @@ dnsblacklistfilter_SOURCES=dnsblacklistfilter.cpp \
                            blacklist_watcher.h \
                            fields.c fields.h
 dnsblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
-dnsblacklistfilter_CFLAGS=-std=gnu99
-dnsblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
+dnsblacklistfilter_CXXFLAGS=-pedantic -Wextra
 dnsblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_dnsblacklistfiltersysconf_DATA=dnsdetect/dnsdetect_config.xml
 
@@ -24,8 +23,7 @@ ipblacklistfilter_SOURCES=ipblacklistfilter.cpp \
                           blacklist_watcher.h \
                           fields.c fields.h
 ipblacklistfilter_LDADD=-lpthread -ltrap -lunirec -lnemea-common
-ipblacklistfilter_CFLAGS=-std=gnu99
-ipblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
+ipblacklistfilter_CXXFLAGS=-pedantic -Wextra
 ipblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_ipblacklistfiltersysconf_DATA=ipdetect/ipdetect_config.xml
 
@@ -37,8 +35,7 @@ urlblacklistfilter_SOURCES=urlblacklistfilter.cpp \
                            blacklist_watcher.h \
                            fields.c fields.h
 urlblacklistfilter_LDADD=-lpthread -ltrap -lidn -lunirec -lnemea-common
-urlblacklistfilter_CFLAGS=-std=gnu99
-urlblacklistfilter_CXXFLAGS=-std=c++11 -Wall -pedantic -Wextra
+urlblacklistfilter_CXXFLAGS=-pedantic -Wextra
 urlblacklistfiltersysconfdir=${sysconfdir}/blacklistfilter
 dist_urlblacklistfiltersysconf_DATA=urldetect/urldetect_config.xml
 

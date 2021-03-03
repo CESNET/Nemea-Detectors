@@ -20,10 +20,10 @@ AC_ARG_ENABLE([debug],
         AC_HELP_STRING([--enable-debug],
         [Enable build with debug symbols and without optimizations.]),
         [if test "$enableval" = "yes"; then
-                CFLAGS="-Wall -g -O0 $CFLAGS"
-                CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
-        fi], [CFLAGS="-Wall -g -O3 $CFLAGS"
-              CXXFLAGS="-Wall -g -O3 $CXXFLAGS"
+                CFLAGS="-std=gnu11 -Wall -g -O0 $CFLAGS"
+                CXXFLAGS="-std=gnu++11 -Wall -g -O0 $CXXFLAGS"
+        fi], [CFLAGS="-std=gnu11 -Wall -g -O3 $CFLAGS"
+              CXXFLAGS="-std=gnu++11 -Wall -g -O3 $CXXFLAGS"
               CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
