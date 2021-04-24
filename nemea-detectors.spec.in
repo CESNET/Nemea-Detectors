@@ -52,6 +52,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/ipblacklistfilter
 %{_bindir}/nemea/urlblacklistfilter
 %{_bindir}/nemea/dnsblacklistfilter
+%{_bindir}/nemea/dga_detector
 %{_bindir}/nemea/blacklist_aggregator.py
 %{_bindir}/nemea/sip_bf_detector
 %{_bindir}/nemea/smtp_spam_detector
