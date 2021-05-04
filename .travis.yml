@@ -59,12 +59,3 @@ script:
   - ./bootstrap.sh && ./configure && make distcheck
   - mkdir dist-pkgs && cp *.spec *.tar.gz dist-pkgs && (cd dist-pkgs/"$d"; tar --strip-components=1 -xf *.tar.gz;)
 
-deploy:
-  provider: pages
-  skip_cleanup: true
-  local_dir: dist-pkgs
-  github_token: $GITHUB_TOKEN
-  target_branch: dist-packages
-  on:
-    branch: master
-
