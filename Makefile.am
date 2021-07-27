@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=amplification_detection \
+    backscatter_classifier \
 	blacklistfilter \
 	blacklistfilter/adaptive_filter \
 	brute_force_detector \
