@@ -1,0 +1,168 @@
+{
+  "attributes": {
+    "domain-dst": {
+      "categories": [
+        "Network activity",
+        "External analysis"
+      ],
+      "description": "Destination domain (victim)",
+      "misp-attribute": "domain",
+      "ui-priority": 1
+    },
+    "dst-port": {
+      "categories": [
+        "Network activity",
+        "External analysis"
+      ],
+      "description": "Destination port of the attack",
+      "misp-attribute": "port",
+      "ui-priority": 0
+    },
+    "duration-of-service-malfunction": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Duration (in seconds) for how long the service was not available for legitimate users or users experienced difficulties",
+      "disable_correlation": true,
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    },
+    "first-seen": {
+      "description": "Beginning of the attack",
+      "disable_correlation": true,
+      "misp-attribute": "datetime",
+      "ui-priority": 0
+    },
+    "ip-dst": {
+      "categories": [
+        "Network activity",
+        "External analysis"
+      ],
+      "description": "Destination IP (victim)",
+      "misp-attribute": "ip-dst",
+      "ui-priority": 1
+    },
+    "ip-src": {
+      "categories": [
+        "Network activity",
+        "External analysis"
+      ],
+      "description": "IP address originating the attack",
+      "misp-attribute": "ip-src",
+      "ui-priority": 1
+    },
+    "last-seen": {
+      "description": "End of the attack",
+      "disable_correlation": true,
+      "misp-attribute": "datetime",
+      "ui-priority": 0
+    },
+    "latitude": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Latitude of victim IP address location",
+      "misp-attribute": "float",
+      "ui-priority": 0
+    },
+    "longitude": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Longitude of victim IP address location",
+      "misp-attribute": "float",
+      "ui-priority": 0
+    },
+    "number-of-ddos-bytes": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Estimated number of DDoS bytes",
+      "disable_correlation": true,
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    },
+    "number-of-ddos-flows": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Estimated number of DDoS flows",
+      "disable_correlation": true,
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    },
+    "number-of-ddos-packets": {
+      "categories": [
+        "Other"
+      ],
+      "description": "Estimated number of DDoS packets",
+      "disable_correlation": true,
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    },
+    "protocol": {
+      "description": "Protocol used for the attack",
+      "misp-attribute": "text",
+      "ui-priority": 0,
+      "disable_correlation": true,
+      "values_list": [
+        "TCP",
+        "UDP",
+        "ICMP",
+        "IP"
+      ]
+    },
+    "reflecting-ip-address": {
+      "categories": [
+        "Network activity"
+      ],
+      "description": "In case of reflective attack, the IP addresses of reflectors",
+      "misp-attribute": "ip-src",
+      "ui-priority": 0
+    },
+    "reflecting-port-number": {
+      "categories": [
+        "Network activity"
+      ],
+      "description": "In case of reflective attack, the port number of a service that is being misused for the reflection",
+      "disable_correlation": true,
+      "misp-attribute": "port",
+      "ui-priority": 0
+    },
+    "src-port": {
+      "categories": [
+        "Network activity",
+        "External analysis"
+      ],
+      "description": "Port originating the attack",
+      "misp-attribute": "port",
+      "ui-priority": 0
+    },
+    "text": {
+      "description": "Description of the DDoS",
+      "disable_correlation": true,
+      "misp-attribute": "text",
+      "ui-priority": 0
+    },
+    "total-bps": {
+      "description": "Bits per second",
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    },
+    "total-pps": {
+      "description": "Packets per second",
+      "misp-attribute": "counter",
+      "ui-priority": 0
+    }
+  },
+  "description": "DDoS object describes a current DDoS activity from a specific or/and to a specific target. Type of DDoS can be attached to the object as a taxonomy",
+  "meta-category": "network",
+  "name": "ddos",
+  "required": [
+    "ip-dst",
+    "first-seen",
+    "last-seen"
+  ],
+  "uuid": "a9d3948d-e4b1-4120-8406-7aefd1c6269f",
+  "version": 8
+}

@@ -1,0 +1,12 @@
+<module>
+<name>backscatter_classifier</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/backscatter_classifier/run_backscatter_classifier.sh</path>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>backscatter_out</params>
+</interface>
+</trapinterfaces>
+</module>

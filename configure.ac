@@ -121,6 +121,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
+                 backscatter_classifier/Makefile
                  blacklistfilter/Makefile
                  blacklistfilter/blacklist_downloader/bl_downloader.py
                  blacklistfilter/adaptive_filter/Makefile
