@@ -510,14 +510,20 @@ class URLandDNSBlacklist(Blacklist):
     def create_detector_file(cls):
         """Fill detector file (.blist) with entities from all URL-DNS blacklists"""
         entities = cls.process_entities()
+        extracted_fqdns = {}
 
         os.makedirs(os.path.dirname(cls.url_detector_file), exist_ok=True)
         os.makedirs(os.path.dirname(cls.dns_detector_file), exist_ok=True)
 
         # not an OrderedDict but since its origin was sorted, this will keep the same order
-        extracted_fqdns = {entity: vals for entity, vals in entities.items() if
-                           re.search(fqdn_regex, entity[:entity.find(cls.separator)])}
-
+        for entity, vals in entities.items():
+            sep_pos = entity.find(cls.separator)
+            if sep_pos != -1:
+                entity = entity[:sep_pos]
+            match = re.search(fqdn_regex, entity)
+            if match is not None:
+                extracted_fqdns[match.group()] = vals
+        
         try:
             with open(cls.url_detector_file, 'w') as url_f, open(cls.dns_detector_file, 'w') as dns_f:
                 url_f.write(super().stringify_blacklists_detector_file(entities, cls.separator))
