@@ -37,7 +37,7 @@ url_regex = re.compile(r'^[^#/].*\..+')
 
 # FQDN regex for DNS
 # taken from: https://github.com/guyhughes/fqdn/blob/develop/fqdn/__init__.py
-fqdn_regex = re.compile(r'^((?!-)[-A-Z\d]{1,62}(?<!-)\.)+[A-Z]{1,62}\.?$', re.IGNORECASE)
+fqdn_regex = re.compile(r'^((?!-)[-A-Z\d]{1,62}(?<!-)\.)+[A-Z]{1,62}\.?', re.IGNORECASE)
 
 # A heterogeneous list with all types of blacklists
 blacklists = []
