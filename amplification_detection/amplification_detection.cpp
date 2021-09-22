@@ -437,7 +437,8 @@ void time2str(ur_time_t t)
 {
    time_t sec = ur_time_get_sec(t);
    int msec = ur_time_get_msec(t);
-   strftime(time_buff, 25, "%Y-%m-%d %H:%M:%S", gmtime(&sec));
+   struct tm tmp_tm;
+   strftime(time_buff, 25, "%Y-%m-%d %H:%M:%S", gmtime_r(&sec, &tmp_tm));
    sprintf(time_buff + 19, ".%03i", msec);
 }
 

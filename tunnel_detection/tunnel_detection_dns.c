@@ -1385,8 +1385,9 @@ void print_founded_anomaly_immediately(char * ip_address, ip_address_t *item, FI
 {
    if (print_time) {
       time_t mytime;
+      char timebuf[26];
       mytime = time(NULL);
-      fprintf(file, "\nTIME: %s\n", ctime(&mytime));
+      fprintf(file, "\nTIME: %s\n", ctime_r(&mytime, timebuf));
    }
    prefix_tree_domain_t *dom;
    char str[1024];
@@ -2055,8 +2056,9 @@ int main(int argc, char **argv)
                }
                else {
                   time_t mytime;
+                  char timebuf[26];
                   mytime = time(NULL);
-                  fprintf(result_file, "\nSTART TIME: %s\n", ctime(&mytime));
+                  fprintf(result_file, "\nSTART TIME: %s\n", ctime_r(&mytime, timebuf));
                }
             break;
          case 'a':
@@ -2714,11 +2716,11 @@ int main(int argc, char **argv)
                      measure.requests++;
                      calculate_character_statistic_conv_to_lowercase(packet.request_string, &char_stat);
                      measure.sum_size_request += packet.size;
-                     measure.sum_2_size_request += packet.size * packet.size;
+                     measure.sum_2_size_request += (unsigned long int) packet.size * packet.size;
                      measure.sum_count_of_unique_letters_request += char_stat.count_of_different_letters;
-                     measure.sum_2_count_of_unique_letters_request += char_stat.count_of_different_letters * char_stat.count_of_different_letters;
+                     measure.sum_2_count_of_unique_letters_request += (unsigned long int) char_stat.count_of_different_letters * char_stat.count_of_different_letters;
                      measure.sum_count_of_numbers += char_stat.count_of_numbers_in_string;
-                     measure.sum_2_count_of_numbers += char_stat.count_of_numbers_in_string * char_stat.count_of_numbers_in_string;
+                     measure.sum_2_count_of_numbers += (unsigned long int) char_stat.count_of_numbers_in_string * char_stat.count_of_numbers_in_string;
                      percent_of_numbers_request = char_stat.length != 0 ? (double)char_stat.count_of_numbers_in_string / (double)char_stat.length : 0;
                      measure.sum_percent_of_numbers += percent_of_numbers_request;
                      measure.sum_2_percent_of_numbers += percent_of_numbers_request * percent_of_numbers_request;
@@ -2760,9 +2762,9 @@ int main(int argc, char **argv)
                   if (max_count_of_unique_letters != 0) {
                      measure.responses++;
                      measure.sum_size_response += packet.size;
-                     measure.sum_2_size_response += packet.size * packet.size;
+                     measure.sum_2_size_response += (unsigned long int) packet.size * packet.size;
                      measure.sum_count_of_unique_letters_response += max_count_of_unique_letters;
-                     measure.sum_2_count_of_unique_letters_response += max_count_of_unique_letters * max_count_of_unique_letters;
+                     measure.sum_2_count_of_unique_letters_response += (unsigned long int) max_count_of_unique_letters * max_count_of_unique_letters;
                   }
                }
             }
