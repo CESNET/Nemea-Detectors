@@ -666,7 +666,8 @@ uint64_t Server::createId(uint32_t time_first)
    char ptr[32];
    const time_t time = time_first;
    uint16_t min_sec = 0;
-   strftime(ptr, 31, "%F %T", gmtime(&time));
+   struct tm tmp_tm;
+   strftime(ptr, 31, "%F %T", gmtime_r(&time, &tmp_tm));
    ptr[4] = ptr[7] = ptr[10] = ptr[13] = ptr[16] = ptr[19] = '\0';
    event_id = (uint64_t) atoi(ptr);
    event_id *= 100;

@@ -57,9 +57,10 @@ char *time_t_to_str(ur_time_t t)
 {
    static char time_str[FORMAT_DATETIME_LENGTH];
    const time_t time = t;
+   struct tm tmp_tm;
 
    // convert local_time to string in defined format
-   if (strftime(time_str, FORMAT_DATETIME_LENGTH, FORMAT_DATETIME, gmtime(&time)) == 0) {
+   if (strftime(time_str, FORMAT_DATETIME_LENGTH, FORMAT_DATETIME, gmtime_r(&time, &tmp_tm)) == 0) {
       // set empty string in case of error strftime
       time_str[0] = '\0';
    }

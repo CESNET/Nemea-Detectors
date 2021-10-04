@@ -787,9 +787,9 @@ void *list_timeout_thread(void *data)
         uint32_t white_expired_sum = 0;
         uint32_t black_expired_sum = 0;
         time_t timestamp = CURRENT_TIME;
-        struct tm *tmp = localtime(&timestamp);
+        struct tm tmp_tm;
         char timestr[200];
-        strftime(timestr, 200, "%Y-%m-%dT%H:%M:%S", tmp);
+        strftime(timestr, 200, "%Y-%m-%dT%H:%M:%S", localtime_r(&timestamp, &tmp_tm));
 
         DEBUG_PRINT("[%s] New round of checking black/white list\n", timestr);
 
@@ -871,9 +871,9 @@ void *check_thread(void *data)
 
    
         time_t timestamp = CURRENT_TIME;
-        struct tm *tmp = localtime(&timestamp);
+        struct tm tmp_tm;
         char timestr[200];
-        strftime(timestr, 200, "%Y-%m-%dT%H:%M:%S", tmp);
+        strftime(timestr, 200, "%Y-%m-%dT%H:%M:%S", localtime_r(&timestamp, &tmp_tm));
 
         DEBUG_PRINT("[%s] New round of passive testing\n", timestr);
 

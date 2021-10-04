@@ -233,8 +233,9 @@ string getProtoString(uint8_t proto)
 std::string getTimeString(const uint32_t &timestamp)
 {
    const time_t temp = timestamp;
+   struct tm tmp_tm;
    char buff[13]; //12 signs + '/0'
-   strftime(buff, 13, "%4Y%2m%2d%2H%2M", gmtime(&temp));
+   strftime(buff, 13, "%4Y%2m%2d%2H%2M", gmtime_r(&temp, &tmp_tm));
 
    return string(buff);
 }
