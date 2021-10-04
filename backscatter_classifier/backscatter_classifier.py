@@ -1,19 +1,24 @@
 #!/usr/bin/python3
+import argparse
+import json
+import logging
+import sys
+from pathlib import Path
+from socket import gethostbyaddr, herror
+from datetime import datetime, timezone, timedelta
+from ipaddress import IPv4Address, IPv4Network
+import os
+from contextlib import contextmanager
 
 from pymisp import ExpandedPyMISP, MISPEvent, MISPObject
 import pytrap
-import sys
 import pickle
-import sklearn
 import numpy as np
-import argparse
-import logging
-from socket import gethostbyaddr, herror
-from datetime import datetime, timezone, timedelta
 import geoip2.database
 import geoip2.errors
-from ipaddress import IPv4Address, IPv4Network
+
 from BackscatterDDoSModel import DDoSModel
+import c3isp_upload
 
 # Supported protocols
 TCP = 6
@@ -283,6 +288,18 @@ def create_ddos_event(rec: pytrap.UnirecTemplate, geoip_db, victim_ip, domain, m
     return misp_event
 
 
+@contextmanager
+def temporary_open(path, mode):
+    """ Context manager which opens file and at the end of context it deletes it. """
+    file = open(path, mode)
+
+    try:
+        yield file
+    finally:
+        file.close()
+        os.remove(path)
+
+
 def process_arguments():
     parser = argparse.ArgumentParser(
         description="Classify backscatter vectors/events received from backscatter module into DDoS and non-DDoS "
@@ -304,6 +321,11 @@ def process_arguments():
                                                "value will not be reported.", default=30, type=int)
     parser.add_argument('--max_duration', help="Maximum duration of event in order to be reported,"
                                                "events above this value will not be reported.", default=7200, type=int)
+    parser.add_argument('--export_to', help="Platform to which will be detected events exported. Three options are "
+                                          "available, 'misp' to export to MISP only, 'c3isp' to export to C3ISP only "
+                                          "and 'c3isp-misp' to export to both C3ISP and MISP.",
+                        default="misp", type=str, choices=["misp", "c3isp", "c3isp-misp"], required=True)
+    parser.add_argument('--c3isp_config', help="Configuration file of C3ISP uploader.", default='servers.ini', type=str)
     return parser.parse_known_args()
 
 
@@ -329,7 +351,7 @@ def main():
 
     # Logging settings
     logger = logging.getLogger("backscatter_classifier")
-    logging.basicConfig(level=logging.INFO, filename=args.logfile, filemode='w',
+    logging.basicConfig(level=logging.DEBUG, filename=args.logfile, filemode='w',
                         format="[%(levelname)s], %(asctime)s, %(name)s, %(funcName)s, line %(lineno)d: %(message)s")
 
     # ASN and city databases
@@ -341,14 +363,18 @@ def main():
         print(str(e), file=sys.stderr)
         sys.exit(EXIT_FAILURE)
 
-    # MISP instance
-    try:
-        misp_instance = ExpandedPyMISP(args.url, args.key, args.ssl)
-    except Exception as e:
-        logger.error(e)
-        logger.error("Error while creating MISP instance")
-        print(str(e), file=sys.stderr)
-        sys.exit(EXIT_FAILURE)
+    if args.export_to in ("c3isp", "c3isp-misp"):
+        c3isp_upload.read_config(args.c3isp_config)
+
+    if args.export_to == "misp":
+        # MISP instance
+        try:
+            misp_instance = ExpandedPyMISP(args.url, args.key, args.ssl)
+        except Exception as e:
+            logger.error(e)
+            logger.error("Error while creating MISP instance")
+            print(str(e), file=sys.stderr)
+            sys.exit(EXIT_FAILURE)
 
     # DDoS model
     ddos_model = pickle.load(args.model)
@@ -408,9 +434,27 @@ def main():
                         # Do not report for unknown domains
                         continue
                     event = create_ddos_event(rec, geoip_db, victim_ip, domain[0], args.misp_templates_dir)
-                    event_id = misp_instance.add_event(event)['Event']['id']
-                    misp_instance.publish(event_id)
+                    if args.export_to == "misp":
+                        try:
+                            event_id = misp_instance.add_event(event)['Event']['id']
+                            misp_instance.publish(event_id)
+                        except Exception as e:
+                            logger.error(e)
+                    elif args.export_to in ("c3isp", "c3isp-misp"):
+                        logger.debug(f"Uploading event to C3ISP platform.")
+                        event_file_path = Path("misp_event_to_c3isp.json").absolute()
+                        with temporary_open(event_file_path, 'w') as event_file:
+                            json.dump(event.to_json(), event_file)
+                            response = c3isp_upload.upload_to_c3isp(event_file_path)
+                            logger.debug(f"Response: {response}")
 
+                        if not response or ('status' in response and response['status'] == 'ERROR'):
+                            logger.error("ERROR during upload!")
+                            continue
+                        if args.export_to == "c3isp-misp":
+                            dpo_id = response['content']['additionalProperties']['dposId']
+                            logger.debug(f'Exporting DPO {dpo_id} to MISP.')
+                            c3isp_upload.export_misp(dpo_id, logger)
             except Exception as e:
                 logger.error(str(e))
                 continue
