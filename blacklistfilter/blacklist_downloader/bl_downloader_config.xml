@@ -210,6 +210,7 @@
                 <element name="file_format">csv</element> 
                 <element name="csv_col">3</element>
                 <element name="download_interval">60</element>
+                <element name="detectors">URL</element>
             </struct>
             -->
             
@@ -224,6 +225,7 @@
                 <element name="file_format">csv</element> 
                 <element name="csv_col">3</element>
                 <element name="download_interval">60</element>
+                <element name="detectors">DNS</element>
             </struct>
             -->
             
@@ -237,6 +239,7 @@
                 <element name="name">Abuse.ch URLhaus</element>
                 <element name="file_format">plaintext</element> 
                 <element name="download_interval">10</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
             
             <!-- Blackbook (domains, compilation of multiple sources), info: https://github.com/stamparm/blackbook -->
@@ -248,6 +251,7 @@
                 <element name="name">Blackbook</element>
                 <element name="file_format">plaintext</element> 
                 <element name="download_interval">720</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
             
             <!-- KriskIntel malicious domains, info: https://kriskintel.com/ -->
@@ -259,6 +263,7 @@
                 <element name="name">KriskIntel domain list</element>
                 <element name="file_format">plaintext</element> 
                 <element name="download_interval">360</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
             
             <!-- KriskIntel Covid-19 phishing domains, info: https://kriskintel.com/ -->
@@ -270,6 +275,7 @@
                 <element name="name">KriskIntel Covid-19 phishing domains</element>
                 <element name="file_format">plaintext</element> 
                 <element name="download_interval">360</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
             
             <!-- Note: KriskIntel also provides a Ransomware-related list, which mixes IPS, domains and hashes. Can it be configured somehow? -->
@@ -284,6 +290,7 @@
                 <element name="name">VXVault URLs</element>
                 <element name="file_format">plaintext</element> 
                 <element name="download_interval">60</element>
+                <element name="detectors">URL,DNS</element>
             </struct>
             
         </array>
