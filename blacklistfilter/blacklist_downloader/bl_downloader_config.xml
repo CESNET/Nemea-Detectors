@@ -230,7 +230,6 @@
             -->
             
             <!-- URLhaus (online only), info: https://urlhaus.abuse.ch/ -->
-            <!-- Also provides ports, use https://sslbl.abuse.ch/blacklist/sslipblacklist.csv when support for ports is implemented -->
             <struct>
                 <element name="id">8</element>
                 <element name="category">Malware</element>
