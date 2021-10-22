@@ -62,17 +62,6 @@
             </struct>
 
             <struct>
-                <element name="id">3</element>
-                <element name="category">Suspicious.Miner</element>
-                <element name="method">web</element>
-                <element name="source">https://raw.githubusercontent.com/andoniaf/mining-pools-list/master/mining-pools_IP.lst</element>
-                <element name="name">Andoniaf Miners</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
                 <element name="id">4</element>
                 <element name="category">Suspicious.Miner</element>
                 <element name="method">web</element>
@@ -94,65 +83,6 @@
                 <element name="ip_version">6</element>
             </struct>
 
-            <struct>
-                <element name="id">6</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">http://cinsscore.com/list/ci-badguys.txt</element>
-                <element name="name">CI Army - BadGuys</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">7</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">http://217.31.192.50/data/latest-proki.txt</element>
-                <element name="name">CZ.NIC Honeypot Cowrie</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">60</element> <!-- 1x per hour -->
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">8</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">http://217.31.192.50/data/latest-dionaea.txt</element>
-                <element name="name">CZ.NIC Honeypot Dionaea</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">60</element> <!-- 1x per hour -->
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">9</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">https://malc0de.com/bl/IP_Blacklist.txt</element>
-                <element name="name">Malc0de</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
-                <element name="ip_version">4</element>
-            </struct>
-
-            <struct>
-                <element name="id">10</element>
-                <element name="category">Suspicious.Miner</element>
-                <element name="method">web</element>
-                <element name="source">http://smashed.fit.vutbr.cz:8080/miningProp/json</element>
-                <element name="name">Smashed Miners</element>
-                <element name="file_format">JSON</element>
-                <element name="json_address_key">address</element>
-                <element name="json_port_key">port</element>
-                <element name="filter_key">status</element>
-                <element name="filter_value">1</element>
-                <element name="download_interval">60</element> <!-- 1x per hour -->
-                <element name="ip_version">4</element>
-            </struct>
-
             <!-- <struct>
                 <element name="id">11</element>
                 <element name="category">Anomaly.Traffic</element>
@@ -160,7 +90,7 @@
                 <element name="source">https://www.team-cymru.org/Services/Bogons/fullbogons-ipv6.txt</element>
                 <element name="name">IPv6 Full Bogons</element>
                 <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
+                <element name="download_interval">720</element>
                 <element name="ip_version">6</element>
             </struct> -->
 
@@ -176,6 +106,48 @@
                 <element name="ip_version">4</element>
             </struct> -->
 
+            <!-- ThreatFox IP-port (full data dump), info: https://threatfox.abuse.ch/export/ -->
+            <!-- New fetures must be implement fisrt:
+                  - data are zipped, must be unzipped
+                  - contains IP:port, so port matching should be implemented as well
+            <struct>
+                <element name="id">13</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://threatfox.abuse.ch/export/csv/ip-port/full/</element>
+                <element name="name">Abuse.ch ThreatFox IPs</element>
+                <element name="file_format">csv</element> 
+                <element name="csv_col">3</element>
+                <element name="download_interval">60</element>
+                <element name="ip_version">4</element>
+            </struct>
+            -->
+            
+            <!-- SSL blacklist, info: https://sslbl.abuse.ch/blacklist/ -->
+            <!-- Also provides ports, use https://sslbl.abuse.ch/blacklist/sslipblacklist.csv when support for ports is implemented -->
+            <struct>
+                <element name="id">14</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://sslbl.abuse.ch/blacklist/sslipblacklist.txt</element>
+                <element name="name">Abuse.ch SSL blacklist</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">10</element>
+                <element name="ip_version">4</element>
+            </struct>
+            
+            <!-- KriskIntel malicious IPs, info: https://kriskintel.com/ -->
+            <struct>
+                <element name="id">15</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://kriskintel.com/feeds/ktip_malicious_Ips.txt</element>
+                <element name="name">KriskIntel IP list</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">360</element>
+                <element name="ip_version">4</element>
+            </struct>
+            
 
         </array>
 
@@ -214,17 +186,7 @@
                 <element name="detectors">URL,DNS</element>
             </struct>
 
-            <struct>
-                <element name="id">3</element>
-                <element name="method">web</element>
-                <element name="source">https://s3.amazonaws.com/lists.disconnect.me/simple_malware.txt</element>
-                <element name="name">DisconnectMe</element>
-                <element name="category">Malware</element>
-                <element name="file_format">plaintext</element>
-                <element name="download_interval">10</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-
+            <!-- Booter blacklist, not updated since May 2019, do we still want to use it? -->
             <struct>
                 <element name="id">4</element>
                 <element name="method">web</element>
@@ -237,17 +199,99 @@
                 <element name="detectors">URL,DNS</element>
             </struct>
 
-            <!-- Probably too many false-positives -->
-            <!-- <struct>
-                <element name="id">5</element>
-                <element name="method">web</element>
-                <element name="source">https://www.squidblacklist.org/downloads/dg-malicious.acl</element>
-                <element name="name">SquidBlacklist</element>
+            <!-- ThreatFox URLs (full data dump), info: https://threatfox.abuse.ch/export/ -->
+            <!-- Data are zipped, unzipping must be implemted first
+            <struct>
+                <element name="id">6</element>
                 <element name="category">Malware</element>
-                <element name="file_format">plaintext</element>
+                <element name="method">web</element>
+                <element name="source">https://threatfox.abuse.ch/export/csv/urls/full/</element>
+                <element name="name">Abuse.ch ThreatFox URLs</element>
+                <element name="file_format">csv</element> 
+                <element name="csv_col">3</element>
+                <element name="download_interval">60</element>
+                <element name="detectors">URL</element>
+            </struct>
+            -->
+            
+            <!-- ThreatFox domains (full data dump), info: https://threatfox.abuse.ch/export/ -->
+            <!-- Data are zipped, unzipping must be implemted first
+            <struct>
+                <element name="id">7</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://threatfox.abuse.ch/export/csv/urls/full/</element>
+                <element name="name">Abuse.ch ThreatFox URLs</element>
+                <element name="file_format">csv</element> 
+                <element name="csv_col">3</element>
+                <element name="download_interval">60</element>
+                <element name="detectors">DNS</element>
+            </struct>
+            -->
+            
+            <!-- URLhaus (online only), info: https://urlhaus.abuse.ch/ -->
+            <struct>
+                <element name="id">8</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://urlhaus.abuse.ch/downloads/text_online/</element>
+                <element name="name">Abuse.ch URLhaus</element>
+                <element name="file_format">plaintext</element> 
                 <element name="download_interval">10</element>
                 <element name="detectors">URL,DNS</element>
-            </struct> -->
+            </struct>
+            
+            <!-- Blackbook (domains, compilation of multiple sources), info: https://github.com/stamparm/blackbook -->
+            <struct>
+                <element name="id">9</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://raw.githubusercontent.com/stamparm/blackbook/master/blackbook.txt</element>
+                <element name="name">Blackbook</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">720</element>
+                <element name="detectors">URL,DNS</element>
+            </struct>
+            
+            <!-- KriskIntel malicious domains, info: https://kriskintel.com/ -->
+            <struct>
+                <element name="id">10</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">https://kriskintel.com/feeds/ktip_malicious_domains.txt</element>
+                <element name="name">KriskIntel domain list</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">360</element>
+                <element name="detectors">URL,DNS</element>
+            </struct>
+            
+            <!-- KriskIntel Covid-19 phishing domains, info: https://kriskintel.com/ -->
+            <struct>
+                <element name="id">11</element>
+                <element name="category">Fraud.Phishing</element>
+                <element name="method">web</element>
+                <element name="source">https://kriskintel.com/feeds/ktip_covid_domains.txt</element>
+                <element name="name">KriskIntel Covid-19 phishing domains</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">360</element>
+                <element name="detectors">URL,DNS</element>
+            </struct>
+            
+            <!-- Note: KriskIntel also provides a Ransomware-related list, which mixes IPS, domains and hashes. Can it be configured somehow? -->
+            
+            
+            <!-- VXVault Malware download URLs, info: http://vxvault.net/ViriList.php -->
+            <struct>
+                <element name="id">12</element>
+                <element name="category">Malware</element>
+                <element name="method">web</element>
+                <element name="source">http://vxvault.net/URL_List.php</element>
+                <element name="name">VXVault URLs</element>
+                <element name="file_format">plaintext</element> 
+                <element name="download_interval">60</element>
+                <element name="detectors">URL,DNS</element>
+            </struct>
+            
         </array>
     </struct>
 </configuration>
