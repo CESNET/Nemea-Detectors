@@ -80,6 +80,18 @@ def split_ip6(ip_dict_entry):
     return tuple_ip
 
 
+def iter_lines_without_comments(data: str):
+    """
+    Iterate over lines of given text (blacklist file), skipping comments and empty lines
+    """
+    for line in data.splitlines():
+        if not line.strip():
+            continue # skip empty lines
+        if line[0] in ('#', ';'):
+            continue # skip comments
+        yield line
+
+
 class GeneralConfig:
     def __init__(self, general_config):
         self.socket_timeout = None
@@ -221,7 +233,7 @@ class Blacklist:
     def cut_csv(self, csv_data):
         """Cut out specified column from a csv file"""
         col_idx = int(self.csv_col) - 1
-        rdr = csv.reader(csv_data.decode().splitlines())
+        rdr = csv.reader(iter_lines_without_comments(csv_data.decode()))
         return '\n'.join([row[col_idx] for row in rdr if len(row) > 0]).encode()
 
     @classmethod
@@ -390,7 +402,7 @@ class IPv6Blacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             match = re.search(ip6_regex, line)
             if match:
                 try:
@@ -444,7 +456,7 @@ class IPv4Blacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             # regex already matches the prefix - if present
             match = re.search(ip4_regex, line)
             if match:
@@ -515,7 +527,7 @@ class URLandDNSBlacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             match = re.search(url_regex, line)
             if match:
                 url = match.group(0)
