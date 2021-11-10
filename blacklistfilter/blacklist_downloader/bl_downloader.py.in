@@ -80,6 +80,18 @@ def split_ip6(ip_dict_entry):
     return tuple_ip
 
 
+def iter_lines_without_comments(data: str):
+    """
+    Iterate over lines of given text (blacklist file), skipping comments and empty lines
+    """
+    for line in data.splitlines():
+        if not line.strip():
+            continue # skip empty lines
+        if line[0] in ('#', ';'):
+            continue # skip comments
+        yield line
+
+
 class GeneralConfig:
     def __init__(self, general_config):
         self.socket_timeout = None
@@ -93,6 +105,10 @@ class GeneralConfig:
 class Blacklist:
     separator = None
     comparator = None
+    # Attributes that must/can be defined in XML config
+    # (this is for IP blacklists, URLandDNSBlacklist overrides the lists)
+    mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','ip_version'}
+    other_attrs = {'csv_col','json_address_key','json_prefix_key','json_port_key','filter_key','filter_value'}
 
     def __init__(self, bl):
         self.entities = dict()  # key=IP/URL, value={set of ports}
@@ -100,9 +116,35 @@ class Blacklist:
 
         self.last_download = 1
 
-        # Generate variables from the XML config file
+        # Store parameters from the XML config file as attributes of this object
+        # (check all mandatory parameters are present and no extra ones are there)
+        configured_attrs = set()
         for element in bl:
-            setattr(self, element.attrib['name'], element.text)
+            attr_name = element.attrib['name']
+            if attr_name not in self.mandatory_attrs.union(self.other_attrs):
+                logger.warning("Unknown attribute found in configuration of blacklist '{}': {}".format(
+                    getattr(self, 'name', None) or getattr(self, 'id', None) or '?', attr_name
+                ))
+                continue # don't set unknown attribute
+            configured_attrs.add(attr_name)
+            setattr(self, attr_name, element.text) # store the attribute value
+        # Check that all needed attributes were set
+        missing = self.mandatory_attrs - configured_attrs
+        if missing:
+            logger.critical("Mandatory configuration element missing in configuration of blacklist '{}': {}".format(
+                getattr(self, 'name', None) or getattr(self, 'id', None) or '?', ','.join(missing)
+            ))
+            sys.exit(1)
+        # Check attrs needed just in some cases
+        if self.file_format == 'csv' and 'csv_col' not in configured_attrs:
+            logger.critical("'csv_col' must be set when file_format=csv (blacklist: '{}')".format(self.name))
+            sys.exit(1)
+        if self.file_format == 'json' and ('json_address_key' not in configured_attrs or 'json_port_key' not in configured_attrs):
+            # FIXME from the code below it seems filtering by port number is mandatory when json format is used,
+            #  while port can't be specified with other formats, which doesn't make sense
+            logger.critical("'json_address_key' and 'json_port_key' must be set when file_format=json (blacklist: '{}')".format(self.name))
+            sys.exit(1)
+        
 
     def __str__(self):
         return str(self.__dict__)
@@ -191,7 +233,7 @@ class Blacklist:
     def cut_csv(self, csv_data):
         """Cut out specified column from a csv file"""
         col_idx = int(self.csv_col) - 1
-        rdr = csv.reader(csv_data.decode().splitlines())
+        rdr = csv.reader(iter_lines_without_comments(csv_data.decode()))
         return '\n'.join([row[col_idx] for row in rdr if len(row) > 0]).encode()
 
     @classmethod
@@ -360,7 +402,7 @@ class IPv6Blacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             match = re.search(ip6_regex, line)
             if match:
                 try:
@@ -414,7 +456,7 @@ class IPv4Blacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             # regex already matches the prefix - if present
             match = re.search(ip4_regex, line)
             if match:
@@ -454,6 +496,8 @@ class URLandDNSBlacklist(Blacklist):
     url_detector_file = None
     separator = '\\'
     comparator = str
+    mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','detectors'}
+    other_attrs = {'csv_col'} # JSON parsing not implemented for URL/DNS lists
 
     def __init__(self, bl):
         super().__init__(bl)
@@ -483,7 +527,7 @@ class URLandDNSBlacklist(Blacklist):
         """
         extracted = []
 
-        for line in blacklist_data.decode('utf-8').splitlines():
+        for line in iter_lines_without_comments(blacklist_data.decode('utf-8')):
             match = re.search(url_regex, line)
             if match:
                 url = match.group(0)
