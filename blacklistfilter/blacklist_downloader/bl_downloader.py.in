@@ -155,16 +155,14 @@ class Blacklist:
         Blacklist entities expected to be sorted
 
         Returns:
-            String with entities from this blacklist, in the version control file format
+            String with entities from this blacklist, in the version control file format ("bl_id:port_list")
 
         """
         output = ''
 
         for blacklist, ports in self.entities.items():
             output += blacklist + ':'
-            if PORT_UNKNOWN in ports:
-                ports.remove(PORT_UNKNOWN)
-            output += ",".join([str(i) for i in sorted(ports)]) + '\n'
+            output += ",".join([str(p) for p in sorted(ports) if p != PORT_UNKNOWN]) + '\n'
 
         return output
 
@@ -172,7 +170,8 @@ class Blacklist:
     def stringify_blacklists_detector_file(entities_dict, bitfield_separator):
         """Output string with entries in the detector file format (.blist)
 
-        entities_dict (OrderedDict) is expected to be already sorted
+        entities_dict: dict(ip -> dict(blacklist_id -> set_of_ports)
+        entities_dict is expected to be already sorted (OrderedDict)
         set of ports is NOT expected to be sorted
 
         Returns:
@@ -182,38 +181,26 @@ class Blacklist:
         separator_blacklists = ';'
 
         for ip in entities_dict:
-            # IP
-            output += ip + bitfield_separator
-
-            # blacklists bitfield
+            # blacklists bitfield (1 on i'th position when IP is on blacklist with id 'i')
             bitfield = 0
 
-            # blacklist: ports
-            all_blacklists = ''
+            # list of ports per blacklist (";bl_id:comma_separated_list_of_ports;...")
+            ports_per_bl = ''
 
             for blacklist in entities_dict[ip]:
-                ignore_list = False
+                # Construct bitfield
                 bitfield |= 2 ** (blacklist - 1)
-                single_blacklist = str(blacklist) + ':'
-
+                # Construct list of ports per blacklist
+                # ("bl_id:comma_separated_list_of_port")
                 ports = sorted(entities_dict[ip][blacklist])
+                if PORT_UNKNOWN in ports:
+                    continue
+                ports_per_bl += separator_blacklists
+                ports_per_bl += str(blacklist) + ':'
+                ports_per_bl += ','.join(map(str, ports))
 
-                for port in ports:
-                    if port == PORT_UNKNOWN:
-                        ignore_list = True
-                    single_blacklist += str(port) + ','
-
-                # replace last port separator by blacklist separator
-                single_blacklist = single_blacklist[:-1] + separator_blacklists
-
-                if not ignore_list:
-                    all_blacklists += single_blacklist
-
-            output += str(bitfield)
-            if len(all_blacklists) > 0:
-                output += separator_blacklists + all_blacklists[:-1]
-
-            output += '\n'
+            # Output line
+            output += ip + bitfield_separator + str(bitfield) + ports_per_bl + '\n'
 
         return output
 
@@ -264,7 +251,7 @@ class Blacklist:
                 if ports == {PORT_UNKNOWN} and len(all_entities_dict[entity][blacklist_id]) != 0:
                     pass  # do not add -1 if there are other ports present
                 else:
-                    all_entities_dict[entity][blacklist_id].append(ports)
+                    all_entities_dict[entity][blacklist_id].add(ports)
             except KeyError:
                 all_entities_dict[entity][blacklist_id] = ports
 
