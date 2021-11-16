@@ -116,13 +116,31 @@ Demonstrated also by UML diagram below:
 
 ![URL preprocessing](../doc/downloader_final.png)
 
-## About detector files
+## Output file format
 
-Detector files are special files created by blacklist downloader for the detectors (ip/url/dns). 
-Every row contains an entity, separator and blacklist index. All the entities are sorted (especially useful for ip blacklistfilter, which uses binary search). When there is a change in any blacklist of a given type, new detector file is created (rewrites the old one). The detector listens for the file change (inotify's IN_CLOSE_WRITE flag) and reloads the file when
+_Detector files_ are special files created by blacklist downloader for the detectors (ip/url/dns). 
+Every row contains an entity, separator and blacklist index, e.g. `1.10.16.1,8`.
+The separator is `,` for IP blacklists, `\` for URL and DNS blacklists.
+
+The blacklist index is a bitmap, a bit set on `i`th position (counted from 1) means presence o blacklist with id `i-1`.
+For example, value 9 means the entity is present on the blacklists with ID 1 and 4.
+
+IP blacklists also support specification of ports.
+For each blacklist the IP is present on, a set of port numbers can also be specified.
+This is appended after the blacklist index as a list of pairs (blacklist-id, list-of-ports).
+The pairs are separated by `;`, ports within the `list-of-ports` are separated by `,`.
+
+The complete format is:
+```
+IP blacklists:
+entity_id ',' blacklist_index_bitfield [ ';' bl_id ':' port [ ',' port ... ] ] [';' bl_id ':' ... ]
+
+DNS/URL blacklists:
+entity_id '\' blacklist_index_bitfield
+```
+
+All the entities are sorted (especially useful for ip blacklistfilter, which uses binary search). When there is a change in any blacklist of a given type, new detector file is created (rewrites the old one). The detector listens for the file change (inotify's IN_CLOSE_WRITE flag) and reloads the file when
 there is a change. The detector doesn't have to process the data, it just loads them and detects. All the preprocessing (sorting, case-insensitivying, ..) is done by the downloader.
-
-The blacklist index is a bitmap, so a value 9 means the entity is present on the blacklists with ID 1 and 4.
 
 
 ### Examples
@@ -133,6 +151,8 @@ The blacklist index is a bitmap, so a value 9 means the entity is present on the
 1.22.124.243,256
 1.22.180.84,256
 1.22.241.193,256
+1.30.40.5,9;1:80,8080,443;4:80
+1.31.1.100,7;2:22
 ```
 
 */tmp/blacklistfilter/ip6.blist*
