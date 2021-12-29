@@ -1,5 +1,5 @@
-%if x%{?python3_pkgversion} == x
-%global python3_pkgversion 36
+%if "x%{?python3_pkgversion}" == "x"
+%global python3_pkgversion 3
 %endif
 
 Summary: Package with detection modules of the Nemea system
@@ -45,9 +45,9 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/nemea/amplification_detection
-%{_bindir}/nemea/backscatter_classifier/backscatter_classifier.py
-%{_bindir}/nemea/backscatter_classifier/BackscatterDDoSModel.py
-%{_bindir}/nemea/backscatter_classifier/run_backscatter_classifier.sh
+%{_bindir}/nemea/backscatter_classifier.py
+%{_bindir}/nemea/BackscatterDDoSModel.py
+%{_bindir}/nemea/run_backscatter_classifier.sh
 %{_bindir}/nemea/ddos_detector
 %{_bindir}/nemea/dnstunnel_detection
 %{_bindir}/nemea/haddrscan_detector
@@ -89,6 +89,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/ipdetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/urldetect_config.xml
 %config(noreplace) %{_sysconfdir}/nemea/blacklistfilter/dnsdetect_config.xml
+%config(noreplace) %{_sysconfdir}/nemea/backscatter_classifier/backscatter_ddos_model.pickle
 
 %{_datadir}/nemea/wai_detector/*/*
 %{_mandir}/man1/*.1.gz
