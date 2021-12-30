@@ -303,7 +303,12 @@ int reload_blacklists(black_list_t &v4_list, black_list_t &v6_list, const ip_con
          size_t bl_semicolon_sep = line.find_first_of(';');
 
          if (bl_semicolon_sep == string::npos) {
-            // no ports present
+            // Add entry to vector
+            if (ip_is4(&bl_entry.ip)) {
+               v4_list_new.push_back(bl_entry);
+            } else {
+               v6_list_new.push_back(bl_entry);
+            }
             continue;
          }
 
