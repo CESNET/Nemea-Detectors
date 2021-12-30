@@ -63,7 +63,8 @@ void check_new_rules(const hosts_key_t &addr, const hosts_record_t &rec)
        est_out_req_syn_cnt > general_conf.syn_scan_syn_to_ack_ratio * est_out_req_ack_cnt && // most of outgoing flows are SYN-only (no ACKs)
        est_out_req_syn_cnt > general_conf.syn_scan_request_to_response_ratio * est_in_rsp_syn_cnt && // most targets don't answer with SYN
        rec.out_req_uniqueips >= general_conf.syn_scan_ips && // a lot of different destinations
-       rec.out_req_syn_cnt > rec.out_all_flows / 3) // it is more than third of total outgoing traffic of this address
+       rec.out_req_syn_cnt > rec.out_all_flows / 3 && // it is more than third of total outgoing traffic of this address
+       rec.out_all_syn_cnt >= rec.out_all_ack_cnt)
        //rec.out_req_syn_cnt > 10 * rec.in_all_syn_cnt) // there is not much incoming connections
                                                         //  - this was added to filter out p2p communication
                                                         // DUPLICATE third rule
