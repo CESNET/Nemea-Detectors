@@ -136,18 +136,6 @@
                 <element name="ip_version">4</element>
             </struct>
             
-            <!-- KriskIntel malicious IPs, info: https://kriskintel.com/ -->
-            <struct>
-                <element name="id">15</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">https://kriskintel.com/feeds/ktip_malicious_Ips.txt</element>
-                <element name="name">KriskIntel IP list</element>
-                <element name="file_format">plaintext</element> 
-                <element name="download_interval">360</element>
-                <element name="ip_version">4</element>
-            </struct>
-            
 
         </array>
 
@@ -252,33 +240,6 @@
                 <element name="download_interval">720</element>
                 <element name="detectors">URL,DNS</element>
             </struct>
-            
-            <!-- KriskIntel malicious domains, info: https://kriskintel.com/ -->
-            <struct>
-                <element name="id">10</element>
-                <element name="category">Malware</element>
-                <element name="method">web</element>
-                <element name="source">https://kriskintel.com/feeds/ktip_malicious_domains.txt</element>
-                <element name="name">KriskIntel domain list</element>
-                <element name="file_format">plaintext</element> 
-                <element name="download_interval">360</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-            
-            <!-- KriskIntel Covid-19 phishing domains, info: https://kriskintel.com/ -->
-            <struct>
-                <element name="id">11</element>
-                <element name="category">Fraud.Phishing</element>
-                <element name="method">web</element>
-                <element name="source">https://kriskintel.com/feeds/ktip_covid_domains.txt</element>
-                <element name="name">KriskIntel Covid-19 phishing domains</element>
-                <element name="file_format">plaintext</element> 
-                <element name="download_interval">360</element>
-                <element name="detectors">URL,DNS</element>
-            </struct>
-            
-            <!-- Note: KriskIntel also provides a Ransomware-related list, which mixes IPS, domains and hashes. Can it be configured somehow? -->
-            
             
             <!-- VXVault Malware download URLs, info: http://vxvault.net/ViriList.php -->
             <struct>
