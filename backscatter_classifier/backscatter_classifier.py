@@ -283,6 +283,8 @@ def create_ddos_event(rec: pytrap.UnirecTemplate, geoip_db, victim_ip, domain, m
                                            misp_objects_path_custom=misp_templates_dir)
             misp_organization.add_attribute('name', asn_info.raw['autonomous_system_organization'])
             misp_organization.add_attribute('role', "Victim")
+            if city_info is not None:
+                misp_organization.add_attribute('country', city_info.country.names['en'])
             misp_event.add_object(misp_organization)
 
     return misp_event
