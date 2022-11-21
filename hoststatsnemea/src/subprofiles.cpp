@@ -345,7 +345,11 @@ bool DNSSubprofile::update_src_ip(hosts_record_t& main_record, const void* data,
 
    /* Update items */
    dns_data_t &src_host_rec = *main_record.dns_data;
-   if (dir_flags & DIR_FLAG_RSP && ur_get(tmplt, data, F_BYTES) >=
+   size_t packets_in_flow = ur_get(tmplt, data, F_PACKETS);
+   if (!packets_in_flow) {
+      packets_in_flow = 1;
+   }
+   if (dir_flags & DIR_FLAG_RSP && (ur_get(tmplt, data, F_BYTES) / packets_in_flow) >=
       DNS_BYTES_OVERLIMIT) {
       INC(src_host_rec.out_rsp_overlimit_cnt);
    }
@@ -366,7 +370,11 @@ bool DNSSubprofile::update_dst_ip(hosts_record_t& main_record, const void* data,
 
    /* Update items */
    dns_data_t &dst_host_rec = *main_record.dns_data;
-   if (dir_flags & DIR_FLAG_RSP && ur_get(tmplt, data, F_BYTES) >=
+   size_t packets_in_flow = ur_get(tmplt, data, F_PACKETS);
+   if (!packets_in_flow) {
+      packets_in_flow = 1;
+   }
+   if (dir_flags & DIR_FLAG_RSP && (ur_get(tmplt, data, F_BYTES) / packets_in_flow) >=
       DNS_BYTES_OVERLIMIT) {
       INC(dst_host_rec.in_rsp_overlimit_cnt);
    }

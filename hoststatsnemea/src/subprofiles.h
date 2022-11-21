@@ -206,7 +206,7 @@ struct dns_data_t {
 // DNS subprofile
 class DNSSubprofile : public SubprofileBase {
 private:
-   // A threshold for excessive flows
+   // A threshold for excessive average packet size in flows
    static const unsigned DNS_BYTES_OVERLIMIT = 1000;
 
    // A filter for incomming flows
