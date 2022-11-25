@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 # terminate in case of error
 set -e
 # setting virtual environment
