@@ -6,6 +6,7 @@ SUBDIRS=amplification_detection \
 	blacklistfilter/adaptive_filter \
 	brute_force_detector \
 	ddos_detector \
+	dga_detector \
 	hoststatsnemea \
 	haddrscan_detector \
 	miner_detector \

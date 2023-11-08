@@ -1,0 +1,6 @@
+BUILT_SOURCES = fields.h fields.c
+
+fields.h fields.c:
+	$(UNIRECPROC) -i ./ -o ./
+
+CLEANFILES = fields.c fields.h
