@@ -2,4 +2,4 @@ geoip2==4.2.0
 numpy==1.22.0
 pandas==1.1.5
 pymisp==2.4.144
-scikit-learn==0.24.1
+scikit-learn==1.0.1
