@@ -75,6 +75,7 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/nemea/haddrscan_aggregator.py
 %{_bindir}/nemea/hoststatsnemea
 %{_bindir}/nemea/miner_detector
+%{_bindir}/nemea/url_blacklist_filter
 %{_bindir}/nemea/voip_fraud_detection
 %{_bindir}/nemea/vportscan_detector
 %{_bindir}/nemea/waintrusion_detector.py

@@ -12,6 +12,7 @@ SUBDIRS=amplification_detection \
 	sip_bf_detector \
 	smtp_spam_detector \
 	tunnel_detection \
+        url_blacklist_filter \
 	voip_fraud_detection \
 	vportscan_detector \
 	waintrusion_detector

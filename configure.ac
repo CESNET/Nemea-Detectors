@@ -139,6 +139,7 @@ AC_CONFIG_FILES([Makefile
                  smtp_spam_detector/smtp_spam_detector
                  smtp_spam_detector/smtp_spam_detector_files/Makefile
                  tunnel_detection/Makefile
+                 url_blacklist_filter/Makefile
                  voip_fraud_detection/Makefile
                  vportscan_detector/Makefile
                  waintrusion_detector/Makefile
