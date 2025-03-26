@@ -182,27 +182,10 @@ void clean_pid_file(char *pid_file){
 }
 
 
-bool ends_with_substring(char *str, char *substr){
-   // check if str ends with substr
-   size_t str_len = strlen(str);
-   size_t substr_len = strlen(substr);
-   if (str_len < substr_len) {
-      return false;
-   }
-   int i = strncmp(str + str_len - substr_len, substr, substr_len);
-   if (i == 0) {
-      return true;
-   } else {
-      return false;
-   }
-}
-
-
-bool is_malicious(char *url, char **malicious_urls){
-   // check if url is malicious
-   char *found;
+bool is_listed(char *url, char **malicious_urls) {
+   // Check if URL is listed on the blacklist
    for (int i = 0; i < blacklist_size; i++) {
-      if (ends_with_substring(malicious_urls[i], url)) {
+      if (strcmp(url, malicious_urls[i]) == 0) {
          return true;
       }
    }
@@ -373,7 +356,7 @@ int main(int argc, char **argv)
       full_url[path_len + host_len] = '\0';
 
       // Check if URL is in the list of malicious URLs, if not continue
-      if (!is_malicious(full_url, malicious_urls)) {
+      if (!is_listed(full_url, malicious_urls)) {
          if (verbose_print) {
             printf("URL \"%s\" -> CLEAN\n", full_url);
          }
