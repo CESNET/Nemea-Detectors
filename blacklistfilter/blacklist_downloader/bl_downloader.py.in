@@ -13,6 +13,10 @@ import argparse
 import csv
 import ipaddress
 import json
+import gzip
+import io
+import zipfile
+import zlib
 from collections import OrderedDict
 from contextlib import suppress
 
@@ -38,6 +42,9 @@ url_regex = re.compile(r'^[^#/].*\..+')
 # FQDN regex for DNS
 # taken from: https://github.com/guyhughes/fqdn/blob/develop/fqdn/__init__.py
 fqdn_regex = re.compile(r'^((?!-)[-A-Z\d]{1,62}(?<!-)\.)+[A-Z]{1,62}\.?', re.IGNORECASE)
+
+# Supported values of the optional 'compression' element of a blacklist config
+COMPRESSION_TYPES = ('none', 'zip', 'gzip')
 
 # A heterogeneous list with all types of blacklists
 blacklists = []
@@ -108,13 +115,17 @@ class Blacklist:
     # Attributes that must/can be defined in XML config
     # (this is for IP blacklists, URLandDNSBlacklist overrides the lists)
     mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','ip_version'}
-    other_attrs = {'csv_col','json_address_key','json_prefix_key','json_port_key','filter_key','filter_value'}
+    other_attrs = {'csv_col','json_address_key','json_prefix_key','json_port_key','filter_key','filter_value',
+                   'compression'}
 
     def __init__(self, bl):
         self.entities = dict()  # key=IP/URL, value={set of ports}
         # ports are not used for URL/DNS blacklists
 
         self.last_download = 1
+
+        # Optional attributes with default values
+        self.compression = 'none'
 
         # Store parameters from the XML config file as attributes of this object
         # (check all mandatory parameters are present and no extra ones are there)
@@ -143,6 +154,12 @@ class Blacklist:
             # FIXME from the code below it seems filtering by port number is mandatory when json format is used,
             #  while port can't be specified with other formats, which doesn't make sense
             logger.critical("'json_address_key' and 'json_port_key' must be set when file_format=json (blacklist: '{}')".format(self.name))
+            sys.exit(1)
+        self.compression = (self.compression or 'none').strip().lower()
+        if self.compression not in COMPRESSION_TYPES:
+            logger.critical("Unsupported 'compression' value '{}' (blacklist: '{}'), expected one of: {}".format(
+                self.compression, self.name, ', '.join(COMPRESSION_TYPES)
+            ))
             sys.exit(1)
         
 
@@ -217,6 +234,43 @@ class Blacklist:
         with open(bl_file, 'w') as f:
             f.write(self.stringify_blacklist_repo())
 
+    def decompress(self, data):
+        """Decompress downloaded blacklist data according to the 'compression' config element
+
+        Must be called only when compression is not 'none'.
+
+        Args:
+            data: Downloaded compressed blacklist file data (bytes)
+
+        Returns: Decompressed data (bytes), or None on error
+        """
+        try:
+            if self.compression == 'gzip':
+                return gzip.decompress(data)
+
+            elif self.compression == 'zip':
+                with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                    members = [m for m in zf.infolist() if not m.is_dir()]
+                    if not members:
+                        logger.warning('{}, {}: ZIP archive is empty'.format(type(self).__name__, self.name))
+                        return None
+                    if len(members) > 1:
+                        logger.debug('{}, {}: ZIP archive contains {} files, concatenating them: {}'.format(
+                            type(self).__name__, self.name, len(members), ', '.join(m.filename for m in members)
+                        ))
+                    return b'\n'.join(zf.read(m) for m in members)
+
+        except (OSError, EOFError, zlib.error, zipfile.BadZipFile, RuntimeError) as e:
+            # gzip.BadGzipFile is a subclass of OSError,
+            # RuntimeError is raised by zipfile for encrypted archives
+            logger.warning('{}, {}: Could not decompress blacklist ({}): {}'.format(
+                type(self).__name__, self.name, self.compression, e
+            ))
+            return None
+
+        # Unreachable: the value is validated in __init__ and the caller skips 'none'
+        raise ValueError("Unsupported compression type: '{}'".format(self.compression))
+
     def cut_csv(self, csv_data):
         """Cut out specified column from a csv file"""
         col_idx = int(self.csv_col) - 1
@@ -278,6 +332,12 @@ class Blacklist:
 
             if req.status_code == 200:
                 blacklist_data = req.content
+
+                if self.compression != 'none':
+                    blacklist_data = self.decompress(blacklist_data)
+                    if blacklist_data is None:
+                        # Decompression failed (already logged), keep the previous entities
+                        return False
 
                 if self.file_format == 'JSON':
                     new_entities = self.extract_entities_json(blacklist_data)
@@ -484,7 +544,7 @@ class URLandDNSBlacklist(Blacklist):
     separator = '\\'
     comparator = str
     mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','detectors'}
-    other_attrs = {'csv_col'} # JSON parsing not implemented for URL/DNS lists
+    other_attrs = {'csv_col','compression'} # JSON parsing not implemented for URL/DNS lists
 
     def __init__(self, bl):
         super().__init__(bl)

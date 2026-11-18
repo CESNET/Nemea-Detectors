@@ -42,6 +42,10 @@
                 <!-- When file_format=JSON and filter_key is set, this specifies a value for the filtering key  -->
                 <!-- <element name="filter_value">1</element> -->
 
+                <!-- OPTIONAL, compression of the downloaded file: none/zip/gzip (default: none).
+                     The file is decompressed before parsing. A ZIP archive with multiple files is concatenated. -->
+                <!-- <element name="compression">gzip</element> -->
+
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
                 <!--Download interval in minutes-->
@@ -107,16 +111,18 @@
             </struct> -->
 
             <!-- ThreatFox IP-port (full data dump), info: https://threatfox.abuse.ch/export/ -->
-            <!-- New fetures must be implement fisrt:
-                  - data are zipped, must be unzipped
-                  - contains IP:port, so port matching should be implemented as well
+            <!-- Download requires a personal Auth-Key from https://auth.abuse.ch/, replace YOUR_API_TOKEN in the source URL.
+                 The ZIP archive contains a single CSV file (full_ip-port.csv), column 3 is "IP:port".
+                 New features must be implemented first:
+                  - contains IP:port, so port matching should be implemented as well (now only IPs are used)
             <struct>
                 <element name="id">13</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
-                <element name="source">https://threatfox.abuse.ch/export/csv/ip-port/full/</element>
+                <element name="source">https://threatfox-api.abuse.ch/v2/files/exports/YOUR_API_TOKEN/ip_port_full.csv.zip</element>
                 <element name="name">Abuse.ch ThreatFox IPs</element>
-                <element name="file_format">csv</element> 
+                <element name="file_format">csv</element>
+                <element name="compression">zip</element>
                 <element name="csv_col">3</element>
                 <element name="download_interval">60</element>
                 <element name="ip_version">4</element>

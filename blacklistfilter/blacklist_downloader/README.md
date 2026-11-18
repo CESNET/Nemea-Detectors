@@ -30,6 +30,10 @@ Notable elements:
     - JSON - use json_address_key to specify JSON key with target adress
     - csv - use csv_col to cut out specified column
     - plaintext - no special action on parsing
+- compression (optional, default `none`)
+    - none - downloaded file is used as is
+    - gzip - downloaded file is decompressed using gzip before parsing
+    - zip - downloaded file is a ZIP archive, all files in it are extracted and concatenated before parsing
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
