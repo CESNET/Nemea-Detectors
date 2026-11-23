@@ -46,6 +46,10 @@ fqdn_regex = re.compile(r'^((?!-)[-A-Z\d]{1,62}(?<!-)\.)+[A-Z]{1,62}\.?', re.IGN
 # Supported values of the optional 'compression' element of a blacklist config
 COMPRESSION_TYPES = ('none', 'zip', 'gzip')
 
+# Placeholder in blacklist 'source' URL, replaced by the value of the 'authtoken' element when downloading
+# (so the token is not part of the URL, which is used e.g. in IDEA alerts)
+AUTHTOKEN_PLACEHOLDER = '{AUTHTOKEN}'
+
 # A heterogeneous list with all types of blacklists
 blacklists = []
 
@@ -116,7 +120,7 @@ class Blacklist:
     # (this is for IP blacklists, URLandDNSBlacklist overrides the lists)
     mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','ip_version'}
     other_attrs = {'csv_col','json_address_key','json_prefix_key','json_port_key','filter_key','filter_value',
-                   'compression'}
+                   'compression','authtoken'}
 
     def __init__(self, bl):
         self.entities = dict()  # key=IP/URL, value={set of ports}
@@ -126,6 +130,7 @@ class Blacklist:
 
         # Optional attributes with default values
         self.compression = 'none'
+        self.authtoken = None
 
         # Store parameters from the XML config file as attributes of this object
         # (check all mandatory parameters are present and no extra ones are there)
@@ -161,10 +166,28 @@ class Blacklist:
                 self.compression, self.name, ', '.join(COMPRESSION_TYPES)
             ))
             sys.exit(1)
-        
+        self.authtoken = (self.authtoken or '').strip() or None
+        if AUTHTOKEN_PLACEHOLDER in self.source and not self.authtoken:
+            logger.critical("'source' contains {} but 'authtoken' is not set (blacklist: '{}')".format(
+                AUTHTOKEN_PLACEHOLDER, self.name
+            ))
+            sys.exit(1)
+        if self.authtoken and AUTHTOKEN_PLACEHOLDER not in self.source:
+            logger.warning("'authtoken' is set but 'source' does not contain {}, the token is not used "
+                           "(blacklist: '{}')".format(AUTHTOKEN_PLACEHOLDER, self.name))
+
 
     def __str__(self):
         return str(self.__dict__)
+
+    def download_url(self):
+        """Return URL to download the blacklist from, with the auth token filled in (if configured)
+
+        Use it only for the download itself, use self.source (with the placeholder) everywhere else, e.g. in logs.
+        """
+        if self.authtoken:
+            return self.source.replace(AUTHTOKEN_PLACEHOLDER, self.authtoken)
+        return self.source
 
     def stringify_blacklist_repo(self):
         """Output string with entries from this blacklist for version control (repo) files
@@ -254,10 +277,11 @@ class Blacklist:
                     if not members:
                         logger.warning('{}, {}: ZIP archive is empty'.format(type(self).__name__, self.name))
                         return None
-                    if len(members) > 1:
-                        logger.debug('{}, {}: ZIP archive contains {} files, concatenating them: {}'.format(
-                            type(self).__name__, self.name, len(members), ', '.join(m.filename for m in members)
-                        ))
+                    logger.debug('{}, {}: ZIP archive contains {} file(s){}: {}'.format(
+                        type(self).__name__, self.name, len(members),
+                        ', concatenating them' if len(members) > 1 else '',
+                        ', '.join('{} ({} B)'.format(m.filename, m.file_size) for m in members)
+                    ))
                     return b'\n'.join(zf.read(m) for m in members)
 
         except (OSError, EOFError, zlib.error, zipfile.BadZipFile, RuntimeError) as e:
@@ -327,17 +351,32 @@ class Blacklist:
         updated = False
         new_entities = None
 
+        # Time of the last download attempt (successful or not), the next attempt is scheduled
+        # 'download_interval' minutes after this, so failing/unchanged sources are not re-downloaded
+        # on every check (which can lead to rate limiting by the server, e.g. HTTP 429)
+        self.last_download = time.time()
+
+        bl_desc = '{} {}'.format(type(self).__name__, self.name)
+        logger.debug('{}: downloading {} (timeout {} s)'.format(bl_desc, self.source, g_conf.socket_timeout))
+        start = time.monotonic()
+
         try:
-            req = requests.get(self.source, timeout=g_conf.socket_timeout)
+            req = requests.get(self.download_url(), timeout=g_conf.socket_timeout)
+            elapsed = time.monotonic() - start
 
             if req.status_code == 200:
                 blacklist_data = req.content
+                download_info = 'downloaded {} B in {:.1f} s'.format(len(blacklist_data), elapsed)
 
                 if self.compression != 'none':
                     blacklist_data = self.decompress(blacklist_data)
                     if blacklist_data is None:
                         # Decompression failed (already logged), keep the previous entities
+                        logger.warning('{}: {}, decompression failed, keeping {} previous entities, '
+                                       'next download in {} min'.format(bl_desc, download_info, len(self.entities),
+                                                                        self.download_interval))
                         return False
+                    download_info += ', {} decompressed to {} B'.format(self.compression, len(blacklist_data))
 
                 if self.file_format == 'JSON':
                     new_entities = self.extract_entities_json(blacklist_data)
@@ -353,25 +392,40 @@ class Blacklist:
                                                         {PORT_UNKNOWN})
 
                 if not new_entities:
-                    logger.warning('{}, {}: No valid entities found'.format(type(self).__name__, self.name))
+                    logger.warning('{}: {}, no valid entities found, keeping {} previous entities, '
+                                   'next download in {} min'.format(bl_desc, download_info, len(self.entities),
+                                                                    self.download_interval))
 
-                elif new_entities != self.entities:
-                    # Blacklist entities changed since last download
-                    self.entities = new_entities
-                    if repo_path:
-                        self.write_to_repo()
-                    self.last_download = time.time()
-                    updated = True
+                else:
+                    if new_entities != self.entities:
+                        # Blacklist entities changed since last download
+                        self.entities = new_entities
+                        if repo_path:
+                            self.write_to_repo()
+                        updated = True
 
-                    logger.info('Updated {}: {}'.format(type(self).__name__, self.name))
+                    logger.info('{}: {}, {} entities, {}, next download in {} min'.format(
+                        bl_desc, download_info, len(new_entities), 'updated' if updated else 'unchanged',
+                        self.download_interval
+                    ))
 
             else:  # req.status_code != 200
-                logger.warning('Could not fetch blacklist: {} ({})\n'
-                               'Status code: {}'.format(self.name, self.source, req.status_code))
+                # Show the beginning of the response body, servers often explain the error there (e.g. rate limit)
+                body = ' '.join(req.text[:300].split())
+                retry_after = req.headers.get('Retry-After')
+                logger.warning('Could not fetch blacklist {} ({}): HTTP {} {} after {:.1f} s{}, response: "{}", '
+                               'next download in {} min'.format(
+                                   bl_desc, self.source, req.status_code, req.reason, elapsed,
+                                   ', Retry-After: {}'.format(retry_after) if retry_after else '',
+                                   body, self.download_interval
+                               ))
 
         except requests.RequestException as e:
-            logger.warning('Could not fetch blacklist: {}\n'
-                           '{}'.format(self.source, e))
+            # Only the exception type is logged (e.g. ReadTimeout, ConnectionError),
+            # its message contains the download URL, i.e. including the auth token
+            logger.warning('Could not fetch blacklist {} ({}) after {:.1f} s: {}, next download in {} min'.format(
+                bl_desc, self.source, time.monotonic() - start, type(e).__name__, self.download_interval
+            ))
 
         return updated
 
@@ -544,7 +598,7 @@ class URLandDNSBlacklist(Blacklist):
     separator = '\\'
     comparator = str
     mandatory_attrs = {'id','category','method','name','file_format','source','download_interval','detectors'}
-    other_attrs = {'csv_col','compression'} # JSON parsing not implemented for URL/DNS lists
+    other_attrs = {'csv_col','compression','authtoken'} # JSON parsing not implemented for URL/DNS lists
 
     def __init__(self, bl):
         super().__init__(bl)

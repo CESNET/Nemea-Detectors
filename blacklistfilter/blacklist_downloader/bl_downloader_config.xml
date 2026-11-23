@@ -3,8 +3,9 @@
     <struct name="general">
         <!-- Download check interval for all blacklists in minutes -->
         <element name="download_interval">10</element>
-        <!-- Socket timeout for requests.get method in seconds -->
-        <element name="socket_timeout">5</element>
+        <!-- Socket timeout for requests.get method in seconds
+             (max. time to connect and max. time between received data, not the total download time) -->
+        <element name="socket_timeout">30</element>
     </struct>
 
     <struct name="detector_files">
@@ -45,6 +46,11 @@
                 <!-- OPTIONAL, compression of the downloaded file: none/zip/gzip (default: none).
                      The file is decompressed before parsing. A ZIP archive with multiple files is concatenated. -->
                 <!-- <element name="compression">gzip</element> -->
+
+                <!-- OPTIONAL, secret token (API key) required for download. The source URL must contain
+                     the {AUTHTOKEN} placeholder, which is replaced by this value when downloading.
+                     The token is kept out of the 'source' URL, which is used e.g. in IDEA alerts. -->
+                <!-- <element name="authtoken">YOUR_API_TOKEN</element> -->
 
                 <!-- Address from which the blacklist will be downloaded -->
                 <element name="source">https://feodotracker.abuse.ch/downloads/ipblocklist.txt</element>
@@ -111,7 +117,8 @@
             </struct> -->
 
             <!-- ThreatFox IP-port (full data dump), info: https://threatfox.abuse.ch/export/ -->
-            <!-- Download requires a personal Auth-Key from https://auth.abuse.ch/, replace YOUR_API_TOKEN in the source URL.
+            <!-- Download requires a personal Auth-Key from https://auth.abuse.ch/, set it in the 'authtoken' element
+                 (it replaces the {AUTHTOKEN} placeholder in the source URL when downloading).
                  The ZIP archive contains a single CSV file (full_ip-port.csv), column 3 is "IP:port".
                  New features must be implemented first:
                   - contains IP:port, so port matching should be implemented as well (now only IPs are used)
@@ -119,7 +126,8 @@
                 <element name="id">13</element>
                 <element name="category">Malware</element>
                 <element name="method">web</element>
-                <element name="source">https://threatfox-api.abuse.ch/v2/files/exports/YOUR_API_TOKEN/ip_port_full.csv.zip</element>
+                <element name="source">https://threatfox-api.abuse.ch/v2/files/exports/{AUTHTOKEN}/ip_port_full.csv.zip</element>
+                <element name="authtoken">YOUR_API_TOKEN</element>
                 <element name="name">Abuse.ch ThreatFox IPs</element>
                 <element name="file_format">csv</element>
                 <element name="compression">zip</element>

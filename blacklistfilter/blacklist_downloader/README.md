@@ -34,6 +34,11 @@ Notable elements:
     - none - downloaded file is used as is
     - gzip - downloaded file is decompressed using gzip before parsing
     - zip - downloaded file is a ZIP archive, all files in it are extracted and concatenated before parsing
+- authtoken (optional) - secret token (API key) needed for download; `source` must contain the `{AUTHTOKEN}`
+  placeholder, which is replaced by this value only when downloading. The token is not part of the `source` URL
+  (used e.g. in IDEA alerts) and it is masked in logs.
+    - e.g. `<element name="source">https://threatfox-api.abuse.ch/v2/files/exports/{AUTHTOKEN}/ip_port_full.csv.zip</element>`
+      and `<element name="authtoken">...</element>`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
