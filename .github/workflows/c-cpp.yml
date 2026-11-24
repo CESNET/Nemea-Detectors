@@ -32,10 +32,11 @@ jobs:
       run: ./configure --enable-debug CXXFLAGS=-coverage CFLAGS=-coverage LDFLAGS=-lgcov
     - name: rebuild and check
       run: make clean; make check
-    - uses: codecov/codecov-action@v1
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         flags: tests # optional
         name: nemea-detectors # optional
         fail_ci_if_error: true # optional (default = false)
         verbose: true # optional (default = false)
-
